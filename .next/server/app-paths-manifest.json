@@ -1,0 +1,9 @@
+{
+  "/overlays/page": "app/overlays/page.js",
+  "/users/page": "app/users/page.js",
+  "/page": "app/page.js",
+  "/auction/page": "app/auction/page.js",
+  "/manage/tournaments/page": "app/manage/tournaments/page.js",
+  "/manage/players/page": "app/manage/players/page.js",
+  "/manage/page": "app/manage/page.js"
+}
