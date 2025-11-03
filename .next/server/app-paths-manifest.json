@@ -1,9 +1,8 @@
 {
-  "/overlays/page": "app/overlays/page.js",
-  "/users/page": "app/users/page.js",
-  "/page": "app/page.js",
+  "/api/players/route": "app/api/players/route.js",
+  "/api/teams/route": "app/api/teams/route.js",
+  "/api/players/[id]/route": "app/api/players/[id]/route.js",
+  "/api/teams/[id]/route": "app/api/teams/[id]/route.js",
   "/auction/page": "app/auction/page.js",
-  "/manage/tournaments/page": "app/manage/tournaments/page.js",
-  "/manage/players/page": "app/manage/players/page.js",
-  "/manage/page": "app/manage/page.js"
+  "/auction/setup/page": "app/auction/setup/page.js"
 }

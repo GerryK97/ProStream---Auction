@@ -1,1 +1,0 @@
-{"c":["app/layout","app/auction/setup/page","webpack"],"r":[],"m":["(app-pages-browser)/./node_modules/@google/genai/dist/web/index.mjs","(app-pages-browser)/./src/services/geminiService.ts","(app-pages-browser)/__barrel_optimize__?names=GoogleGenAI,Type!=!./node_modules/@google/genai/dist/web/index.mjs"]}

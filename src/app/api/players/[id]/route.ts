@@ -4,10 +4,11 @@ import { playerDB } from '@/lib/db-mongodb';
 // GET /api/players/[id] - Get player by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const player = await playerDB.getById(params.id);
+    const { id } = await params;
+    const player = await playerDB.getById(id);
     if (!player) {
       return NextResponse.json(
         { error: 'Player not found' },
@@ -26,11 +27,12 @@ export async function GET(
 // PUT /api/players/[id] - Update player
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
-    const updatedPlayer = await playerDB.update(params.id, body);
+    const updatedPlayer = await playerDB.update(id, body);
     if (!updatedPlayer) {
       return NextResponse.json(
         { error: 'Player not found' },
@@ -49,10 +51,11 @@ export async function PUT(
 // DELETE /api/players/[id] - Delete player
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const success = await playerDB.delete(params.id);
+    const { id } = await params;
+    const success = await playerDB.delete(id);
     if (!success) {
       return NextResponse.json(
         { error: 'Player not found' },

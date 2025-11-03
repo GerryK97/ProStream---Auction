@@ -7,10 +7,19 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
   if (!isOpen) return null;
+
+  const sizeClasses = {
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-xl',
+    '2xl': 'max-w-2xl',
+  };
 
   return (
     <div
@@ -18,7 +27,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
       onClick={onClose}
     >
       <div
-        className="bg-neutral-800 rounded-lg shadow-xl w-full max-w-md m-4 p-6 animate-slide-in-up border border-neutral-700"
+        className={`bg-neutral-800 rounded-lg shadow-xl w-full ${sizeClasses[size]} m-4 p-6 animate-slide-in-up border border-neutral-700`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4 pb-2 border-b border-neutral-700">

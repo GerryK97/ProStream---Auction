@@ -137,6 +137,69 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../src/app/api/auction/bid/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/auction/bid">> = Specific
+  const handler = {} as typeof import("../../src/app/api/auction/bid/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/api/auction/reset-all/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/auction/reset-all">> = Specific
+  const handler = {} as typeof import("../../src/app/api/auction/reset-all/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/api/auction/reset/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/auction/reset">> = Specific
+  const handler = {} as typeof import("../../src/app/api/auction/reset/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/api/auction/select-player/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/auction/select-player">> = Specific
+  const handler = {} as typeof import("../../src/app/api/auction/select-player/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/api/auction/sell/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/auction/sell">> = Specific
+  const handler = {} as typeof import("../../src/app/api/auction/sell/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/api/auction/state/[tournamentId]/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/auction/state/[tournamentId]">> = Specific
+  const handler = {} as typeof import("../../src/app/api/auction/state/[tournamentId]/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/api/auction/undo/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/auction/undo">> = Specific
+  const handler = {} as typeof import("../../src/app/api/auction/undo/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../src/app/api/players/[id]/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/players/[id]">> = Specific
@@ -186,6 +249,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/tournaments/[id]">> = Specific
   const handler = {} as typeof import("../../src/app/api/tournaments/[id]/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/api/tournaments/[id]/status/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/tournaments/[id]/status">> = Specific
+  const handler = {} as typeof import("../../src/app/api/tournaments/[id]/status/route.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check

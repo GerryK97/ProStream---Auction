@@ -7,6 +7,209 @@ import Modal from './Modal';
 import { PlusIcon, DeleteIcon, EditIcon } from './icons';
 
 
+interface AddPlayerFromDatabaseProps {
+    selectedTournament: Tournament;
+    allPlayers: Player[];
+    tournamentPlayers: Player[];
+    onAdd: (playerId: string) => Promise<void>;
+    onCreateNew: () => void;
+}
+
+interface AddTeamFromDatabaseProps {
+    selectedTournament: Tournament;
+    allTeams: Team[];
+    tournamentTeams: Team[];
+    onAdd: (teamId: string) => Promise<void>;
+    onCreateNew: () => void;
+}
+
+const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
+    selectedTournament,
+    allPlayers,
+    tournamentPlayers,
+    onAdd,
+    onCreateNew,
+}) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [addingPlayerId, setAddingPlayerId] = useState<string | null>(null);
+
+    // Filter out players already in this tournament
+    const tournamentPlayerIds = new Set(tournamentPlayers.map(p => p._id));
+    const availablePlayers = allPlayers.filter(p => !tournamentPlayerIds.has(p._id));
+
+    const filteredPlayers = availablePlayers.filter(p =>
+        p.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const handleAddPlayer = async (playerId: string) => {
+        setAddingPlayerId(playerId);
+        await onAdd(playerId);
+        setAddingPlayerId(null);
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-neutral-400">
+                    {availablePlayers.length} player(s) available to add
+                </p>
+            </div>
+            <div className="flex items-center gap-2 mb-4">
+                <input
+                    type="text"
+                    placeholder="Search players..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="flex-1 bg-neutral-700 border-neutral-600 rounded-md px-3 py-2 focus:ring-brand-primary focus:border-brand-primary"
+                />
+                <button
+                    onClick={onCreateNew}
+                    className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-md transition-colors whitespace-nowrap"
+                >
+                    + Create New
+                </button>
+            </div>
+
+            <div className="max-h-96 overflow-y-auto space-y-2">
+                {filteredPlayers.length === 0 ? (
+                    <p className="text-center text-neutral-400 py-8">
+                        {searchTerm ? 'No players found matching your search' : 'No available players in database'}
+                    </p>
+                ) : (
+                    filteredPlayers.map((player) => (
+                        <div
+                            key={player._id}
+                            className="bg-neutral-700/50 p-3 rounded-md flex items-center justify-between hover:bg-neutral-700 transition-colors"
+                        >
+                            <div className="flex items-center gap-3">
+                                <img
+                                    src={player.imageURL}
+                                    alt={player.name}
+                                    className="w-12 h-12 rounded-full object-cover"
+                                />
+                                <div>
+                                    <p className="font-semibold">{player.name}</p>
+                                    <p className="text-xs text-neutral-400">
+                                        Matches: {player.stats.matchesPlayed} | Score: {player.stats.totalScore}
+                                    </p>
+                                    <p className="text-xs text-neutral-500">
+                                        From: {player.tournamentId || 'Unassigned'}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => handleAddPlayer(player._id)}
+                                disabled={addingPlayerId === player._id}
+                                className={`font-bold py-2 px-4 rounded-md text-sm transition-colors whitespace-nowrap ${
+                                    addingPlayerId === player._id
+                                        ? 'bg-neutral-600 text-neutral-400 cursor-not-allowed'
+                                        : 'bg-blue-600 hover:bg-blue-500 text-white'
+                                }`}
+                            >
+                                {addingPlayerId === player._id ? 'Adding...' : 'Add Player'}
+                            </button>
+                        </div>
+                    ))
+                )}
+            </div>
+        </div>
+    );
+};
+
+const AddTeamFromDatabase: React.FC<AddTeamFromDatabaseProps> = ({
+    selectedTournament,
+    allTeams,
+    tournamentTeams,
+    onAdd,
+    onCreateNew,
+}) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [addingTeamId, setAddingTeamId] = useState<string | null>(null);
+
+    // Filter out teams already in this tournament
+    const tournamentTeamIds = new Set(tournamentTeams.map(t => t._id));
+    const availableTeams = allTeams.filter(t => !tournamentTeamIds.has(t._id));
+
+    const filteredTeams = availableTeams.filter(t =>
+        t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.ownerName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const handleAddTeam = async (teamId: string) => {
+        setAddingTeamId(teamId);
+        await onAdd(teamId);
+        setAddingTeamId(null);
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-neutral-400">
+                    {availableTeams.length} team(s) available to add
+                </p>
+            </div>
+            <div className="flex items-center gap-2 mb-4">
+                <input
+                    type="text"
+                    placeholder="Search teams..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="flex-1 bg-neutral-700 border-neutral-600 rounded-md px-3 py-2 focus:ring-brand-primary focus:border-brand-primary"
+                />
+                <button
+                    onClick={onCreateNew}
+                    className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-md transition-colors whitespace-nowrap"
+                >
+                    + Create New
+                </button>
+            </div>
+
+            <div className="max-h-96 overflow-y-auto space-y-2">
+                {filteredTeams.length === 0 ? (
+                    <p className="text-center text-neutral-400 py-8">
+                        {searchTerm ? 'No teams found matching your search' : 'No available teams in database'}
+                    </p>
+                ) : (
+                    filteredTeams.map((team) => (
+                        <div
+                            key={team._id}
+                            className="bg-neutral-700/50 p-3 rounded-md flex items-center justify-between hover:bg-neutral-700 transition-colors"
+                        >
+                            <div className="flex items-center gap-3">
+                                <img
+                                    src={team.logoURL}
+                                    alt={team.name}
+                                    className="w-12 h-12 rounded-md object-cover"
+                                />
+                                <div>
+                                    <p className="font-semibold">{team.name}</p>
+                                    <p className="text-xs text-neutral-400">
+                                        Owner: {team.ownerName}
+                                    </p>
+                                    <p className="text-xs text-neutral-500">
+                                        From: {team.tournamentId || 'Unassigned'}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => handleAddTeam(team._id)}
+                                disabled={addingTeamId === team._id}
+                                className={`font-bold py-2 px-4 rounded-md text-sm transition-colors whitespace-nowrap ${
+                                    addingTeamId === team._id
+                                        ? 'bg-neutral-600 text-neutral-400 cursor-not-allowed'
+                                        : 'bg-blue-600 hover:bg-blue-500 text-white'
+                                }`}
+                            >
+                                {addingTeamId === team._id ? 'Adding...' : 'Add Team'}
+                            </button>
+                        </div>
+                    ))
+                )}
+            </div>
+        </div>
+    );
+};
+
 interface PlayerFormProps {
     onSave: (player: Omit<Player, '_id' | 'tournamentId' | 'isSold' | 'finalPrice' | 'winningTeamId'>) => void;
     onClose: () => void;
@@ -137,11 +340,14 @@ const TeamForm: React.FC<TeamFormProps> = ({ onSave }) => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ name, ownerName, logoURL });
-        setName('');
-        setOwnerName('');
-        setLogoURL('');
-        setLogoFile(null);
+        if (name && ownerName) {
+            onSave({ name, ownerName, logoURL });
+            // Clear form after successful submission
+            setName('');
+            setOwnerName('');
+            setLogoURL('');
+            setLogoFile(null);
+        }
     };
 
     return (
@@ -175,22 +381,110 @@ const TeamForm: React.FC<TeamFormProps> = ({ onSave }) => {
 }
 
 const AuctionSetupPanel: React.FC = () => {
-    const { tournament, teams, players, setTournamentStatus, addPlayer, deletePlayer, addTeam, deleteTeam } = useAuction();
+    const { tournament, tournaments, teams, players, setTournamentStatus, addPlayer, deletePlayer, addTeam, deleteTeam } = useAuction();
 
     const [isAddPlayerModalOpen, setAddPlayerModalOpen] = useState(false);
     const [isAddTeamModalOpen, setAddTeamModalOpen] = useState(false);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [selectedTournamentId, setSelectedTournamentId] = useState(tournament?._id || '');
+    const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+    const [allTeams, setAllTeams] = useState<Team[]>([]);
+    const [tournamentPlayers, setTournamentPlayers] = useState<Player[]>([]);
+    const [tournamentTeams, setTournamentTeams] = useState<Team[]>([]);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-    if (!tournament) {
+    // Handle player removal from tournament
+    const handleRemovePlayer = async (playerId: string) => {
+        try {
+            const response = await fetch(`/api/players/${playerId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tournamentId: null }),
+            });
+            if (response.ok) {
+                setRefreshTrigger(prev => prev + 1);
+            } else {
+                alert('Failed to remove player from tournament');
+            }
+        } catch (error) {
+            console.error('Failed to remove player:', error);
+            alert('An error occurred while removing the player');
+        }
+    };
+
+    // Handle team removal from tournament
+    const handleRemoveTeam = async (teamId: string) => {
+        try {
+            const response = await fetch(`/api/teams/${teamId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tournamentId: null }),
+            });
+            if (response.ok) {
+                setRefreshTrigger(prev => prev + 1);
+            } else {
+                alert('Failed to remove team from tournament');
+            }
+        } catch (error) {
+            console.error('Failed to remove team:', error);
+            alert('An error occurred while removing the team');
+        }
+    };
+
+    // Get selected tournament
+    const selectedTournament = tournaments.find(t => t._id === selectedTournamentId) || tournament;
+
+    // Fetch all players and teams from database on mount and when refresh is triggered
+    React.useEffect(() => {
+        const fetchData = async () => {
+            try {
+                // Fetch all players
+                const playersResponse = await fetch('/api/players');
+                if (playersResponse.ok) {
+                    const allPlayersData = await playersResponse.json();
+                    setAllPlayers(allPlayersData);
+
+                    // Filter players for current tournament
+                    if (selectedTournament) {
+                        const tournamentPlayersData = allPlayersData.filter(
+                            (p: Player) => p.tournamentId === selectedTournament._id
+                        );
+                        setTournamentPlayers(tournamentPlayersData);
+                    }
+                }
+
+                // Fetch all teams
+                const teamsResponse = await fetch('/api/teams');
+                if (teamsResponse.ok) {
+                    const allTeamsData = await teamsResponse.json();
+                    setAllTeams(allTeamsData);
+
+                    // Filter teams for current tournament
+                    if (selectedTournament) {
+                        const tournamentTeamsData = allTeamsData.filter(
+                            (t: Team) => t.tournamentId === selectedTournament._id
+                        );
+                        setTournamentTeams(tournamentTeamsData);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch data:', error);
+            }
+        };
+        fetchData();
+    }, [refreshTrigger, selectedTournament?._id]);
+
+    if (!selectedTournament) {
         return <div className="text-center p-8 text-neutral-400">Loading tournament data...</div>;
     }
 
-    const totalPlayers = players.length;
-    const totalTeams = teams.length;
-    const soldPlayersCount = players.filter(p => p.isSold).length;
+    const totalPlayers = tournamentPlayers.length;
+    const totalTeams = tournamentTeams.length;
+    const soldPlayersCount = tournamentPlayers.filter(p => p.isSold).length;
     const availablePlayersCount = totalPlayers - soldPlayersCount;
 
-    const isAuctionLive = tournament.status === 'Live';
-    const isAuctionCompleted = tournament.status === 'Completed';
+    const isAuctionLive = selectedTournament.status === 'Live';
+    const isAuctionCompleted = selectedTournament.status === 'Completed';
 
     return (
         <div className="space-y-8 animate-fade-in">
@@ -201,12 +495,36 @@ const AuctionSetupPanel: React.FC = () => {
 
             <div className="bg-neutral-800 border border-neutral-700 rounded-lg p-6 space-y-4">
                 <div className="flex justify-between items-start">
-                    <div>
-                        <label className="text-sm text-neutral-400">Select Tournament</label>
-                        <div className="flex items-center gap-4 p-2 border border-neutral-600 rounded-md bg-neutral-900/50 mt-1">
-                             <p className="text-lg font-semibold">{tournament.name} - Budget: {tournament.budgetPerTeam.toLocaleString()} | Squad: 5</p>
-                             <svg className="w-5 h-5 text-neutral-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
-                        </div>
+                    <div className="relative w-full max-w-xl">
+                        <label className="text-sm text-neutral-400 mb-1 block">Select Tournament</label>
+                        <button
+                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                            className="flex items-center justify-between gap-4 w-full p-3 border border-neutral-600 rounded-md bg-neutral-900/50 hover:bg-neutral-900 transition-colors"
+                        >
+                             <p className="text-lg font-semibold">{selectedTournament.name} - Budget: {selectedTournament.budgetPerTeam.toLocaleString()} | Squad: {selectedTournament.squadSize}</p>
+                             <svg className={`w-5 h-5 text-neutral-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
+                        </button>
+                        {isDropdownOpen && (
+                            <div className="absolute z-10 mt-1 w-full bg-neutral-800 border border-neutral-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                {tournaments.map((t) => (
+                                    <button
+                                        key={t._id}
+                                        onClick={() => {
+                                            setSelectedTournamentId(t._id);
+                                            setIsDropdownOpen(false);
+                                        }}
+                                        className={`w-full text-left p-3 hover:bg-neutral-700 transition-colors ${
+                                            t._id === selectedTournamentId ? 'bg-neutral-700 text-brand-primary' : ''
+                                        }`}
+                                    >
+                                        <p className="font-semibold">{t.name}</p>
+                                        <p className="text-xs text-neutral-400">
+                                            Budget: {t.budgetPerTeam.toLocaleString()} | Squad: {t.squadSize} | Status: {t.status}
+                                        </p>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                     {isAuctionCompleted && (
                         <div className="bg-purple-600/50 text-purple-200 border border-purple-500 text-sm font-semibold px-3 py-1 rounded-full flex items-center gap-2">
@@ -217,9 +535,9 @@ const AuctionSetupPanel: React.FC = () => {
                 </div>
 
                 <div className="bg-neutral-900/40 p-3 rounded-md text-xs text-neutral-400 font-mono space-y-1">
-                    <p>Status: <span className="text-yellow-300">{tournament.status.toUpperCase()}</span></p>
+                    <p>Status: <span className="text-yellow-300">{selectedTournament.status.toUpperCase()}</span></p>
                     <p>isAuctionActive: <span className={isAuctionLive ? 'text-green-400' : 'text-red-400'}>{isAuctionLive.toString()}</span></p>
-                    <p>Show Complete Button: <span className="text-red-400">false</span></p>
+                    <p>Tournament ID: <span className="text-cyan-400">{selectedTournament._id}</span></p>
                 </div>
 
                 <div className="flex items-center justify-between border-t border-neutral-700 pt-4">
@@ -258,19 +576,25 @@ const AuctionSetupPanel: React.FC = () => {
                         </div>
                     </div>
                     <ul className="space-y-3 h-96 overflow-y-auto pr-2">
-                        {players.map(player => (
-                            <li key={player._id} className="bg-neutral-900/50 p-3 rounded-md flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <img src={player.imageURL} alt={player.name} className="w-12 h-12 rounded-full object-cover"/>
-                                    <div>
-                                        <p className="font-semibold">{player.name}</p>
-                                        <p className="text-sm text-neutral-400">Batsman</p>
-                                        <p className="text-xs font-semibold text-green-400 tracking-wider">AVAILABLE</p>
+                        {tournamentPlayers.length === 0 ? (
+                            <p className="text-center text-neutral-400 py-8">No players registered for this tournament</p>
+                        ) : (
+                            tournamentPlayers.map(player => (
+                                <li key={player._id} className="bg-neutral-900/50 p-3 rounded-md flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <img src={player.imageURL} alt={player.name} className="w-12 h-12 rounded-full object-cover"/>
+                                        <div>
+                                            <p className="font-semibold">{player.name}</p>
+                                            <p className="text-sm text-neutral-400">Matches: {player.stats.matchesPlayed}</p>
+                                            <p className={`text-xs font-semibold ${player.isSold ? 'text-red-400' : 'text-green-400'} tracking-wider`}>
+                                                {player.isSold ? 'SOLD' : 'AVAILABLE'}
+                                            </p>
+                                        </div>
                                     </div>
-                                </div>
-                                <button onClick={() => deletePlayer(player._id)} className="bg-red-600 hover:bg-red-500 text-white font-bold py-1 px-3 rounded-lg text-sm transition-colors">Remove</button>
-                            </li>
-                        ))}
+                                    <button onClick={() => handleRemovePlayer(player._id)} className="bg-red-600 hover:bg-red-500 text-white font-bold py-1 px-3 rounded-lg text-sm transition-colors">Remove</button>
+                                </li>
+                            ))
+                        )}
                     </ul>
                 </div>
                  <div className="bg-neutral-800 border border-neutral-700 rounded-lg p-6">
@@ -279,39 +603,85 @@ const AuctionSetupPanel: React.FC = () => {
                         <button onClick={() => setAddTeamModalOpen(true)} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors flex items-center gap-1"><PlusIcon className="h-4 w-4" /> Add Teams</button>
                     </div>
                      <ul className="space-y-3 h-96 overflow-y-auto pr-2">
-                        {teams.map(team => (
-                            <li key={team._id} className="bg-neutral-900/50 p-3 rounded-md flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <img src={team.logoURL} alt={team.name} className="w-12 h-12 rounded-md object-cover"/>
-                                    <div>
-                                        <p className="font-semibold">{team.name}</p>
-                                        <p className="text-sm text-neutral-400">Budget: {team.initialBudget.toLocaleString()}</p>
-                                        <p className="text-xs text-neutral-400">Remaining: {team.currentBalance.toLocaleString()} | Players: {team.playersPurchased.length}</p>
+                        {totalTeams === 0 ? (
+                            <p className="text-center text-neutral-400 py-8">No teams registered for this tournament</p>
+                        ) : (
+                            tournamentTeams.map(team => (
+                                <li key={team._id} className="bg-neutral-900/50 p-3 rounded-md flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <img src={team.logoURL} alt={team.name} className="w-12 h-12 rounded-md object-cover"/>
+                                        <div>
+                                            <p className="font-semibold">{team.name}</p>
+                                            <p className="text-sm text-neutral-400">Budget: {team.initialBudget.toLocaleString()}</p>
+                                            <p className="text-xs text-neutral-400">Remaining: {team.currentBalance.toLocaleString()} | Players: {team.playersPurchased.length}</p>
+                                        </div>
                                     </div>
-                                </div>
-                                <button onClick={() => deleteTeam(team._id)} className="bg-red-600 hover:bg-red-500 text-white font-bold py-1 px-3 rounded-lg text-sm transition-colors">Remove</button>
-                            </li>
-                        ))}
+                                    <button onClick={() => handleRemoveTeam(team._id)} className="bg-red-600 hover:bg-red-500 text-white font-bold py-1 px-3 rounded-lg text-sm transition-colors">Remove</button>
+                                </li>
+                            ))
+                        )}
                     </ul>
                 </div>
             </div>
 
-            <Modal isOpen={isAddPlayerModalOpen} onClose={() => setAddPlayerModalOpen(false)} title="Add New Player">
-                <PlayerForm
-                    tournament={tournament}
-                    onSave={(playerData) => {
-                        addPlayer(playerData);
-                        setAddPlayerModalOpen(false);
+            <Modal isOpen={isAddPlayerModalOpen} onClose={() => setAddPlayerModalOpen(false)} title="Add Players to Tournament" size="2xl">
+                <AddPlayerFromDatabase
+                    selectedTournament={selectedTournament}
+                    allPlayers={allPlayers}
+                    tournamentPlayers={tournamentPlayers}
+                    onAdd={async (playerId) => {
+                        // Update player's tournamentId to add them to this tournament
+                        try {
+                            const response = await fetch(`/api/players/${playerId}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ tournamentId: selectedTournament._id }),
+                            });
+                            if (response.ok) {
+                                // Refresh player list without closing modal
+                                setRefreshTrigger(prev => prev + 1);
+                            } else {
+                                alert('Failed to add player to tournament');
+                            }
+                        } catch (error) {
+                            console.error('Failed to add player:', error);
+                            alert('An error occurred while adding the player');
+                        }
                     }}
-                    onClose={() => setAddPlayerModalOpen(false)}
+                    onCreateNew={() => {
+                        setAddPlayerModalOpen(false);
+                        // You can add a modal for creating new players here
+                    }}
                 />
             </Modal>
 
-            <Modal isOpen={isAddTeamModalOpen} onClose={() => setAddTeamModalOpen(false)} title="Add New Team">
-                <TeamForm
-                    onSave={(teamData) => {
-                        addTeam(teamData as Omit<Team, '_id' | 'tournamentId' | 'initialBudget' | 'currentBalance' | 'playersPurchased'>);
+            <Modal isOpen={isAddTeamModalOpen} onClose={() => setAddTeamModalOpen(false)} title="Add Teams to Tournament" size="2xl">
+                <AddTeamFromDatabase
+                    selectedTournament={selectedTournament}
+                    allTeams={allTeams}
+                    tournamentTeams={tournamentTeams}
+                    onAdd={async (teamId) => {
+                        // Update team's tournamentId to add them to this tournament
+                        try {
+                            const response = await fetch(`/api/teams/${teamId}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ tournamentId: selectedTournament._id }),
+                            });
+                            if (response.ok) {
+                                // Refresh team list without closing modal
+                                setRefreshTrigger(prev => prev + 1);
+                            } else {
+                                alert('Failed to add team to tournament');
+                            }
+                        } catch (error) {
+                            console.error('Failed to add team:', error);
+                            alert('An error occurred while adding the team');
+                        }
+                    }}
+                    onCreateNew={() => {
                         setAddTeamModalOpen(false);
+                        // You can add a modal for creating new teams here
                     }}
                 />
             </Modal>

@@ -4,10 +4,11 @@ import { teamDB } from '@/lib/db-mongodb';
 // GET /api/teams/[id] - Get team by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const team = await teamDB.getById(params.id);
+    const { id } = await params;
+    const team = await teamDB.getById(id);
     if (!team) {
       return NextResponse.json(
         { error: 'Team not found' },
@@ -26,11 +27,12 @@ export async function GET(
 // PUT /api/teams/[id] - Update team
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
-    const updatedTeam = await teamDB.update(params.id, body);
+    const updatedTeam = await teamDB.update(id, body);
     if (!updatedTeam) {
       return NextResponse.json(
         { error: 'Team not found' },
@@ -49,10 +51,11 @@ export async function PUT(
 // DELETE /api/teams/[id] - Delete team
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const success = await teamDB.delete(params.id);
+    const { id } = await params;
+    const success = await teamDB.delete(id);
     if (!success) {
       return NextResponse.json(
         { error: 'Team not found' },
