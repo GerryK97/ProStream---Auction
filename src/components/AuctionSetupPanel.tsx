@@ -468,7 +468,7 @@ const AuctionSetupPanel: React.FC = () => {
                     }
                 }
 
-                // Also fetch tournaments to ensure status is updated
+                // Fetch tournaments
                 await fetch('/api/tournaments');
             } catch (error) {
                 console.error('Failed to fetch data:', error);
@@ -487,7 +487,11 @@ const AuctionSetupPanel: React.FC = () => {
     const availablePlayersCount = totalPlayers - soldPlayersCount;
 
     const isAuctionLive = selectedTournament.status === 'Live';
+    const isAuctionStopped = selectedTournament.status === 'Stopped';
     const isAuctionCompleted = selectedTournament.status === 'Completed';
+    const isAuctionArchived = selectedTournament.status === 'Archived';
+    const canStartAuction = ['Draft', 'Setup'].includes(selectedTournament.status);
+    const canArchive = isAuctionCompleted && soldPlayersCount === totalPlayers;
 
     return (
         <div className="space-y-8 animate-fade-in">
@@ -509,30 +513,66 @@ const AuctionSetupPanel: React.FC = () => {
                         </button>
                         {isDropdownOpen && (
                             <div className="absolute z-10 mt-1 w-full bg-neutral-800 border border-neutral-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                                {tournaments.map((t) => (
-                                    <button
-                                        key={t._id}
-                                        onClick={() => {
-                                            setSelectedTournamentId(t._id);
-                                            setIsDropdownOpen(false);
-                                        }}
-                                        className={`w-full text-left p-3 hover:bg-neutral-700 transition-colors ${
-                                            t._id === selectedTournamentId ? 'bg-neutral-700 text-brand-primary' : ''
-                                        }`}
-                                    >
-                                        <p className="font-semibold">{t.name}</p>
-                                        <p className="text-xs text-neutral-400">
-                                            Budget: {t.budgetPerTeam.toLocaleString()} | Squad: {t.squadSize} | Status: {t.status}
-                                        </p>
-                                    </button>
-                                ))}
+                                {tournaments.map((t) => {
+                                    const getStatusColor = (status: string) => {
+                                        switch(status) {
+                                            case 'Live': return 'text-green-400 font-bold';
+                                            case 'Stopped': return 'text-yellow-400 font-bold';
+                                            case 'Completed': return 'text-purple-400 font-bold';
+                                            case 'Archived': return 'text-neutral-500';
+                                            default: return 'text-neutral-400';
+                                        }
+                                    };
+
+                                    return (
+                                        <button
+                                            key={t._id}
+                                            onClick={() => {
+                                                setSelectedTournamentId(t._id);
+                                                setIsDropdownOpen(false);
+                                            }}
+                                            className={`w-full text-left p-3 hover:bg-neutral-700 transition-colors ${
+                                                t._id === selectedTournamentId ? 'bg-neutral-700 text-brand-primary' : ''
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <p className="font-semibold">{t.name}</p>
+                                                <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(t.status)}`}>
+                                                    {t.status === 'Live' && '🔴 '}
+                                                    {t.status}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-neutral-400">
+                                                Budget: {t.budgetPerTeam.toLocaleString()} | Squad: {t.squadSize}
+                                            </p>
+                                        </button>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
+                    {isAuctionLive && (
+                        <div className="bg-green-600/50 text-green-200 border border-green-500 text-sm font-semibold px-3 py-1 rounded-full flex items-center gap-2 animate-pulse">
+                             <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><circle cx="10" cy="10" r="6" /></svg>
+                            LIVE
+                        </div>
+                    )}
+                    {isAuctionStopped && (
+                        <div className="bg-yellow-600/50 text-yellow-200 border border-yellow-500 text-sm font-semibold px-3 py-1 rounded-full flex items-center gap-2">
+                             <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd" /></svg>
+                            Stopped
+                        </div>
+                    )}
                     {isAuctionCompleted && (
                         <div className="bg-purple-600/50 text-purple-200 border border-purple-500 text-sm font-semibold px-3 py-1 rounded-full flex items-center gap-2">
                              <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.06 0l4.001-5.5z" clipRule="evenodd" /></svg>
                             Completed
+                        </div>
+                    )}
+                    {isAuctionArchived && (
+                        <div className="bg-neutral-600/50 text-neutral-200 border border-neutral-500 text-sm font-semibold px-3 py-1 rounded-full flex items-center gap-2">
+                             <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z" /><path fillRule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clipRule="evenodd" /></svg>
+                            Archived
                         </div>
                     )}
                 </div>
@@ -545,136 +585,157 @@ const AuctionSetupPanel: React.FC = () => {
 
                 <div className="flex items-center justify-between border-t border-neutral-700 pt-4">
                     <div className="flex items-center gap-4">
-                        <button
-                            onClick={async () => {
-                                if (isAuctionLive) {
-                                    // Stop the auction
-                                    if (!window.confirm(`Are you sure you want to stop the auction for "${selectedTournament.name}"? You can resume it later.`)) {
+                        {/* Start Auction Button - Show for Draft/Setup */}
+                        {canStartAuction && (
+                            <button
+                                onClick={async () => {
+                                    if (totalTeams < 2) {
+                                        alert('At least 2 teams are required to start the auction');
                                         return;
                                     }
-                                    try {
-                                        const response = await fetch(`/api/tournaments/${selectedTournament._id}/status`, {
-                                            method: 'PATCH',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ status: 'Setup' }),
-                                        });
-                                        if (response.ok) {
-                                            // Clear auction details from localStorage
-                                            localStorage.removeItem('liveTournamentId');
-                                            localStorage.setItem('auctionStopped', Date.now().toString());
-
-                                            // Dispatch event to notify Auction Control in the same tab
-                                            window.dispatchEvent(new Event('auctionStateChanged'));
-
-                                            setRefreshTrigger(prev => prev + 1);
-                                            alert('Auction stopped successfully!');
-                                        } else {
-                                            alert('Failed to stop auction');
-                                        }
-                                    } catch (error) {
-                                        console.error('Failed to stop auction:', error);
-                                        alert('An error occurred while stopping the auction');
+                                    if (totalPlayers < 1) {
+                                        alert('At least 1 player is required to start the auction');
+                                        return;
                                     }
-                                } else {
-                                    // Start the auction
+
                                     try {
-                                        // First, set ALL Live tournaments to Setup (to ensure only one can be Live)
-                                        const liveTournaments = tournaments.filter(t => t.status === 'Live');
-                                        if (liveTournaments.length > 0) {
-                                            console.log(`Setting ${liveTournaments.length} Live tournament(s) to Setup...`);
-                                            const results = await Promise.allSettled(
-                                                liveTournaments.map(async (t) => {
-                                                    const res = await fetch(`/api/tournaments/${t._id}/status`, {
-                                                        method: 'PATCH',
-                                                        headers: { 'Content-Type': 'application/json' },
-                                                        body: JSON.stringify({ status: 'Setup' }),
-                                                    });
-                                                    if (!res.ok) {
-                                                        console.warn(`Failed to set tournament ${t._id} (${t.name}) to Setup: ${res.status}`);
-                                                    }
-                                                    return res;
-                                                })
-                                            );
-                                            console.log('Completed setting tournaments to Setup:', results);
-                                        }
-
-                                        // Now start ONLY the selected tournament
-                                        console.log(`Starting tournament ${selectedTournament._id} (${selectedTournament.name})...`);
-                                        const response = await fetch(`/api/tournaments/${selectedTournament._id}/status`, {
-                                            method: 'PATCH',
+                                        const response = await fetch('/api/auction/start', {
+                                            method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ status: 'Live' }),
+                                            body: JSON.stringify({ tournamentId: selectedTournament._id }),
                                         });
+                                        const data = await response.json();
+
                                         if (response.ok) {
-                                            console.log(`Successfully started tournament ${selectedTournament.name}`);
-
-                                            // Send tournament details to Auction Control
-                                            localStorage.setItem('liveTournamentId', selectedTournament._id);
-                                            localStorage.setItem('auctionStarted', Date.now().toString());
-
-                                            // Dispatch event to notify Auction Control in the same tab
-                                            window.dispatchEvent(new Event('auctionStateChanged'));
-
                                             setRefreshTrigger(prev => prev + 1);
                                             alert(`Auction started for "${selectedTournament.name}"! Navigate to Auction Control to begin.`);
                                         } else {
-                                            const errorData = await response.json();
-                                            console.error('Failed to start auction:', errorData);
-                                            alert(`Failed to start auction: ${errorData.error || 'Unknown error'}`);
+                                            alert(`Failed to start auction: ${data.error}`);
                                         }
                                     } catch (error) {
                                         console.error('Failed to start auction:', error);
                                         alert('An error occurred while starting the auction');
                                     }
-                                }
-                            }}
-                            disabled={isAuctionCompleted}
-                            className={`${
-                                isAuctionLive
-                                    ? 'bg-red-600 hover:bg-red-500'
-                                    : 'bg-green-600 hover:bg-green-500'
-                            } text-white font-bold py-2 px-6 rounded-lg transition-colors disabled:bg-neutral-600 disabled:cursor-not-allowed flex items-center gap-2`}
-                        >
-                            {isAuctionLive ? (
-                                <>
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-                                    </svg>
-                                    Stop Auction
-                                </>
-                            ) : (
-                                <>
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    Start Auction
-                                </>
-                            )}
-                        </button>
-                        <button
-                            onClick={async () => {
-                                try {
-                                    const response = await fetch(`/api/tournaments/${selectedTournament._id}/status`, {
-                                        method: 'PATCH',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ status: 'Completed' }),
-                                    });
-                                    if (response.ok) {
-                                        setRefreshTrigger(prev => prev + 1);
-                                    } else {
-                                        alert('Failed to archive tournament');
+                                }}
+                                className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Start Auction
+                            </button>
+                        )}
+
+                        {/* Stop Auction Button - Show for Live */}
+                        {isAuctionLive && (
+                            <button
+                                onClick={async () => {
+                                    if (!window.confirm(`Are you sure you want to stop the auction for "${selectedTournament.name}"?`)) {
+                                        return;
                                     }
-                                } catch (error) {
-                                    console.error('Failed to archive tournament:', error);
-                                    alert('An error occurred while archiving the tournament');
-                                }
-                            }}
-                            className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-6 rounded-lg transition-colors"
-                        >
-                            Archive Tournament
-                        </button>
+
+                                    try {
+                                        const response = await fetch('/api/auction/stop', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ tournamentId: selectedTournament._id }),
+                                        });
+                                        const data = await response.json();
+
+                                        if (response.ok) {
+                                            setRefreshTrigger(prev => prev + 1);
+                                            const message = data.stats.isComplete
+                                                ? 'Auction completed! All players have been sold.'
+                                                : `Auction stopped. ${data.stats.remainingPlayers} players remaining.`;
+                                            alert(message);
+                                        } else {
+                                            alert(`Failed to stop auction: ${data.error}`);
+                                        }
+                                    } catch (error) {
+                                        console.error('Failed to stop auction:', error);
+                                        alert('An error occurred while stopping the auction');
+                                    }
+                                }}
+                                className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                                </svg>
+                                Stop Auction
+                            </button>
+                        )}
+
+                        {/* Restart Auction Button - Show for Stopped */}
+                        {isAuctionStopped && (
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        const response = await fetch('/api/auction/restart', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ tournamentId: selectedTournament._id }),
+                                        });
+                                        const data = await response.json();
+
+                                        if (response.ok) {
+                                            setRefreshTrigger(prev => prev + 1);
+                                            alert(`Auction restarted! ${data.unsoldPlayers} players remaining.`);
+                                        } else {
+                                            alert(`Failed to restart auction: ${data.error}`);
+                                        }
+                                    } catch (error) {
+                                        console.error('Failed to restart auction:', error);
+                                        alert('An error occurred while restarting the auction');
+                                    }
+                                }}
+                                className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                Restart Auction
+                            </button>
+                        )}
+
+                        {/* Archive Button - Show for Completed */}
+                        {canArchive && (
+                            <button
+                                onClick={async () => {
+                                    if (!window.confirm(`Archive "${selectedTournament.name}"? This will move it to archived tournaments.`)) {
+                                        return;
+                                    }
+
+                                    try {
+                                        const response = await fetch(`/api/tournaments/${selectedTournament._id}/archive`, {
+                                            method: 'POST',
+                                        });
+                                        const data = await response.json();
+
+                                        if (response.ok) {
+                                            setRefreshTrigger(prev => prev + 1);
+                                            alert('Tournament archived successfully!');
+                                        } else {
+                                            alert(`Failed to archive tournament: ${data.error}`);
+                                        }
+                                    } catch (error) {
+                                        console.error('Failed to archive tournament:', error);
+                                        alert('An error occurred while archiving the tournament');
+                                    }
+                                }}
+                                className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                </svg>
+                                Archive Tournament
+                            </button>
+                        )}
+
+                        {isAuctionArchived && (
+                            <div className="text-neutral-400 italic">This tournament is archived (read-only)</div>
+                        )}
                     </div>
                     <div className="flex gap-8 text-center">
                         <div>
@@ -816,6 +877,95 @@ const AuctionSetupPanel: React.FC = () => {
                     }}
                 />
             </Modal>
+
+            {/* Database Cleanup Utility */}
+            <div className="bg-neutral-800 border border-neutral-700 rounded-lg p-4 mt-8">
+                <h3 className="text-lg font-bold mb-2 text-red-400">⚠️ Database Cleanup Utilities</h3>
+                <p className="text-sm text-neutral-400 mb-4">Use these tools to reset the database for testing or starting fresh.</p>
+                <div className="flex gap-3 flex-wrap">
+                    <button
+                        onClick={async () => {
+                            if (!window.confirm('Reset ALL tournaments to Draft status? This will clear live/stopped/completed statuses.')) {
+                                return;
+                            }
+                            try {
+                                const response = await fetch('/api/database/cleanup', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ action: 'reset-all-tournaments-to-draft' }),
+                                });
+                                const data = await response.json();
+                                if (response.ok) {
+                                    setRefreshTrigger(prev => prev + 1);
+                                    alert(`Success! ${data.modifiedCount} tournaments reset to Draft.`);
+                                } else {
+                                    alert(`Error: ${data.error}`);
+                                }
+                            } catch (error) {
+                                console.error('Failed to reset tournaments:', error);
+                                alert('An error occurred');
+                            }
+                        }}
+                        className="bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"
+                    >
+                        Reset All Tournaments to Draft
+                    </button>
+                    <button
+                        onClick={async () => {
+                            if (!window.confirm('Reset ALL players to unsold and restore team budgets? This will clear all auction data.')) {
+                                return;
+                            }
+                            try {
+                                const response = await fetch('/api/database/cleanup', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ action: 'reset-all-players' }),
+                                });
+                                const data = await response.json();
+                                if (response.ok) {
+                                    setRefreshTrigger(prev => prev + 1);
+                                    alert(`Success! ${data.playersReset} players and ${data.teamsReset} teams reset.`);
+                                } else {
+                                    alert(`Error: ${data.error}`);
+                                }
+                            } catch (error) {
+                                console.error('Failed to reset players:', error);
+                                alert('An error occurred');
+                            }
+                        }}
+                        className="bg-orange-600 hover:bg-orange-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"
+                    >
+                        Reset All Players & Teams
+                    </button>
+                    <button
+                        onClick={async () => {
+                            if (!window.confirm('FULL DATABASE CLEANUP? This will:\n- Reset all tournaments to Draft\n- Reset all players to unsold\n- Restore all team budgets\n- Clear all auction states\n\nThis cannot be undone!')) {
+                                return;
+                            }
+                            try {
+                                const response = await fetch('/api/database/cleanup', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ action: 'full-cleanup' }),
+                                });
+                                const data = await response.json();
+                                if (response.ok) {
+                                    setRefreshTrigger(prev => prev + 1);
+                                    alert('Full cleanup completed! Database is now clean.');
+                                } else {
+                                    alert(`Error: ${data.error}`);
+                                }
+                            } catch (error) {
+                                console.error('Failed to cleanup database:', error);
+                                alert('An error occurred');
+                            }
+                        }}
+                        className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"
+                    >
+                        🔥 Full Database Cleanup
+                    </button>
+                </div>
+            </div>
         </div>
     );
 };

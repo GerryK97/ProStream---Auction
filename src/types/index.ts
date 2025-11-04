@@ -7,7 +7,7 @@ export interface Tournament {
   squadSize: number;
   basePricePerPlayer: number;
   logoURL?: string;
-  status: 'Draft' | 'Completed' | 'Setup' | 'Pending' | 'Live' | 'Paused';
+  status: 'Draft' | 'Completed' | 'Setup' | 'Pending' | 'Live' | 'Paused' | 'Stopped' | 'Archived';
 }
 
 export interface Team {

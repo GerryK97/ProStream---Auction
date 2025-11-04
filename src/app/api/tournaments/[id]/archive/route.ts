@@ -1,0 +1,73 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { connectToDatabase } from '@/lib/mongodb';
+import { TournamentModel } from '@/models/Tournament';
+import { PlayerModel } from '@/models/Player';
+
+// POST /api/tournaments/[id]/archive - Archive a completed tournament
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    await connectToDatabase();
+    const { id } = await params;
+
+    // Get tournament
+    const tournament = await TournamentModel.findById(id).lean();
+    if (!tournament) {
+      return NextResponse.json(
+        { error: 'Tournament not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if tournament is completed
+    if (tournament.status !== 'Completed') {
+      return NextResponse.json(
+        { error: 'Only completed tournaments can be archived' },
+        { status: 400 }
+      );
+    }
+
+    // Verify all players are sold
+    const totalPlayers = await PlayerModel.countDocuments({
+      tournamentId: id
+    });
+    const soldPlayers = await PlayerModel.countDocuments({
+      tournamentId: id,
+      isSold: true
+    });
+
+    if (soldPlayers !== totalPlayers) {
+      return NextResponse.json(
+        {
+          error: 'Cannot archive tournament with unsold players',
+          stats: {
+            totalPlayers,
+            soldPlayers,
+            remainingPlayers: totalPlayers - soldPlayers
+          }
+        },
+        { status: 400 }
+      );
+    }
+
+    // Update tournament status to Archived
+    const updatedTournament = await TournamentModel.findByIdAndUpdate(
+      id,
+      { $set: { status: 'Archived' } },
+      { new: true }
+    ).lean();
+
+    return NextResponse.json({
+      message: 'Tournament archived successfully',
+      tournament: updatedTournament
+    });
+  } catch (error) {
+    console.error('Error archiving tournament:', error);
+    return NextResponse.json(
+      { error: 'Failed to archive tournament' },
+      { status: 500 }
+    );
+  }
+}

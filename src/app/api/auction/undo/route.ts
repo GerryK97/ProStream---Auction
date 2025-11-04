@@ -17,36 +17,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get auction state
-    const auctionState = await AuctionStateModel.findOne({ tournamentId });
-    if (!auctionState) {
-      return NextResponse.json(
-        { error: 'Auction state not found for this tournament' },
-        { status: 404 }
-      );
-    }
-
-    if (!auctionState.currentPlayerId) {
-      return NextResponse.json(
-        { error: 'No player to undo' },
-        { status: 400 }
-      );
-    }
-
-    // Get the sold player
-    const player = await PlayerModel.findOne({
-      _id: auctionState.currentPlayerId,
+    // Find the last sold player in the tournament (by finding most recent sold player)
+    // We'll use finalPrice as a proxy for when it was sold (higher IDs = more recent)
+    const lastSoldPlayer = await PlayerModel.findOne({
+      tournamentId,
       isSold: true,
-    }).lean();
+    })
+      .sort({ _id: -1 }) // Get most recently inserted sold player
+      .lean();
 
-    if (!player || !player.winningTeamId || player.finalPrice === undefined) {
+    if (!lastSoldPlayer || !lastSoldPlayer.winningTeamId || lastSoldPlayer.finalPrice === undefined) {
       return NextResponse.json(
         { error: 'No sold player found to undo' },
         { status: 400 }
       );
     }
 
-    const { _id: playerId, winningTeamId, finalPrice } = player;
+    const { _id: playerId, winningTeamId, finalPrice } = lastSoldPlayer;
 
     // Unsell the player
     await PlayerModel.findOneAndUpdate(
@@ -71,23 +58,28 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Reset auction state for this player
-    const updatedState = await AuctionStateModel.findOneAndUpdate(
-      { tournamentId },
-      {
-        $set: {
-          currentBid: 0,
-          winningTeamId: null,
-          currentAuctionStatus: 'Pending',
-          history: [],
-        },
-      },
-      { new: true }
-    ).lean();
+    // Get auction state
+    const auctionState = await AuctionStateModel.findOne({ tournamentId });
+
+    // If this was the current player being auctioned, reset the auction state
+    if (auctionState && auctionState.currentPlayerId?.toString() === playerId.toString()) {
+      await AuctionStateModel.findOneAndUpdate(
+        { tournamentId },
+        {
+          $set: {
+            currentBid: 0,
+            winningTeamId: null,
+            currentAuctionStatus: 'Pending',
+            history: [],
+          },
+        }
+      );
+    }
 
     return NextResponse.json({
       message: 'Last sale undone successfully',
-      auctionState: updatedState,
+      player: lastSoldPlayer,
+      refundedAmount: finalPrice,
     });
   } catch (error) {
     console.error('Error undoing sale:', error);

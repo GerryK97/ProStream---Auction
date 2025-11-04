@@ -182,67 +182,38 @@ const AuctionControlPanel: React.FC = () => {
     const [liveTournament, setLiveTournament] = useState<Tournament | null>(null);
     const [tournaments, setTournaments] = useState<Tournament[]>([]);
 
-    // Listen for auction start/stop from localStorage
+    // Fetch active tournament from database
     useEffect(() => {
-        const loadLiveTournament = async () => {
-            const liveTournamentId = localStorage.getItem('liveTournamentId');
-
-            if (!liveTournamentId) {
-                console.log('No live tournament ID found in localStorage');
-                setLiveTournament(null);
-                return;
-            }
-
+        const loadActiveTournament = async () => {
             try {
-                console.log(`Loading tournament ${liveTournamentId} from API...`);
-                const response = await fetch(`/api/tournaments/${liveTournamentId}`);
+                console.log('Fetching active tournament from database...');
+                const response = await fetch('/api/tournaments/active');
+
                 if (response.ok) {
                     const tournament = await response.json();
-                    console.log('Loaded tournament:', tournament);
-
-                    // Verify the tournament is actually Live
-                    if (tournament.status === 'Live') {
-                        setLiveTournament(tournament);
-                    } else {
-                        console.warn(`Tournament ${tournament.name} is not Live (status: ${tournament.status}). Clearing localStorage.`);
-                        localStorage.removeItem('liveTournamentId');
-                        setLiveTournament(null);
-                    }
+                    console.log('Active tournament:', tournament);
+                    setLiveTournament(tournament);
+                } else if (response.status === 404) {
+                    console.log('No active tournament found');
+                    setLiveTournament(null);
                 } else {
-                    console.error('Failed to load tournament:', response.status);
-                    localStorage.removeItem('liveTournamentId');
+                    console.error('Failed to load active tournament:', response.status);
                     setLiveTournament(null);
                 }
             } catch (error) {
-                console.error('Failed to fetch live tournament:', error);
-                localStorage.removeItem('liveTournamentId');
+                console.error('Failed to fetch active tournament:', error);
                 setLiveTournament(null);
             }
         };
 
         // Initial load
-        loadLiveTournament();
+        loadActiveTournament();
 
-        // Listen for storage events (when auction is started/stopped in another tab or component)
-        const handleStorageChange = (e: StorageEvent) => {
-            if (e.key === 'auctionStarted' || e.key === 'auctionStopped') {
-                console.log('Detected auction state change:', e.key);
-                loadLiveTournament();
-            }
-        };
-
-        // Listen for custom event (for same-tab updates)
-        const handleAuctionChange = () => {
-            console.log('Detected auction change event');
-            loadLiveTournament();
-        };
-
-        window.addEventListener('storage', handleStorageChange);
-        window.addEventListener('auctionStateChanged', handleAuctionChange);
+        // Poll for updates every 3 seconds
+        const pollInterval = setInterval(loadActiveTournament, 3000);
 
         return () => {
-            window.removeEventListener('storage', handleStorageChange);
-            window.removeEventListener('auctionStateChanged', handleAuctionChange);
+            clearInterval(pollInterval);
         };
     }, [refreshTrigger]);
 
@@ -453,23 +424,77 @@ const AuctionControlPanel: React.FC = () => {
         }
     }
 
+    const handleRestartAuction = async () => {
+        if (!liveTournament) return;
+        try {
+            const response = await fetch('/api/auction/restart', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tournamentId: liveTournament._id }),
+            });
+            const data = await response.json();
+
+            if (response.ok) {
+                setRefreshTrigger(prev => prev + 1);
+                setError(null);
+            } else {
+                setError(data.error || 'Failed to restart auction');
+            }
+        } catch (error) {
+            console.error('Failed to restart auction:', error);
+            setError('An error occurred while restarting the auction');
+        }
+    }
+
+    const isAuctionStopped = liveTournament?.status === 'Stopped';
+
     return (
         <div className="animate-fade-in space-y-4">
-            {/* Live Auction Header */}
+            {/* Auction Header */}
             <div className="bg-neutral-800 border border-neutral-700 rounded-lg p-4">
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-green-400 font-semibold text-sm uppercase tracking-wide">Live Auction</span>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            {isAuctionStopped ? (
+                                <>
+                                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                                    <span className="text-yellow-400 font-semibold text-sm uppercase tracking-wide">Auction Stopped</span>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                                    <span className="text-green-400 font-semibold text-sm uppercase tracking-wide">Live Auction</span>
+                                </>
+                            )}
+                        </div>
+                        <div className="h-6 w-px bg-neutral-600"></div>
+                        <div>
+                            <p className="text-xl font-bold text-cyan-400">{liveTournament.name}</p>
+                            <p className="text-xs text-neutral-400">
+                                Budget: {liveTournament.budgetPerTeam.toLocaleString()} | Squad: {liveTournament.squadSize} | Base Price: {liveTournament.basePricePerPlayer.toLocaleString()}
+                            </p>
+                        </div>
                     </div>
-                    <div className="h-6 w-px bg-neutral-600"></div>
-                    <div>
-                        <p className="text-xl font-bold text-cyan-400">{liveTournament.name}</p>
-                        <p className="text-xs text-neutral-400">
-                            Budget: {liveTournament.budgetPerTeam.toLocaleString()} | Squad: {liveTournament.squadSize} | Base Price: {liveTournament.basePricePerPlayer.toLocaleString()}
+                    {isAuctionStopped && (
+                        <button
+                            onClick={handleRestartAuction}
+                            className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Restart Auction
+                        </button>
+                    )}
+                </div>
+                {isAuctionStopped && (
+                    <div className="mt-3 bg-yellow-900/30 border border-yellow-700/50 rounded-md p-3 text-yellow-200 text-sm">
+                        <p className="font-semibold mb-1">⚠️ Auction Paused</p>
+                        <p className="text-yellow-300/80">
+                            The auction has been stopped. You can view the current status or restart the auction to continue selling remaining players.
                         </p>
                     </div>
-                </div>
+                )}
             </div>
 
             {/* Auction Control Grid */}

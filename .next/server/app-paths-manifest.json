@@ -1,7 +1,5 @@
 {
   "/auction/page": "app/auction/page.js",
-  "/manage/tournaments/page": "app/manage/tournaments/page.js",
-  "/manage/teams/page": "app/manage/teams/page.js",
   "/auction/setup/page": "app/auction/setup/page.js",
-  "/manage/players/page": "app/manage/players/page.js"
+  "/manage/tournaments/page": "app/manage/tournaments/page.js"
 }
