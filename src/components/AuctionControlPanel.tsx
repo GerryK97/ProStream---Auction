@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuction } from '@/hooks/useAuction';
 import { Player, Team, Tournament } from '@/types';
 
 const formatCurrency = (amount: number) => `$${amount.toLocaleString()}`;
@@ -174,23 +173,113 @@ const TeamsAndSoldPlayersPanel: React.FC<{
 
 
 const AuctionControlPanel: React.FC = () => {
-    const {
-        tournament,
-        teams,
-        players,
-        auctionState,
-        placeBid,
-        sellCurrentPlayer,
-        undoLastAction,
-        selectSpecificPlayer,
-        resetCurrentAuction,
-        resetAllSales
-    } = useAuction();
-
     const [biddingTeamId, setBiddingTeamId] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [teams, setTeams] = useState<Team[]>([]);
+    const [players, setPlayers] = useState<Player[]>([]);
+    const [auctionState, setAuctionState] = useState<any>({ currentPlayerId: null, currentBid: 0, winningTeamId: null, currentAuctionStatus: 'Pending', history: [] });
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [liveTournament, setLiveTournament] = useState<Tournament | null>(null);
+    const [tournaments, setTournaments] = useState<Tournament[]>([]);
 
-     useEffect(() => {
+    // Listen for auction start/stop from localStorage
+    useEffect(() => {
+        const loadLiveTournament = async () => {
+            const liveTournamentId = localStorage.getItem('liveTournamentId');
+
+            if (!liveTournamentId) {
+                console.log('No live tournament ID found in localStorage');
+                setLiveTournament(null);
+                return;
+            }
+
+            try {
+                console.log(`Loading tournament ${liveTournamentId} from API...`);
+                const response = await fetch(`/api/tournaments/${liveTournamentId}`);
+                if (response.ok) {
+                    const tournament = await response.json();
+                    console.log('Loaded tournament:', tournament);
+
+                    // Verify the tournament is actually Live
+                    if (tournament.status === 'Live') {
+                        setLiveTournament(tournament);
+                    } else {
+                        console.warn(`Tournament ${tournament.name} is not Live (status: ${tournament.status}). Clearing localStorage.`);
+                        localStorage.removeItem('liveTournamentId');
+                        setLiveTournament(null);
+                    }
+                } else {
+                    console.error('Failed to load tournament:', response.status);
+                    localStorage.removeItem('liveTournamentId');
+                    setLiveTournament(null);
+                }
+            } catch (error) {
+                console.error('Failed to fetch live tournament:', error);
+                localStorage.removeItem('liveTournamentId');
+                setLiveTournament(null);
+            }
+        };
+
+        // Initial load
+        loadLiveTournament();
+
+        // Listen for storage events (when auction is started/stopped in another tab or component)
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === 'auctionStarted' || e.key === 'auctionStopped') {
+                console.log('Detected auction state change:', e.key);
+                loadLiveTournament();
+            }
+        };
+
+        // Listen for custom event (for same-tab updates)
+        const handleAuctionChange = () => {
+            console.log('Detected auction change event');
+            loadLiveTournament();
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        window.addEventListener('auctionStateChanged', handleAuctionChange);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('auctionStateChanged', handleAuctionChange);
+        };
+    }, [refreshTrigger]);
+
+    // Fetch data from API
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!liveTournament) return;
+
+            try {
+                // Fetch players
+                const playersRes = await fetch('/api/players');
+                if (playersRes.ok) {
+                    const allPlayers = await playersRes.json();
+                    setPlayers(allPlayers.filter((p: Player) => p.tournamentId === liveTournament._id));
+                }
+
+                // Fetch teams
+                const teamsRes = await fetch('/api/teams');
+                if (teamsRes.ok) {
+                    const allTeams = await teamsRes.json();
+                    setTeams(allTeams.filter((t: Team) => t.tournamentId === liveTournament._id));
+                }
+
+                // Fetch auction state
+                const auctionRes = await fetch(`/api/auction/state/${liveTournament._id}`);
+                if (auctionRes.ok) {
+                    const state = await auctionRes.json();
+                    setAuctionState(state);
+                }
+            } catch (error) {
+                console.error('Failed to fetch auction data:', error);
+            }
+        };
+        fetchData();
+    }, [liveTournament, refreshTrigger]);
+
+    useEffect(() => {
         if (error) {
             const timer = setTimeout(() => setError(null), 3000);
             return () => clearTimeout(timer);
@@ -207,56 +296,215 @@ const AuctionControlPanel: React.FC = () => {
     const soldPlayers = players.filter(p => p.isSold);
     const isAuctioning = !!currentPlayer && auctionState.currentAuctionStatus !== 'Sold';
 
-    const handleBid = (amount: number) => {
+    // Check if tournament is live
+    if (!liveTournament) {
+        return (
+            <div className="flex items-center justify-center h-[calc(100vh-12rem)] animate-fade-in">
+                <div className="bg-neutral-800 border border-neutral-700 rounded-lg p-12 max-w-2xl text-center">
+                    <div className="mb-6">
+                        <svg className="w-24 h-24 mx-auto text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                    <h2 className="text-3xl font-bold mb-4 text-neutral-200">Auction Not Started</h2>
+                    <p className="text-neutral-400 mb-6 text-lg">
+                        No live auction found. Please go to Auction Setup and click 'Start Auction' to begin.
+                    </p>
+                    <a
+                        href="/auction/setup"
+                        className="inline-block bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-8 rounded-lg transition-colors"
+                    >
+                        Go to Auction Setup
+                    </a>
+                </div>
+            </div>
+        );
+    }
+
+    const handleSelectPlayer = async (playerId: string) => {
+        if (!liveTournament) return;
+        try {
+            const response = await fetch('/api/auction/select-player', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tournamentId: liveTournament._id, playerId }),
+            });
+            if (response.ok) {
+                setRefreshTrigger(prev => prev + 1);
+            } else {
+                const data = await response.json();
+                setError(data.error || 'Failed to select player');
+            }
+        } catch (error) {
+            console.error('Failed to select player:', error);
+            setError('An error occurred while selecting the player');
+        }
+    };
+
+    const handleBid = async (amount: number) => {
         if (!biddingTeamId) {
             setError("Please select a team.");
             return;
         }
-        const err = placeBid(biddingTeamId, amount);
-        if (err) setError(err);
+        if (!liveTournament) return;
+
+        try {
+            const response = await fetch('/api/auction/bid', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tournamentId: liveTournament._id,
+                    teamId: biddingTeamId,
+                    amount,
+                }),
+            });
+            if (response.ok) {
+                setRefreshTrigger(prev => prev + 1);
+            } else {
+                const data = await response.json();
+                setError(data.error || 'Failed to place bid');
+            }
+        } catch (error) {
+            console.error('Failed to place bid:', error);
+            setError('An error occurred while placing the bid');
+        }
     };
 
-    const handleSell = () => {
-        const err = sellCurrentPlayer();
-        if (err) setError(err);
+    const handleSell = async () => {
+        if (!liveTournament) return;
+        try {
+            const response = await fetch('/api/auction/sell', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tournamentId: liveTournament._id }),
+            });
+            if (response.ok) {
+                setRefreshTrigger(prev => prev + 1);
+            } else {
+                const data = await response.json();
+                setError(data.error || 'Failed to sell player');
+            }
+        } catch (error) {
+            console.error('Failed to sell player:', error);
+            setError('An error occurred while selling the player');
+        }
+    };
+
+    const handleReset = async () => {
+        if (!liveTournament) return;
+        try {
+            const response = await fetch('/api/auction/reset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tournamentId: liveTournament._id }),
+            });
+            if (response.ok) {
+                setRefreshTrigger(prev => prev + 1);
+            } else {
+                const data = await response.json();
+                setError(data.error || 'Failed to reset auction');
+            }
+        } catch (error) {
+            console.error('Failed to reset auction:', error);
+            setError('An error occurred while resetting the auction');
+        }
+    };
+
+    const handleUndo = async () => {
+        if (!liveTournament) return;
+        try {
+            const response = await fetch('/api/auction/undo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tournamentId: liveTournament._id }),
+            });
+            if (response.ok) {
+                setRefreshTrigger(prev => prev + 1);
+            } else {
+                const data = await response.json();
+                setError(data.error || 'Failed to undo sale');
+            }
+        } catch (error) {
+            console.error('Failed to undo sale:', error);
+            setError('An error occurred while undoing the sale');
+        }
+    };
+
+    const handleCleanupAll = async () => {
+        if (!liveTournament) return;
+        if (!window.confirm("Are you sure you want to reset all sales? This cannot be undone.")) {
+            return;
+        }
+        try {
+            const response = await fetch('/api/auction/reset-all', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tournamentId: liveTournament._id }),
+            });
+            if (response.ok) {
+                setRefreshTrigger(prev => prev + 1);
+            } else {
+                const data = await response.json();
+                setError(data.error || 'Failed to reset all sales');
+            }
+        } catch (error) {
+            console.error('Failed to reset all sales:', error);
+            setError('An error occurred while resetting all sales');
+        }
     }
 
     return (
-        <div className="grid grid-cols-1 xl:grid-cols-7 gap-6 animate-fade-in relative">
-            <div className="xl:col-span-2">
-                <AvailablePlayersPanel
-                    players={players}
-                    onSelectPlayer={selectSpecificPlayer}
-                    isAuctioning={isAuctioning}
-                />
+        <div className="animate-fade-in space-y-4">
+            {/* Live Auction Header */}
+            <div className="bg-neutral-800 border border-neutral-700 rounded-lg p-4">
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                        <span className="text-green-400 font-semibold text-sm uppercase tracking-wide">Live Auction</span>
+                    </div>
+                    <div className="h-6 w-px bg-neutral-600"></div>
+                    <div>
+                        <p className="text-xl font-bold text-cyan-400">{liveTournament.name}</p>
+                        <p className="text-xs text-neutral-400">
+                            Budget: {liveTournament.budgetPerTeam.toLocaleString()} | Squad: {liveTournament.squadSize} | Base Price: {liveTournament.basePricePerPlayer.toLocaleString()}
+                        </p>
+                    </div>
+                </div>
             </div>
-            <div className="xl:col-span-3">
-                <CurrentAuctionPanel
-                    currentPlayer={currentPlayer}
-                    tournament={tournament}
-                    teams={teams}
-                    biddingTeamId={biddingTeamId}
-                    setBiddingTeamId={setBiddingTeamId}
-                    auctionState={auctionState}
-                    onBid={handleBid}
-                    onSell={handleSell}
-                    onReset={resetCurrentAuction}
-                />
+
+            {/* Auction Control Grid */}
+            <div className="grid grid-cols-1 xl:grid-cols-7 gap-6 relative">
+                <div className="xl:col-span-2">
+                    <AvailablePlayersPanel
+                        players={players}
+                        onSelectPlayer={handleSelectPlayer}
+                        isAuctioning={isAuctioning}
+                    />
+                </div>
+                <div className="xl:col-span-3">
+                    <CurrentAuctionPanel
+                        currentPlayer={currentPlayer}
+                        tournament={liveTournament}
+                        teams={teams}
+                        biddingTeamId={biddingTeamId}
+                        setBiddingTeamId={setBiddingTeamId}
+                        auctionState={auctionState}
+                        onBid={handleBid}
+                        onSell={handleSell}
+                        onReset={handleReset}
+                    />
+                </div>
+                <div className="xl:col-span-2">
+                    <TeamsAndSoldPlayersPanel
+                        teams={teams}
+                        soldPlayers={soldPlayers}
+                        winningTeamId={auctionState.winningTeamId}
+                        onUndo={handleUndo}
+                        onCleanup={handleCleanupAll}
+                    />
+                </div>
+                {error && <div className="absolute bottom-4 right-4 text-center text-red-400 bg-red-900/80 backdrop-blur-sm p-3 rounded-lg shadow-lg border border-red-700 animate-fade-in">{error}</div>}
             </div>
-            <div className="xl:col-span-2">
-                <TeamsAndSoldPlayersPanel
-                    teams={teams}
-                    soldPlayers={soldPlayers}
-                    winningTeamId={auctionState.winningTeamId}
-                    onUndo={undoLastAction}
-                    onCleanup={() => {
-                        if (window.confirm("Are you sure you want to reset all sales? This cannot be undone.")) {
-                            resetAllSales();
-                        }
-                    }}
-                />
-            </div>
-            {error && <div className="absolute bottom-4 right-4 text-center text-red-400 bg-red-900/80 backdrop-blur-sm p-3 rounded-lg shadow-lg border border-red-700 animate-fade-in">{error}</div>}
              <style jsx>{`
                 .btn-primary { @apply bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 disabled:bg-neutral-600 disabled:cursor-not-allowed; }
                 .btn-secondary { @apply bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 disabled:bg-neutral-600 disabled:cursor-not-allowed; }

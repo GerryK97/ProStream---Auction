@@ -3,7 +3,6 @@ export interface Tournament {
   _id: string;
   name: string;
   year: number;
-  company?: string;
   budgetPerTeam: number;
   squadSize: number;
   basePricePerPlayer: number;

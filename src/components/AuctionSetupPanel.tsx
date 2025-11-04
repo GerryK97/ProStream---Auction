@@ -467,6 +467,9 @@ const AuctionSetupPanel: React.FC = () => {
                         setTournamentTeams(tournamentTeamsData);
                     }
                 }
+
+                // Also fetch tournaments to ensure status is updated
+                await fetch('/api/tournaments');
             } catch (error) {
                 console.error('Failed to fetch data:', error);
             }
@@ -542,8 +545,136 @@ const AuctionSetupPanel: React.FC = () => {
 
                 <div className="flex items-center justify-between border-t border-neutral-700 pt-4">
                     <div className="flex items-center gap-4">
-                        <button onClick={() => setTournamentStatus('Live')} disabled={isAuctionLive || isAuctionCompleted} className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-6 rounded-lg transition-colors disabled:bg-neutral-600 disabled:cursor-not-allowed">Start Auction</button>
-                        <button onClick={() => setTournamentStatus('Completed')} className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">Archive Tournament</button>
+                        <button
+                            onClick={async () => {
+                                if (isAuctionLive) {
+                                    // Stop the auction
+                                    if (!window.confirm(`Are you sure you want to stop the auction for "${selectedTournament.name}"? You can resume it later.`)) {
+                                        return;
+                                    }
+                                    try {
+                                        const response = await fetch(`/api/tournaments/${selectedTournament._id}/status`, {
+                                            method: 'PATCH',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ status: 'Setup' }),
+                                        });
+                                        if (response.ok) {
+                                            // Clear auction details from localStorage
+                                            localStorage.removeItem('liveTournamentId');
+                                            localStorage.setItem('auctionStopped', Date.now().toString());
+
+                                            // Dispatch event to notify Auction Control in the same tab
+                                            window.dispatchEvent(new Event('auctionStateChanged'));
+
+                                            setRefreshTrigger(prev => prev + 1);
+                                            alert('Auction stopped successfully!');
+                                        } else {
+                                            alert('Failed to stop auction');
+                                        }
+                                    } catch (error) {
+                                        console.error('Failed to stop auction:', error);
+                                        alert('An error occurred while stopping the auction');
+                                    }
+                                } else {
+                                    // Start the auction
+                                    try {
+                                        // First, set ALL Live tournaments to Setup (to ensure only one can be Live)
+                                        const liveTournaments = tournaments.filter(t => t.status === 'Live');
+                                        if (liveTournaments.length > 0) {
+                                            console.log(`Setting ${liveTournaments.length} Live tournament(s) to Setup...`);
+                                            const results = await Promise.allSettled(
+                                                liveTournaments.map(async (t) => {
+                                                    const res = await fetch(`/api/tournaments/${t._id}/status`, {
+                                                        method: 'PATCH',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ status: 'Setup' }),
+                                                    });
+                                                    if (!res.ok) {
+                                                        console.warn(`Failed to set tournament ${t._id} (${t.name}) to Setup: ${res.status}`);
+                                                    }
+                                                    return res;
+                                                })
+                                            );
+                                            console.log('Completed setting tournaments to Setup:', results);
+                                        }
+
+                                        // Now start ONLY the selected tournament
+                                        console.log(`Starting tournament ${selectedTournament._id} (${selectedTournament.name})...`);
+                                        const response = await fetch(`/api/tournaments/${selectedTournament._id}/status`, {
+                                            method: 'PATCH',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ status: 'Live' }),
+                                        });
+                                        if (response.ok) {
+                                            console.log(`Successfully started tournament ${selectedTournament.name}`);
+
+                                            // Send tournament details to Auction Control
+                                            localStorage.setItem('liveTournamentId', selectedTournament._id);
+                                            localStorage.setItem('auctionStarted', Date.now().toString());
+
+                                            // Dispatch event to notify Auction Control in the same tab
+                                            window.dispatchEvent(new Event('auctionStateChanged'));
+
+                                            setRefreshTrigger(prev => prev + 1);
+                                            alert(`Auction started for "${selectedTournament.name}"! Navigate to Auction Control to begin.`);
+                                        } else {
+                                            const errorData = await response.json();
+                                            console.error('Failed to start auction:', errorData);
+                                            alert(`Failed to start auction: ${errorData.error || 'Unknown error'}`);
+                                        }
+                                    } catch (error) {
+                                        console.error('Failed to start auction:', error);
+                                        alert('An error occurred while starting the auction');
+                                    }
+                                }
+                            }}
+                            disabled={isAuctionCompleted}
+                            className={`${
+                                isAuctionLive
+                                    ? 'bg-red-600 hover:bg-red-500'
+                                    : 'bg-green-600 hover:bg-green-500'
+                            } text-white font-bold py-2 px-6 rounded-lg transition-colors disabled:bg-neutral-600 disabled:cursor-not-allowed flex items-center gap-2`}
+                        >
+                            {isAuctionLive ? (
+                                <>
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                                    </svg>
+                                    Stop Auction
+                                </>
+                            ) : (
+                                <>
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Start Auction
+                                </>
+                            )}
+                        </button>
+                        <button
+                            onClick={async () => {
+                                try {
+                                    const response = await fetch(`/api/tournaments/${selectedTournament._id}/status`, {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ status: 'Completed' }),
+                                    });
+                                    if (response.ok) {
+                                        setRefreshTrigger(prev => prev + 1);
+                                    } else {
+                                        alert('Failed to archive tournament');
+                                    }
+                                } catch (error) {
+                                    console.error('Failed to archive tournament:', error);
+                                    alert('An error occurred while archiving the tournament');
+                                }
+                            }}
+                            className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-6 rounded-lg transition-colors"
+                        >
+                            Archive Tournament
+                        </button>
                     </div>
                     <div className="flex gap-8 text-center">
                         <div>
