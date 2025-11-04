@@ -40,6 +40,51 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/api/teams/[id]/route.js"
+    ],
+    "/api/auction/state/[tournamentId]/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/auction/state/[tournamentId]/route.js"
+    ],
+    "/api/tournaments/[id]/status/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/tournaments/[id]/status/route.js"
+    ],
+    "/manage/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/manage/layout.js"
+    ],
+    "/manage/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/manage/page.js"
+    ],
+    "/manage/tournaments/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/manage/tournaments/page.js"
+    ],
+    "/api/tournaments/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/tournaments/route.js"
+    ],
+    "/manage/teams/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/manage/teams/page.js"
+    ],
+    "/manage/players/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/manage/players/page.js"
+    ],
+    "/api/tournaments/[id]/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/tournaments/[id]/route.js"
     ]
   }
 }
