@@ -1,4 +1,9 @@
 {
+  "/api/players/route": "app/api/players/route.js",
+  "/api/teams/route": "app/api/teams/route.js",
+  "/api/tournaments/active/route": "app/api/tournaments/active/route.js",
+  "/api/auction/state/[tournamentId]/route": "app/api/auction/state/[tournamentId]/route.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/auction/page": "app/auction/page.js",
   "/auction/setup/page": "app/auction/setup/page.js",
   "/manage/tournaments/page": "app/manage/tournaments/page.js"

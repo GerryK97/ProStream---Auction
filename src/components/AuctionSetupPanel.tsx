@@ -381,7 +381,7 @@ const TeamForm: React.FC<TeamFormProps> = ({ onSave }) => {
 }
 
 const AuctionSetupPanel: React.FC = () => {
-    const { tournament, tournaments, teams, players, setTournamentStatus, addPlayer, deletePlayer, addTeam, deleteTeam } = useAuction();
+    const { tournament, setTournamentStatus, addPlayer, deletePlayer, addTeam, deleteTeam } = useAuction();
 
     const [isAddPlayerModalOpen, setAddPlayerModalOpen] = useState(false);
     const [isAddTeamModalOpen, setAddTeamModalOpen] = useState(false);
@@ -389,6 +389,7 @@ const AuctionSetupPanel: React.FC = () => {
     const [selectedTournamentId, setSelectedTournamentId] = useState(tournament?._id || '');
     const [allPlayers, setAllPlayers] = useState<Player[]>([]);
     const [allTeams, setAllTeams] = useState<Team[]>([]);
+    const [tournaments, setTournaments] = useState<Tournament[]>([]);
     const [tournamentPlayers, setTournamentPlayers] = useState<Player[]>([]);
     const [tournamentTeams, setTournamentTeams] = useState<Team[]>([]);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -403,12 +404,9 @@ const AuctionSetupPanel: React.FC = () => {
             });
             if (response.ok) {
                 setRefreshTrigger(prev => prev + 1);
-            } else {
-                alert('Failed to remove player from tournament');
             }
         } catch (error) {
             console.error('Failed to remove player:', error);
-            alert('An error occurred while removing the player');
         }
     };
 
@@ -422,22 +420,23 @@ const AuctionSetupPanel: React.FC = () => {
             });
             if (response.ok) {
                 setRefreshTrigger(prev => prev + 1);
-            } else {
-                alert('Failed to remove team from tournament');
             }
         } catch (error) {
             console.error('Failed to remove team:', error);
-            alert('An error occurred while removing the team');
         }
     };
 
-    // Get selected tournament
-    const selectedTournament = tournaments.find(t => t._id === selectedTournamentId) || tournament;
-
-    // Fetch all players and teams from database on mount and when refresh is triggered
+    // Fetch all players, teams, and tournaments from database on mount and when refresh is triggered
     React.useEffect(() => {
         const fetchData = async () => {
             try {
+                // Fetch all tournaments
+                const tournamentsResponse = await fetch('/api/tournaments');
+                if (tournamentsResponse.ok) {
+                    const tournamentsData = await tournamentsResponse.json();
+                    setTournaments(tournamentsData);
+                }
+
                 // Fetch all players
                 const playersResponse = await fetch('/api/players');
                 if (playersResponse.ok) {
@@ -445,9 +444,9 @@ const AuctionSetupPanel: React.FC = () => {
                     setAllPlayers(allPlayersData);
 
                     // Filter players for current tournament
-                    if (selectedTournament) {
+                    if (selectedTournamentId) {
                         const tournamentPlayersData = allPlayersData.filter(
-                            (p: Player) => p.tournamentId === selectedTournament._id
+                            (p: Player) => p.tournamentId === selectedTournamentId
                         );
                         setTournamentPlayers(tournamentPlayersData);
                     }
@@ -460,22 +459,22 @@ const AuctionSetupPanel: React.FC = () => {
                     setAllTeams(allTeamsData);
 
                     // Filter teams for current tournament
-                    if (selectedTournament) {
+                    if (selectedTournamentId) {
                         const tournamentTeamsData = allTeamsData.filter(
-                            (t: Team) => t.tournamentId === selectedTournament._id
+                            (t: Team) => t.tournamentId === selectedTournamentId
                         );
                         setTournamentTeams(tournamentTeamsData);
                     }
                 }
-
-                // Fetch tournaments
-                await fetch('/api/tournaments');
             } catch (error) {
                 console.error('Failed to fetch data:', error);
             }
         };
         fetchData();
-    }, [refreshTrigger, selectedTournament?._id]);
+    }, [refreshTrigger, selectedTournamentId]);
+
+    // Get selected tournament
+    const selectedTournament = tournaments.find(t => t._id === selectedTournamentId) || tournament;
 
     if (!selectedTournament) {
         return <div className="text-center p-8 text-neutral-400">Loading tournament data...</div>;
@@ -590,11 +589,9 @@ const AuctionSetupPanel: React.FC = () => {
                             <button
                                 onClick={async () => {
                                     if (totalTeams < 2) {
-                                        alert('At least 2 teams are required to start the auction');
                                         return;
                                     }
                                     if (totalPlayers < 1) {
-                                        alert('At least 1 player is required to start the auction');
                                         return;
                                     }
 
@@ -608,13 +605,9 @@ const AuctionSetupPanel: React.FC = () => {
 
                                         if (response.ok) {
                                             setRefreshTrigger(prev => prev + 1);
-                                            alert(`Auction started for "${selectedTournament.name}"! Navigate to Auction Control to begin.`);
-                                        } else {
-                                            alert(`Failed to start auction: ${data.error}`);
                                         }
                                     } catch (error) {
                                         console.error('Failed to start auction:', error);
-                                        alert('An error occurred while starting the auction');
                                     }
                                 }}
                                 className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
@@ -631,10 +624,6 @@ const AuctionSetupPanel: React.FC = () => {
                         {isAuctionLive && (
                             <button
                                 onClick={async () => {
-                                    if (!window.confirm(`Are you sure you want to stop the auction for "${selectedTournament.name}"?`)) {
-                                        return;
-                                    }
-
                                     try {
                                         const response = await fetch('/api/auction/stop', {
                                             method: 'POST',
@@ -645,16 +634,9 @@ const AuctionSetupPanel: React.FC = () => {
 
                                         if (response.ok) {
                                             setRefreshTrigger(prev => prev + 1);
-                                            const message = data.stats.isComplete
-                                                ? 'Auction completed! All players have been sold.'
-                                                : `Auction stopped. ${data.stats.remainingPlayers} players remaining.`;
-                                            alert(message);
-                                        } else {
-                                            alert(`Failed to stop auction: ${data.error}`);
                                         }
                                     } catch (error) {
                                         console.error('Failed to stop auction:', error);
-                                        alert('An error occurred while stopping the auction');
                                     }
                                 }}
                                 className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
@@ -681,13 +663,9 @@ const AuctionSetupPanel: React.FC = () => {
 
                                         if (response.ok) {
                                             setRefreshTrigger(prev => prev + 1);
-                                            alert(`Auction restarted! ${data.unsoldPlayers} players remaining.`);
-                                        } else {
-                                            alert(`Failed to restart auction: ${data.error}`);
                                         }
                                     } catch (error) {
                                         console.error('Failed to restart auction:', error);
-                                        alert('An error occurred while restarting the auction');
                                     }
                                 }}
                                 className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
@@ -703,10 +681,6 @@ const AuctionSetupPanel: React.FC = () => {
                         {canArchive && (
                             <button
                                 onClick={async () => {
-                                    if (!window.confirm(`Archive "${selectedTournament.name}"? This will move it to archived tournaments.`)) {
-                                        return;
-                                    }
-
                                     try {
                                         const response = await fetch(`/api/tournaments/${selectedTournament._id}/archive`, {
                                             method: 'POST',
@@ -715,13 +689,9 @@ const AuctionSetupPanel: React.FC = () => {
 
                                         if (response.ok) {
                                             setRefreshTrigger(prev => prev + 1);
-                                            alert('Tournament archived successfully!');
-                                        } else {
-                                            alert(`Failed to archive tournament: ${data.error}`);
                                         }
                                     } catch (error) {
                                         console.error('Failed to archive tournament:', error);
-                                        alert('An error occurred while archiving the tournament');
                                     }
                                 }}
                                 className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
@@ -832,12 +802,9 @@ const AuctionSetupPanel: React.FC = () => {
                             if (response.ok) {
                                 // Refresh player list without closing modal
                                 setRefreshTrigger(prev => prev + 1);
-                            } else {
-                                alert('Failed to add player to tournament');
                             }
                         } catch (error) {
                             console.error('Failed to add player:', error);
-                            alert('An error occurred while adding the player');
                         }
                     }}
                     onCreateNew={() => {
@@ -863,12 +830,9 @@ const AuctionSetupPanel: React.FC = () => {
                             if (response.ok) {
                                 // Refresh team list without closing modal
                                 setRefreshTrigger(prev => prev + 1);
-                            } else {
-                                alert('Failed to add team to tournament');
                             }
                         } catch (error) {
                             console.error('Failed to add team:', error);
-                            alert('An error occurred while adding the team');
                         }
                     }}
                     onCreateNew={() => {
@@ -885,9 +849,6 @@ const AuctionSetupPanel: React.FC = () => {
                 <div className="flex gap-3 flex-wrap">
                     <button
                         onClick={async () => {
-                            if (!window.confirm('Reset ALL tournaments to Draft status? This will clear live/stopped/completed statuses.')) {
-                                return;
-                            }
                             try {
                                 const response = await fetch('/api/database/cleanup', {
                                     method: 'POST',
@@ -897,13 +858,9 @@ const AuctionSetupPanel: React.FC = () => {
                                 const data = await response.json();
                                 if (response.ok) {
                                     setRefreshTrigger(prev => prev + 1);
-                                    alert(`Success! ${data.modifiedCount} tournaments reset to Draft.`);
-                                } else {
-                                    alert(`Error: ${data.error}`);
                                 }
                             } catch (error) {
                                 console.error('Failed to reset tournaments:', error);
-                                alert('An error occurred');
                             }
                         }}
                         className="bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"
@@ -912,9 +869,6 @@ const AuctionSetupPanel: React.FC = () => {
                     </button>
                     <button
                         onClick={async () => {
-                            if (!window.confirm('Reset ALL players to unsold and restore team budgets? This will clear all auction data.')) {
-                                return;
-                            }
                             try {
                                 const response = await fetch('/api/database/cleanup', {
                                     method: 'POST',
@@ -924,13 +878,9 @@ const AuctionSetupPanel: React.FC = () => {
                                 const data = await response.json();
                                 if (response.ok) {
                                     setRefreshTrigger(prev => prev + 1);
-                                    alert(`Success! ${data.playersReset} players and ${data.teamsReset} teams reset.`);
-                                } else {
-                                    alert(`Error: ${data.error}`);
                                 }
                             } catch (error) {
                                 console.error('Failed to reset players:', error);
-                                alert('An error occurred');
                             }
                         }}
                         className="bg-orange-600 hover:bg-orange-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"
@@ -939,9 +889,6 @@ const AuctionSetupPanel: React.FC = () => {
                     </button>
                     <button
                         onClick={async () => {
-                            if (!window.confirm('FULL DATABASE CLEANUP? This will:\n- Reset all tournaments to Draft\n- Reset all players to unsold\n- Restore all team budgets\n- Clear all auction states\n\nThis cannot be undone!')) {
-                                return;
-                            }
                             try {
                                 const response = await fetch('/api/database/cleanup', {
                                     method: 'POST',
@@ -951,13 +898,9 @@ const AuctionSetupPanel: React.FC = () => {
                                 const data = await response.json();
                                 if (response.ok) {
                                     setRefreshTrigger(prev => prev + 1);
-                                    alert('Full cleanup completed! Database is now clean.');
-                                } else {
-                                    alert(`Error: ${data.error}`);
                                 }
                             } catch (error) {
                                 console.error('Failed to cleanup database:', error);
-                                alert('An error occurred');
                             }
                         }}
                         className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"

@@ -59,7 +59,7 @@ const CurrentAuctionPanel: React.FC<{
     teams: Team[];
     biddingTeamId: string;
     setBiddingTeamId: (id: string) => void;
-    auctionState: ReturnType<typeof useAuction>['auctionState'];
+    auctionState: any;
     onBid: (amount: number) => void;
     onSell: () => void;
     onReset: () => void;
@@ -186,18 +186,12 @@ const AuctionControlPanel: React.FC = () => {
     useEffect(() => {
         const loadActiveTournament = async () => {
             try {
-                console.log('Fetching active tournament from database...');
                 const response = await fetch('/api/tournaments/active');
 
                 if (response.ok) {
                     const tournament = await response.json();
-                    console.log('Active tournament:', tournament);
                     setLiveTournament(tournament);
                 } else if (response.status === 404) {
-                    console.log('No active tournament found');
-                    setLiveTournament(null);
-                } else {
-                    console.error('Failed to load active tournament:', response.status);
                     setLiveTournament(null);
                 }
             } catch (error) {
@@ -313,6 +307,7 @@ const AuctionControlPanel: React.FC = () => {
     };
 
     const handleBid = async (amount: number) => {
+        console.log('handleBid called with amount:', amount, 'team:', biddingTeamId);
         if (!biddingTeamId) {
             setError("Please select a team.");
             return;
@@ -320,6 +315,7 @@ const AuctionControlPanel: React.FC = () => {
         if (!liveTournament) return;
 
         try {
+            console.log('Sending bid request:', { tournamentId: liveTournament._id, teamId: biddingTeamId, amount });
             const response = await fetch('/api/auction/bid', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -329,10 +325,12 @@ const AuctionControlPanel: React.FC = () => {
                     amount,
                 }),
             });
+            console.log('Bid response status:', response.status);
             if (response.ok) {
                 setRefreshTrigger(prev => prev + 1);
             } else {
                 const data = await response.json();
+                console.log('Bid error:', data);
                 setError(data.error || 'Failed to place bid');
             }
         } catch (error) {
@@ -342,17 +340,24 @@ const AuctionControlPanel: React.FC = () => {
     };
 
     const handleSell = async () => {
-        if (!liveTournament) return;
+        console.log('handleSell called');
+        if (!liveTournament) {
+            console.log('No live tournament');
+            return;
+        }
         try {
+            console.log('Sending sell request for tournament:', liveTournament._id);
             const response = await fetch('/api/auction/sell', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tournamentId: liveTournament._id }),
             });
+            console.log('Sell response status:', response.status);
             if (response.ok) {
                 setRefreshTrigger(prev => prev + 1);
             } else {
                 const data = await response.json();
+                console.log('Sell error:', data);
                 setError(data.error || 'Failed to sell player');
             }
         } catch (error) {
