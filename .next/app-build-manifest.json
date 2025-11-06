@@ -6,30 +6,20 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/page.js"
-    ],
     "/auction/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/auction/layout.js"
     ],
-    "/auction/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/auction/page.js"
-    ],
-    "/api/tournaments/[id]/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/tournaments/[id]/route.js"
-    ],
     "/auction/setup/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/auction/setup/page.js"
+    ],
+    "/api/tournaments/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/tournaments/route.js"
     ],
     "/api/players/route": [
       "static/chunks/webpack.js",
@@ -41,85 +31,45 @@
       "static/chunks/main-app.js",
       "static/chunks/app/api/teams/route.js"
     ],
-    "/api/tournaments/route": [
+    "/auction/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/api/tournaments/route.js"
-    ],
-    "/api/auction/state/[tournamentId]/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/auction/state/[tournamentId]/route.js"
-    ],
-    "/api/players/[id]/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/players/[id]/route.js"
-    ],
-    "/api/teams/[id]/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/teams/[id]/route.js"
-    ],
-    "/api/auction/start/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/auction/start/route.js"
-    ],
-    "/manage/layout": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/manage/layout.js"
-    ],
-    "/manage/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/manage/page.js"
-    ],
-    "/manage/tournaments/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/manage/tournaments/page.js"
-    ],
-    "/overlays/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/overlays/page.js"
-    ],
-    "/api/database/cleanup/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/database/cleanup/route.js"
-    ],
-    "/api/auction/select-player/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/auction/select-player/route.js"
+      "static/chunks/app/auction/page.js"
     ],
     "/api/tournaments/active/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/api/tournaments/active/route.js"
     ],
-    "/api/auction/stop/route": [
+    "/api/auction/stream/[tournamentId]/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/api/auction/stop/route.js"
+      "static/chunks/app/api/auction/stream/[tournamentId]/route.js"
+    ],
+    "/overlays/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/overlays/page.js"
+    ],
+    "/overlays/[id]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/overlays/[id]/page.js"
     ],
     "/api/auction/restart/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/api/auction/restart/route.js"
     ],
-    "/api/auction/reset/route": [
+    "/api/auction/select-player/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/api/auction/reset/route.js"
+      "static/chunks/app/api/auction/select-player/route.js"
     ],
-    "/_not-found/page": [
+    "/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/_not-found/page.js"
+      "static/chunks/app/page.js"
     ]
   }
 }

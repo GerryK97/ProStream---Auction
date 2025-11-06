@@ -5,7 +5,7 @@ import { TournamentModel } from '@/models/Tournament';
 // PATCH /api/tournaments/[id]/status - Update tournament status
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectToDatabase();

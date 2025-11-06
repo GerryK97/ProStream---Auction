@@ -4,7 +4,6 @@ import { useAuction } from '../hooks/useAuction';
 import { Player, Team, Tournament, PlayerStats } from '../types';
 import Modal from './Modal';
 import { PlusIcon, DeleteIcon, LoadingSpinner, SparklesIcon, EditIcon } from './icons';
-import { generatePlayerStats } from '../services/geminiService';
 
 
 interface PlayerFormProps {
@@ -22,20 +21,10 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, tournament, playerToEdi
     const [isGenerating, setIsGenerating] = useState(false);
     const [stats, setStats] = useState<PlayerStats | null>(playerToEdit?.stats || null);
 
-    const handleGenerateStats = async () => {
-        if (!name.trim() || !tournament?.name) return;
-        setIsGenerating(true);
-        setStats(null);
-        try {
-            const generatedStats = await generatePlayerStats(tournament.name, name);
-            setStats(generatedStats);
-        } catch (error) {
-            console.error("Stat generation failed", error);
-            setStats({ matchesPlayed: 0, totalScore: 0, totalWickets: 0 });
-        } finally {
-            setIsGenerating(false);
-        }
-    };
+    // Removed: AI stats generation feature
+    // const handleGenerateStats = async () => {
+    //     ...
+    // };
     
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -70,15 +59,6 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, tournament, playerToEdi
                 <label htmlFor="name" className="block text-sm font-medium text-neutral-300">Player Name</label>
                 <input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary" />
             </div>
-            
-            {!isEditing && (
-                <div className="text-center">
-                    <button type="button" onClick={handleGenerateStats} disabled={!name.trim() || isGenerating} className="inline-flex items-center gap-2 bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
-                        {isGenerating ? <LoadingSpinner className="h-5 w-5"/> : <SparklesIcon className="h-5 w-5" />}
-                        {isGenerating ? 'Generating...' : 'Generate AI Stats'}
-                    </button>
-                </div>
-            )}
 
             <div className="bg-neutral-700/50 p-3 rounded-md space-y-3 animate-fade-in">
                  <h4 className="font-semibold text-neutral-200 mb-2 border-b border-neutral-600 pb-2">{isEditing ? 'Player Stats' : 'Player Stats (Editable)'}</h4>

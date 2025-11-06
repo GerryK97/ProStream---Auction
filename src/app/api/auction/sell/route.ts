@@ -9,11 +9,11 @@ import { PlayerModel } from '@/models/Player';
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
-    const { tournamentId } = await request.json();
+    const { tournamentId, teamId } = await request.json();
 
-    if (!tournamentId) {
+    if (!tournamentId || !teamId) {
       return NextResponse.json(
-        { error: 'Missing required field: tournamentId' },
+        { error: 'Missing required fields: tournamentId, teamId' },
         { status: 400 }
       );
     }
@@ -28,23 +28,40 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate
-    if (!auctionState.currentPlayerId || !auctionState.winningTeamId || auctionState.currentBid === 0) {
+    if (!auctionState.currentPlayerId || auctionState.currentBid === 0) {
       return NextResponse.json(
         { error: 'No valid bid to sell' },
         { status: 400 }
       );
     }
 
+    // Validate team exists
+    const team = await TeamModel.findOne({ _id: teamId }).lean();
+    if (!team) {
+      return NextResponse.json(
+        { error: 'Team not found' },
+        { status: 404 }
+      );
+    }
+
+    // Validate team has enough balance
+    if (auctionState.currentBid > (team as any).currentBalance) {
+      return NextResponse.json(
+        { error: 'Team does not have enough balance for this player' },
+        { status: 400 }
+      );
+    }
+
     // Validate tournament is live
     const tournament = await TournamentModel.findOne({ _id: tournamentId }).lean();
-    if (!tournament || tournament.status !== 'Live') {
+    if (!tournament || (tournament as any).status !== 'Live') {
       return NextResponse.json(
         { error: 'Auction is not live' },
         { status: 400 }
       );
     }
 
-    const { currentPlayerId, winningTeamId, currentBid } = auctionState;
+    const { currentPlayerId, currentBid } = auctionState;
 
     // Update player to sold
     const updatedPlayer = await PlayerModel.findOneAndUpdate(
@@ -53,7 +70,7 @@ export async function POST(request: NextRequest) {
         $set: {
           isSold: true,
           finalPrice: currentBid,
-          winningTeamId,
+          winningTeamId: teamId,
         },
       },
       { new: true }
@@ -68,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     // Update team balance and players purchased
     const updatedTeam = await TeamModel.findOneAndUpdate(
-      { _id: winningTeamId },
+      { _id: teamId },
       {
         $inc: { currentBalance: -currentBid },
         $push: { playersPurchased: currentPlayerId },

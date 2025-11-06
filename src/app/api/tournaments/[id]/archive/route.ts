@@ -6,7 +6,7 @@ import { PlayerModel } from '@/models/Player';
 // POST /api/tournaments/[id]/archive - Archive a completed tournament
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectToDatabase();
@@ -22,7 +22,7 @@ export async function POST(
     }
 
     // Check if tournament is completed
-    if (tournament.status !== 'Completed') {
+    if ((tournament as any).status !== 'Completed') {
       return NextResponse.json(
         { error: 'Only completed tournaments can be archived' },
         { status: 400 }

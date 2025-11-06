@@ -26,14 +26,14 @@ export async function POST(request: NextRequest) {
       .sort({ _id: -1 }) // Get most recently inserted sold player
       .lean();
 
-    if (!lastSoldPlayer || !lastSoldPlayer.winningTeamId || lastSoldPlayer.finalPrice === undefined) {
+    if (!lastSoldPlayer || !(lastSoldPlayer as any).winningTeamId || (lastSoldPlayer as any).finalPrice === undefined) {
       return NextResponse.json(
         { error: 'No sold player found to undo' },
         { status: 400 }
       );
     }
 
-    const { _id: playerId, winningTeamId, finalPrice } = lastSoldPlayer;
+    const { _id: playerId, winningTeamId, finalPrice } = lastSoldPlayer as any;
 
     // Unsell the player
     await PlayerModel.findOneAndUpdate(

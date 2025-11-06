@@ -5,9 +5,9 @@ import { Tournament, Team, Player } from '@/types';
 
 // Mock data storage
 let tournaments: Tournament[] = [
-  { _id: 't1', name: 'LPL 2025', year: 2025, company: 'Default Company', budgetPerTeam: 500000, squadSize: 5, basePricePerPlayer: 5000, logoURL: 'https://placehold.co/64x64/E01A36/FFFFFF/png?text=LPL', status: 'Completed' },
-  { _id: 't2', name: 'IPL 2025', year: 2025, company: 'Default Company', budgetPerTeam: 500000, squadSize: 10, basePricePerPlayer: 5000, logoURL: 'https://placehold.co/64x64/004B8D/FFFFFF/png?text=IPL', status: 'Draft' },
-  { _id: 't3', name: 'ipl 2025', year: 2025, company: 'Default Company', budgetPerTeam: 500000, squadSize: 4, basePricePerPlayer: 5000, logoURL: 'https://placehold.co/64x64/004B8D/FFFFFF/png?text=ipl', status: 'Draft' },
+  { _id: 't1', name: 'LPL 2025', year: 2025, budgetPerTeam: 500000, squadSize: 5, basePricePerPlayer: 5000, logoURL: 'https://placehold.co/64x64/E01A36/FFFFFF/png?text=LPL', status: 'Completed' },
+  { _id: 't2', name: 'IPL 2025', year: 2025, budgetPerTeam: 500000, squadSize: 10, basePricePerPlayer: 5000, logoURL: 'https://placehold.co/64x64/004B8D/FFFFFF/png?text=IPL', status: 'Draft' },
+  { _id: 't3', name: 'ipl 2025', year: 2025, budgetPerTeam: 500000, squadSize: 4, basePricePerPlayer: 5000, logoURL: 'https://placehold.co/64x64/004B8D/FFFFFF/png?text=ipl', status: 'Draft' },
 ];
 
 let teams: Team[] = [

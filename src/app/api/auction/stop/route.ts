@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if tournament is live or paused
-    if (tournament.status !== 'Live' && tournament.status !== 'Paused') {
+    if ((tournament as any).status !== 'Live' && (tournament as any).status !== 'Paused') {
       return NextResponse.json(
         { error: 'Tournament is not in Live or Paused status' },
         { status: 400 }

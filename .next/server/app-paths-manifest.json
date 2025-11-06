@@ -1,10 +1,14 @@
 {
+  "/api/tournaments/route": "app/api/tournaments/route.js",
   "/api/players/route": "app/api/players/route.js",
   "/api/teams/route": "app/api/teams/route.js",
   "/api/tournaments/active/route": "app/api/tournaments/active/route.js",
-  "/api/auction/state/[tournamentId]/route": "app/api/auction/state/[tournamentId]/route.js",
-  "/_not-found/page": "app/_not-found/page.js",
-  "/auction/page": "app/auction/page.js",
+  "/api/auction/stream/[tournamentId]/route": "app/api/auction/stream/[tournamentId]/route.js",
+  "/api/auction/restart/route": "app/api/auction/restart/route.js",
+  "/api/auction/select-player/route": "app/api/auction/select-player/route.js",
+  "/overlays/page": "app/overlays/page.js",
+  "/overlays/[id]/page": "app/overlays/[id]/page.js",
+  "/page": "app/page.js",
   "/auction/setup/page": "app/auction/setup/page.js",
-  "/manage/tournaments/page": "app/manage/tournaments/page.js"
+  "/auction/page": "app/auction/page.js"
 }

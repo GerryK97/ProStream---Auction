@@ -13,12 +13,12 @@ const generateId = (prefix: string) =>
 export const tournamentDB = {
   getAll: async (): Promise<Tournament[]> => {
     await connectToDatabase();
-    return await TournamentModel.find().lean();
+    return await TournamentModel.find().lean() as any;
   },
 
   getById: async (id: string): Promise<Tournament | null> => {
     await connectToDatabase();
-    return await TournamentModel.findOne({ _id: id }).lean();
+    return await TournamentModel.findOne({ _id: id }).lean() as any;
   },
 
   create: async (data: Omit<Tournament, '_id' | 'status'>): Promise<Tournament> => {
@@ -39,7 +39,7 @@ export const tournamentDB = {
       { $set: data },
       { new: true }
     ).lean();
-    return updated;
+    return updated as any;
   },
 
   delete: async (id: string): Promise<boolean> => {
@@ -53,12 +53,12 @@ export const tournamentDB = {
 export const teamDB = {
   getAll: async (): Promise<Team[]> => {
     await connectToDatabase();
-    return await TeamModel.find().lean();
+    return await TeamModel.find().lean() as any;
   },
 
   getById: async (id: string): Promise<Team | null> => {
     await connectToDatabase();
-    return await TeamModel.findOne({ _id: id }).lean();
+    return await TeamModel.findOne({ _id: id }).lean() as any;
   },
 
   create: async (
@@ -84,7 +84,7 @@ export const teamDB = {
       { $set: data },
       { new: true }
     ).lean();
-    return updated;
+    return updated as any;
   },
 
   delete: async (id: string): Promise<boolean> => {
@@ -98,12 +98,12 @@ export const teamDB = {
 export const playerDB = {
   getAll: async (): Promise<Player[]> => {
     await connectToDatabase();
-    return await PlayerModel.find().lean();
+    return await PlayerModel.find().lean() as any;
   },
 
   getById: async (id: string): Promise<Player | null> => {
     await connectToDatabase();
-    return await PlayerModel.findOne({ _id: id }).lean();
+    return await PlayerModel.findOne({ _id: id }).lean() as any;
   },
 
   create: async (
@@ -127,7 +127,7 @@ export const playerDB = {
       { $set: data },
       { new: true }
     ).lean();
-    return updated;
+    return updated as any;
   },
 
   delete: async (id: string): Promise<boolean> => {

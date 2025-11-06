@@ -5,7 +5,7 @@ import { AuctionStateModel } from '@/models/AuctionState';
 // GET /api/auction/state/[tournamentId] - Get auction state for a tournament
 export async function GET(
   request: NextRequest,
-  { params }: { params: { tournamentId: string } }
+  { params }: { params: Promise<{ tournamentId: string }> }
 ) {
   try {
     await connectToDatabase();

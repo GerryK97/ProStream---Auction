@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
 
-// POST /api/auction/reset - Reset the current auction (clear bids but keep player selected)
+// POST /api/auction/reset - Reset the current auction (remove player from bidding board and return to available players list)
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
@@ -31,11 +31,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Reset bids but keep current player
+    // Reset auction and remove current player (return to available players list)
     const updatedState = await AuctionStateModel.findOneAndUpdate(
       { tournamentId },
       {
         $set: {
+          currentPlayerId: null,
           currentBid: 0,
           winningTeamId: null,
           currentAuctionStatus: 'Pending',

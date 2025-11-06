@@ -218,6 +218,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../src/app/api/auction/stream/[tournamentId]/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/auction/stream/[tournamentId]">> = Specific
+  const handler = {} as typeof import("../../src/app/api/auction/stream/[tournamentId]/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../src/app/api/auction/undo/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/auction/undo">> = Specific

@@ -11,9 +11,9 @@ export async function POST(request: NextRequest) {
     await connectToDatabase();
     const { tournamentId, teamId, amount } = await request.json();
 
-    if (!tournamentId || !teamId || typeof amount !== 'number') {
+    if (!tournamentId || typeof amount !== 'number') {
       return NextResponse.json(
-        { error: 'Missing required fields: tournamentId, teamId, amount' },
+        { error: 'Missing required fields: tournamentId, amount' },
         { status: 400 }
       );
     }
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     // Validate tournament is live
     const tournament = await TournamentModel.findOne({ _id: tournamentId }).lean();
-    if (!tournament || tournament.status !== 'Live') {
+    if (!tournament || (tournament as any).status !== 'Live') {
       return NextResponse.json(
         { error: 'Auction is not live' },
         { status: 400 }
@@ -52,19 +52,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (player.isSold) {
+    if ((player as any).isSold) {
       return NextResponse.json(
         { error: 'Player is already sold' },
         { status: 400 }
-      );
-    }
-
-    // Validate team
-    const team = await TeamModel.findOne({ _id: teamId }).lean();
-    if (!team) {
-      return NextResponse.json(
-        { error: 'Team not found' },
-        { status: 404 }
       );
     }
 
@@ -76,23 +67,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (auctionState.currentBid === 0 && amount < tournament.basePricePerPlayer) {
+    if (auctionState.currentBid === 0 && amount < (tournament as any).basePricePerPlayer) {
       return NextResponse.json(
-        { error: `The first bid must be at least the base price of ${tournament.basePricePerPlayer.toLocaleString()}` },
+        { error: `The first bid must be at least the base price of ${(tournament as any).basePricePerPlayer.toLocaleString()}` },
         { status: 400 }
       );
     }
 
-    if (amount > team.currentBalance) {
-      return NextResponse.json(
-        { error: 'Team does not have enough balance for this bid' },
-        { status: 400 }
-      );
-    }
-
-    // Update auction state
+    // Update auction state (team will be assigned when selling)
     const newBid = {
-      teamId,
+      teamId: teamId || null,
       amount,
       timestamp: Date.now(),
     };
@@ -102,7 +86,6 @@ export async function POST(request: NextRequest) {
       {
         $set: {
           currentBid: amount,
-          winningTeamId: teamId,
           currentAuctionStatus: 'Bidding',
         },
         $push: { history: newBid },

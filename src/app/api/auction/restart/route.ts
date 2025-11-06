@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if tournament is stopped
-    if (tournament.status !== 'Stopped') {
+    if ((tournament as any).status !== 'Stopped') {
       return NextResponse.json(
         { error: 'Only stopped auctions can be restarted' },
         { status: 400 }
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     if (liveTournament) {
       return NextResponse.json(
-        { error: `Another tournament "${liveTournament.name}" is already live. Stop it before restarting this auction.` },
+        { error: `Another tournament "${(liveTournament as any).name}" is already live. Stop it before restarting this auction.` },
         { status: 400 }
       );
     }

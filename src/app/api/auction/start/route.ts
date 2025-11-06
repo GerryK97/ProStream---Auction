@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     if (liveTournament) {
       return NextResponse.json(
-        { error: `Another tournament "${liveTournament.name}" is already live. Stop it before starting this auction.` },
+        { error: `Another tournament "${(liveTournament as any).name}" is already live. Stop it before starting this auction.` },
         { status: 400 }
       );
     }

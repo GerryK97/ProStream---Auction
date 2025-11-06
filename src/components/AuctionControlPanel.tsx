@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Player, Team, Tournament } from '@/types';
+import { useAuctionSSE } from '@/hooks/useAuctionSSE';
 
 const formatCurrency = (amount: number) => `$${amount.toLocaleString()}`;
 
@@ -65,12 +66,27 @@ const CurrentAuctionPanel: React.FC<{
     onReset: () => void;
 }> = ({ currentPlayer, tournament, teams, biddingTeamId, setBiddingTeamId, auctionState, onBid, onSell, onReset }) => {
     const [bidAmount, setBidAmount] = useState(0);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         const base = tournament?.basePricePerPlayer || 0;
         const nextBid = auctionState.currentBid > 0 ? auctionState.currentBid + 1000 : base;
         setBidAmount(nextBid);
     }, [auctionState.currentBid, currentPlayer, tournament]);
+
+    const handleQuickBid = async (increment: number) => {
+        // If no bid yet, start from base price, otherwise add to current bid
+        const basePrice = tournament?.basePricePerPlayer || 0;
+        const startingPoint = auctionState.currentBid > 0 ? auctionState.currentBid : basePrice;
+        const newAmount = startingPoint + increment;
+
+        setIsSubmitting(true);
+        try {
+            await onBid(newAmount);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     if (!currentPlayer || !tournament) {
         return (
@@ -102,31 +118,60 @@ const CurrentAuctionPanel: React.FC<{
                     <p>Base Price: <span className="font-semibold">{formatCurrency(tournament.basePricePerPlayer)}</span></p>
                 </div>
                 <div className="bg-neutral-900/50 p-4 rounded-lg max-w-lg mx-auto">
-                    <p className="text-center mb-3 font-semibold text-neutral-300">Update Bid Amount</p>
+                    <p className="text-center mb-3 font-semibold text-neutral-300">Quick Bid (Auto Submit)</p>
                      <div className="flex justify-center gap-1 sm:gap-2 mb-3">
                         {bidIncrements.map(inc => (
-                            <button key={inc} onClick={() => setBidAmount(prev => prev + inc)} disabled={isSold} className="btn-secondary text-xs px-2 sm:px-3 py-1.5 flex-1 disabled:opacity-50">+ {inc.toLocaleString()}</button>
+                            <button
+                                key={inc}
+                                onClick={() => handleQuickBid(inc)}
+                                disabled={isSold || isSubmitting}
+                                className="btn-secondary text-xs px-2 sm:px-3 py-1.5 flex-1 disabled:opacity-50 hover:bg-green-600 transition-colors">
+                                + {inc.toLocaleString()}
+                            </button>
                         ))}
                     </div>
-                    <div className="flex gap-2">
-                        <select value={biddingTeamId} onChange={e => setBiddingTeamId(e.target.value)} disabled={isSold} className="input-field w-1/2 disabled:opacity-50">
-                            {teams.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
-                        </select>
-                         <input
+                    <div className="border-t border-neutral-700 pt-3 mt-3">
+                        <p className="text-center mb-3 text-sm text-neutral-400">Or Set Custom Amount</p>
+                        <input
                             type="number"
                             value={bidAmount}
                             onChange={(e) => setBidAmount(parseInt(e.target.value, 10) || 0)}
-                            disabled={isSold}
-                            className="input-field text-center text-lg w-1/2 disabled:opacity-50"
+                            disabled={isSold || isSubmitting}
+                            className="input-field text-center text-lg w-full disabled:opacity-50"
+                            placeholder="Enter bid amount"
                         />
+                         <button
+                            onClick={() => onBid(bidAmount)}
+                            disabled={isSold || isSubmitting}
+                            className="btn-primary w-full mt-3 disabled:opacity-50">
+                            {isSubmitting ? 'Submitting...' : 'Set Custom Bid'}
+                        </button>
                     </div>
-                     <button onClick={() => onBid(bidAmount)} disabled={isSold} className="btn-primary w-full mt-3">Set</button>
                 </div>
             </div>
             <div className="mt-6 border-t border-neutral-700 pt-4 text-center">
-                 <p className="mb-3 text-sm text-neutral-500">Auctioneer Actions</p>
+                 <p className="mb-3 text-sm text-neutral-500">Finalize Sale</p>
+                 <div className="mb-3 max-w-md mx-auto">
+                     <label className="block text-sm font-semibold text-neutral-300 mb-2">Select Winning Team</label>
+                     <select
+                         value={biddingTeamId}
+                         onChange={e => setBiddingTeamId(e.target.value)}
+                         disabled={isSold || currentBid === 0}
+                         className="w-full bg-neutral-700 text-white border-2 border-neutral-600 rounded-md px-4 py-3 text-lg font-semibold focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                         {teams.map(t => (
+                             <option key={t._id} value={t._id} className="bg-neutral-800 text-white py-2">
+                                 {t.name}
+                             </option>
+                         ))}
+                     </select>
+                 </div>
                  <div className="flex justify-center gap-4 mb-3">
-                     <button onClick={onSell} disabled={isSold || currentBid === 0} className="btn-primary py-3 px-8 disabled:opacity-50">Sell Player</button>
+                     <button
+                         onClick={onSell}
+                         disabled={isSold || currentBid === 0 || !biddingTeamId}
+                         className="btn-primary py-3 px-8 disabled:opacity-50">
+                         Sell Player
+                     </button>
                      <button onClick={onReset} disabled={isSold} className="btn-danger py-3 px-8 disabled:opacity-50">Reset</button>
                  </div>
                  <p className="font-bold text-xl tracking-widest text-yellow-400">{currentAuctionStatus === 'Bidding' ? 'BIDDING ACTIVE' : (isSold ? 'PLAYER SOLD' : 'BIDDING PENDING')}</p>
@@ -175,14 +220,10 @@ const TeamsAndSoldPlayersPanel: React.FC<{
 const AuctionControlPanel: React.FC = () => {
     const [biddingTeamId, setBiddingTeamId] = useState('');
     const [error, setError] = useState<string | null>(null);
-    const [teams, setTeams] = useState<Team[]>([]);
-    const [players, setPlayers] = useState<Player[]>([]);
-    const [auctionState, setAuctionState] = useState<any>({ currentPlayerId: null, currentBid: 0, winningTeamId: null, currentAuctionStatus: 'Pending', history: [] });
+    const [liveTournamentId, setLiveTournamentId] = useState<string | null>(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
-    const [liveTournament, setLiveTournament] = useState<Tournament | null>(null);
-    const [tournaments, setTournaments] = useState<Tournament[]>([]);
 
-    // Fetch active tournament from database
+    // Fetch active tournament ID (one-time check, then SSE handles updates)
     useEffect(() => {
         const loadActiveTournament = async () => {
             try {
@@ -190,59 +231,37 @@ const AuctionControlPanel: React.FC = () => {
 
                 if (response.ok) {
                     const tournament = await response.json();
-                    setLiveTournament(tournament);
+                    setLiveTournamentId(tournament._id);
                 } else if (response.status === 404) {
-                    setLiveTournament(null);
+                    setLiveTournamentId(null);
                 }
             } catch (error) {
                 console.error('Failed to fetch active tournament:', error);
-                setLiveTournament(null);
+                setLiveTournamentId(null);
             }
         };
 
-        // Initial load
         loadActiveTournament();
 
-        // Poll for updates every 3 seconds
-        const pollInterval = setInterval(loadActiveTournament, 3000);
-
-        return () => {
-            clearInterval(pollInterval);
-        };
+        // Re-check when actions are performed
     }, [refreshTrigger]);
 
-    // Fetch data from API
+    // Use SSE hook to get real-time auction updates
+    const {
+        tournament: liveTournament,
+        auctionState,
+        players,
+        teams,
+        isConnected,
+        error: sseError,
+    } = useAuctionSSE(liveTournamentId);
+
+    // Display SSE errors
     useEffect(() => {
-        const fetchData = async () => {
-            if (!liveTournament) return;
-
-            try {
-                // Fetch players
-                const playersRes = await fetch('/api/players');
-                if (playersRes.ok) {
-                    const allPlayers = await playersRes.json();
-                    setPlayers(allPlayers.filter((p: Player) => p.tournamentId === liveTournament._id));
-                }
-
-                // Fetch teams
-                const teamsRes = await fetch('/api/teams');
-                if (teamsRes.ok) {
-                    const allTeams = await teamsRes.json();
-                    setTeams(allTeams.filter((t: Team) => t.tournamentId === liveTournament._id));
-                }
-
-                // Fetch auction state
-                const auctionRes = await fetch(`/api/auction/state/${liveTournament._id}`);
-                if (auctionRes.ok) {
-                    const state = await auctionRes.json();
-                    setAuctionState(state);
-                }
-            } catch (error) {
-                console.error('Failed to fetch auction data:', error);
-            }
-        };
-        fetchData();
-    }, [liveTournament, refreshTrigger]);
+        if (sseError && !error) {
+            setError(sseError);
+        }
+    }, [sseError, error]);
 
     useEffect(() => {
         if (error) {
@@ -273,7 +292,7 @@ const AuctionControlPanel: React.FC = () => {
                     </div>
                     <h2 className="text-3xl font-bold mb-4 text-neutral-200">Auction Not Started</h2>
                     <p className="text-neutral-400 mb-6 text-lg">
-                        No live auction found. Please go to Auction Setup and click 'Start Auction' to begin.
+                        No live auction found. Please go to Auction Setup and click &apos;Start Auction&apos; to begin.
                     </p>
                     <a
                         href="/auction/setup"
@@ -307,21 +326,31 @@ const AuctionControlPanel: React.FC = () => {
     };
 
     const handleBid = async (amount: number) => {
-        console.log('handleBid called with amount:', amount, 'team:', biddingTeamId);
-        if (!biddingTeamId) {
-            setError("Please select a team.");
-            return;
-        }
+        console.log('handleBid called with amount:', amount);
+
         if (!liveTournament) return;
 
+        // Client-side validation
+        const currentBid = auctionState.currentBid || 0;
+        const basePrice = liveTournament.basePricePerPlayer || 0;
+
+        if (currentBid > 0 && amount <= currentBid) {
+            setError(`Bid must be greater than current bid of ${formatCurrency(currentBid)}`);
+            return;
+        }
+
+        if (currentBid === 0 && amount < basePrice) {
+            setError(`First bid must be at least base price of ${formatCurrency(basePrice)}`);
+            return;
+        }
+
         try {
-            console.log('Sending bid request:', { tournamentId: liveTournament._id, teamId: biddingTeamId, amount });
+            console.log('Sending bid request:', { tournamentId: liveTournament._id, amount });
             const response = await fetch('/api/auction/bid', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     tournamentId: liveTournament._id,
-                    teamId: biddingTeamId,
                     amount,
                 }),
             });
@@ -340,17 +369,24 @@ const AuctionControlPanel: React.FC = () => {
     };
 
     const handleSell = async () => {
-        console.log('handleSell called');
+        console.log('handleSell called with team:', biddingTeamId);
         if (!liveTournament) {
             console.log('No live tournament');
             return;
         }
+        if (!biddingTeamId) {
+            setError('Please select a winning team before selling');
+            return;
+        }
         try {
-            console.log('Sending sell request for tournament:', liveTournament._id);
+            console.log('Sending sell request for tournament:', liveTournament._id, 'team:', biddingTeamId);
             const response = await fetch('/api/auction/sell', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tournamentId: liveTournament._id }),
+                body: JSON.stringify({
+                    tournamentId: liveTournament._id,
+                    teamId: biddingTeamId,
+                }),
             });
             console.log('Sell response status:', response.status);
             if (response.ok) {
@@ -471,6 +507,13 @@ const AuctionControlPanel: React.FC = () => {
                                     <span className="text-green-400 font-semibold text-sm uppercase tracking-wide">Live Auction</span>
                                 </>
                             )}
+                        </div>
+                        <div className="h-6 w-px bg-neutral-600"></div>
+                        <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                            <span className={`text-xs ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
+                                {isConnected ? 'Connected' : 'Disconnected'}
+                            </span>
                         </div>
                         <div className="h-6 w-px bg-neutral-600"></div>
                         <div>
