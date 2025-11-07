@@ -1,10 +1,11 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import OverlayWrapper from '@/components/overlays/OverlayWrapper';
 import SoldPlayersSummaryOverlay from '@/components/overlays/SoldPlayersSummaryOverlay';
 
-export default function SoldSummaryOverlayPage() {
+function SoldSummaryContent() {
     const searchParams = useSearchParams();
     const tournamentId = searchParams.get('tournament') || undefined;
     const position = (searchParams.get('position') as 'center' | 'top' | 'bottom') || 'center';
@@ -20,5 +21,13 @@ export default function SoldSummaryOverlayPage() {
                 />
             )}
         </OverlayWrapper>
+    );
+}
+
+export default function SoldSummaryOverlayPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <SoldSummaryContent />
+        </Suspense>
     );
 }

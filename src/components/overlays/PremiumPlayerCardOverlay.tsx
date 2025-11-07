@@ -76,7 +76,7 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
                                 {currentPlayer.name}
                             </h2>
                             <div className="text-sm text-neutral-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                                {currentPlayer.role || 'Player'}
+                                Player
                             </div>
                         </div>
                     </div>

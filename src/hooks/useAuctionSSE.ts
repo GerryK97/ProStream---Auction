@@ -1,13 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Player, Team, Tournament } from '@/types';
-
-interface AuctionState {
-  currentPlayerId: string | null;
-  currentBid: number;
-  winningTeamId: string | null;
-  currentAuctionStatus: 'Pending' | 'Bidding' | 'Sold';
-  history: any[];
-}
+import { Player, Team, Tournament, AuctionState } from '@/types';
 
 interface AuctionUpdateEvent {
   type: 'auction-update' | 'connected' | 'error';
@@ -29,6 +21,7 @@ interface UseAuctionSSEReturn {
 }
 
 const defaultAuctionState: AuctionState = {
+  tournamentId: '',
   currentPlayerId: null,
   currentBid: 0,
   winningTeamId: null,

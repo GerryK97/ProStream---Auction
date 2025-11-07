@@ -1,10 +1,11 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import OverlayWrapper from '@/components/overlays/OverlayWrapper';
 import TeamCardsOverlay from '@/components/overlays/TeamCardsOverlay';
 
-export default function TeamsOverlayPage() {
+function TeamsContent() {
     const searchParams = useSearchParams();
     const tournamentId = searchParams.get('tournament') || undefined;
     const layout = (searchParams.get('layout') as 'horizontal' | 'vertical' | 'grid') || 'horizontal';
@@ -22,5 +23,13 @@ export default function TeamsOverlayPage() {
                 />
             )}
         </OverlayWrapper>
+    );
+}
+
+export default function TeamsOverlayPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <TeamsContent />
+        </Suspense>
     );
 }

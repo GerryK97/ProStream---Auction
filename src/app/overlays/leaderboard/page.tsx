@@ -1,10 +1,11 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import OverlayWrapper from '@/components/overlays/OverlayWrapper';
 import LeaderboardOverlay from '@/components/overlays/LeaderboardOverlay';
 
-export default function LeaderboardOverlayPage() {
+function LeaderboardContent() {
     const searchParams = useSearchParams();
     const tournamentId = searchParams.get('tournament') || undefined;
     const sortBy = (searchParams.get('sortBy') as 'players' | 'balance' | 'spent') || 'players';
@@ -21,5 +22,13 @@ export default function LeaderboardOverlayPage() {
                 />
             )}
         </OverlayWrapper>
+    );
+}
+
+export default function LeaderboardOverlayPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <LeaderboardContent />
+        </Suspense>
     );
 }

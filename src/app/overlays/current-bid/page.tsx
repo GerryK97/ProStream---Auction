@@ -1,10 +1,11 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import OverlayWrapper from '@/components/overlays/OverlayWrapper';
 import CurrentBidOverlay from '@/components/overlays/CurrentBidOverlay';
 
-export default function CurrentBidOverlayPage() {
+function CurrentBidContent() {
     const searchParams = useSearchParams();
     const tournamentId = searchParams.get('tournament') || undefined;
     const size = (searchParams.get('size') as 'small' | 'medium' | 'large') || 'medium';
@@ -21,5 +22,13 @@ export default function CurrentBidOverlayPage() {
                 />
             )}
         </OverlayWrapper>
+    );
+}
+
+export default function CurrentBidOverlayPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <CurrentBidContent />
+        </Suspense>
     );
 }

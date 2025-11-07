@@ -1,10 +1,11 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import OverlayWrapper from '@/components/overlays/OverlayWrapper';
 import PlayerCardOverlay from '@/components/overlays/PlayerCardOverlay';
 
-export default function PlayerCardOverlayPage() {
+function PlayerCardContent() {
     const searchParams = useSearchParams();
     const tournamentId = searchParams.get('tournament') || undefined;
     const size = (searchParams.get('size') as 'small' | 'medium' | 'large') || 'medium';
@@ -22,5 +23,13 @@ export default function PlayerCardOverlayPage() {
                 />
             )}
         </OverlayWrapper>
+    );
+}
+
+export default function PlayerCardOverlayPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <PlayerCardContent />
+        </Suspense>
     );
 }

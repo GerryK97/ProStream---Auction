@@ -30,11 +30,6 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
     const totalPlayers = players.length;
     const allPlayersSold = soldPlayers.length === totalPlayers && totalPlayers > 0;
 
-    // Hide if not all players are sold
-    if (!allPlayersSold || !tournament) {
-        return null;
-    }
-
     // Sort by highest sold value
     const sortedPlayers = [...soldPlayers].sort((a, b) => (b.finalPrice || 0) - (a.finalPrice || 0));
 
@@ -54,6 +49,11 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
 
         return () => clearInterval(timer);
     }, [totalPages]);
+
+    // Hide if not all players are sold
+    if (!allPlayersSold || !tournament) {
+        return null;
+    }
 
     // Extract player number from ID
     const getPlayerNumber = (playerId: string) => playerId.replace('p', '');
