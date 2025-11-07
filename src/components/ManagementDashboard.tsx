@@ -365,6 +365,7 @@ const TeamCreationForm: React.FC<{
     const [ownerName, setOwnerName] = useState('');
     const [logoURL, setLogoURL] = useState('');
     const [logoFile, setLogoFile] = useState<File | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
 
     useEffect(() => {
         setName(editingTeam?.name || '');
@@ -386,10 +387,34 @@ const TeamCreationForm: React.FC<{
             setLogoFile(null);
         }
     };
-    
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
-            setLogoFile(e.target.files[0]);
+            const file = e.target.files[0];
+            setLogoFile(file);
+            setIsUploading(true);
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('folder', 'prostream-auction/teams');
+
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setLogoURL(data.url);
+                } else {
+                    console.error('Upload failed');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+            } finally {
+                setIsUploading(false);
+            }
         }
     };
     
@@ -404,9 +429,13 @@ const TeamCreationForm: React.FC<{
                  <div>
                     <label className="block text-sm font-medium text-neutral-300 mb-1">Team Logo</label>
                     <div className="flex items-center justify-between bg-neutral-700 border-neutral-600 rounded-md p-2">
-                        <label htmlFor="logo-file" className="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-3 rounded-md text-sm transition-colors">Choose File</label>
-                        <input type="file" id="logo-file" className="hidden" onChange={handleFileChange} accept="image/*" />
-                        <span className="text-sm text-neutral-400 truncate ml-2">{logoFile?.name ?? 'No file chosen'}</span>
+                        <label htmlFor="logo-file" className={`cursor-pointer bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-3 rounded-md text-sm transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                            {isUploading ? 'Uploading...' : 'Choose File'}
+                        </label>
+                        <input type="file" id="logo-file" className="hidden" onChange={handleFileChange} accept="image/*" disabled={isUploading} />
+                        <span className="text-sm text-neutral-400 truncate ml-2">
+                            {isUploading ? 'Uploading to cloud...' : (logoFile?.name ?? 'No file chosen')}
+                        </span>
                     </div>
                     <p className="text-center text-xs text-neutral-500 my-1">or enter a URL below</p>
                     <FormInput id="logoUrl" label="" value={logoURL} onChange={setLogoURL} placeholder="Logo URL (optional)" />
@@ -414,7 +443,7 @@ const TeamCreationForm: React.FC<{
                                   
                  <div className="border-t border-neutral-700 pt-4 flex justify-end gap-3">
                     {isEditing && <button type="button" onClick={onCancel} className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">Cancel</button>}
-                    <button type="submit" className="bg-brand-primary hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                    <button type="submit" disabled={isUploading} className="bg-brand-primary hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                         {isEditing ? 'Save Changes' : 'Create Team'}
                     </button>
                 </div>
@@ -478,17 +507,46 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, tournament, playerToEdi
     const [name, setName] = useState(playerToEdit?.name || '');
     const [imageURL, setImageURL] = useState(playerToEdit?.imageURL || '');
     const [imageFile, setImageFile] = useState<File | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
     const [stats, setStats] = useState<PlayerStats>(playerToEdit?.stats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 });
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
             setImageFile(file);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setImageURL(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            setIsUploading(true);
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('folder', 'prostream-auction/players');
+
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setImageURL(data.url);
+                } else {
+                    console.error('Upload failed');
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setImageURL(reader.result as string);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setImageURL(reader.result as string);
+                };
+                reader.readAsDataURL(file);
+            } finally {
+                setIsUploading(false);
+            }
         }
     };
 
@@ -540,11 +598,13 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, tournament, playerToEdi
                     />
                     <div className="flex-grow">
                         <div className="flex items-center justify-between bg-neutral-700 border-neutral-600 rounded-md p-2">
-                            <label htmlFor="player-image-file-mgmt" className="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-3 rounded-md text-sm transition-colors">
-                                Choose File
+                            <label htmlFor="player-image-file-mgmt" className={`cursor-pointer bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-3 rounded-md text-sm transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                {isUploading ? 'Uploading...' : 'Choose File'}
                             </label>
-                            <input type="file" id="player-image-file-mgmt" className="hidden" onChange={handleFileChange} accept="image/*" />
-                            <span className="text-sm text-neutral-400 truncate ml-2">{imageFile?.name ?? 'No file chosen'}</span>
+                            <input type="file" id="player-image-file-mgmt" className="hidden" onChange={handleFileChange} accept="image/*" disabled={isUploading} />
+                            <span className="text-sm text-neutral-400 truncate ml-2">
+                                {isUploading ? 'Uploading to cloud...' : (imageFile?.name ?? 'No file chosen')}
+                            </span>
                         </div>
                         <p className="text-center text-xs text-neutral-500 my-1">or enter a URL below</p>
                         <input 
@@ -562,7 +622,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, tournament, playerToEdi
                 </div>
             </div>
             <div className="pt-2 text-right">
-                <button type="submit" className="inline-flex justify-center items-center gap-2 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
+                <button type="submit" disabled={isUploading} className="inline-flex justify-center items-center gap-2 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
                     {isEditing ? <EditIcon className="h-5 w-5" /> : <PlusIcon className="h-5 w-5" />}
                     {isEditing ? 'Save Changes' : 'Add Player'}
                 </button>

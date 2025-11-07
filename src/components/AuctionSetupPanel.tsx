@@ -222,17 +222,48 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, tournament, playerToEdi
     const [name, setName] = useState(playerToEdit?.name || '');
     const [imageURL, setImageURL] = useState(playerToEdit?.imageURL || '');
     const [imageFile, setImageFile] = useState<File | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
     const [stats, setStats] = useState<PlayerStats>(playerToEdit?.stats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 });
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
             setImageFile(file);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setImageURL(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            setIsUploading(true);
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('folder', 'prostream-auction/players');
+
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setImageURL(data.url);
+                } else {
+                    console.error('Upload failed');
+                    // Fallback to FileReader for preview
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setImageURL(reader.result as string);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                // Fallback to FileReader for preview
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setImageURL(reader.result as string);
+                };
+                reader.readAsDataURL(file);
+            } finally {
+                setIsUploading(false);
+            }
         }
     };
 
@@ -285,11 +316,13 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, tournament, playerToEdi
                     />
                     <div className="flex-grow">
                         <div className="flex items-center justify-between bg-neutral-700 border-neutral-600 rounded-md p-2">
-                            <label htmlFor="player-image-file-setup" className="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-3 rounded-md text-sm transition-colors">
-                                Choose File
+                            <label htmlFor="player-image-file-setup" className={`cursor-pointer bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-3 rounded-md text-sm transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                {isUploading ? 'Uploading...' : 'Choose File'}
                             </label>
-                            <input type="file" id="player-image-file-setup" className="hidden" onChange={handleFileChange} accept="image/*" />
-                            <span className="text-sm text-neutral-400 truncate ml-2">{imageFile?.name ?? 'No file chosen'}</span>
+                            <input type="file" id="player-image-file-setup" className="hidden" onChange={handleFileChange} accept="image/*" disabled={isUploading} />
+                            <span className="text-sm text-neutral-400 truncate ml-2">
+                                {isUploading ? 'Uploading to cloud...' : (imageFile?.name ?? 'No file chosen')}
+                            </span>
                         </div>
                         <p className="text-center text-xs text-neutral-500 my-1">or enter a URL below</p>
                         <input
@@ -307,7 +340,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, tournament, playerToEdi
                 </div>
             </div>
             <div className="pt-2 text-right">
-                <button type="submit" className="inline-flex justify-center items-center gap-2 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
+                <button type="submit" disabled={isUploading} className="inline-flex justify-center items-center gap-2 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
                     {isEditing ? <EditIcon className="h-5 w-5" /> : <PlusIcon className="h-5 w-5" />}
                     {isEditing ? 'Save Changes' : 'Add Player'}
                 </button>
@@ -325,16 +358,47 @@ const TeamForm: React.FC<TeamFormProps> = ({ onSave }) => {
     const [ownerName, setOwnerName] = useState('');
     const [logoURL, setLogoURL] = useState('');
     const [logoFile, setLogoFile] = useState<File | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
             setLogoFile(file);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setLogoURL(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            setIsUploading(true);
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('folder', 'prostream-auction/teams');
+
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setLogoURL(data.url);
+                } else {
+                    console.error('Upload failed');
+                    // Fallback to FileReader for preview
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setLogoURL(reader.result as string);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                // Fallback to FileReader for preview
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setLogoURL(reader.result as string);
+                };
+                reader.readAsDataURL(file);
+            } finally {
+                setIsUploading(false);
+            }
         }
     };
 
@@ -363,15 +427,19 @@ const TeamForm: React.FC<TeamFormProps> = ({ onSave }) => {
             <div>
                  <label className="block text-sm font-medium text-neutral-300 mb-1">Team Logo</label>
                 <div className="flex items-center justify-between bg-neutral-700 border-neutral-600 rounded-md p-2">
-                    <label htmlFor="logo-file-auction-setup" className="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-3 rounded-md text-sm transition-colors">Choose File</label>
-                    <input type="file" id="logo-file-auction-setup" className="hidden" onChange={handleFileChange} accept="image/*" />
-                    <span className="text-sm text-neutral-400 truncate ml-2">{logoFile?.name ?? 'No file chosen'}</span>
+                    <label htmlFor="logo-file-auction-setup" className={`cursor-pointer bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-3 rounded-md text-sm transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        {isUploading ? 'Uploading...' : 'Choose File'}
+                    </label>
+                    <input type="file" id="logo-file-auction-setup" className="hidden" onChange={handleFileChange} accept="image/*" disabled={isUploading} />
+                    <span className="text-sm text-neutral-400 truncate ml-2">
+                        {isUploading ? 'Uploading to cloud...' : (logoFile?.name ?? 'No file chosen')}
+                    </span>
                 </div>
                 <p className="text-center text-xs text-neutral-500 my-1">or enter a URL below</p>
                 <input type="text" id="logoURL" value={logoURL} onChange={(e) => setLogoURL(e.target.value)} placeholder="Logo URL (optional)" className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary" />
             </div>
             <div className="pt-2 text-right">
-                <button type="submit" className="inline-flex justify-center items-center gap-2 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
+                <button type="submit" disabled={isUploading} className="inline-flex justify-center items-center gap-2 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
                     <PlusIcon className="h-5 w-5" />
                     Add Team
                 </button>
