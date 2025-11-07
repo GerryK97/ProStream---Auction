@@ -407,11 +407,15 @@ const TeamCreationForm: React.FC<{
                 if (response.ok) {
                     const data = await response.json();
                     setLogoURL(data.url);
+                    alert('✅ Team logo uploaded successfully to Cloudinary!');
                 } else {
-                    console.error('Upload failed');
+                    const errorData = await response.json();
+                    console.error('Upload failed:', errorData);
+                    alert(`❌ Upload failed: ${errorData.error || 'Unknown error'}`);
                 }
             } catch (error) {
                 console.error('Upload error:', error);
+                alert('❌ Upload error: Could not connect to upload service. Please check your internet connection.');
             } finally {
                 setIsUploading(false);
             }

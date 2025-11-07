@@ -379,8 +379,11 @@ const TeamForm: React.FC<TeamFormProps> = ({ onSave }) => {
                 if (response.ok) {
                     const data = await response.json();
                     setLogoURL(data.url);
+                    console.log('✅ Team logo uploaded to Cloudinary:', data.url);
                 } else {
-                    console.error('Upload failed');
+                    const errorData = await response.json();
+                    console.error('Upload failed:', errorData);
+                    alert(`❌ Cloudinary upload failed: ${errorData.error || 'Unknown error'}. Using local preview instead.`);
                     // Fallback to FileReader for preview
                     const reader = new FileReader();
                     reader.onloadend = () => {
@@ -390,6 +393,7 @@ const TeamForm: React.FC<TeamFormProps> = ({ onSave }) => {
                 }
             } catch (error) {
                 console.error('Upload error:', error);
+                alert('❌ Could not upload to Cloudinary. Using local preview instead. Please check Cloudinary credentials.');
                 // Fallback to FileReader for preview
                 const reader = new FileReader();
                 reader.onloadend = () => {
