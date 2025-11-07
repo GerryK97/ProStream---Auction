@@ -2,8 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Custom Colors for Premium Card */
+  --color-custom-gray-100: #f9f9f9;
+  --color-custom-gray-150: #f2f2f2;
+  --color-custom-gray-200: #e1e1e1;
+  --color-custom-gray-400: #97a2c6;
+  --color-custom-gray: #7b8294;
+  --color-custom-gray-600: #3a4662;
+  --color-custom-gray-700: #252e44;
+  --color-custom-gray-800: #1f2638;
+  --color-custom-gray-900: #252831;
+
+  --color-custom-orange: #ff5411;
+  --color-custom-yellow: #ffcc00;
+
+  --color-team-golden-primary: #ffba00;
+}
+
 body {
-  background: linear-gradient(to bottom right, #111827, #1f2937);
+  background: transparent;
   color: white;
   min-height: 100vh;
 }

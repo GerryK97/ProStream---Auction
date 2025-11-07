@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Player, Team, Tournament } from '@/types';
 import { useAuctionSSE } from '@/hooks/useAuctionSSE';
 
-const formatCurrency = (amount: number) => `$${amount.toLocaleString()}`;
+const formatCurrency = (amount: number) => amount.toLocaleString();
 
 const AvailablePlayersPanel: React.FC<{
     players: Player[];
@@ -183,33 +183,96 @@ const CurrentAuctionPanel: React.FC<{
 const TeamsAndSoldPlayersPanel: React.FC<{
     teams: Team[];
     soldPlayers: Player[];
+    tournament: Tournament | null;
     winningTeamId: string | null;
     onUndo: () => void;
     onCleanup: () => void;
-}> = ({ teams, soldPlayers, winningTeamId, onUndo, onCleanup }) => {
+}> = ({ teams, soldPlayers, tournament, winningTeamId, onUndo, onCleanup }) => {
+    const calculateMaxBid = (team: Team) => {
+        if (!tournament) return 0;
+
+        const squadSize = tournament.squadSize;
+        const basePrice = tournament.basePricePerPlayer;
+        const playersPurchased = team.playersPurchased.length;
+        const remainingPlayers = squadSize - playersPurchased;
+
+        // If squad is complete or it's the last player, team can spend all remaining balance
+        if (remainingPlayers <= 1) {
+            return team.currentBalance;
+        }
+
+        // Otherwise, reserve base price for remaining players
+        const reservedAmount = (remainingPlayers - 1) * basePrice;
+        const maxBid = team.currentBalance - reservedAmount;
+
+        // Return 0 if insufficient funds
+        return Math.max(0, maxBid);
+    };
+
     return (
         <div className="space-y-6 h-full flex flex-col">
             <div className="bg-neutral-800 rounded-lg p-4 border border-neutral-700 flex-grow h-1/2 overflow-hidden flex flex-col">
                  <h3 className="font-bold text-lg mb-3">Teams</h3>
                  <ul className="space-y-2 overflow-y-auto pr-2 flex-grow">
-                     {teams.map(team => (
-                         <li key={team._id} className={`p-2 rounded-md flex items-center gap-3 relative overflow-hidden transition-all duration-300 ${winningTeamId === team._id ? 'bg-neutral-700' : 'bg-neutral-700/40'}`}>
-                            {winningTeamId === team._id && <div className="absolute left-0 top-0 h-full w-1.5 bg-red-500 animate-pulse"></div>}
-                            <img src={team.logoURL} alt={team.name} className="w-10 h-10 rounded-full object-cover"/>
-                            <div>
-                                <p className="font-semibold">{team.name}</p>
-                                <p className="text-xs text-neutral-300">Budget: <span className="text-green-400">{formatCurrency(team.currentBalance)}</span></p>
-                                <p className="text-xs text-neutral-300">Max Bid: <span className="text-red-400">{formatCurrency(team.currentBalance)}</span></p>
-                            </div>
-                         </li>
-                     ))}
+                     {teams.map(team => {
+                         const maxBid = calculateMaxBid(team);
+                         const playersPurchased = team.playersPurchased.length;
+                         const squadSize = tournament?.squadSize || 0;
+                         const remainingPlayers = squadSize - playersPurchased;
+                         const hasInsufficientFunds = maxBid <= 0 && remainingPlayers > 0;
+
+                         return (
+                             <li key={team._id} className={`p-2 rounded-md flex items-center gap-3 relative overflow-hidden transition-all duration-300 ${winningTeamId === team._id ? 'bg-neutral-700' : 'bg-neutral-700/40'}`}>
+                                {winningTeamId === team._id && <div className="absolute left-0 top-0 h-full w-1.5 bg-red-500 animate-pulse"></div>}
+                                <img src={team.logoURL} alt={team.name} className="w-10 h-10 rounded-full object-cover"/>
+                                <div className="flex-grow">
+                                    <div className="flex items-center gap-2">
+                                        <p className="font-semibold">{team.name}</p>
+                                        {hasInsufficientFunds && (
+                                            <span className="text-red-500 text-xs" title="Insufficient funds for remaining players">⚠️</span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-neutral-300">Budget: <span className="text-green-400">{formatCurrency(team.currentBalance)}</span></p>
+                                    <p className="text-xs text-neutral-300">
+                                        Max Bid: <span className={hasInsufficientFunds ? "text-red-500 font-semibold" : "text-cyan-400"}>{formatCurrency(maxBid)}</span>
+                                    </p>
+                                    <p className="text-xs text-neutral-500">{playersPurchased}/{squadSize} players</p>
+                                </div>
+                             </li>
+                         );
+                     })}
                  </ul>
             </div>
-             <div className="bg-neutral-800 rounded-lg p-4 border border-neutral-700">
+             <div className="bg-neutral-800 rounded-lg p-4 border border-neutral-700 flex-grow h-1/2 overflow-hidden flex flex-col">
                 <h3 className="font-bold text-lg mb-3">Sold Players ({soldPlayers.length})</h3>
-                <div className="flex gap-2">
-                    <button onClick={onUndo} className="btn-secondary w-full text-sm">Undo Last Sale</button>
-                    <button onClick={onCleanup} className="btn-danger w-full text-sm">Cleanup All</button>
+                <div className="flex gap-2 mb-3">
+                    <button onClick={onUndo} className="btn-secondary w-full text-sm py-1.5">Undo Last Sale</button>
+                    <button onClick={onCleanup} className="btn-danger w-full text-sm py-1.5">Cleanup All</button>
+                </div>
+                <div className="overflow-y-auto pr-2 flex-grow">
+                    {soldPlayers.length === 0 ? (
+                        <p className="text-center text-neutral-400 py-8 text-sm">No players sold yet</p>
+                    ) : (
+                        <ul className="space-y-2">
+                            {soldPlayers.map(player => {
+                                const playerTeam = teams.find(t => t._id === player.winningTeamId);
+                                return (
+                                    <li key={player._id} className="bg-neutral-700/50 p-2 rounded-md">
+                                        <div className="flex items-center gap-2">
+                                            <img src={player.imageURL} alt={player.name} className="w-10 h-10 rounded-full object-cover"/>
+                                            <div className="flex-grow min-w-0">
+                                                <p className="font-semibold text-sm truncate">{player.name}</p>
+                                                <p className="text-xs text-green-400">{formatCurrency(player.finalPrice || 0)}</p>
+                                                <p className="text-xs text-neutral-400 truncate">
+                                                    {playerTeam ? playerTeam.name : 'Unknown Team'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    )}
                 </div>
              </div>
         </div>
@@ -571,6 +634,7 @@ const AuctionControlPanel: React.FC = () => {
                     <TeamsAndSoldPlayersPanel
                         teams={teams}
                         soldPlayers={soldPlayers}
+                        tournament={liveTournament}
                         winningTeamId={auctionState.winningTeamId}
                         onUndo={handleUndo}
                         onCleanup={handleCleanupAll}
