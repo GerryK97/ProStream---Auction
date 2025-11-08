@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Player, Team, Tournament } from '@/types';
 import { useAuctionSSE } from '@/hooks/useAuctionSSE';
+import { imageOptimizers } from '@/lib/imageOptimization';
 
 const formatCurrency = (amount: number) => amount.toLocaleString();
 
@@ -108,7 +109,12 @@ const CurrentAuctionPanel: React.FC<{
                     <p className="text-neutral-400">Batsman</p>
                 </div>
                 <div className="flex justify-center items-center gap-6 mb-4">
-                    <img src={currentPlayer.imageURL} alt={currentPlayer.name} className="w-40 h-40 rounded-lg object-cover border-4 border-neutral-700 shadow-lg" />
+                    <img
+                        src={imageOptimizers.playerCard(currentPlayer.imageURL)}
+                        alt={currentPlayer.name}
+                        className="w-40 h-40 rounded-lg object-cover border-4 border-neutral-700 shadow-lg"
+                        loading="lazy"
+                    />
                     <div>
                         <p className="text-neutral-400 text-sm">Current Bid</p>
                         <p className="text-6xl font-bold text-green-400">{formatCurrency(currentBid)}</p>
@@ -224,7 +230,12 @@ const TeamsAndSoldPlayersPanel: React.FC<{
                          return (
                              <li key={team._id} className={`p-2 rounded-md flex items-center gap-3 relative overflow-hidden transition-all duration-300 ${winningTeamId === team._id ? 'bg-neutral-700' : 'bg-neutral-700/40'}`}>
                                 {winningTeamId === team._id && <div className="absolute left-0 top-0 h-full w-1.5 bg-red-500 animate-pulse"></div>}
-                                <img src={team.logoURL} alt={team.name} className="w-10 h-10 rounded-full object-cover"/>
+                                <img
+                                    src={imageOptimizers.teamThumbnail(team.logoURL)}
+                                    alt={team.name}
+                                    className="w-10 h-10 rounded-full object-cover"
+                                    loading="lazy"
+                                />
                                 <div className="flex-grow">
                                     <div className="flex items-center gap-2">
                                         <p className="font-semibold">{team.name}</p>
@@ -259,7 +270,12 @@ const TeamsAndSoldPlayersPanel: React.FC<{
                                 return (
                                     <li key={player._id} className="bg-neutral-700/50 p-2 rounded-md">
                                         <div className="flex items-center gap-2">
-                                            <img src={player.imageURL} alt={player.name} className="w-10 h-10 rounded-full object-cover"/>
+                                            <img
+                                                src={imageOptimizers.playerThumbnail(player.imageURL)}
+                                                alt={player.name}
+                                                className="w-10 h-10 rounded-full object-cover"
+                                                loading="lazy"
+                                            />
                                             <div className="flex-grow min-w-0">
                                                 <p className="font-semibold text-sm truncate">{player.name}</p>
                                                 <p className="text-xs text-green-400">{formatCurrency(player.finalPrice || 0)}</p>

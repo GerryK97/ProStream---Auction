@@ -5,6 +5,7 @@ import { useAuction } from '@/hooks/useAuction';
 import { Player, Team, Tournament, PlayerStats } from '@/types';
 import Modal from './Modal';
 import { PlusIcon, DeleteIcon, EditIcon } from './icons';
+import { imageOptimizers } from '@/lib/imageOptimization';
 
 
 interface AddPlayerFromDatabaseProps {
@@ -177,9 +178,10 @@ const AddTeamFromDatabase: React.FC<AddTeamFromDatabaseProps> = ({
                         >
                             <div className="flex items-center gap-3">
                                 <img
-                                    src={team.logoURL}
+                                    src={imageOptimizers.teamThumbnail(team.logoURL)}
                                     alt={team.name}
                                     className="w-12 h-12 rounded-md object-cover"
+                                    loading="lazy"
                                 />
                                 <div>
                                     <p className="font-semibold">{team.name}</p>
@@ -816,7 +818,12 @@ const AuctionSetupPanel: React.FC = () => {
                             tournamentPlayers.map(player => (
                                 <li key={player._id} className="bg-neutral-900/50 p-3 rounded-md flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <img src={player.imageURL} alt={player.name} className="w-12 h-12 rounded-full object-cover"/>
+                                        <img
+                                            src={imageOptimizers.playerThumbnail(player.imageURL)}
+                                            alt={player.name}
+                                            className="w-12 h-12 rounded-full object-cover"
+                                            loading="lazy"
+                                        />
                                         <div>
                                             <p className="font-semibold">{player.name}</p>
                                             <p className="text-sm text-neutral-400">Matches: {player.stats.matchesPlayed}</p>
@@ -843,7 +850,12 @@ const AuctionSetupPanel: React.FC = () => {
                             tournamentTeams.map(team => (
                                 <li key={team._id} className="bg-neutral-900/50 p-3 rounded-md flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <img src={team.logoURL} alt={team.name} className="w-12 h-12 rounded-md object-cover"/>
+                                        <img
+                                            src={imageOptimizers.teamThumbnail(team.logoURL)}
+                                            alt={team.name}
+                                            className="w-12 h-12 rounded-md object-cover"
+                                            loading="lazy"
+                                        />
                                         <div>
                                             <p className="font-semibold">{team.name}</p>
                                             <p className="text-sm text-neutral-400">Budget: {team.initialBudget.toLocaleString()}</p>

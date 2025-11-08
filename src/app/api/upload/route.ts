@@ -35,16 +35,13 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes);
 
     // Upload to Cloudinary using upload_stream
+    // No transformations at upload time - we'll apply them dynamically when fetching
     const uploadResult = await new Promise<any>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder,
           resource_type: 'auto',
-          transformation: [
-            { width: 800, height: 800, crop: 'limit' },
-            { quality: 'auto' },
-            { fetch_format: 'auto' }
-          ]
+          // Store original resolution, transform on-the-fly when displaying
         },
         (error, result) => {
           if (error) reject(error);

@@ -5,6 +5,7 @@ import { useAuction } from '@/hooks/useAuction';
 import { Player, Team, Tournament, PlayerStats } from '@/types';
 import { PlusIcon, EditIcon, DeleteIcon, LoadingSpinner, CheckCircleIcon, DocumentTextIcon } from './icons';
 import Modal from './Modal';
+import { imageOptimizers } from '@/lib/imageOptimization';
 
 type ManagementView = 'tournaments' | 'teams' | 'players';
 
@@ -159,7 +160,12 @@ const TournamentManagementPanel: React.FC<{
                         {tournaments.map(t => (
                             <li key={t._id} className="bg-neutral-900/50 p-3 rounded-lg flex items-center justify-between gap-4">
                                 <div className="flex items-center gap-4">
-                                    <img src={t.logoURL || `https://placehold.co/64x64/4B5563/FFFFFF/png?text=${t.name.charAt(0)}`} alt={`${t.name} logo`} className="w-12 h-12 rounded-md object-cover bg-neutral-700" />
+                                    <img
+                                        src={t.logoURL ? imageOptimizers.teamThumbnail(t.logoURL) : `https://placehold.co/64x64/4B5563/FFFFFF/png?text=${t.name.charAt(0)}`}
+                                        alt={`${t.name} logo`}
+                                        className="w-12 h-12 rounded-md object-cover bg-neutral-700"
+                                        loading="lazy"
+                                    />
                                     <div>
                                         <div className="flex items-center gap-3">
                                             <h4 className="font-bold text-lg">{t.name}</h4>
@@ -322,7 +328,12 @@ const TeamManagementPanel: React.FC<{
                         {teams.map(team => (
                              <li key={team._id} className="bg-neutral-900/50 p-3 rounded-lg flex items-center justify-between gap-4 hover:bg-neutral-700/50 transition-colors">
                                 <div className="flex items-center gap-4">
-                                    <img src={team.logoURL} alt={`${team.name} logo`} className="w-12 h-12 rounded-md object-cover bg-neutral-700" />
+                                    <img
+                                        src={imageOptimizers.teamThumbnail(team.logoURL)}
+                                        alt={`${team.name} logo`}
+                                        className="w-12 h-12 rounded-md object-cover bg-neutral-700"
+                                        loading="lazy"
+                                    />
                                     <div>
                                         <h4 className="font-bold text-lg">{team.name}</h4>
                                         <p className="text-sm text-neutral-400">Owner: {team.ownerName}</p>
@@ -480,7 +491,12 @@ const PlayersSection: React.FC<{ players: Player[]; onAddPlayer: () => void; onE
                         {players.map((player, idx) => (
                             <tr key={player._id} className={`border-t border-neutral-700 ${idx % 2 === 0 ? 'bg-neutral-800' : 'bg-neutral-800/50'}`}>
                                 <td className="p-4 flex items-center gap-4">
-                                    <img src={player.imageURL} alt={player.name} className="w-10 h-10 rounded-full object-cover"/>
+                                    <img
+                                        src={imageOptimizers.playerThumbnail(player.imageURL)}
+                                        alt={player.name}
+                                        className="w-10 h-10 rounded-full object-cover"
+                                        loading="lazy"
+                                    />
                                     <span className="font-medium">{player.name}</span>
                                 </td>
                                 <td className="p-4 text-neutral-300">{player.stats.matchesPlayed}</td>
