@@ -6,6 +6,7 @@ import { Player, Team, Tournament, PlayerStats } from '@/types';
 import Modal from './Modal';
 import { PlusIcon, DeleteIcon, EditIcon } from './icons';
 import { imageOptimizers } from '@/lib/imageOptimization';
+import ImageUpload from './ImageUpload';
 
 
 interface AddPlayerFromDatabaseProps {
@@ -223,51 +224,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, tournament, playerToEdi
     const isEditing = !!playerToEdit;
     const [name, setName] = useState(playerToEdit?.name || '');
     const [imageURL, setImageURL] = useState(playerToEdit?.imageURL || '');
-    const [imageFile, setImageFile] = useState<File | null>(null);
-    const [isUploading, setIsUploading] = useState(false);
     const [stats, setStats] = useState<PlayerStats>(playerToEdit?.stats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 });
-
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            setImageFile(file);
-            setIsUploading(true);
-
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('folder', 'prostream-auction/players');
-
-                const response = await fetch('/api/upload', {
-                    method: 'POST',
-                    body: formData,
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    setImageURL(data.url);
-                } else {
-                    console.error('Upload failed');
-                    // Fallback to FileReader for preview
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                        setImageURL(reader.result as string);
-                    };
-                    reader.readAsDataURL(file);
-                }
-            } catch (error) {
-                console.error('Upload error:', error);
-                // Fallback to FileReader for preview
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    setImageURL(reader.result as string);
-                };
-                reader.readAsDataURL(file);
-            } finally {
-                setIsUploading(false);
-            }
-        }
-    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -308,41 +265,18 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, tournament, playerToEdi
                  </div>
             </div>
 
-             <div>
-                <label className="block text-sm font-medium text-neutral-300 mb-1">Player Profile Image</label>
-                 <div className="flex items-center gap-4">
-                    <img
-                        src={imageURL || 'https://placehold.co/100x100/374151/F3F4F6/png?text=No+Image'}
-                        alt="Player Preview"
-                        className="w-16 h-16 rounded-full object-cover bg-neutral-700"
-                    />
-                    <div className="flex-grow">
-                        <div className="flex items-center justify-between bg-neutral-700 border-neutral-600 rounded-md p-2">
-                            <label htmlFor="player-image-file-setup" className={`cursor-pointer bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-3 rounded-md text-sm transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                                {isUploading ? 'Uploading...' : 'Choose File'}
-                            </label>
-                            <input type="file" id="player-image-file-setup" className="hidden" onChange={handleFileChange} accept="image/*" disabled={isUploading} />
-                            <span className="text-sm text-neutral-400 truncate ml-2">
-                                {isUploading ? 'Uploading to cloud...' : (imageFile?.name ?? 'No file chosen')}
-                            </span>
-                        </div>
-                        <p className="text-center text-xs text-neutral-500 my-1">or enter a URL below</p>
-                        <input
-                            type="text"
-                            id="imageURL"
-                            value={imageURL}
-                            onChange={(e) => {
-                                setImageURL(e.target.value);
-                                setImageFile(null);
-                            }}
-                            placeholder="Image URL (optional)"
-                            className="w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2 text-sm"
-                        />
-                    </div>
-                </div>
-            </div>
+            <ImageUpload
+                value={imageURL}
+                onChange={setImageURL}
+                folder="players"
+                label="Player Profile Image"
+                placeholder="Image URL (optional)"
+                previewClassName="w-16 h-16"
+                previewShape="circle"
+                id="player-image-file-setup"
+            />
             <div className="pt-2 text-right">
-                <button type="submit" disabled={isUploading} className="inline-flex justify-center items-center gap-2 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                <button type="submit" className="inline-flex justify-center items-center gap-2 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
                     {isEditing ? <EditIcon className="h-5 w-5" /> : <PlusIcon className="h-5 w-5" />}
                     {isEditing ? 'Save Changes' : 'Add Player'}
                 </button>
@@ -359,54 +293,6 @@ const TeamForm: React.FC<TeamFormProps> = ({ onSave }) => {
     const [name, setName] = useState('');
     const [ownerName, setOwnerName] = useState('');
     const [logoURL, setLogoURL] = useState('');
-    const [logoFile, setLogoFile] = useState<File | null>(null);
-    const [isUploading, setIsUploading] = useState(false);
-
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            setLogoFile(file);
-            setIsUploading(true);
-
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('folder', 'prostream-auction/teams');
-
-                const response = await fetch('/api/upload', {
-                    method: 'POST',
-                    body: formData,
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    setLogoURL(data.url);
-                    console.log('✅ Team logo uploaded to Cloudinary:', data.url);
-                } else {
-                    const errorData = await response.json();
-                    console.error('Upload failed:', errorData);
-                    alert(`❌ Cloudinary upload failed: ${errorData.error || 'Unknown error'}. Using local preview instead.`);
-                    // Fallback to FileReader for preview
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                        setLogoURL(reader.result as string);
-                    };
-                    reader.readAsDataURL(file);
-                }
-            } catch (error) {
-                console.error('Upload error:', error);
-                alert('❌ Could not upload to Cloudinary. Using local preview instead. Please check Cloudinary credentials.');
-                // Fallback to FileReader for preview
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    setLogoURL(reader.result as string);
-                };
-                reader.readAsDataURL(file);
-            } finally {
-                setIsUploading(false);
-            }
-        }
-    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -416,7 +302,6 @@ const TeamForm: React.FC<TeamFormProps> = ({ onSave }) => {
             setName('');
             setOwnerName('');
             setLogoURL('');
-            setLogoFile(null);
         }
     };
 
@@ -430,22 +315,18 @@ const TeamForm: React.FC<TeamFormProps> = ({ onSave }) => {
                 <label htmlFor="ownerName" className="block text-sm font-medium text-neutral-300">Owner Name</label>
                 <input type="text" id="ownerName" value={ownerName} onChange={(e) => setOwnerName(e.target.value)} required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary" />
             </div>
-            <div>
-                 <label className="block text-sm font-medium text-neutral-300 mb-1">Team Logo</label>
-                <div className="flex items-center justify-between bg-neutral-700 border-neutral-600 rounded-md p-2">
-                    <label htmlFor="logo-file-auction-setup" className={`cursor-pointer bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-3 rounded-md text-sm transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                        {isUploading ? 'Uploading...' : 'Choose File'}
-                    </label>
-                    <input type="file" id="logo-file-auction-setup" className="hidden" onChange={handleFileChange} accept="image/*" disabled={isUploading} />
-                    <span className="text-sm text-neutral-400 truncate ml-2">
-                        {isUploading ? 'Uploading to cloud...' : (logoFile?.name ?? 'No file chosen')}
-                    </span>
-                </div>
-                <p className="text-center text-xs text-neutral-500 my-1">or enter a URL below</p>
-                <input type="text" id="logoURL" value={logoURL} onChange={(e) => setLogoURL(e.target.value)} placeholder="Logo URL (optional)" className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary" />
-            </div>
+            <ImageUpload
+                value={logoURL}
+                onChange={setLogoURL}
+                folder="teams"
+                label="Team Logo"
+                placeholder="Logo URL (optional)"
+                previewClassName="w-16 h-16"
+                previewShape="square"
+                id="logo-file-auction-setup"
+            />
             <div className="pt-2 text-right">
-                <button type="submit" disabled={isUploading} className="inline-flex justify-center items-center gap-2 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                <button type="submit" className="inline-flex justify-center items-center gap-2 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
                     <PlusIcon className="h-5 w-5" />
                     Add Team
                 </button>

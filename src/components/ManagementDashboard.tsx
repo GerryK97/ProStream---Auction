@@ -6,6 +6,7 @@ import { Player, Team, Tournament, PlayerStats } from '@/types';
 import { PlusIcon, EditIcon, DeleteIcon, LoadingSpinner, CheckCircleIcon, DocumentTextIcon } from './icons';
 import Modal from './Modal';
 import { imageOptimizers } from '@/lib/imageOptimization';
+import ImageUpload from './ImageUpload';
 
 type ManagementView = 'tournaments' | 'teams' | 'players';
 
@@ -258,7 +259,16 @@ const CreateTournamentForm: React.FC<{
                 <FormInput id="budget" label="Budget Per Team" value={budget} onChange={setBudget} placeholder="e.g., 1,000,000" type="number" required />
                 <FormInput id="squadSize" label="Squad Size" value={squadSize} onChange={setSquadSize} placeholder="e.g., 11" type="number" required />
                 <FormInput id="basePrice" label="Base Price Per Player" value={basePrice} onChange={setBasePrice} placeholder="e.g., 50,000" type="number" required />
-                <FormInput id="logoUrl" label="Tournament Logo" value={logoURL} onChange={setLogoURL} placeholder="Logo URL (optional)" />
+                <ImageUpload
+                    value={logoURL}
+                    onChange={setLogoURL}
+                    folder="tournaments"
+                    label="Tournament Logo"
+                    placeholder="Logo URL (optional)"
+                    previewClassName="w-16 h-16"
+                    previewShape="square"
+                    id="tournament-logo"
+                />
                 <div className="border-t border-neutral-700 pt-4 flex justify-end gap-3">
                     {isEditing && <button type="button" onClick={onCancelEdit} className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">Cancel</button>}
                     <button type="submit" className="bg-brand-primary hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">
@@ -375,15 +385,12 @@ const TeamCreationForm: React.FC<{
     const [shortCode, setShortCode] = useState('');
     const [ownerName, setOwnerName] = useState('');
     const [logoURL, setLogoURL] = useState('');
-    const [logoFile, setLogoFile] = useState<File | null>(null);
-    const [isUploading, setIsUploading] = useState(false);
 
     useEffect(() => {
         setName(editingTeam?.name || '');
         setShortCode(editingTeam?.shortCode || '');
         setOwnerName(editingTeam?.ownerName || '');
         setLogoURL(editingTeam?.logoURL || '');
-        setLogoFile(null);
     }, [editingTeam]);
 
 
@@ -395,41 +402,6 @@ const TeamCreationForm: React.FC<{
             setShortCode('');
             setOwnerName('');
             setLogoURL('');
-            setLogoFile(null);
-        }
-    };
-
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            setLogoFile(file);
-            setIsUploading(true);
-
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('folder', 'prostream-auction/teams');
-
-                const response = await fetch('/api/upload', {
-                    method: 'POST',
-                    body: formData,
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    setLogoURL(data.url);
-                    alert('✅ Team logo uploaded successfully to Cloudinary!');
-                } else {
-                    const errorData = await response.json();
-                    console.error('Upload failed:', errorData);
-                    alert(`❌ Upload failed: ${errorData.error || 'Unknown error'}`);
-                }
-            } catch (error) {
-                console.error('Upload error:', error);
-                alert('❌ Upload error: Could not connect to upload service. Please check your internet connection.');
-            } finally {
-                setIsUploading(false);
-            }
         }
     };
     
@@ -441,24 +413,20 @@ const TeamCreationForm: React.FC<{
                  <FormInput id="shortCode" label="Short Code (e.g., MI)" value={shortCode} onChange={setShortCode} required />
                  <FormInput id="ownerName" label="Owner Name" value={ownerName} onChange={setOwnerName} required />
                  
-                 <div>
-                    <label className="block text-sm font-medium text-neutral-300 mb-1">Team Logo</label>
-                    <div className="flex items-center justify-between bg-neutral-700 border-neutral-600 rounded-md p-2">
-                        <label htmlFor="logo-file" className={`cursor-pointer bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-3 rounded-md text-sm transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                            {isUploading ? 'Uploading...' : 'Choose File'}
-                        </label>
-                        <input type="file" id="logo-file" className="hidden" onChange={handleFileChange} accept="image/*" disabled={isUploading} />
-                        <span className="text-sm text-neutral-400 truncate ml-2">
-                            {isUploading ? 'Uploading to cloud...' : (logoFile?.name ?? 'No file chosen')}
-                        </span>
-                    </div>
-                    <p className="text-center text-xs text-neutral-500 my-1">or enter a URL below</p>
-                    <FormInput id="logoUrl" label="" value={logoURL} onChange={setLogoURL} placeholder="Logo URL (optional)" />
-                 </div>
+                 <ImageUpload
+                    value={logoURL}
+                    onChange={setLogoURL}
+                    folder="teams"
+                    label="Team Logo"
+                    placeholder="Logo URL (optional)"
+                    previewClassName="w-16 h-16"
+                    previewShape="square"
+                    id="logo-file"
+                 />
                                   
                  <div className="border-t border-neutral-700 pt-4 flex justify-end gap-3">
                     {isEditing && <button type="button" onClick={onCancel} className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">Cancel</button>}
-                    <button type="submit" disabled={isUploading} className="bg-brand-primary hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button type="submit" className="bg-brand-primary hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">
                         {isEditing ? 'Save Changes' : 'Create Team'}
                     </button>
                 </div>
@@ -526,49 +494,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, tournament, playerToEdi
     const isEditing = !!playerToEdit;
     const [name, setName] = useState(playerToEdit?.name || '');
     const [imageURL, setImageURL] = useState(playerToEdit?.imageURL || '');
-    const [imageFile, setImageFile] = useState<File | null>(null);
-    const [isUploading, setIsUploading] = useState(false);
     const [stats, setStats] = useState<PlayerStats>(playerToEdit?.stats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 });
-
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            setImageFile(file);
-            setIsUploading(true);
-
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('folder', 'prostream-auction/players');
-
-                const response = await fetch('/api/upload', {
-                    method: 'POST',
-                    body: formData,
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    setImageURL(data.url);
-                } else {
-                    console.error('Upload failed');
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                        setImageURL(reader.result as string);
-                    };
-                    reader.readAsDataURL(file);
-                }
-            } catch (error) {
-                console.error('Upload error:', error);
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    setImageURL(reader.result as string);
-                };
-                reader.readAsDataURL(file);
-            } finally {
-                setIsUploading(false);
-            }
-        }
-    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -608,41 +534,18 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, tournament, playerToEdi
                      </div>
                  </div>
             </div>
-             <div>
-                <label className="block text-sm font-medium text-neutral-300 mb-1">Player Profile Image</label>
-                <div className="flex items-center gap-4">
-                    <img 
-                        src={imageURL || 'https://placehold.co/100x100/374151/F3F4F6/png?text=No+Image'} 
-                        alt="Player Preview" 
-                        className="w-16 h-16 rounded-full object-cover bg-neutral-700"
-                    />
-                    <div className="flex-grow">
-                        <div className="flex items-center justify-between bg-neutral-700 border-neutral-600 rounded-md p-2">
-                            <label htmlFor="player-image-file-mgmt" className={`cursor-pointer bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-3 rounded-md text-sm transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                                {isUploading ? 'Uploading...' : 'Choose File'}
-                            </label>
-                            <input type="file" id="player-image-file-mgmt" className="hidden" onChange={handleFileChange} accept="image/*" disabled={isUploading} />
-                            <span className="text-sm text-neutral-400 truncate ml-2">
-                                {isUploading ? 'Uploading to cloud...' : (imageFile?.name ?? 'No file chosen')}
-                            </span>
-                        </div>
-                        <p className="text-center text-xs text-neutral-500 my-1">or enter a URL below</p>
-                        <input 
-                            type="text" 
-                            id="imageURL" 
-                            value={imageURL} 
-                            onChange={(e) => {
-                                setImageURL(e.target.value);
-                                setImageFile(null);
-                            }} 
-                            placeholder="Image URL (optional)" 
-                            className="w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2 text-sm"
-                        />
-                    </div>
-                </div>
-            </div>
+            <ImageUpload
+                value={imageURL}
+                onChange={setImageURL}
+                folder="players"
+                label="Player Profile Image"
+                placeholder="Image URL (optional)"
+                previewClassName="w-16 h-16"
+                previewShape="circle"
+                id="player-image-file-mgmt"
+            />
             <div className="pt-2 text-right">
-                <button type="submit" disabled={isUploading} className="inline-flex justify-center items-center gap-2 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                <button type="submit" className="inline-flex justify-center items-center gap-2 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
                     {isEditing ? <EditIcon className="h-5 w-5" /> : <PlusIcon className="h-5 w-5" />}
                     {isEditing ? 'Save Changes' : 'Add Player'}
                 </button>
