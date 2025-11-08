@@ -11,7 +11,7 @@ const teamSchema = new Schema<Team>(
     initialBudget: { type: Number, required: true },
     currentBalance: { type: Number, required: true },
     playersPurchased: [{ type: String }],
-    logoURL: { type: String, required: true },
+    logoURL: { type: String, required: false },
     primaryColor: { type: String },
     secondaryColor: { type: String },
   },

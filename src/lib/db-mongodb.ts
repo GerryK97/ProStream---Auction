@@ -72,6 +72,8 @@ export const teamDB = {
       currentBalance: 10000000,
       playersPurchased: [],
       ...data,
+      // Provide default logo if not provided
+      logoURL: data.logoURL || `https://placehold.co/100x100/374151/F3F4F6/png?text=${encodeURIComponent(data.name.charAt(0))}`,
     };
     const doc = await TeamModel.create(newTeam);
     return doc.toObject();
@@ -115,6 +117,8 @@ export const playerDB = {
       tournamentId: 't1', // Default tournament
       isSold: false,
       ...data,
+      // Provide default image if not provided
+      imageURL: data.imageURL || `https://placehold.co/100x100/374151/F3F4F6/png?text=No+Image`,
     };
     const doc = await PlayerModel.create(newPlayer);
     return doc.toObject();

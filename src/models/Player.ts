@@ -16,7 +16,7 @@ const playerSchema = new Schema<Player>(
     tournamentId: { type: String, required: true },
     name: { type: String, required: true },
     stats: { type: playerStatsSchema, required: true },
-    imageURL: { type: String, required: true },
+    imageURL: { type: String, required: false },
     isSold: { type: Boolean, default: false },
     finalPrice: { type: Number },
     winningTeamId: { type: String },

@@ -19,7 +19,7 @@ export interface Team {
   initialBudget: number;
   currentBalance: number;
   playersPurchased: string[]; // Array of Player IDs
-  logoURL: string;
+  logoURL?: string;
   primaryColor?: string;
   secondaryColor?: string;
 }
@@ -35,7 +35,7 @@ export interface Player {
   tournamentId: string;
   name: string;
   stats: PlayerStats;
-  imageURL: string;
+  imageURL?: string;
   isSold: boolean;
   finalPrice?: number;
   winningTeamId?: string;

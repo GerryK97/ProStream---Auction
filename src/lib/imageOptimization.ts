@@ -41,11 +41,16 @@ function isCloudinaryUrl(url: string): boolean {
  * @returns Optimized image URL
  */
 export function optimizeImage(
-  url: string,
+  url: string | undefined,
   size: ImageSize | TransformOptions = 'medium'
 ): string {
+  // Return placeholder if URL is empty or undefined
+  if (!url) {
+    return 'https://placehold.co/100x100/374151/F3F4F6/png?text=No+Image';
+  }
+
   // Return original URL if not a Cloudinary URL
-  if (!url || !isCloudinaryUrl(url)) {
+  if (!isCloudinaryUrl(url)) {
     return url;
   }
 
@@ -99,7 +104,7 @@ export function optimizeImage(
  * Get optimized image props for img elements
  */
 export function getOptimizedImageProps(
-  url: string,
+  url: string | undefined,
   size: ImageSize | TransformOptions = 'medium',
   alt: string = ''
 ) {
@@ -116,19 +121,19 @@ export function getOptimizedImageProps(
  */
 export const imageOptimizers = {
   // Player images
-  playerThumbnail: (url: string) => optimizeImage(url, 'thumbnail'),
-  playerCard: (url: string) => optimizeImage(url, 'medium'),
-  playerDetail: (url: string) => optimizeImage(url, 'large'),
-  playerOverlay: (url: string) => optimizeImage(url, 'hero'),
+  playerThumbnail: (url: string | undefined) => optimizeImage(url, 'thumbnail'),
+  playerCard: (url: string | undefined) => optimizeImage(url, 'medium'),
+  playerDetail: (url: string | undefined) => optimizeImage(url, 'large'),
+  playerOverlay: (url: string | undefined) => optimizeImage(url, 'hero'),
 
   // Team logos
-  teamThumbnail: (url: string) => optimizeImage(url, 'thumbnail'),
-  teamCard: (url: string) => optimizeImage(url, 'small'),
-  teamLogo: (url: string) => optimizeImage(url, 'medium'),
-  teamHero: (url: string) => optimizeImage(url, 'large'),
+  teamThumbnail: (url: string | undefined) => optimizeImage(url, 'thumbnail'),
+  teamCard: (url: string | undefined) => optimizeImage(url, 'small'),
+  teamLogo: (url: string | undefined) => optimizeImage(url, 'medium'),
+  teamHero: (url: string | undefined) => optimizeImage(url, 'large'),
 
   // Generic
-  listItem: (url: string) => optimizeImage(url, 'small'),
-  preview: (url: string) => optimizeImage(url, 'medium'),
-  full: (url: string) => optimizeImage(url, 'large'),
+  listItem: (url: string | undefined) => optimizeImage(url, 'small'),
+  preview: (url: string | undefined) => optimizeImage(url, 'medium'),
+  full: (url: string | undefined) => optimizeImage(url, 'large'),
 };
