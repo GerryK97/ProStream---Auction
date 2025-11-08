@@ -13,7 +13,7 @@ const playerStatsSchema = new Schema(
 const playerSchema = new Schema<Player>(
   {
     _id: { type: String, required: true },
-    tournamentId: { type: String, required: true },
+    tournamentId: { type: String, required: false, default: null },
     name: { type: String, required: true },
     stats: { type: playerStatsSchema, required: true },
     imageURL: { type: String, required: false },

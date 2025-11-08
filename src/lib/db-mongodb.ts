@@ -67,19 +67,22 @@ export const teamDB = {
     await connectToDatabase();
     const newTeam: Team = {
       _id: generateId('team'),
-      tournamentId: 't1', // Default tournament
-      initialBudget: 10000000,
-      currentBalance: 10000000,
+      name: data.name,
+      shortCode: data.shortCode,
+      ownerName: data.ownerName,
+      // No tournamentId - team is unassigned
+      // No budget fields - only set when assigned to tournament
       playersPurchased: [],
-      ...data,
       // Provide default logo if not provided
       logoURL: data.logoURL || `https://placehold.co/100x100/374151/F3F4F6/png?text=${encodeURIComponent(data.name.charAt(0))}`,
+      primaryColor: data.primaryColor,
+      secondaryColor: data.secondaryColor,
     };
     const doc = await TeamModel.create(newTeam);
     return doc.toObject();
   },
 
-  update: async (id: string, data: Partial<Omit<Team, '_id' | 'tournamentId'>>): Promise<Team | null> => {
+  update: async (id: string, data: Partial<Omit<Team, '_id'>>): Promise<Team | null> => {
     await connectToDatabase();
     const updated = await TeamModel.findOneAndUpdate(
       { _id: id },
@@ -114,9 +117,10 @@ export const playerDB = {
     await connectToDatabase();
     const newPlayer: Player = {
       _id: generateId('p'),
-      tournamentId: 't1', // Default tournament
+      name: data.name,
+      stats: data.stats,
+      // No tournamentId - player is unassigned
       isSold: false,
-      ...data,
       // Provide default image if not provided
       imageURL: data.imageURL || `https://placehold.co/100x100/374151/F3F4F6/png?text=No+Image`,
     };
@@ -124,7 +128,7 @@ export const playerDB = {
     return doc.toObject();
   },
 
-  update: async (id: string, data: Partial<Omit<Player, '_id' | 'tournamentId'>>): Promise<Player | null> => {
+  update: async (id: string, data: Partial<Omit<Player, '_id'>>): Promise<Player | null> => {
     await connectToDatabase();
     const updated = await PlayerModel.findOneAndUpdate(
       { _id: id },

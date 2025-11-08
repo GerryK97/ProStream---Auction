@@ -12,13 +12,13 @@ export interface Tournament {
 
 export interface Team {
   _id: string;
-  tournamentId: string;
+  tournamentId?: string | null;
   name: string;
   shortCode: string;
   ownerName: string;
-  initialBudget: number;
-  currentBalance: number;
-  playersPurchased: string[]; // Array of Player IDs
+  initialBudget?: number;
+  currentBalance?: number;
+  playersPurchased?: string[]; // Array of Player IDs
   logoURL?: string;
   primaryColor?: string;
   secondaryColor?: string;
@@ -32,11 +32,11 @@ export interface PlayerStats {
 
 export interface Player {
   _id:string;
-  tournamentId: string;
+  tournamentId?: string | null;
   name: string;
   stats: PlayerStats;
   imageURL?: string;
-  isSold: boolean;
+  isSold?: boolean;
   finalPrice?: number;
   winningTeamId?: string;
 }

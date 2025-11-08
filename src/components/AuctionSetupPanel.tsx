@@ -739,8 +739,8 @@ const AuctionSetupPanel: React.FC = () => {
                                         />
                                         <div>
                                             <p className="font-semibold">{team.name}</p>
-                                            <p className="text-sm text-neutral-400">Budget: {team.initialBudget.toLocaleString()}</p>
-                                            <p className="text-xs text-neutral-400">Remaining: {team.currentBalance.toLocaleString()} | Players: {team.playersPurchased.length}</p>
+                                            <p className="text-sm text-neutral-400">Budget: {team.initialBudget?.toLocaleString() || 'Not set'}</p>
+                                            <p className="text-xs text-neutral-400">Remaining: {team.currentBalance?.toLocaleString() || 'N/A'} | Players: {team.playersPurchased?.length || 0}</p>
                                         </div>
                                     </div>
                                     <button onClick={() => handleRemoveTeam(team._id)} className="bg-red-600 hover:bg-red-500 text-white font-bold py-1 px-3 rounded-lg text-sm transition-colors">Remove</button>
@@ -785,12 +785,17 @@ const AuctionSetupPanel: React.FC = () => {
                     allTeams={allTeams}
                     tournamentTeams={tournamentTeams}
                     onAdd={async (teamId) => {
-                        // Update team's tournamentId to add them to this tournament
+                        // Update team's tournamentId and assign budget to add them to this tournament
                         try {
                             const response = await fetch(`/api/teams/${teamId}`, {
                                 method: 'PUT',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ tournamentId: selectedTournament._id }),
+                                body: JSON.stringify({
+                                    tournamentId: selectedTournament._id,
+                                    initialBudget: selectedTournament.budgetPerTeam,
+                                    currentBalance: selectedTournament.budgetPerTeam,
+                                    playersPurchased: []
+                                }),
                             });
                             if (response.ok) {
                                 // Refresh team list without closing modal
