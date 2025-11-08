@@ -235,7 +235,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!tournament) return "No tournament configured.";
     if (amount <= auctionState.currentBid) return "Bid must be higher than the current bid.";
     if (auctionState.currentBid === 0 && amount < tournament.basePricePerPlayer) return `The first bid must be at least the base price of ${tournament.basePricePerPlayer.toLocaleString()}.`;
-    if (amount > team.currentBalance) return "Team does not have enough balance for this bid.";
+    if (amount > (team.currentBalance || 0)) return "Team does not have enough balance for this bid.";
 
     const newBid: Bid = { teamId, amount, timestamp: Date.now() };
     setAuctionState(prev => ({
@@ -325,7 +325,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     ));
 
     setTeams(prevTeams => prevTeams.map(t =>
-      t._id === winningTeamId ? { ...t, currentBalance: t.currentBalance - currentBid, playersPurchased: [...t.playersPurchased, currentPlayerId] } : t
+      t._id === winningTeamId ? { ...t, currentBalance: (t.currentBalance || 0) - currentBid, playersPurchased: [...(t.playersPurchased || []), currentPlayerId] } : t
     ));
 
     setAuctionState(prev => ({ ...prev, currentAuctionStatus: 'Sold' }));
@@ -342,8 +342,8 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       p._id === playerId ? { ...p, isSold: false, finalPrice: undefined, winningTeamId: undefined } : p
     ));
 
-    setTeams(prev => prev.map(t => 
-      t._id === winningTeamId ? { ...t, currentBalance: t.currentBalance + finalPrice, playersPurchased: t.playersPurchased.filter(pId => pId !== playerId) } : t
+    setTeams(prev => prev.map(t =>
+      t._id === winningTeamId ? { ...t, currentBalance: (t.currentBalance || 0) + finalPrice, playersPurchased: (t.playersPurchased || []).filter(pId => pId !== playerId) } : t
     ));
 
      setAuctionState(prev => ({

@@ -195,11 +195,11 @@ const TeamsAndSoldPlayersPanel: React.FC<{
     onCleanup: () => void;
 }> = ({ teams, soldPlayers, tournament, winningTeamId, onUndo, onCleanup }) => {
     const calculateMaxBid = (team: Team) => {
-        if (!tournament) return 0;
+        if (!tournament || !team.currentBalance) return 0;
 
         const squadSize = tournament.squadSize;
         const basePrice = tournament.basePricePerPlayer;
-        const playersPurchased = team.playersPurchased.length;
+        const playersPurchased = team.playersPurchased?.length || 0;
         const remainingPlayers = squadSize - playersPurchased;
 
         // If squad is complete or it's the last player, team can spend all remaining balance
@@ -222,7 +222,7 @@ const TeamsAndSoldPlayersPanel: React.FC<{
                  <ul className="space-y-2 overflow-y-auto pr-2 flex-grow">
                      {teams.map(team => {
                          const maxBid = calculateMaxBid(team);
-                         const playersPurchased = team.playersPurchased.length;
+                         const playersPurchased = team.playersPurchased?.length || 0;
                          const squadSize = tournament?.squadSize || 0;
                          const remainingPlayers = squadSize - playersPurchased;
                          const hasInsufficientFunds = maxBid <= 0 && remainingPlayers > 0;
@@ -243,7 +243,7 @@ const TeamsAndSoldPlayersPanel: React.FC<{
                                             <span className="text-red-500 text-xs" title="Insufficient funds for remaining players">⚠️</span>
                                         )}
                                     </div>
-                                    <p className="text-xs text-neutral-300">Budget: <span className="text-green-400">{formatCurrency(team.currentBalance)}</span></p>
+                                    <p className="text-xs text-neutral-300">Budget: <span className="text-green-400">{formatCurrency(team.currentBalance || 0)}</span></p>
                                     <p className="text-xs text-neutral-300">
                                         Max Bid: <span className={hasInsufficientFunds ? "text-red-500 font-semibold" : "text-cyan-400"}>{formatCurrency(maxBid)}</span>
                                     </p>

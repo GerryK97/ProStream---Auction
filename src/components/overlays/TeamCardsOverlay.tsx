@@ -22,11 +22,11 @@ const TeamCardsOverlay: React.FC<TeamCardsOverlayProps> = ({
 }) => {
     // Calculate max bid for teams
     const calculateMaxBid = (team: Team) => {
-        if (!tournament) return 0;
+        if (!tournament || !team.currentBalance) return 0;
 
         const squadSize = tournament.squadSize;
         const basePrice = tournament.basePricePerPlayer;
-        const playersPurchased = team.playersPurchased.length;
+        const playersPurchased = team.playersPurchased?.length || 0;
         const remainingPlayers = squadSize - playersPurchased;
 
         if (remainingPlayers <= 1) {
@@ -64,7 +64,7 @@ const TeamCardsOverlay: React.FC<TeamCardsOverlayProps> = ({
                     {teams.map(team => {
                         const maxBid = calculateMaxBid(team);
                         const isWinningTeam = currentPlayer?.winningTeamId === team._id;
-                        const playersPurchased = team.playersPurchased.length;
+                        const playersPurchased = team.playersPurchased?.length || 0;
                         const squadSize = tournament?.squadSize || 0;
 
                         return (
@@ -78,7 +78,7 @@ const TeamCardsOverlay: React.FC<TeamCardsOverlayProps> = ({
                                 <div className="flex-grow min-w-0">
                                     <p className="font-bold truncate text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{team.name}</p>
                                     <p className="text-sm text-neutral-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{playersPurchased}/{squadSize} players</p>
-                                    <p className="text-lg font-mono text-green-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{formatCurrency(team.currentBalance)}</p>
+                                    <p className="text-lg font-mono text-green-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{formatCurrency(team.currentBalance || 0)}</p>
                                     <p className="text-xs text-cyan-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Max: {formatCurrency(maxBid)}</p>
                                 </div>
                             </div>

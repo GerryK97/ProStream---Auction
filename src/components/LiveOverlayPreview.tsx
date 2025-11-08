@@ -92,11 +92,11 @@ const LiveOverlayPreview: React.FC<LiveOverlayPreviewProps> = ({ tournamentId })
     const calculateMaxBid = (teamId: string) => {
         if (!tournament) return 0;
         const team = teams.find(t => t._id === teamId);
-        if (!team) return 0;
+        if (!team || !team.currentBalance) return 0;
 
         const squadSize = tournament.squadSize;
         const basePrice = tournament.basePricePerPlayer;
-        const playersPurchased = team.playersPurchased.length;
+        const playersPurchased = team.playersPurchased?.length || 0;
         const remainingPlayers = squadSize - playersPurchased;
 
         if (remainingPlayers <= 1) {
@@ -170,7 +170,7 @@ const LiveOverlayPreview: React.FC<LiveOverlayPreviewProps> = ({ tournamentId })
                         {teams.map(team => {
                             const maxBid = calculateMaxBid(team._id);
                             const isWinningTeam = currentPlayer?.winningTeamId === team._id;
-                            const playersPurchased = team.playersPurchased.length;
+                            const playersPurchased = team.playersPurchased?.length || 0;
                             const squadSize = tournament?.squadSize || 0;
 
                             return (
@@ -184,7 +184,7 @@ const LiveOverlayPreview: React.FC<LiveOverlayPreviewProps> = ({ tournamentId })
                                     <div className="flex-grow">
                                         <p className="font-bold truncate text-white">{team.name}</p>
                                         <p className="text-sm text-neutral-400">{playersPurchased}/{squadSize} players</p>
-                                        <p className="text-lg font-mono text-green-400">{formatCurrency(team.currentBalance)}</p>
+                                        <p className="text-lg font-mono text-green-400">{formatCurrency(team.currentBalance || 0)}</p>
                                         <p className="text-xs text-cyan-400">Max: {formatCurrency(maxBid)}</p>
                                     </div>
                                 </div>
