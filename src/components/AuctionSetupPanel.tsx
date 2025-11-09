@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAuction } from '@/hooks/useAuction';
-import { Player, Team, Tournament, PlayerStats } from '@/types';
+import { Player, Team, Tournament, PlayerStats, MasterTeam, MasterPlayer } from '@/types';
 import Modal from './Modal';
 import { PlusIcon, DeleteIcon, EditIcon } from './icons';
 import { imageOptimizers } from '@/lib/imageOptimization';
@@ -11,23 +11,23 @@ import ImageUpload from './ImageUpload';
 
 interface AddPlayerFromDatabaseProps {
     selectedTournament: Tournament;
-    allPlayers: Player[];
+    masterPlayers: MasterPlayer[];
     tournamentPlayers: Player[];
-    onAdd: (playerId: string) => Promise<void>;
+    onAdd: (masterPlayerId: string) => Promise<void>;
     onCreateNew: () => void;
 }
 
 interface AddTeamFromDatabaseProps {
     selectedTournament: Tournament;
-    allTeams: Team[];
+    masterTeams: MasterTeam[];
     tournamentTeams: Team[];
-    onAdd: (teamId: string) => Promise<void>;
+    onAdd: (masterTeamId: string) => Promise<void>;
     onCreateNew: () => void;
 }
 
 const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
     selectedTournament,
-    allPlayers,
+    masterPlayers,
     tournamentPlayers,
     onAdd,
     onCreateNew,
@@ -35,17 +35,19 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
     const [searchTerm, setSearchTerm] = useState('');
     const [addingPlayerId, setAddingPlayerId] = useState<string | null>(null);
 
-    // Filter out players already in this tournament
-    const tournamentPlayerIds = new Set(tournamentPlayers.map(p => p._id));
-    const availablePlayers = allPlayers.filter(p => !tournamentPlayerIds.has(p._id));
+    // Filter out master players already in this tournament
+    const tournamentMasterPlayerIds = new Set(tournamentPlayers.map(p => p.masterPlayerId).filter(Boolean));
+    const availablePlayers = masterPlayers.filter(p => !tournamentMasterPlayerIds.has(p._id));
 
     const filteredPlayers = availablePlayers.filter(p =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase())
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.position.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.currentClub.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const handleAddPlayer = async (playerId: string) => {
-        setAddingPlayerId(playerId);
-        await onAdd(playerId);
+    const handleAddPlayer = async (masterPlayerId: string) => {
+        setAddingPlayerId(masterPlayerId);
+        await onAdd(masterPlayerId);
         setAddingPlayerId(null);
     };
 
@@ -85,17 +87,18 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
                         >
                             <div className="flex items-center gap-3">
                                 <img
-                                    src={player.imageURL}
+                                    src={imageOptimizers.playerThumbnail(player.photoURL)}
                                     alt={player.name}
                                     className="w-12 h-12 rounded-full object-cover"
+                                    loading="lazy"
                                 />
                                 <div>
                                     <p className="font-semibold">{player.name}</p>
                                     <p className="text-xs text-neutral-400">
-                                        Matches: {player.stats.matchesPlayed} | Score: {player.stats.totalScore}
+                                        {player.position} | {player.currentClub}
                                     </p>
                                     <p className="text-xs text-neutral-500">
-                                        From: {player.tournamentId || 'Unassigned'}
+                                        Matches: {player.careerStats?.matchesPlayed || 0} | Score: {player.careerStats?.totalScore || 0}
                                     </p>
                                 </div>
                             </div>
@@ -120,7 +123,7 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
 
 const AddTeamFromDatabase: React.FC<AddTeamFromDatabaseProps> = ({
     selectedTournament,
-    allTeams,
+    masterTeams,
     tournamentTeams,
     onAdd,
     onCreateNew,
@@ -128,18 +131,18 @@ const AddTeamFromDatabase: React.FC<AddTeamFromDatabaseProps> = ({
     const [searchTerm, setSearchTerm] = useState('');
     const [addingTeamId, setAddingTeamId] = useState<string | null>(null);
 
-    // Filter out teams already in this tournament
-    const tournamentTeamIds = new Set(tournamentTeams.map(t => t._id));
-    const availableTeams = allTeams.filter(t => !tournamentTeamIds.has(t._id));
+    // Filter out master teams already in this tournament
+    const tournamentMasterTeamIds = new Set(tournamentTeams.map(t => t.masterTeamId).filter(Boolean));
+    const availableTeams = masterTeams.filter(t => !tournamentMasterTeamIds.has(t._id));
 
     const filteredTeams = availableTeams.filter(t =>
         t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         t.ownerName.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const handleAddTeam = async (teamId: string) => {
-        setAddingTeamId(teamId);
-        await onAdd(teamId);
+    const handleAddTeam = async (masterTeamId: string) => {
+        setAddingTeamId(masterTeamId);
+        await onAdd(masterTeamId);
         setAddingTeamId(null);
     };
 
@@ -187,10 +190,7 @@ const AddTeamFromDatabase: React.FC<AddTeamFromDatabaseProps> = ({
                                 <div>
                                     <p className="font-semibold">{team.name}</p>
                                     <p className="text-xs text-neutral-400">
-                                        Owner: {team.ownerName}
-                                    </p>
-                                    <p className="text-xs text-neutral-500">
-                                        From: {team.tournamentId || 'Unassigned'}
+                                        Owner: {team.ownerName} | {team.shortCode}
                                     </p>
                                 </div>
                             </div>
@@ -342,20 +342,18 @@ const AuctionSetupPanel: React.FC = () => {
     const [isAddTeamModalOpen, setAddTeamModalOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [selectedTournamentId, setSelectedTournamentId] = useState(tournament?._id || '');
-    const [allPlayers, setAllPlayers] = useState<Player[]>([]);
-    const [allTeams, setAllTeams] = useState<Team[]>([]);
+    const [masterPlayers, setMasterPlayers] = useState<MasterPlayer[]>([]);
+    const [masterTeams, setMasterTeams] = useState<MasterTeam[]>([]);
     const [tournaments, setTournaments] = useState<Tournament[]>([]);
     const [tournamentPlayers, setTournamentPlayers] = useState<Player[]>([]);
     const [tournamentTeams, setTournamentTeams] = useState<Team[]>([]);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-    // Handle player removal from tournament
+    // Handle player removal from tournament (delete tournament instance)
     const handleRemovePlayer = async (playerId: string) => {
         try {
             const response = await fetch(`/api/players/${playerId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tournamentId: null }),
+                method: 'DELETE',
             });
             if (response.ok) {
                 setRefreshTrigger(prev => prev + 1);
@@ -365,13 +363,11 @@ const AuctionSetupPanel: React.FC = () => {
         }
     };
 
-    // Handle team removal from tournament
+    // Handle team removal from tournament (delete tournament instance)
     const handleRemoveTeam = async (teamId: string) => {
         try {
             const response = await fetch(`/api/teams/${teamId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tournamentId: null }),
+                method: 'DELETE',
             });
             if (response.ok) {
                 setRefreshTrigger(prev => prev + 1);
@@ -381,7 +377,7 @@ const AuctionSetupPanel: React.FC = () => {
         }
     };
 
-    // Fetch all players, teams, and tournaments from database on mount and when refresh is triggered
+    // Fetch master players, master teams, and tournaments from database on mount and when refresh is triggered
     React.useEffect(() => {
         const fetchData = async () => {
             try {
@@ -392,14 +388,18 @@ const AuctionSetupPanel: React.FC = () => {
                     setTournaments(tournamentsData);
                 }
 
-                // Fetch all players
-                const playersResponse = await fetch('/api/players');
-                if (playersResponse.ok) {
-                    const allPlayersData = await playersResponse.json();
-                    setAllPlayers(allPlayersData);
+                // Fetch master players
+                const masterPlayersResponse = await fetch('/api/master-players');
+                if (masterPlayersResponse.ok) {
+                    const masterPlayersData = await masterPlayersResponse.json();
+                    setMasterPlayers(masterPlayersData);
+                }
 
-                    // Filter players for current tournament
-                    if (selectedTournamentId) {
+                // Fetch tournament players (instances)
+                if (selectedTournamentId) {
+                    const playersResponse = await fetch('/api/players');
+                    if (playersResponse.ok) {
+                        const allPlayersData = await playersResponse.json();
                         const tournamentPlayersData = allPlayersData.filter(
                             (p: Player) => p.tournamentId === selectedTournamentId
                         );
@@ -407,14 +407,18 @@ const AuctionSetupPanel: React.FC = () => {
                     }
                 }
 
-                // Fetch all teams
-                const teamsResponse = await fetch('/api/teams');
-                if (teamsResponse.ok) {
-                    const allTeamsData = await teamsResponse.json();
-                    setAllTeams(allTeamsData);
+                // Fetch master teams
+                const masterTeamsResponse = await fetch('/api/master-teams');
+                if (masterTeamsResponse.ok) {
+                    const masterTeamsData = await masterTeamsResponse.json();
+                    setMasterTeams(masterTeamsData);
+                }
 
-                    // Filter teams for current tournament
-                    if (selectedTournamentId) {
+                // Fetch tournament teams (instances)
+                if (selectedTournamentId) {
+                    const teamsResponse = await fetch('/api/teams');
+                    if (teamsResponse.ok) {
+                        const allTeamsData = await teamsResponse.json();
                         const tournamentTeamsData = allTeamsData.filter(
                             (t: Team) => t.tournamentId === selectedTournamentId
                         );
@@ -754,15 +758,18 @@ const AuctionSetupPanel: React.FC = () => {
             <Modal isOpen={isAddPlayerModalOpen} onClose={() => setAddPlayerModalOpen(false)} title="Add Players to Tournament" size="2xl">
                 <AddPlayerFromDatabase
                     selectedTournament={selectedTournament}
-                    allPlayers={allPlayers}
+                    masterPlayers={masterPlayers}
                     tournamentPlayers={tournamentPlayers}
-                    onAdd={async (playerId) => {
-                        // Update player's tournamentId to add them to this tournament
+                    onAdd={async (masterPlayerId) => {
+                        // Create tournament player instance from master player
                         try {
-                            const response = await fetch(`/api/players/${playerId}`, {
-                                method: 'PUT',
+                            const response = await fetch('/api/players/create-from-master', {
+                                method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ tournamentId: selectedTournament._id }),
+                                body: JSON.stringify({
+                                    masterPlayerId,
+                                    tournamentId: selectedTournament._id
+                                }),
                             });
                             if (response.ok) {
                                 // Refresh player list without closing modal
@@ -774,7 +781,7 @@ const AuctionSetupPanel: React.FC = () => {
                     }}
                     onCreateNew={() => {
                         setAddPlayerModalOpen(false);
-                        // You can add a modal for creating new players here
+                        // Navigate to Management Dashboard to create new master players
                     }}
                 />
             </Modal>
@@ -782,19 +789,17 @@ const AuctionSetupPanel: React.FC = () => {
             <Modal isOpen={isAddTeamModalOpen} onClose={() => setAddTeamModalOpen(false)} title="Add Teams to Tournament" size="2xl">
                 <AddTeamFromDatabase
                     selectedTournament={selectedTournament}
-                    allTeams={allTeams}
+                    masterTeams={masterTeams}
                     tournamentTeams={tournamentTeams}
-                    onAdd={async (teamId) => {
-                        // Update team's tournamentId and assign budget to add them to this tournament
+                    onAdd={async (masterTeamId) => {
+                        // Create tournament team instance from master team
                         try {
-                            const response = await fetch(`/api/teams/${teamId}`, {
-                                method: 'PUT',
+                            const response = await fetch('/api/teams/create-from-master', {
+                                method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
-                                    tournamentId: selectedTournament._id,
-                                    initialBudget: selectedTournament.budgetPerTeam,
-                                    currentBalance: selectedTournament.budgetPerTeam,
-                                    playersPurchased: []
+                                    masterTeamId,
+                                    tournamentId: selectedTournament._id
                                 }),
                             });
                             if (response.ok) {
@@ -807,7 +812,7 @@ const AuctionSetupPanel: React.FC = () => {
                     }}
                     onCreateNew={() => {
                         setAddTeamModalOpen(false);
-                        // You can add a modal for creating new teams here
+                        // Navigate to Management Dashboard to create new master teams
                     }}
                 />
             </Modal>

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuction } from '@/hooks/useAuction';
-import { Player, Team, Tournament, PlayerStats } from '@/types';
+import { Player, Team, Tournament, PlayerStats, MasterTeam, MasterPlayer } from '@/types';
 import { PlusIcon, EditIcon, DeleteIcon, LoadingSpinner, CheckCircleIcon, DocumentTextIcon } from './icons';
 import Modal from './Modal';
 import { imageOptimizers } from '@/lib/imageOptimization';
@@ -11,13 +11,44 @@ import ImageUpload from './ImageUpload';
 type ManagementView = 'tournaments' | 'teams' | 'players';
 
 const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
-    const { tournaments, teams, players, addPlayer, updatePlayer, deletePlayer, addTournament, updateTournament, deleteTournament, addTeam, updateTeam, deleteTeam } = useAuction();
-    
+    const { tournaments, addTournament, updateTournament, deleteTournament } = useAuction();
+
+    // Master Teams state (fetched from API)
+    const [masterTeams, setMasterTeams] = useState<MasterTeam[]>([]);
+    const [masterPlayers, setMasterPlayers] = useState<MasterPlayer[]>([]);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
     const [isAddPlayerModalOpen, setAddPlayerModalOpen] = useState(false);
-    const [editingTeam, setEditingTeam] = useState<Team | null>(null);
-    const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
-    const [playerToDelete, setPlayerToDelete] = useState<Player | null>(null);
-    
+    const [editingTeam, setEditingTeam] = useState<MasterTeam | null>(null);
+    const [editingPlayer, setEditingPlayer] = useState<MasterPlayer | null>(null);
+    const [playerToDelete, setPlayerToDelete] = useState<MasterPlayer | null>(null);
+
+    // Fetch master teams and players from API
+    useEffect(() => {
+        const fetchMasterData = async () => {
+            try {
+                const [teamsRes, playersRes] = await Promise.all([
+                    fetch('/api/master-teams'),
+                    fetch('/api/master-players')
+                ]);
+
+                if (teamsRes.ok) {
+                    const teamsData = await teamsRes.json();
+                    setMasterTeams(teamsData);
+                }
+
+                if (playersRes.ok) {
+                    const playersData = await playersRes.json();
+                    setMasterPlayers(playersData);
+                }
+            } catch (error) {
+                console.error('Failed to fetch master data:', error);
+            }
+        };
+
+        fetchMasterData();
+    }, [refreshTrigger]);
+
     useEffect(() => {
         setAddPlayerModalOpen(false);
         setEditingTeam(null);
@@ -39,17 +70,15 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
                             onDeleteTournament={deleteTournament}
                         />;
             case 'teams':
-                return <TeamManagementPanel 
-                    teams={teams}
+                return <TeamManagementPanel
+                    teams={masterTeams}
                     editingTeam={editingTeam}
                     setEditingTeam={setEditingTeam}
-                    addTeam={addTeam}
-                    updateTeam={updateTeam}
-                    deleteTeam={deleteTeam}
+                    onRefresh={() => setRefreshTrigger(prev => prev + 1)}
                 />;
             case 'players':
-                return <PlayersSection 
-                            players={players} 
+                return <PlayersSection
+                            players={masterPlayers}
                             onAddPlayer={() => setAddPlayerModalOpen(true)}
                             onEditPlayer={setEditingPlayer}
                             onDeletePlayer={setPlayerToDelete}
@@ -64,24 +93,44 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
             {renderView()}
 
             <Modal isOpen={isAddPlayerModalOpen} onClose={() => setAddPlayerModalOpen(false)} title="Add New Player">
-                <PlayerForm 
-                    tournament={tournaments[0]} // Pass active tournament
-                    onSave={(playerData) => {
-                        addPlayer(playerData);
-                        setAddPlayerModalOpen(false);
+                <PlayerForm
+                    onSave={async (playerData) => {
+                        try {
+                            const response = await fetch('/api/master-players', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(playerData),
+                            });
+                            if (response.ok) {
+                                setRefreshTrigger(prev => prev + 1);
+                                setAddPlayerModalOpen(false);
+                            }
+                        } catch (error) {
+                            console.error('Failed to add player:', error);
+                        }
                     }}
                     onClose={() => setAddPlayerModalOpen(false)}
                 />
             </Modal>
-            
+
             <Modal isOpen={!!editingPlayer} onClose={() => setEditingPlayer(null)} title="Edit Player">
                 {editingPlayer && (
                     <PlayerForm
                         playerToEdit={editingPlayer}
-                        tournament={tournaments[0]}
-                        onSave={(playerData) => {
-                            updatePlayer(editingPlayer._id, playerData);
-                            setEditingPlayer(null);
+                        onSave={async (playerData) => {
+                            try {
+                                const response = await fetch(`/api/master-players/${editingPlayer._id}`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(playerData),
+                                });
+                                if (response.ok) {
+                                    setRefreshTrigger(prev => prev + 1);
+                                    setEditingPlayer(null);
+                                }
+                            } catch (error) {
+                                console.error('Failed to update player:', error);
+                            }
                         }}
                         onClose={() => setEditingPlayer(null)}
                     />
@@ -94,9 +143,18 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
                         <p className="text-neutral-300">Are you sure you want to permanently delete <strong className="text-white">{playerToDelete.name}</strong>? This action cannot be undone.</p>
                         <div className="flex justify-end gap-4 mt-6">
                             <button onClick={() => setPlayerToDelete(null)} className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">Cancel</button>
-                            <button onClick={() => {
-                                deletePlayer(playerToDelete._id);
-                                setPlayerToDelete(null);
+                            <button onClick={async () => {
+                                try {
+                                    const response = await fetch(`/api/master-players/${playerToDelete._id}`, {
+                                        method: 'DELETE',
+                                    });
+                                    if (response.ok) {
+                                        setRefreshTrigger(prev => prev + 1);
+                                        setPlayerToDelete(null);
+                                    }
+                                } catch (error) {
+                                    console.error('Failed to delete player:', error);
+                                }
                             }} className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">Delete</button>
                         </div>
                     </div>
@@ -298,34 +356,59 @@ const FormInput: React.FC<{id: string, label: string, value: string, onChange: (
 
 
 const TeamManagementPanel: React.FC<{
-    teams: Team[];
-    editingTeam: Team | null;
-    setEditingTeam: (team: Team | null) => void;
-    addTeam: (teamData: Omit<Team, '_id' | 'tournamentId' | 'initialBudget' | 'currentBalance' | 'playersPurchased'>) => void;
-    updateTeam: (teamId: string, teamData: Partial<Omit<Team, '_id' | 'tournamentId'>>) => void;
-    deleteTeam: (teamId: string) => void;
-}> = ({ teams, editingTeam, setEditingTeam, addTeam, updateTeam, deleteTeam }) => {
-    const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
+    teams: MasterTeam[];
+    editingTeam: MasterTeam | null;
+    setEditingTeam: (team: MasterTeam | null) => void;
+    onRefresh: () => void;
+}> = ({ teams, editingTeam, setEditingTeam, onRefresh }) => {
+    const [teamToDelete, setTeamToDelete] = useState<MasterTeam | null>(null);
 
-    const handleConfirmDelete = () => {
+    const handleConfirmDelete = async () => {
         if (teamToDelete) {
-            deleteTeam(teamToDelete._id);
-            setTeamToDelete(null);
+            try {
+                const response = await fetch(`/api/master-teams/${teamToDelete._id}`, {
+                    method: 'DELETE',
+                });
+                if (response.ok) {
+                    onRefresh();
+                    setTeamToDelete(null);
+                }
+            } catch (error) {
+                console.error('Failed to delete team:', error);
+            }
         }
     };
     
     return (
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
             <div className="lg:col-span-2">
-                <TeamCreationForm 
+                <TeamCreationForm
                     key={editingTeam?._id ?? 'new'}
                     editingTeam={editingTeam}
-                    onSave={(data) => {
-                        if (editingTeam) {
-                            updateTeam(editingTeam._id, data);
-                            setEditingTeam(null);
-                        } else {
-                            addTeam(data as any);
+                    onSave={async (data) => {
+                        try {
+                            if (editingTeam) {
+                                const response = await fetch(`/api/master-teams/${editingTeam._id}`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(data),
+                                });
+                                if (response.ok) {
+                                    onRefresh();
+                                    setEditingTeam(null);
+                                }
+                            } else {
+                                const response = await fetch('/api/master-teams', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(data),
+                                });
+                                if (response.ok) {
+                                    onRefresh();
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Failed to save team:', error);
                         }
                     }}
                     onCancel={() => setEditingTeam(null)}
@@ -376,8 +459,8 @@ const TeamManagementPanel: React.FC<{
 
 
 const TeamCreationForm: React.FC<{
-    editingTeam: Team | null;
-    onSave: (data: Partial<Omit<Team, '_id' | 'tournamentId'>>) => void;
+    editingTeam: MasterTeam | null;
+    onSave: (data: Partial<Omit<MasterTeam, '_id'>>) => void;
     onCancel: () => void;
 }> = ({ editingTeam, onSave, onCancel }) => {
     const isEditing = !!editingTeam;
@@ -435,7 +518,7 @@ const TeamCreationForm: React.FC<{
     );
 };
 
-const PlayersSection: React.FC<{ players: Player[]; onAddPlayer: () => void; onEditPlayer: (player: Player) => void; onDeletePlayer: (player: Player) => void; }> = ({ players, onAddPlayer, onEditPlayer, onDeletePlayer }) => (
+const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => void; onEditPlayer: (player: MasterPlayer) => void; onDeletePlayer: (player: MasterPlayer) => void; }> = ({ players, onAddPlayer, onEditPlayer, onDeletePlayer }) => (
     <section>
         <SectionHeader title="Players" subtitle="Eligible players for the auction.">
              <button onClick={onAddPlayer} className="flex items-center gap-2 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
@@ -449,6 +532,8 @@ const PlayersSection: React.FC<{ players: Player[]; onAddPlayer: () => void; onE
                     <thead className="bg-neutral-700/50">
                         <tr>
                             <th className="p-4 text-sm font-semibold text-neutral-300">Player</th>
+                            <th className="p-4 text-sm font-semibold text-neutral-300">Position</th>
+                            <th className="p-4 text-sm font-semibold text-neutral-300">Current Club</th>
                             <th className="p-4 text-sm font-semibold text-neutral-300">Matches</th>
                             <th className="p-4 text-sm font-semibold text-neutral-300">Score</th>
                             <th className="p-4 text-sm font-semibold text-neutral-300">Wickets</th>
@@ -460,16 +545,18 @@ const PlayersSection: React.FC<{ players: Player[]; onAddPlayer: () => void; onE
                             <tr key={player._id} className={`border-t border-neutral-700 ${idx % 2 === 0 ? 'bg-neutral-800' : 'bg-neutral-800/50'}`}>
                                 <td className="p-4 flex items-center gap-4">
                                     <img
-                                        src={imageOptimizers.playerThumbnail(player.imageURL)}
+                                        src={imageOptimizers.playerThumbnail(player.photoURL)}
                                         alt={player.name}
                                         className="w-10 h-10 rounded-full object-cover"
                                         loading="lazy"
                                     />
                                     <span className="font-medium">{player.name}</span>
                                 </td>
-                                <td className="p-4 text-neutral-300">{player.stats.matchesPlayed}</td>
-                                <td className="p-4 text-neutral-300">{player.stats.totalScore.toLocaleString()}</td>
-                                <td className="p-4 text-neutral-300">{player.stats.totalWickets}</td>
+                                <td className="p-4 text-neutral-300">{player.position}</td>
+                                <td className="p-4 text-neutral-300">{player.currentClub}</td>
+                                <td className="p-4 text-neutral-300">{player.careerStats?.matchesPlayed || 0}</td>
+                                <td className="p-4 text-neutral-300">{player.careerStats?.totalScore.toLocaleString() || 0}</td>
+                                <td className="p-4 text-neutral-300">{player.careerStats?.totalWickets || 0}</td>
                                 <td className="p-4 text-right">
                                     <button onClick={() => onEditPlayer(player)} className="p-2 text-neutral-400 hover:text-brand-primary"><EditIcon className="h-5 w-5"/></button>
                                     <button onClick={() => onDeletePlayer(player)} className="p-2 text-neutral-400 hover:text-red-500"><DeleteIcon className="h-5 w-5"/></button>
@@ -484,27 +571,34 @@ const PlayersSection: React.FC<{ players: Player[]; onAddPlayer: () => void; onE
 );
 
 interface PlayerFormProps {
-    onSave: (player: Omit<Player, '_id' | 'tournamentId' | 'isSold' | 'finalPrice' | 'winningTeamId'>) => void;
+    onSave: (player: Omit<MasterPlayer, '_id'>) => void;
     onClose: () => void;
-    tournament: Tournament | null;
-    playerToEdit?: Player;
+    playerToEdit?: MasterPlayer;
 }
 
-const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, tournament, playerToEdit }) => {
+const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, playerToEdit }) => {
     const isEditing = !!playerToEdit;
     const [name, setName] = useState(playerToEdit?.name || '');
-    const [imageURL, setImageURL] = useState(playerToEdit?.imageURL || '');
-    const [stats, setStats] = useState<PlayerStats>(playerToEdit?.stats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 });
+    const [position, setPosition] = useState(playerToEdit?.position || '');
+    const [currentClub, setCurrentClub] = useState(playerToEdit?.currentClub || '');
+    const [photoURL, setPhotoURL] = useState(playerToEdit?.photoURL || '');
+    const [careerStats, setCareerStats] = useState<PlayerStats>(playerToEdit?.careerStats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (name) {
-            onSave({ name, imageURL: imageURL || `https://picsum.photos/seed/${name}/200`, stats });
+        if (name && position && currentClub) {
+            onSave({
+                name,
+                position,
+                currentClub,
+                photoURL: photoURL || `https://placehold.co/200x200/4B5563/FFFFFF/png?text=${name.charAt(0)}`,
+                careerStats
+            });
         }
     };
 
     const handleStatChange = (field: keyof PlayerStats, value: string) => {
-        setStats(prev => ({
+        setCareerStats(prev => ({
             ...prev,
             [field]: parseInt(value, 10) || 0
         }));
@@ -514,32 +608,42 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, tournament, playerToEdi
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
                 <label htmlFor="name" className="block text-sm font-medium text-neutral-300">Player Name</label>
-                <input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary" />
+                <input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2" />
+            </div>
+
+            <div>
+                <label htmlFor="position" className="block text-sm font-medium text-neutral-300">Position</label>
+                <input type="text" id="position" value={position} onChange={(e) => setPosition(e.target.value)} placeholder="e.g., Batsman, Bowler, All-rounder" required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2" />
+            </div>
+
+            <div>
+                <label htmlFor="currentClub" className="block text-sm font-medium text-neutral-300">Current Club</label>
+                <input type="text" id="currentClub" value={currentClub} onChange={(e) => setCurrentClub(e.target.value)} placeholder="e.g., Mumbai Indians, CSK" required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2" />
             </div>
 
             <div className="bg-neutral-700/50 p-3 rounded-md space-y-3 animate-fade-in">
-                 <h4 className="font-semibold text-neutral-200 mb-2 border-b border-neutral-600 pb-2">Player Stats</h4>
+                 <h4 className="font-semibold text-neutral-200 mb-2 border-b border-neutral-600 pb-2">Career Stats</h4>
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                      <div>
                         <label htmlFor="matchesPlayed" className="block text-sm font-medium text-neutral-300">Matches Played</label>
-                        <input type="number" id="matchesPlayed" value={stats.matchesPlayed} onChange={(e) => handleStatChange('matchesPlayed', e.target.value)} required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary" />
+                        <input type="number" id="matchesPlayed" value={careerStats.matchesPlayed} onChange={(e) => handleStatChange('matchesPlayed', e.target.value)} required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2" />
                      </div>
                      <div>
                         <label htmlFor="totalScore" className="block text-sm font-medium text-neutral-300">Total Score</label>
-                        <input type="number" id="totalScore" value={stats.totalScore} onChange={(e) => handleStatChange('totalScore', e.target.value)} required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary" />
+                        <input type="number" id="totalScore" value={careerStats.totalScore} onChange={(e) => handleStatChange('totalScore', e.target.value)} required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2" />
                      </div>
                      <div>
                         <label htmlFor="totalWickets" className="block text-sm font-medium text-neutral-300">Total Wickets</label>
-                        <input type="number" id="totalWickets" value={stats.totalWickets} onChange={(e) => handleStatChange('totalWickets', e.target.value)} required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary" />
+                        <input type="number" id="totalWickets" value={careerStats.totalWickets} onChange={(e) => handleStatChange('totalWickets', e.target.value)} required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2" />
                      </div>
                  </div>
             </div>
             <ImageUpload
-                value={imageURL}
-                onChange={setImageURL}
+                value={photoURL}
+                onChange={setPhotoURL}
                 folder="players"
-                label="Player Profile Image"
-                placeholder="Image URL (optional)"
+                label="Player Profile Photo"
+                placeholder="Photo URL (optional)"
                 previewClassName="w-16 h-16"
                 previewShape="circle"
                 id="player-image-file-mgmt"

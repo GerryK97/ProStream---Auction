@@ -10,18 +10,23 @@ export interface Tournament {
   status: 'Draft' | 'Completed' | 'Setup' | 'Pending' | 'Live' | 'Paused' | 'Stopped' | 'Archived';
 }
 
-export interface Team {
+// Master Team (Global Registry - never changes across tournaments)
+export interface MasterTeam {
   _id: string;
-  tournamentId?: string | null;
   name: string;
   shortCode: string;
   ownerName: string;
-  initialBudget?: number;
-  currentBalance?: number;
-  playersPurchased?: string[]; // Array of Player IDs
   logoURL?: string;
-  primaryColor?: string;
-  secondaryColor?: string;
+}
+
+// Master Player (Global Registry - never changes across tournaments)
+export interface MasterPlayer {
+  _id: string;
+  name: string;
+  position: string;        // e.g., "Batsman", "Bowler", "All-rounder", "Wicket-keeper"
+  currentClub: string;     // e.g., "Mumbai Indians"
+  photoURL?: string;
+  careerStats?: PlayerStats; // Career-wide stats
 }
 
 export interface PlayerStats {
@@ -30,12 +35,35 @@ export interface PlayerStats {
   totalWickets: number;
 }
 
-export interface Player {
-  _id:string;
+// Tournament Team (Tournament-specific instance - READ ONLY after creation)
+export interface Team {
+  _id: string;
+  masterTeamId?: string;    // Reference to MasterTeam (optional for backward compatibility)
   tournamentId?: string | null;
+  // Copied from master (read-only - edit master to update)
   name: string;
-  stats: PlayerStats;
-  imageURL?: string;
+  shortCode: string;
+  ownerName: string;
+  logoURL?: string;
+  // Tournament-specific data
+  initialBudget?: number;
+  currentBalance?: number;
+  playersPurchased?: string[]; // Array of Player IDs
+}
+
+// Tournament Player (Tournament-specific instance - READ ONLY after creation)
+export interface Player {
+  _id: string;
+  masterPlayerId?: string;  // Reference to MasterPlayer (optional for backward compatibility)
+  tournamentId?: string | null;
+  // Copied from master (read-only - edit master to update)
+  name: string;
+  position?: string;
+  currentClub?: string;
+  photoURL?: string;
+  imageURL?: string;        // Kept for backward compatibility
+  // Tournament-specific data
+  stats: PlayerStats;       // Tournament stats (separate from career)
   isSold?: boolean;
   finalPrice?: number;
   winningTeamId?: string;

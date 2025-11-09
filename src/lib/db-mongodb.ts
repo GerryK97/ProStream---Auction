@@ -3,7 +3,9 @@ import { connectToDatabase } from './mongodb';
 import { TournamentModel } from '@/models/Tournament';
 import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
-import { Tournament, Team, Player } from '@/types';
+import { MasterTeamModel } from '@/models/MasterTeam';
+import { MasterPlayerModel } from '@/models/MasterPlayer';
+import { Tournament, Team, Player, MasterTeam, MasterPlayer } from '@/types';
 
 // Helper function to generate IDs
 const generateId = (prefix: string) =>
@@ -49,6 +51,159 @@ export const tournamentDB = {
   },
 };
 
+// Master Team operations (Global Registry)
+export const masterTeamDB = {
+  getAll: async (): Promise<MasterTeam[]> => {
+    await connectToDatabase();
+    return await MasterTeamModel.find().sort({ name: 1 }).lean() as any;
+  },
+
+  getById: async (id: string): Promise<MasterTeam | null> => {
+    await connectToDatabase();
+    return await MasterTeamModel.findOne({ _id: id }).lean() as any;
+  },
+
+  create: async (data: Omit<MasterTeam, '_id'>): Promise<MasterTeam> => {
+    await connectToDatabase();
+
+    // Check for duplicate shortCode
+    const existing = await MasterTeamModel.findOne({ shortCode: data.shortCode });
+    if (existing) {
+      throw new Error(`Team with shortCode "${data.shortCode}" already exists`);
+    }
+
+    const newMasterTeam: MasterTeam = {
+      _id: generateId('mt'),
+      ...data,
+      logoURL: data.logoURL || `https://placehold.co/100x100/374151/F3F4F6/png?text=${encodeURIComponent(data.name.charAt(0))}`,
+    };
+    const doc = await MasterTeamModel.create(newMasterTeam);
+    return doc.toObject();
+  },
+
+  update: async (id: string, data: Partial<Omit<MasterTeam, '_id'>>): Promise<MasterTeam | null> => {
+    await connectToDatabase();
+
+    // Update master
+    const updated = await MasterTeamModel.findOneAndUpdate(
+      { _id: id },
+      { $set: data },
+      { new: true }
+    ).lean();
+
+    if (!updated) return null;
+
+    // Propagate changes to all tournament instances
+    const updateFields: any = {};
+    if (data.name) updateFields.name = data.name;
+    if (data.shortCode) updateFields.shortCode = data.shortCode;
+    if (data.ownerName) updateFields.ownerName = data.ownerName;
+    if (data.logoURL !== undefined) updateFields.logoURL = data.logoURL;
+
+    if (Object.keys(updateFields).length > 0) {
+      await TeamModel.updateMany(
+        { masterTeamId: id },
+        { $set: updateFields }
+      );
+    }
+
+    return updated as any;
+  },
+
+  delete: async (id: string): Promise<boolean> => {
+    await connectToDatabase();
+
+    // CASCADE DELETE - Delete all tournament instances first
+    await TeamModel.deleteMany({ masterTeamId: id });
+
+    // Delete master
+    const result = await MasterTeamModel.deleteOne({ _id: id });
+    return result.deletedCount > 0;
+  },
+
+  // Get all tournaments where this master team is used
+  getUsageInTournaments: async (id: string): Promise<string[]> => {
+    await connectToDatabase();
+    const teams = await TeamModel.find({ masterTeamId: id }).distinct('tournamentId');
+    return teams;
+  },
+};
+
+// Master Player operations (Global Registry)
+export const masterPlayerDB = {
+  getAll: async (): Promise<MasterPlayer[]> => {
+    await connectToDatabase();
+    return await MasterPlayerModel.find().sort({ name: 1 }).lean() as any;
+  },
+
+  getById: async (id: string): Promise<MasterPlayer | null> => {
+    await connectToDatabase();
+    return await MasterPlayerModel.findOne({ _id: id }).lean() as any;
+  },
+
+  create: async (data: Omit<MasterPlayer, '_id'>): Promise<MasterPlayer> => {
+    await connectToDatabase();
+    const newMasterPlayer: MasterPlayer = {
+      _id: generateId('mp'),
+      ...data,
+      photoURL: data.photoURL || `https://placehold.co/100x100/374151/F3F4F6/png?text=No+Image`,
+      careerStats: data.careerStats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 },
+    };
+    const doc = await MasterPlayerModel.create(newMasterPlayer);
+    return doc.toObject();
+  },
+
+  update: async (id: string, data: Partial<Omit<MasterPlayer, '_id'>>): Promise<MasterPlayer | null> => {
+    await connectToDatabase();
+
+    // Update master
+    const updated = await MasterPlayerModel.findOneAndUpdate(
+      { _id: id },
+      { $set: data },
+      { new: true }
+    ).lean();
+
+    if (!updated) return null;
+
+    // Propagate changes to all tournament instances
+    const updateFields: any = {};
+    if (data.name) updateFields.name = data.name;
+    if (data.position) updateFields.position = data.position;
+    if (data.currentClub) updateFields.currentClub = data.currentClub;
+    if (data.photoURL !== undefined) {
+      updateFields.photoURL = data.photoURL;
+      updateFields.imageURL = data.photoURL; // Keep both in sync
+    }
+
+    if (Object.keys(updateFields).length > 0) {
+      await PlayerModel.updateMany(
+        { masterPlayerId: id },
+        { $set: updateFields }
+      );
+    }
+
+    return updated as any;
+  },
+
+  delete: async (id: string): Promise<boolean> => {
+    await connectToDatabase();
+
+    // CASCADE DELETE - Delete all tournament instances first
+    await PlayerModel.deleteMany({ masterPlayerId: id });
+
+    // Delete master
+    const result = await MasterPlayerModel.deleteOne({ _id: id });
+    return result.deletedCount > 0;
+  },
+
+  // Get all tournaments where this master player is used
+  getUsageInTournaments: async (id: string): Promise<string[]> => {
+    await connectToDatabase();
+    const players = await PlayerModel.find({ masterPlayerId: id }).distinct('tournamentId');
+    return players;
+  },
+};
+
 // Team operations
 export const teamDB = {
   getAll: async (): Promise<Team[]> => {
@@ -75,8 +230,6 @@ export const teamDB = {
       playersPurchased: [],
       // Provide default logo if not provided
       logoURL: data.logoURL || `https://placehold.co/100x100/374151/F3F4F6/png?text=${encodeURIComponent(data.name.charAt(0))}`,
-      primaryColor: data.primaryColor,
-      secondaryColor: data.secondaryColor,
     };
     const doc = await TeamModel.create(newTeam);
     return doc.toObject();
@@ -90,6 +243,46 @@ export const teamDB = {
       { new: true }
     ).lean();
     return updated as any;
+  },
+
+  // Create tournament team from master team
+  createFromMaster: async (
+    masterTeamId: string,
+    tournamentId: string
+  ): Promise<Team> => {
+    await connectToDatabase();
+
+    // Get master team data
+    const masterTeam = await MasterTeamModel.findOne({ _id: masterTeamId }).lean() as MasterTeam | null;
+    if (!masterTeam) throw new Error('Master team not found');
+
+    // Get tournament data for budget
+    const tournament = await TournamentModel.findOne({ _id: tournamentId }).lean() as Tournament | null;
+    if (!tournament) throw new Error('Tournament not found');
+
+    // Check if team already exists in tournament
+    const existing = await TeamModel.findOne({ masterTeamId, tournamentId });
+    if (existing) {
+      throw new Error('Team already added to this tournament');
+    }
+
+    const newTeam: Team = {
+      _id: generateId('team'),
+      masterTeamId,
+      tournamentId,
+      // Copy from master (read-only)
+      name: masterTeam.name,
+      shortCode: masterTeam.shortCode,
+      ownerName: masterTeam.ownerName,
+      logoURL: masterTeam.logoURL,
+      // Tournament-specific
+      initialBudget: tournament.budgetPerTeam,
+      currentBalance: tournament.budgetPerTeam,
+      playersPurchased: [],
+    };
+
+    const doc = await TeamModel.create(newTeam);
+    return doc.toObject();
   },
 
   delete: async (id: string): Promise<boolean> => {
@@ -136,6 +329,42 @@ export const playerDB = {
       { new: true }
     ).lean();
     return updated as any;
+  },
+
+  // Create tournament player from master player
+  createFromMaster: async (
+    masterPlayerId: string,
+    tournamentId: string
+  ): Promise<Player> => {
+    await connectToDatabase();
+
+    // Get master player data
+    const masterPlayer = await MasterPlayerModel.findOne({ _id: masterPlayerId }).lean() as MasterPlayer | null;
+    if (!masterPlayer) throw new Error('Master player not found');
+
+    // Check if player already exists in tournament
+    const existing = await PlayerModel.findOne({ masterPlayerId, tournamentId });
+    if (existing) {
+      throw new Error('Player already added to this tournament');
+    }
+
+    const newPlayer: Player = {
+      _id: generateId('p'),
+      masterPlayerId,
+      tournamentId,
+      // Copy from master (read-only)
+      name: masterPlayer.name,
+      position: masterPlayer.position,
+      currentClub: masterPlayer.currentClub,
+      photoURL: masterPlayer.photoURL,
+      imageURL: masterPlayer.photoURL, // Keep both for compatibility
+      // Tournament-specific (fresh stats)
+      stats: { matchesPlayed: 0, totalScore: 0, totalWickets: 0 },
+      isSold: false,
+    };
+
+    const doc = await PlayerModel.create(newPlayer);
+    return doc.toObject();
   },
 
   delete: async (id: string): Promise<boolean> => {
@@ -202,8 +431,6 @@ export const seedDatabase = async () => {
         currentBalance: 8500000,
         playersPurchased: ['p1'],
         logoURL: 'https://placehold.co/64/E879F9/111827/png?text=W',
-        primaryColor: '#FF0000',
-        secondaryColor: '#0000FF',
       },
       {
         _id: 'team2',
@@ -215,8 +442,6 @@ export const seedDatabase = async () => {
         currentBalance: 7500000,
         playersPurchased: ['p2'],
         logoURL: 'https://placehold.co/64/F472B6/111827/png?text=C',
-        primaryColor: '#00FF00',
-        secondaryColor: '#FFFF00',
       },
       {
         _id: 'team3',
@@ -228,8 +453,6 @@ export const seedDatabase = async () => {
         currentBalance: 9200000,
         playersPurchased: ['p3'],
         logoURL: 'https://placehold.co/64/A78BFA/111827/png?text=M',
-        primaryColor: '#0000FF',
-        secondaryColor: '#FF0000',
       },
       {
         _id: 'team4',
@@ -241,8 +464,6 @@ export const seedDatabase = async () => {
         currentBalance: 6800000,
         playersPurchased: ['p4'],
         logoURL: 'https://placehold.co/64/FBBF24/111827/png?text=G',
-        primaryColor: '#FFFF00',
-        secondaryColor: '#00FF00',
       },
       {
         _id: 'team5',
@@ -254,8 +475,6 @@ export const seedDatabase = async () => {
         currentBalance: 10000000,
         playersPurchased: [],
         logoURL: 'https://placehold.co/64/34D399/111827/png?text=CO',
-        primaryColor: '#34D399',
-        secondaryColor: '#06B6D4',
       },
       {
         _id: 'team6',
@@ -267,8 +486,6 @@ export const seedDatabase = async () => {
         currentBalance: 10000000,
         playersPurchased: [],
         logoURL: 'https://placehold.co/64/60A5FA/111827/png?text=MA',
-        primaryColor: '#60A5FA',
-        secondaryColor: '#818CF8',
       },
       {
         _id: 'team7',
@@ -280,8 +497,6 @@ export const seedDatabase = async () => {
         currentBalance: 10000000,
         playersPurchased: [],
         logoURL: 'https://placehold.co/64/F43F5E/111827/png?text=J',
-        primaryColor: '#F43F5E',
-        secondaryColor: '#EC4899',
       },
       {
         _id: 'team8',
@@ -293,8 +508,6 @@ export const seedDatabase = async () => {
         currentBalance: 10000000,
         playersPurchased: [],
         logoURL: 'https://placehold.co/64/8B5CF6/111827/png?text=P',
-        primaryColor: '#8B5CF6',
-        secondaryColor: '#D946EF',
       },
     ]);
 
