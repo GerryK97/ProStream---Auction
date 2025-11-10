@@ -155,9 +155,9 @@ const CurrentAuctionPanel: React.FC<{
                     </div>
                 </div>
             </div>
-            <div className="mt-6 border-t border-neutral-700 pt-4 text-center bg-neutral-800">
+            <div className="mt-6 border-t border-neutral-700 pt-4 text-center">
                  <p className="mb-3 text-sm text-neutral-500">Finalize Sale</p>
-                 <div className="mb-3 max-w-md mx-auto">
+                 <div className="mb-3 max-w-md mx-auto bg-neutral-800">
                      <label className="block text-sm font-semibold text-neutral-300 mb-2">Select Winning Team</label>
                      <select
                          value={biddingTeamId}
@@ -171,7 +171,7 @@ const CurrentAuctionPanel: React.FC<{
                          ))}
                      </select>
                  </div>
-                 <div className="flex justify-center gap-4 mb-3">
+                 <div className="flex justify-center gap-4 mb-3 bg-neutral-800">
                      <button
                          onClick={onSell}
                          disabled={isSold || currentBid === 0 || !biddingTeamId}
