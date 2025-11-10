@@ -72,7 +72,7 @@ export function useAuctionSSE(tournamentId: string | null): UseAuctionSSEReturn 
                 break;
 
               case 'auction-update':
-                console.log('Auction Update Received:', data);
+                // Auction updates received via SSE
                 if (data.tournament) setTournament(data.tournament);
                 if (data.auctionState) setAuctionState(data.auctionState);
                 if (data.players) setPlayers(data.players);

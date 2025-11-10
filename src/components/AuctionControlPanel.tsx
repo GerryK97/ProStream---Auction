@@ -103,7 +103,7 @@ const CurrentAuctionPanel: React.FC<{
 
     return (
         <div className="bg-neutral-800 rounded-lg p-6 border border-neutral-700 h-[calc(100vh-15rem)] flex flex-col justify-between">
-            <div>
+            <div className="bg-neutral-800">
                 <div className="text-center mb-4">
                     <p className="text-3xl font-bold text-cyan-400">#{currentPlayer._id.replace('p', '').padStart(3, '0')} {currentPlayer.name}</p>
                     <p className="text-neutral-400">Batsman</p>
@@ -155,9 +155,9 @@ const CurrentAuctionPanel: React.FC<{
                     </div>
                 </div>
             </div>
-            <div className="mt-6 border-t border-neutral-700 pt-4 text-center">
+            <div className="mt-6 border-t border-neutral-700 pt-4 text-center bg-neutral-800">
                  <p className="mb-3 text-sm text-neutral-500">Finalize Sale</p>
-                 <div className="mb-3 max-w-md mx-auto bg-neutral-800">
+                 <div className="mb-3 max-w-md mx-auto">
                      <label className="block text-sm font-semibold text-neutral-300 mb-2">Select Winning Team</label>
                      <select
                          value={biddingTeamId}
@@ -171,7 +171,7 @@ const CurrentAuctionPanel: React.FC<{
                          ))}
                      </select>
                  </div>
-                 <div className="flex justify-center gap-4 mb-3 bg-neutral-800">
+                 <div className="flex justify-center gap-4 mb-3">
                      <button
                          onClick={onSell}
                          disabled={isSold || currentBid === 0 || !biddingTeamId}
