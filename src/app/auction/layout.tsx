@@ -43,7 +43,7 @@ export default function AuctionLayout({
         </div>
       </nav>
 
-      <div className="container mx-auto px-6 py-6">
+      <div className="container mx-auto px-6 py-6 bg-neutral-900">
         {children}
       </div>
     </div>
