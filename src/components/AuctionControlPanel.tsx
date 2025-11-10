@@ -155,7 +155,7 @@ const CurrentAuctionPanel: React.FC<{
                     </div>
                 </div>
             </div>
-            <div className="mt-6 border-t border-neutral-700 pt-4 text-center">
+            <div className="mt-6 border-t border-neutral-700 pt-4 text-center bg-neutral-800">
                  <p className="mb-3 text-sm text-neutral-500">Finalize Sale</p>
                  <div className="mb-3 max-w-md mx-auto">
                      <label className="block text-sm font-semibold text-neutral-300 mb-2">Select Winning Team</label>

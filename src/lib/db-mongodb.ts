@@ -11,6 +11,14 @@ import { Tournament, Team, Player, MasterTeam, MasterPlayer } from '@/types';
 const generateId = (prefix: string) =>
   `${prefix}${Date.now()}${Math.random().toString(36).substr(2, 9)}`;
 
+// Helper function to generate sequential player ID with zero-padding
+const generateSequentialPlayerId = async (): Promise<string> => {
+  await connectToDatabase();
+  const count = await MasterPlayerModel.countDocuments();
+  const playerNumber = (count + 1).toString().padStart(3, '0');
+  return playerNumber;
+};
+
 // Tournament operations
 export const tournamentDB = {
   getAll: async (): Promise<Tournament[]> => {
@@ -143,8 +151,9 @@ export const masterPlayerDB = {
 
   create: async (data: Omit<MasterPlayer, '_id'>): Promise<MasterPlayer> => {
     await connectToDatabase();
+    const playerId = await generateSequentialPlayerId();
     const newMasterPlayer: MasterPlayer = {
-      _id: generateId('mp'),
+      _id: playerId,
       ...data,
       photoURL: data.photoURL || `https://placehold.co/100x100/374151/F3F4F6/png?text=No+Image`,
       careerStats: data.careerStats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 },
