@@ -19,7 +19,7 @@ const AvailablePlayersPanel: React.FC<{
         .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
     return (
-        <div className="bg-neutral-800 rounded-lg p-4 flex flex-col h-[calc(100vh-15rem)] border border-neutral-700">
+        <div className="bg-neutral-800 rounded-lg p-4 flex flex-col min-h-[calc(100vh-15rem)] border border-neutral-700">
             <h3 className="font-bold text-lg mb-2">Available Players</h3>
             {isAuctioning && (
                 <div className="bg-yellow-900/50 border border-yellow-700 text-yellow-200 text-xs rounded-md p-2 mb-3">
@@ -91,7 +91,7 @@ const CurrentAuctionPanel: React.FC<{
 
     if (!currentPlayer || !tournament) {
         return (
-            <div className="bg-neutral-800 rounded-lg p-4 flex items-center justify-center h-[calc(100vh-15rem)] border border-neutral-700">
+            <div className="bg-neutral-800 rounded-lg p-4 flex items-center justify-center min-h-[calc(100vh-15rem)] border border-neutral-700">
                 <p className="text-neutral-400 text-lg">{!tournament ? "No tournament data" : "Select a player to start the auction"}</p>
             </div>
         );
@@ -102,7 +102,7 @@ const CurrentAuctionPanel: React.FC<{
     const bidIncrements = [1000, 5000, 10000, 25000, 50000];
 
     return (
-        <div className="bg-neutral-800 rounded-lg p-6 border border-neutral-700 h-[calc(100vh-15rem)] flex flex-col justify-between">
+        <div className="bg-neutral-800 rounded-lg p-6 border border-neutral-700 min-h-[calc(100vh-15rem)] flex flex-col justify-between">
             <div>
                 <div className="text-center mb-4">
                     <p className="text-3xl font-bold text-cyan-400">#{currentPlayer._id.replace('p', '').padStart(3, '0')} {currentPlayer.name}</p>
@@ -216,10 +216,10 @@ const TeamsAndSoldPlayersPanel: React.FC<{
     };
 
     return (
-        <div className="space-y-6 h-full flex flex-col">
-            <div className="bg-neutral-800 rounded-lg p-4 border border-neutral-700 flex-grow h-1/2 overflow-hidden flex flex-col">
+        <div className="space-y-6 flex flex-col">
+            <div className="bg-neutral-800 rounded-lg p-4 border border-neutral-700 flex flex-col">
                  <h3 className="font-bold text-lg mb-3">Teams</h3>
-                 <ul className="space-y-2 overflow-y-auto pr-2 flex-grow">
+                 <ul className="space-y-2 overflow-y-auto pr-2 max-h-[400px]">
                      {teams.map(team => {
                          const maxBid = calculateMaxBid(team);
                          const playersPurchased = team.playersPurchased?.length || 0;
@@ -254,13 +254,13 @@ const TeamsAndSoldPlayersPanel: React.FC<{
                      })}
                  </ul>
             </div>
-             <div className="bg-neutral-800 rounded-lg p-4 border border-neutral-700 flex-grow h-1/2 overflow-hidden flex flex-col">
+             <div className="bg-neutral-800 rounded-lg p-4 border border-neutral-700 flex flex-col">
                 <h3 className="font-bold text-lg mb-3">Sold Players ({soldPlayers.length})</h3>
                 <div className="flex gap-2 mb-3">
                     <button onClick={onUndo} className="btn-secondary w-full text-sm py-1.5">Undo Last Sale</button>
                     <button onClick={onCleanup} className="btn-danger w-full text-sm py-1.5">Cleanup All</button>
                 </div>
-                <div className="overflow-y-auto pr-2 flex-grow">
+                <div className="overflow-y-auto pr-2 max-h-[400px]">
                     {soldPlayers.length === 0 ? (
                         <p className="text-center text-neutral-400 py-8 text-sm">No players sold yet</p>
                     ) : (
