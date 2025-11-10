@@ -561,6 +561,7 @@ const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => voi
                 <table className="w-full text-left">
                     <thead className="bg-neutral-700/50">
                         <tr>
+                            <th className="p-4 text-sm font-semibold text-neutral-300">Player ID</th>
                             <th className="p-4 text-sm font-semibold text-neutral-300">Player</th>
                             <th className="p-4 text-sm font-semibold text-neutral-300">Position</th>
                             <th className="p-4 text-sm font-semibold text-neutral-300">Current Club</th>
@@ -571,8 +572,14 @@ const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => voi
                         </tr>
                     </thead>
                     <tbody>
-                        {players.map((player, idx) => (
+                        {players.map((player, idx) => {
+                            // Format player ID: if it's already a short format (3 digits), use as is
+                            // Otherwise, it might be a long string, so just display the _id
+                            const displayId = player._id.length <= 3 ? player._id : player._id.slice(-8);
+
+                            return (
                             <tr key={player._id} className={`border-t border-neutral-700 ${idx % 2 === 0 ? 'bg-neutral-800' : 'bg-neutral-800/50'}`}>
+                                <td className="p-4 text-neutral-400 text-xs font-mono">{displayId}</td>
                                 <td className="p-4 flex items-center gap-4">
                                     <img
                                         src={imageOptimizers.playerThumbnail(player.photoURL)}
@@ -592,7 +599,8 @@ const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => voi
                                     <button onClick={() => onDeletePlayer(player)} className="p-2 text-neutral-400 hover:text-red-500"><DeleteIcon className="h-5 w-5"/></button>
                                 </td>
                             </tr>
-                        ))}
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>
