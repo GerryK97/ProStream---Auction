@@ -39,7 +39,7 @@ const AvailablePlayersPanel: React.FC<{
                         <li key={player._id} className="flex items-center justify-between bg-neutral-700/50 p-2 rounded-md">
                             <div>
                                 <p className="font-semibold text-cyan-400">#{player._id.replace('p', '').padStart(3, '0')} {player.name}</p>
-                                <p className="text-xs text-neutral-400">Batsman</p>
+                                <p className="text-xs text-neutral-400">{player.position || 'Player'}</p>
                             </div>
                             <button
                                 onClick={() => onSelectPlayer(player._id)}
@@ -106,7 +106,7 @@ const CurrentAuctionPanel: React.FC<{
             <div>
                 <div className="text-center mb-4">
                     <p className="text-3xl font-bold text-cyan-400">#{currentPlayer._id.replace('p', '').padStart(3, '0')} {currentPlayer.name}</p>
-                    <p className="text-neutral-400">Batsman</p>
+                    <p className="text-neutral-400">{currentPlayer.position || 'Player'}</p>
                 </div>
                 <div className="flex justify-center items-center gap-6 mb-4">
                     <img

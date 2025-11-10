@@ -11,9 +11,10 @@ import ImageUpload from './ImageUpload';
 type ManagementView = 'tournaments' | 'teams' | 'players';
 
 const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
-    const { tournaments, addTournament, updateTournament, deleteTournament } = useAuction();
+    const { } = useAuction();
 
-    // Master Teams state (fetched from API)
+    // State fetched from API
+    const [tournaments, setTournaments] = useState<Tournament[]>([]);
     const [masterTeams, setMasterTeams] = useState<MasterTeam[]>([]);
     const [masterPlayers, setMasterPlayers] = useState<MasterPlayer[]>([]);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -23,14 +24,20 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
     const [editingPlayer, setEditingPlayer] = useState<MasterPlayer | null>(null);
     const [playerToDelete, setPlayerToDelete] = useState<MasterPlayer | null>(null);
 
-    // Fetch master teams and players from API
+    // Fetch tournaments, master teams, and master players from API
     useEffect(() => {
-        const fetchMasterData = async () => {
+        const fetchData = async () => {
             try {
-                const [teamsRes, playersRes] = await Promise.all([
+                const [tournamentsRes, teamsRes, playersRes] = await Promise.all([
+                    fetch('/api/tournaments'),
                     fetch('/api/master-teams'),
                     fetch('/api/master-players')
                 ]);
+
+                if (tournamentsRes.ok) {
+                    const tournamentsData = await tournamentsRes.json();
+                    setTournaments(tournamentsData);
+                }
 
                 if (teamsRes.ok) {
                     const teamsData = await teamsRes.json();
@@ -42,11 +49,11 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
                     setMasterPlayers(playersData);
                 }
             } catch (error) {
-                console.error('Failed to fetch master data:', error);
+                console.error('Failed to fetch data:', error);
             }
         };
 
-        fetchMasterData();
+        fetchData();
     }, [refreshTrigger]);
 
     useEffect(() => {
@@ -63,11 +70,9 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
     const renderView = () => {
         switch (view) {
             case 'tournaments':
-                return <TournamentManagementPanel 
+                return <TournamentManagementPanel
                             tournaments={tournaments}
-                            onAddTournament={addTournament}
-                            onUpdateTournament={updateTournament}
-                            onDeleteTournament={deleteTournament}
+                            onRefresh={() => setRefreshTrigger(prev => prev + 1)}
                         />;
             case 'teams':
                 return <TeamManagementPanel
@@ -177,17 +182,15 @@ const SectionHeader: React.FC<{ title: string; subtitle: string; children?: Reac
 
 const TournamentManagementPanel: React.FC<{
     tournaments: Tournament[];
-    onAddTournament: (data: Omit<Tournament, '_id' | 'status'>) => void;
-    onUpdateTournament: (id: string, data: Partial<Omit<Tournament, '_id'>>) => void;
-    onDeleteTournament: (id: string) => void;
-}> = ({ tournaments, onAddTournament, onUpdateTournament, onDeleteTournament }) => {
+    onRefresh: () => void;
+}> = ({ tournaments, onRefresh }) => {
     const [tournamentToDelete, setTournamentToDelete] = useState<Tournament | null>(null);
     const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
 
     const handleEdit = (tournament: Tournament) => {
         setEditingTournament(tournament);
     };
-    
+
     const handleDelete = (tournament: Tournament) => {
         setTournamentToDelete(tournament);
     }
@@ -195,14 +198,32 @@ const TournamentManagementPanel: React.FC<{
     return (
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
             <div className="lg:col-span-2">
-                <CreateTournamentForm 
+                <CreateTournamentForm
                     key={editingTournament?._id || 'new'}
-                    onSave={(data) => {
-                         if (editingTournament) {
-                            onUpdateTournament(editingTournament._id, data);
-                            setEditingTournament(null);
-                        } else {
-                            onAddTournament(data);
+                    onSave={async (data) => {
+                        try {
+                            if (editingTournament) {
+                                const response = await fetch(`/api/tournaments/${editingTournament._id}`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(data),
+                                });
+                                if (response.ok) {
+                                    onRefresh();
+                                    setEditingTournament(null);
+                                }
+                            } else {
+                                const response = await fetch('/api/tournaments', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(data),
+                                });
+                                if (response.ok) {
+                                    onRefresh();
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Failed to save tournament:', error);
                         }
                     }}
                     tournamentToEdit={editingTournament}
@@ -251,9 +272,18 @@ const TournamentManagementPanel: React.FC<{
                         <p className="text-neutral-300">Are you sure you want to permanently delete <strong className="text-white">{tournamentToDelete.name}</strong>? This action cannot be undone.</p>
                         <div className="flex justify-end gap-4 mt-6">
                             <button onClick={() => setTournamentToDelete(null)} className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">Cancel</button>
-                            <button onClick={() => {
-                                onDeleteTournament(tournamentToDelete._id);
-                                setTournamentToDelete(null);
+                            <button onClick={async () => {
+                                try {
+                                    const response = await fetch(`/api/tournaments/${tournamentToDelete._id}`, {
+                                        method: 'DELETE',
+                                    });
+                                    if (response.ok) {
+                                        onRefresh();
+                                        setTournamentToDelete(null);
+                                    }
+                                } catch (error) {
+                                    console.error('Failed to delete tournament:', error);
+                                }
                             }} className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">Delete</button>
                         </div>
                     </div>
