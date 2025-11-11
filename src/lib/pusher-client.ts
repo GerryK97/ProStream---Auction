@@ -24,44 +24,56 @@ export function getPusherClient(): PusherJS {
     const key = process.env.NEXT_PUBLIC_PUSHER_KEY;
     const cluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
 
+    console.log('[Pusher Client] Initializing with:', {
+      hasKey: !!key,
+      hasCluster: !!cluster,
+      key: key ? `${key.substring(0, 10)}...` : 'missing',
+      cluster: cluster || 'missing'
+    });
+
     if (!key || !cluster) {
-      throw new Error(
-        'Missing Pusher client configuration. Please set NEXT_PUBLIC_PUSHER_KEY and NEXT_PUBLIC_PUSHER_CLUSTER environment variables.'
-      );
+      const error = `Missing Pusher client configuration. NEXT_PUBLIC_PUSHER_KEY: ${key ? 'present' : 'MISSING'}, NEXT_PUBLIC_PUSHER_CLUSTER: ${cluster ? 'present' : 'MISSING'}`;
+      console.error('[Pusher Client]', error);
+      throw new Error(error);
     }
 
-    pusherClientInstance = new PusherJS(key, {
-      cluster: cluster,
-      forceTLS: true,
-      // Enable stats for monitoring (optional)
-      enabledTransports: ['ws', 'wss'],
-      // Reconnection settings
-      activityTimeout: 30000, // 30 seconds
-      pongTimeout: 10000, // 10 seconds
-    });
+    try {
+      pusherClientInstance = new PusherJS(key, {
+        cluster: cluster,
+        forceTLS: true,
+        // Enable stats for monitoring (optional)
+        enabledTransports: ['ws', 'wss'],
+        // Reconnection settings
+        activityTimeout: 30000, // 30 seconds
+        pongTimeout: 10000, // 10 seconds
+      });
 
-    // Connection state logging
-    pusherClientInstance.connection.bind('connected', () => {
-      console.log('[Pusher Client] Connected successfully');
-    });
+      // Connection state logging
+      pusherClientInstance.connection.bind('connected', () => {
+        console.log('[Pusher Client] Connected successfully');
+      });
 
-    pusherClientInstance.connection.bind('disconnected', () => {
-      console.log('[Pusher Client] Disconnected');
-    });
+      pusherClientInstance.connection.bind('disconnected', () => {
+        console.log('[Pusher Client] Disconnected');
+      });
 
-    pusherClientInstance.connection.bind('error', (error: any) => {
-      console.error('[Pusher Client] Connection error:', error);
-    });
+      pusherClientInstance.connection.bind('error', (error: any) => {
+        console.error('[Pusher Client] Connection error:', error);
+      });
 
-    pusherClientInstance.connection.bind('unavailable', () => {
-      console.warn('[Pusher Client] Connection unavailable');
-    });
+      pusherClientInstance.connection.bind('unavailable', () => {
+        console.warn('[Pusher Client] Connection unavailable');
+      });
 
-    pusherClientInstance.connection.bind('failed', () => {
-      console.error('[Pusher Client] Connection failed');
-    });
+      pusherClientInstance.connection.bind('failed', () => {
+        console.error('[Pusher Client] Connection failed');
+      });
 
-    console.log('[Pusher Client] Initialized successfully');
+      console.log('[Pusher Client] Initialized successfully');
+    } catch (error) {
+      console.error('[Pusher Client] Failed to initialize:', error);
+      throw error;
+    }
   }
 
   return pusherClientInstance;

@@ -306,7 +306,8 @@ export function usePusherAuction(
       };
     } catch (err) {
       console.error('[Pusher] Error setting up connection:', err);
-      setError('Failed to establish real-time connection');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to establish real-time connection';
+      setError(`Pusher connection failed: ${errorMessage}`);
       setIsConnected(false);
     }
   }, [tournamentId, fetchInitialData]);
