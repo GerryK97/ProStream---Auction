@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     // Get tournament for base price
     const tournament = await TournamentModel.findById(tournamentId).lean();
-    const basePrice = tournament?.basePricePerPlayer || 0;
+    const basePrice = (tournament as any)?.basePricePerPlayer || 0;
 
     // Trigger Pusher event
     try {
