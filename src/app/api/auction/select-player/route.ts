@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
         currentPlayer: player as any,
         basePrice,
         auctionState: updatedState as any,
-        message: `Player ${player.name} selected for auction`,
+        message: `Player ${(player as any).name} selected for auction`,
       });
     } catch (pusherError) {
       console.error('Failed to trigger Pusher event:', pusherError);
