@@ -378,8 +378,8 @@ export const playerDB = {
       currentClub: masterPlayer.currentClub,
       photoURL: masterPlayer.photoURL,
       imageURL: masterPlayer.photoURL, // Keep both for compatibility
-      // Tournament-specific (fresh stats)
-      stats: { matchesPlayed: 0, totalScore: 0, totalWickets: 0 },
+      // Copy career stats from master player
+      stats: masterPlayer.careerStats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 },
       isSold: false,
     };
 
