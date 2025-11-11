@@ -11,10 +11,18 @@ import { Tournament, Team, Player, MasterTeam, MasterPlayer } from '@/types';
 const generateId = (prefix: string) =>
   `${prefix}${Date.now()}${Math.random().toString(36).substr(2, 9)}`;
 
-// Helper function to generate sequential player ID with zero-padding
+// Helper function to generate sequential master player ID with PS prefix
 const generateSequentialPlayerId = async (): Promise<string> => {
   await connectToDatabase();
   const count = await MasterPlayerModel.countDocuments();
+  const playerNumber = (count + 1).toString().padStart(3, '0');
+  return `PS${playerNumber}`;
+};
+
+// Helper function to generate sequential tournament player ID (unique per tournament)
+const generateTournamentPlayerId = async (tournamentId: string): Promise<string> => {
+  await connectToDatabase();
+  const count = await PlayerModel.countDocuments({ tournamentId });
   const playerNumber = (count + 1).toString().padStart(3, '0');
   return playerNumber;
 };
@@ -357,8 +365,11 @@ export const playerDB = {
       throw new Error('Player already added to this tournament');
     }
 
+    // Generate tournament-specific sequential ID
+    const tournamentPlayerId = await generateTournamentPlayerId(tournamentId);
+
     const newPlayer: Player = {
-      _id: generateId('p'),
+      _id: tournamentPlayerId,
       masterPlayerId,
       tournamentId,
       // Copy from master (read-only)
@@ -520,10 +531,10 @@ export const seedDatabase = async () => {
       },
     ]);
 
-    // Seed Players
+    // Seed Players (using new sequential format: 001, 002, 003...)
     await PlayerModel.insertMany([
       {
-        _id: 'p1',
+        _id: '001',
         tournamentId: 't1',
         name: 'Shadow',
         stats: { matchesPlayed: 50, totalScore: 1200, totalWickets: 5 },
@@ -531,7 +542,7 @@ export const seedDatabase = async () => {
         isSold: false,
       },
       {
-        _id: 'p2',
+        _id: '002',
         tournamentId: 't1',
         name: 'Vortex',
         stats: { matchesPlayed: 65, totalScore: 850, totalWickets: 75 },
@@ -539,7 +550,7 @@ export const seedDatabase = async () => {
         isSold: false,
       },
       {
-        _id: 'p3',
+        _id: '003',
         tournamentId: 't1',
         name: 'Blitz',
         stats: { matchesPlayed: 45, totalScore: 1500, totalWickets: 10 },
@@ -547,7 +558,7 @@ export const seedDatabase = async () => {
         isSold: false,
       },
       {
-        _id: 'p4',
+        _id: '004',
         tournamentId: 't1',
         name: 'Rogue',
         stats: { matchesPlayed: 55, totalScore: 980, totalWickets: 30 },
