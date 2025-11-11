@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     let auctionState = await AuctionStateModel.findOne({ tournamentId }).lean();
 
     // If this was the current player being auctioned, reset the auction state
-    if (auctionState && auctionState.currentPlayerId?.toString() === playerId.toString()) {
+    if (auctionState && (auctionState as any).currentPlayerId?.toString() === playerId.toString()) {
       auctionState = await AuctionStateModel.findOneAndUpdate(
         { tournamentId },
         {
