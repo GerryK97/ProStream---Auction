@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { PlayerModel } from '@/models/Player';
+import { TournamentModel } from '@/models/Tournament';
+import { triggerPlayerSelected } from '@/lib/pusher-server';
 
 // POST /api/auction/select-player - Select a specific player for auction
 export async function POST(request: NextRequest) {
@@ -61,6 +63,22 @@ export async function POST(request: NextRequest) {
       },
       { new: true }
     ).lean();
+
+    // Get tournament for base price
+    const tournament = await TournamentModel.findById(tournamentId).lean();
+    const basePrice = tournament?.basePricePerPlayer || 0;
+
+    // Trigger Pusher event
+    try {
+      await triggerPlayerSelected(tournamentId, {
+        currentPlayer: player as any,
+        basePrice,
+        auctionState: updatedState as any,
+        message: `Player ${player.name} selected for auction`,
+      });
+    } catch (pusherError) {
+      console.error('Failed to trigger Pusher event:', pusherError);
+    }
 
     return NextResponse.json(updatedState);
   } catch (error) {

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Player, Team, Tournament } from '@/types';
-import { useAuctionSSE } from '@/hooks/useAuctionSSE';
+import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { imageOptimizers } from '@/lib/imageOptimization';
 
 const formatCurrency = (amount: number) => amount.toLocaleString();
@@ -325,22 +325,22 @@ const AuctionControlPanel: React.FC = () => {
         // Re-check when actions are performed
     }, [refreshTrigger]);
 
-    // Use SSE hook to get real-time auction updates
+    // Use Pusher hook to get real-time auction updates
     const {
         tournament: liveTournament,
         auctionState,
         players,
         teams,
         isConnected,
-        error: sseError,
-    } = useAuctionSSE(liveTournamentId);
+        error: pusherError,
+    } = usePusherAuction(liveTournamentId);
 
-    // Display SSE errors
+    // Display Pusher errors
     useEffect(() => {
-        if (sseError && !error) {
-            setError(sseError);
+        if (pusherError && !error) {
+            setError(pusherError);
         }
-    }, [sseError, error]);
+    }, [pusherError, error]);
 
     useEffect(() => {
         if (error) {

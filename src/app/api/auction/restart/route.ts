@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { TournamentModel } from '@/models/Tournament';
 import { PlayerModel } from '@/models/Player';
+import { AuctionStateModel } from '@/models/AuctionState';
+import { triggerAuctionRestarted } from '@/lib/pusher-server';
 
 // POST /api/auction/restart - Restart a stopped auction
 export async function POST(request: NextRequest) {
@@ -65,6 +67,20 @@ export async function POST(request: NextRequest) {
       { $set: { status: 'Live' } },
       { new: true }
     ).lean();
+
+    // Get auction state
+    const auctionState = await AuctionStateModel.findOne({ tournamentId }).lean();
+
+    // Trigger Pusher event
+    try {
+      await triggerAuctionRestarted({
+        tournament: updatedTournament as any,
+        auctionState: auctionState as any,
+        message: 'Auction restarted successfully',
+      });
+    } catch (pusherError) {
+      console.error('Failed to trigger Pusher event:', pusherError);
+    }
 
     return NextResponse.json({
       message: 'Auction restarted successfully',

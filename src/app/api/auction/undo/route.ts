@@ -3,6 +3,7 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { PlayerModel } from '@/models/Player';
 import { TeamModel } from '@/models/Team';
+import { triggerAuctionUndo } from '@/lib/pusher-server';
 
 // POST /api/auction/undo - Undo the last player sale
 export async function POST(request: NextRequest) {
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
     const { _id: playerId, winningTeamId, finalPrice } = lastSoldPlayer as any;
 
     // Unsell the player
-    await PlayerModel.findOneAndUpdate(
+    const restoredPlayer = await PlayerModel.findOneAndUpdate(
       { _id: playerId },
       {
         $set: {
@@ -46,24 +47,26 @@ export async function POST(request: NextRequest) {
           finalPrice: '',
           winningTeamId: '',
         },
-      }
-    );
+      },
+      { new: true }
+    ).lean();
 
     // Refund the team
-    await TeamModel.findOneAndUpdate(
+    const updatedTeam = await TeamModel.findOneAndUpdate(
       { _id: winningTeamId },
       {
         $inc: { currentBalance: finalPrice },
         $pull: { playersPurchased: playerId },
-      }
-    );
+      },
+      { new: true }
+    ).lean();
 
     // Get auction state
-    const auctionState = await AuctionStateModel.findOne({ tournamentId });
+    let auctionState = await AuctionStateModel.findOne({ tournamentId }).lean();
 
     // If this was the current player being auctioned, reset the auction state
     if (auctionState && auctionState.currentPlayerId?.toString() === playerId.toString()) {
-      await AuctionStateModel.findOneAndUpdate(
+      auctionState = await AuctionStateModel.findOneAndUpdate(
         { tournamentId },
         {
           $set: {
@@ -72,8 +75,22 @@ export async function POST(request: NextRequest) {
             currentAuctionStatus: 'Pending',
             history: [],
           },
-        }
-      );
+        },
+        { new: true }
+      ).lean();
+    }
+
+    // Trigger Pusher event
+    try {
+      await triggerAuctionUndo(tournamentId, {
+        restoredPlayer: restoredPlayer as any,
+        updatedTeam: updatedTeam as any,
+        refundedAmount: finalPrice,
+        auctionState: auctionState as any,
+        message: 'Last sale undone successfully',
+      });
+    } catch (pusherError) {
+      console.error('Failed to trigger Pusher event:', pusherError);
     }
 
     return NextResponse.json({
