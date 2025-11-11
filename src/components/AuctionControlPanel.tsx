@@ -35,10 +35,10 @@ const AvailablePlayersPanel: React.FC<{
             />
             <div className="flex-grow overflow-y-auto pr-2">
                 <ul className="space-y-2">
-                    {availablePlayers.map(player => (
+                    {availablePlayers.map((player, index) => (
                         <li key={player._id} className="flex items-center justify-between bg-neutral-700/50 p-2 rounded-md">
                             <div>
-                                <p className="font-semibold text-cyan-400">#{player._id} {player.name}</p>
+                                <p className="font-semibold text-cyan-400">{player.name}</p>
                                 <p className="text-xs text-neutral-400">{player.position || 'Player'}</p>
                             </div>
                             <button
