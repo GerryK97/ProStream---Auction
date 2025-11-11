@@ -189,7 +189,7 @@ export function usePusherAuction(
         if (data.winningTeam) {
           setTeams((prevTeams) =>
             prevTeams.map((team) =>
-              team._id === data.winningTeam._id ? data.winningTeam : team
+              team._id === data.winningTeam!._id ? data.winningTeam! : team
             )
           );
         }
