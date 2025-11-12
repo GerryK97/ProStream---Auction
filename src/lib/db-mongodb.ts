@@ -188,8 +188,7 @@ export const masterPlayerDB = {
     if (data.position) updateFields.position = data.position;
     if (data.currentClub) updateFields.currentClub = data.currentClub;
     if (data.photoURL !== undefined) {
-      updateFields.photoURL = data.photoURL;
-      updateFields.imageURL = data.photoURL; // Keep both in sync
+      updateFields.imageURL = data.photoURL; // Copy photoURL to imageURL in tournament players
     }
 
     if (Object.keys(updateFields).length > 0) {
@@ -391,8 +390,7 @@ export const playerDB = {
         name: masterPlayer.name,
         position: masterPlayer.position,
         currentClub: masterPlayer.currentClub,
-        photoURL: masterPlayer.photoURL,
-        imageURL: masterPlayer.photoURL, // Keep both for compatibility
+        imageURL: masterPlayer.photoURL, // Copy from master photoURL
         // Copy career stats from master player
         stats: masterPlayer.careerStats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 },
         isSold: false,

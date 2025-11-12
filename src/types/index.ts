@@ -60,8 +60,7 @@ export interface Player {
   name: string;
   position?: string;
   currentClub?: string;
-  photoURL?: string;
-  imageURL?: string;        // Kept for backward compatibility
+  imageURL?: string;        // Player image (copied from master photoURL)
   // Tournament-specific data
   stats: PlayerStats;       // Tournament stats (separate from career)
   isSold?: boolean;
