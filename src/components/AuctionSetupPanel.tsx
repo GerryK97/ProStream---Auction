@@ -253,7 +253,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, tournament, playerToEdi
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (name) {
-            onSave({ name, imageURL: imageURL || `https://picsum.photos/seed/${name}/200`, stats });
+            onSave({ name, photoURL: imageURL || `https://picsum.photos/seed/${name}/200`, stats });
         }
     };
 
