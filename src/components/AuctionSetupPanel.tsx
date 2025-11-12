@@ -15,6 +15,7 @@ interface AddPlayerFromDatabaseProps {
     tournamentPlayers: Player[];
     onAdd: (masterPlayerId: string) => Promise<void>;
     onCreateNew: () => void;
+    onError?: (error: string) => void;
 }
 
 interface AddTeamFromDatabaseProps {
@@ -31,9 +32,11 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
     tournamentPlayers,
     onAdd,
     onCreateNew,
+    onError,
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [addingPlayerId, setAddingPlayerId] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     // Filter out master players already in this tournament
     const tournamentMasterPlayerIds = new Set(tournamentPlayers.map(p => p.masterPlayerId).filter(Boolean));
@@ -47,12 +50,33 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
 
     const handleAddPlayer = async (masterPlayerId: string) => {
         setAddingPlayerId(masterPlayerId);
-        await onAdd(masterPlayerId);
+        setError(null);
+        try {
+            await onAdd(masterPlayerId);
+        } catch (err: any) {
+            const errorMsg = err.message || 'Failed to add player';
+            setError(errorMsg);
+            if (onError) onError(errorMsg);
+        }
         setAddingPlayerId(null);
     };
 
     return (
         <div className="space-y-4">
+            {error && (
+                <div className="bg-red-900/50 border border-red-700 text-red-200 rounded-md p-3 flex items-start justify-between">
+                    <div>
+                        <p className="font-semibold">Error Adding Player</p>
+                        <p className="text-sm">{error}</p>
+                    </div>
+                    <button
+                        onClick={() => setError(null)}
+                        className="text-red-200 hover:text-white"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
             <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-neutral-400">
                     {availablePlayers.length} player(s) available to add
@@ -757,22 +781,22 @@ const AuctionSetupPanel: React.FC = () => {
                     tournamentPlayers={tournamentPlayers}
                     onAdd={async (masterPlayerId) => {
                         // Create tournament player instance from master player
-                        try {
-                            const response = await fetch('/api/players/create-from-master', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    masterPlayerId,
-                                    tournamentId: selectedTournament._id
-                                }),
-                            });
-                            if (response.ok) {
-                                // Refresh player list without closing modal
-                                setRefreshTrigger(prev => prev + 1);
-                            }
-                        } catch (error) {
-                            console.error('Failed to add player:', error);
+                        const response = await fetch('/api/players/create-from-master', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                masterPlayerId,
+                                tournamentId: selectedTournament._id
+                            }),
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.error || 'Failed to add player to tournament');
                         }
+
+                        // Refresh player list without closing modal
+                        setRefreshTrigger(prev => prev + 1);
                     }}
                     onCreateNew={() => {
                         setAddPlayerModalOpen(false);
