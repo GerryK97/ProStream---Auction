@@ -437,7 +437,10 @@ const AuctionSetupPanel: React.FC = () => {
                 ] = await Promise.all(responses.map(res => res.ok ? res.json() : null));
 
                 // Update state
-                if (tournamentsData) setTournaments(tournamentsData);
+                if (tournamentsData) {
+                    console.log('[AuctionSetup] Loaded tournaments:', tournamentsData.length, tournamentsData.map((t: Tournament) => ({ id: t._id, name: t.name })));
+                    setTournaments(tournamentsData);
+                }
                 if (masterPlayersData) setMasterPlayers(masterPlayersData);
                 if (masterTeamsData) setMasterTeams(masterTeamsData);
                 if (tournamentPlayersData) setTournamentPlayers(tournamentPlayersData);
@@ -451,8 +454,34 @@ const AuctionSetupPanel: React.FC = () => {
         fetchData();
     }, [refreshTrigger, selectedTournamentId]);
 
+    // Initialize selectedTournamentId from context or first tournament
+    React.useEffect(() => {
+        console.log('[AuctionSetup] Checking tournament selection:', {
+            selectedTournamentId,
+            tournamentFromContext: tournament?._id,
+            tournamentsLoaded: tournaments.length
+        });
+
+        if (!selectedTournamentId && tournaments.length > 0) {
+            // Initialize to first tournament if no selection
+            const firstTournamentId = tournaments[0]._id;
+            console.log('[AuctionSetup] Initializing to first tournament:', firstTournamentId);
+            setSelectedTournamentId(firstTournamentId);
+        } else if (selectedTournamentId && !tournaments.find(t => t._id === selectedTournamentId) && tournaments.length > 0) {
+            // If selected tournament doesn't exist in loaded tournaments, switch to first
+            const firstTournamentId = tournaments[0]._id;
+            console.log('[AuctionSetup] Selected tournament not found, switching to first:', firstTournamentId);
+            setSelectedTournamentId(firstTournamentId);
+        }
+    }, [tournaments, selectedTournamentId, tournament]);
+
     // Get selected tournament
     const selectedTournament = tournaments.find(t => t._id === selectedTournamentId);
+    console.log('[AuctionSetup] Selected tournament result:', {
+        selectedTournamentId,
+        found: !!selectedTournament,
+        tournamentName: selectedTournament?.name
+    });
 
     // Show message when no tournaments exist
     if (tournaments.length === 0) {
