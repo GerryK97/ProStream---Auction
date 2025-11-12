@@ -107,7 +107,7 @@ const PlayerCardOverlay: React.FC<PlayerCardOverlayProps> = ({
                     )}
 
                     <img
-                        src={currentPlayer.imageURL}
+                        src={currentPlayer.photoURL}
                         alt={currentPlayer.name}
                         className={`${config.image} rounded-md object-cover border-4 border-cyan-500 shadow-lg`}
                     />

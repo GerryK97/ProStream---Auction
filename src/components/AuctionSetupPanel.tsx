@@ -15,6 +15,7 @@ interface AddPlayerFromDatabaseProps {
     tournamentPlayers: Player[];
     onAdd: (masterPlayerId: string) => Promise<void>;
     onCreateNew: () => void;
+    onError?: (error: string) => void;
 }
 
 interface AddTeamFromDatabaseProps {
@@ -31,9 +32,11 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
     tournamentPlayers,
     onAdd,
     onCreateNew,
+    onError,
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [addingPlayerId, setAddingPlayerId] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     // Filter out master players already in this tournament
     const tournamentMasterPlayerIds = new Set(tournamentPlayers.map(p => p.masterPlayerId).filter(Boolean));
@@ -47,12 +50,33 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
 
     const handleAddPlayer = async (masterPlayerId: string) => {
         setAddingPlayerId(masterPlayerId);
-        await onAdd(masterPlayerId);
+        setError(null);
+        try {
+            await onAdd(masterPlayerId);
+        } catch (err: any) {
+            const errorMsg = err.message || 'Failed to add player';
+            setError(errorMsg);
+            if (onError) onError(errorMsg);
+        }
         setAddingPlayerId(null);
     };
 
     return (
         <div className="space-y-4">
+            {error && (
+                <div className="bg-red-900/50 border border-red-700 text-red-200 rounded-md p-3 flex items-start justify-between">
+                    <div>
+                        <p className="font-semibold">Error Adding Player</p>
+                        <p className="text-sm">{error}</p>
+                    </div>
+                    <button
+                        onClick={() => setError(null)}
+                        className="text-red-200 hover:text-white"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
             <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-neutral-400">
                     {availablePlayers.length} player(s) available to add
@@ -223,13 +247,13 @@ interface PlayerFormProps {
 const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, tournament, playerToEdit }) => {
     const isEditing = !!playerToEdit;
     const [name, setName] = useState(playerToEdit?.name || '');
-    const [imageURL, setImageURL] = useState(playerToEdit?.imageURL || '');
+    const [imageURL, setImageURL] = useState(playerToEdit?.photoURL || '');
     const [stats, setStats] = useState<PlayerStats>(playerToEdit?.stats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (name) {
-            onSave({ name, imageURL: imageURL || `https://picsum.photos/seed/${name}/200`, stats });
+            onSave({ name, photoURL: imageURL || `https://picsum.photos/seed/${name}/200`, stats });
         }
     };
 
@@ -381,50 +405,48 @@ const AuctionSetupPanel: React.FC = () => {
     React.useEffect(() => {
         const fetchData = async () => {
             try {
-                // Fetch all tournaments
-                const tournamentsResponse = await fetch('/api/tournaments');
-                if (tournamentsResponse.ok) {
-                    const tournamentsData = await tournamentsResponse.json();
+                const startTime = Date.now();
+                console.log('[AuctionSetup] Starting data fetch...');
+
+                // Build parallel fetch requests
+                const requests = [
+                    fetch('/api/tournaments'),
+                    fetch('/api/master-players'),
+                    fetch('/api/master-teams'),
+                ];
+
+                // Add tournament-specific requests if tournament is selected
+                if (selectedTournamentId) {
+                    requests.push(
+                        fetch(`/api/players?tournamentId=${selectedTournamentId}`),
+                        fetch(`/api/teams?tournamentId=${selectedTournamentId}`)
+                    );
+                }
+
+                // Execute all requests in parallel
+                const responses = await Promise.all(requests);
+                console.log(`[AuctionSetup] All requests completed in ${Date.now() - startTime}ms`);
+
+                // Parse responses in parallel
+                const [
+                    tournamentsData,
+                    masterPlayersData,
+                    masterTeamsData,
+                    tournamentPlayersData,
+                    tournamentTeamsData
+                ] = await Promise.all(responses.map(res => res.ok ? res.json() : null));
+
+                // Update state
+                if (tournamentsData) {
+                    console.log('[AuctionSetup] Loaded tournaments:', tournamentsData.length, tournamentsData.map((t: Tournament) => ({ id: t._id, name: t.name })));
                     setTournaments(tournamentsData);
                 }
+                if (masterPlayersData) setMasterPlayers(masterPlayersData);
+                if (masterTeamsData) setMasterTeams(masterTeamsData);
+                if (tournamentPlayersData) setTournamentPlayers(tournamentPlayersData);
+                if (tournamentTeamsData) setTournamentTeams(tournamentTeamsData);
 
-                // Fetch master players
-                const masterPlayersResponse = await fetch('/api/master-players');
-                if (masterPlayersResponse.ok) {
-                    const masterPlayersData = await masterPlayersResponse.json();
-                    setMasterPlayers(masterPlayersData);
-                }
-
-                // Fetch tournament players (instances)
-                if (selectedTournamentId) {
-                    const playersResponse = await fetch('/api/players');
-                    if (playersResponse.ok) {
-                        const allPlayersData = await playersResponse.json();
-                        const tournamentPlayersData = allPlayersData.filter(
-                            (p: Player) => p.tournamentId === selectedTournamentId
-                        );
-                        setTournamentPlayers(tournamentPlayersData);
-                    }
-                }
-
-                // Fetch master teams
-                const masterTeamsResponse = await fetch('/api/master-teams');
-                if (masterTeamsResponse.ok) {
-                    const masterTeamsData = await masterTeamsResponse.json();
-                    setMasterTeams(masterTeamsData);
-                }
-
-                // Fetch tournament teams (instances)
-                if (selectedTournamentId) {
-                    const teamsResponse = await fetch('/api/teams');
-                    if (teamsResponse.ok) {
-                        const allTeamsData = await teamsResponse.json();
-                        const tournamentTeamsData = allTeamsData.filter(
-                            (t: Team) => t.tournamentId === selectedTournamentId
-                        );
-                        setTournamentTeams(tournamentTeamsData);
-                    }
-                }
+                console.log(`[AuctionSetup] Total fetch time: ${Date.now() - startTime}ms`);
             } catch (error) {
                 console.error('Failed to fetch data:', error);
             }
@@ -432,8 +454,54 @@ const AuctionSetupPanel: React.FC = () => {
         fetchData();
     }, [refreshTrigger, selectedTournamentId]);
 
+    // Initialize selectedTournamentId from context or first tournament
+    React.useEffect(() => {
+        console.log('[AuctionSetup] Checking tournament selection:', {
+            selectedTournamentId,
+            tournamentFromContext: tournament?._id,
+            tournamentsLoaded: tournaments.length
+        });
+
+        if (!selectedTournamentId && tournaments.length > 0) {
+            // Initialize to first tournament if no selection
+            const firstTournamentId = tournaments[0]._id;
+            console.log('[AuctionSetup] Initializing to first tournament:', firstTournamentId);
+            setSelectedTournamentId(firstTournamentId);
+        } else if (selectedTournamentId && !tournaments.find(t => t._id === selectedTournamentId) && tournaments.length > 0) {
+            // If selected tournament doesn't exist in loaded tournaments, switch to first
+            const firstTournamentId = tournaments[0]._id;
+            console.log('[AuctionSetup] Selected tournament not found, switching to first:', firstTournamentId);
+            setSelectedTournamentId(firstTournamentId);
+        }
+    }, [tournaments, selectedTournamentId, tournament]);
+
     // Get selected tournament
-    const selectedTournament = tournaments.find(t => t._id === selectedTournamentId) || tournament;
+    const selectedTournament = tournaments.find(t => t._id === selectedTournamentId);
+    console.log('[AuctionSetup] Selected tournament result:', {
+        selectedTournamentId,
+        found: !!selectedTournament,
+        tournamentName: selectedTournament?.name
+    });
+
+    // Show message when no tournaments exist
+    if (tournaments.length === 0) {
+        return (
+            <div className="text-center p-12">
+                <div className="bg-neutral-800 border border-neutral-700 rounded-lg p-8 max-w-2xl mx-auto">
+                    <h2 className="text-2xl font-bold mb-2">No Tournaments Found</h2>
+                    <p className="text-neutral-400 mb-6">
+                        Create a tournament in the Management Dashboard to get started with auction setup.
+                    </p>
+                    <a
+                        href="/management"
+                        className="inline-block bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                    >
+                        Go to Management Dashboard
+                    </a>
+                </div>
+            </div>
+        );
+    }
 
     if (!selectedTournament) {
         return <div className="text-center p-8 text-neutral-400">Loading tournament data...</div>;
@@ -704,13 +772,13 @@ const AuctionSetupPanel: React.FC = () => {
                                 <li key={player._id} className="bg-neutral-900/50 p-3 rounded-md flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <img
-                                            src={imageOptimizers.playerThumbnail(player.imageURL)}
+                                            src={imageOptimizers.playerThumbnail(player.photoURL)}
                                             alt={player.name}
                                             className="w-12 h-12 rounded-full object-cover"
                                             loading="lazy"
                                         />
                                         <div>
-                                            <p className="font-semibold">{player.name}</p>
+                                            <p className="font-semibold">#{player.playerNo || player._id} {player.name}</p>
                                             <p className="text-sm text-neutral-400">Matches: {player.stats.matchesPlayed}</p>
                                             <p className={`text-xs font-semibold ${player.isSold ? 'text-red-400' : 'text-green-400'} tracking-wider`}>
                                                 {player.isSold ? 'SOLD' : 'AVAILABLE'}
@@ -762,22 +830,22 @@ const AuctionSetupPanel: React.FC = () => {
                     tournamentPlayers={tournamentPlayers}
                     onAdd={async (masterPlayerId) => {
                         // Create tournament player instance from master player
-                        try {
-                            const response = await fetch('/api/players/create-from-master', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    masterPlayerId,
-                                    tournamentId: selectedTournament._id
-                                }),
-                            });
-                            if (response.ok) {
-                                // Refresh player list without closing modal
-                                setRefreshTrigger(prev => prev + 1);
-                            }
-                        } catch (error) {
-                            console.error('Failed to add player:', error);
+                        const response = await fetch('/api/players/create-from-master', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                masterPlayerId,
+                                tournamentId: selectedTournament._id
+                            }),
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.error || 'Failed to add player to tournament');
                         }
+
+                        // Refresh player list without closing modal
+                        setRefreshTrigger(prev => prev + 1);
                     }}
                     onCreateNew={() => {
                         setAddPlayerModalOpen(false);

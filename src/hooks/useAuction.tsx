@@ -22,10 +22,10 @@ const MOCK_TEAMS: Team[] = [
 ];
 
 const MOCK_PLAYERS: Player[] = [
-  { _id: 'p1', tournamentId: 't1', name: 'Shadow', stats: { matchesPlayed: 50, totalScore: 1200, totalWickets: 5 }, imageURL: 'https://picsum.photos/seed/shadow/200', isSold: false },
-  { _id: 'p2', tournamentId: 't1', name: 'Vortex', stats: { matchesPlayed: 65, totalScore: 850, totalWickets: 75 }, imageURL: 'https://picsum.photos/seed/vortex/200', isSold: false },
-  { _id: 'p3', tournamentId: 't1', name: 'Blitz', stats: { matchesPlayed: 45, totalScore: 1500, totalWickets: 10 }, imageURL: 'https://picsum.photos/seed/blitz/200', isSold: false },
-  { _id: 'p4', tournamentId: 't1', name: 'Rogue', stats: { matchesPlayed: 55, totalScore: 980, totalWickets: 30 }, imageURL: 'https://picsum.photos/seed/rogue/200', isSold: false }
+  { _id: 'p1', tournamentId: 't1', name: 'Shadow', stats: { matchesPlayed: 50, totalScore: 1200, totalWickets: 5 }, photoURL: 'https://picsum.photos/seed/shadow/200', isSold: false },
+  { _id: 'p2', tournamentId: 't1', name: 'Vortex', stats: { matchesPlayed: 65, totalScore: 850, totalWickets: 75 }, photoURL: 'https://picsum.photos/seed/vortex/200', isSold: false },
+  { _id: 'p3', tournamentId: 't1', name: 'Blitz', stats: { matchesPlayed: 45, totalScore: 1500, totalWickets: 10 }, photoURL: 'https://picsum.photos/seed/blitz/200', isSold: false },
+  { _id: 'p4', tournamentId: 't1', name: 'Rogue', stats: { matchesPlayed: 55, totalScore: 980, totalWickets: 30 }, photoURL: 'https://picsum.photos/seed/rogue/200', isSold: false }
 ];
 
 const MOCK_AUCTION_STATE: AuctionState = {
@@ -134,13 +134,22 @@ interface AuctionContextType {
 const AuctionContext = createContext<AuctionContextType | undefined>(undefined);
 
 export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [tournaments, setTournaments] = useState<Tournament[]>(MOCK_TOURNAMENTS);
-  const [teams, setTeams] = useState<Team[]>(MOCK_TEAMS);
-  const [players, setPlayers] = useState<Player[]>(MOCK_PLAYERS);
-  const [auctionState, setAuctionState] = useState<AuctionState>(MOCK_AUCTION_STATE);
+  // Initialize with empty arrays - data should come from database via API calls
+  // MOCK data was causing stale data to persist in memory after database deletions
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [auctionState, setAuctionState] = useState<AuctionState>({
+    tournamentId: '',
+    currentPlayerId: null,
+    currentBid: 0,
+    winningTeamId: null,
+    currentAuctionStatus: 'Pending',
+    history: [],
+  });
   const [overlayTemplates, setOverlayTemplates] = useState<OverlayTemplate[]>(MOCK_OVERLAY_TEMPLATES);
   const [overlayInstances, setOverlayInstances] = useState<OverlayInstance[]>(MOCK_OVERLAY_INSTANCES);
-  const [activeTemplateId, setActiveTemplateId] = useState<string>(MOCK_OVERLAY_TEMPLATES[0]._id);
+  const [activeTemplateId, setActiveTemplateId] = useState<string>(MOCK_OVERLAY_TEMPLATES[0]?._id || '');
 
   const activeTemplate = useMemo(() => overlayTemplates.find(t => t._id === activeTemplateId), [overlayTemplates, activeTemplateId]);
   

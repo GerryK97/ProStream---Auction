@@ -19,12 +19,48 @@ const generateSequentialPlayerId = async (): Promise<string> => {
   return `PS${playerNumber}`;
 };
 
-// Helper function to generate sequential tournament player ID (unique per tournament)
+// Helper function to generate tournament player ID (globally unique)
+// Uses timestamp + random string to guarantee uniqueness and avoid collisions
 const generateTournamentPlayerId = async (tournamentId: string): Promise<string> => {
+  // Use the same approach as other entities (teams, tournaments, etc.)
+  // This guarantees uniqueness without database queries or race conditions
+  return generateId('p');
+};
+
+// Helper function to generate sequential player number within tournament
+// Returns "001", "002", "003", etc. (unique per tournament)
+const generatePlayerNo = async (tournamentId: string): Promise<string> => {
   await connectToDatabase();
-  const count = await PlayerModel.countDocuments({ tournamentId });
-  const playerNumber = (count + 1).toString().padStart(3, '0');
-  return playerNumber;
+
+  console.log(`[generatePlayerNo] Generating playerNo for tournament: ${tournamentId}`);
+
+  // Get the highest playerNo for this tournament
+  const result = await PlayerModel.find({ tournamentId, playerNo: { $exists: true } })
+    .select('playerNo tournamentId')
+    .sort({ playerNo: -1 })
+    .limit(1)
+    .lean();
+
+  console.log(`[generatePlayerNo] Found existing players:`, result);
+
+  let nextNumber = 1;
+
+  if (result.length > 0 && result[0].playerNo) {
+    // Extract number from playerNo (e.g., "001" -> 1, "099" -> 99)
+    const match = result[0].playerNo.match(/^\d+$/);
+    if (match) {
+      nextNumber = parseInt(match[0], 10) + 1;
+    }
+    console.log(`[generatePlayerNo] Highest playerNo found: ${result[0].playerNo}, next will be: ${nextNumber}`);
+  } else {
+    console.log(`[generatePlayerNo] No existing players found, starting at: 001`);
+  }
+
+  // Pad with leading zeros (001, 002, ... 099, 100, ...)
+  const playerNo = nextNumber.toString().padStart(3, '0');
+  console.log(`[generatePlayerNo] Generated playerNo: ${playerNo} for tournament: ${tournamentId}`);
+
+  return playerNo;
 };
 
 // Tournament operations
@@ -188,8 +224,7 @@ export const masterPlayerDB = {
     if (data.position) updateFields.position = data.position;
     if (data.currentClub) updateFields.currentClub = data.currentClub;
     if (data.photoURL !== undefined) {
-      updateFields.photoURL = data.photoURL;
-      updateFields.imageURL = data.photoURL; // Keep both in sync
+      updateFields.photoURL = data.photoURL; // Same field name in both schemas
     }
 
     if (Object.keys(updateFields).length > 0) {
@@ -331,8 +366,8 @@ export const playerDB = {
       stats: data.stats,
       // No tournamentId - player is unassigned
       isSold: false,
-      // Provide default image if not provided
-      imageURL: data.imageURL || `https://placehold.co/100x100/374151/F3F4F6/png?text=No+Image`,
+      // Provide default photo if not provided
+      photoURL: data.photoURL || `https://placehold.co/100x100/374151/F3F4F6/png?text=No+Image`,
     };
     const doc = await PlayerModel.create(newPlayer);
     return doc.toObject();
@@ -353,38 +388,64 @@ export const playerDB = {
     masterPlayerId: string,
     tournamentId: string
   ): Promise<Player> => {
-    await connectToDatabase();
+    try {
+      await connectToDatabase();
 
-    // Get master player data
-    const masterPlayer = await MasterPlayerModel.findOne({ _id: masterPlayerId }).lean() as MasterPlayer | null;
-    if (!masterPlayer) throw new Error('Master player not found');
+      console.log(`[playerDB.createFromMaster] Starting: masterPlayerId=${masterPlayerId}, tournamentId=${tournamentId}`);
 
-    // Check if player already exists in tournament
-    const existing = await PlayerModel.findOne({ masterPlayerId, tournamentId });
-    if (existing) {
-      throw new Error('Player already added to this tournament');
+      // Get master player data
+      const startTime = Date.now();
+      const masterPlayer = await MasterPlayerModel.findOne({ _id: masterPlayerId }).lean() as MasterPlayer | null;
+      console.log(`[playerDB.createFromMaster] Master player fetch took ${Date.now() - startTime}ms`);
+
+      if (!masterPlayer) {
+        console.error(`[playerDB.createFromMaster] Master player not found: ${masterPlayerId}`);
+        throw new Error('Master player not found');
+      }
+
+      // Check if player already exists in tournament
+      const checkStart = Date.now();
+      const existing = await PlayerModel.findOne({ masterPlayerId, tournamentId });
+      console.log(`[playerDB.createFromMaster] Duplicate check took ${Date.now() - checkStart}ms`);
+
+      if (existing) {
+        console.warn(`[playerDB.createFromMaster] Player already exists: ${existing._id}`);
+        throw new Error('Player already added to this tournament');
+      }
+
+      // Generate globally unique ID (timestamp-based)
+      const idGenStart = Date.now();
+      const tournamentPlayerId = await generateTournamentPlayerId(tournamentId);
+
+      // Generate sequential player number within tournament (001, 002, 003)
+      const playerNo = await generatePlayerNo(tournamentId);
+      console.log(`[playerDB.createFromMaster] ID generation took ${Date.now() - idGenStart}ms, generated: ${tournamentPlayerId}, playerNo: ${playerNo}`);
+
+      const newPlayer: Player = {
+        _id: tournamentPlayerId,
+        playerNo: playerNo,
+        masterPlayerId,
+        tournamentId,
+        // Copy from master (read-only)
+        name: masterPlayer.name,
+        position: masterPlayer.position,
+        currentClub: masterPlayer.currentClub,
+        photoURL: masterPlayer.photoURL, // Same field name as master
+        // Copy career stats from master player
+        stats: masterPlayer.careerStats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 },
+        isSold: false,
+      };
+
+      const createStart = Date.now();
+      const doc = await PlayerModel.create(newPlayer);
+      console.log(`[playerDB.createFromMaster] Player creation took ${Date.now() - createStart}ms`);
+      console.log(`[playerDB.createFromMaster] Successfully created player: ${tournamentPlayerId} (${masterPlayer.name})`);
+
+      return doc.toObject();
+    } catch (error) {
+      console.error('[playerDB.createFromMaster] Error:', error);
+      throw error;
     }
-
-    // Generate tournament-specific sequential ID
-    const tournamentPlayerId = await generateTournamentPlayerId(tournamentId);
-
-    const newPlayer: Player = {
-      _id: tournamentPlayerId,
-      masterPlayerId,
-      tournamentId,
-      // Copy from master (read-only)
-      name: masterPlayer.name,
-      position: masterPlayer.position,
-      currentClub: masterPlayer.currentClub,
-      photoURL: masterPlayer.photoURL,
-      imageURL: masterPlayer.photoURL, // Keep both for compatibility
-      // Copy career stats from master player
-      stats: masterPlayer.careerStats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 },
-      isSold: false,
-    };
-
-    const doc = await PlayerModel.create(newPlayer);
-    return doc.toObject();
   },
 
   delete: async (id: string): Promise<boolean> => {
