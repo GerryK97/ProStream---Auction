@@ -11,21 +11,21 @@ let tournaments: Tournament[] = [
 ];
 
 let teams: Team[] = [
-  { _id: 'team1', tournamentId: 't1', name: 'Wariyapola', shortCode: 'WCC', ownerName: 'Masan', initialBudget: 10000000, currentBalance: 8500000, playersPurchased: ['p1'], logoURL: 'https://placehold.co/64/E879F9/111827/png?text=W', primaryColor: '#FF0000', secondaryColor: '#0000FF' },
-  { _id: 'team2', tournamentId: 't1', name: 'Chilaw', shortCode: 'CCC', ownerName: 'Sandun', initialBudget: 10000000, currentBalance: 7500000, playersPurchased: ['p2'], logoURL: 'https://placehold.co/64/F472B6/111827/png?text=C', primaryColor: '#00FF00', secondaryColor: '#FFFF00' },
-  { _id: 'team3', tournamentId: 't1', name: 'Matara', shortCode: 'MCC', ownerName: 'Kumar', initialBudget: 10000000, currentBalance: 9200000, playersPurchased: ['p3'], logoURL: 'https://placehold.co/64/A78BFA/111827/png?text=M', primaryColor: '#0000FF', secondaryColor: '#FF0000' },
-  { _id: 'team4', tournamentId: 't1', name: 'Galle', shortCode: 'GCC', ownerName: 'Madu', initialBudget: 10000000, currentBalance: 6800000, playersPurchased: ['p4'], logoURL: 'https://placehold.co/64/FBBF24/111827/png?text=G', primaryColor: '#FFFF00', secondaryColor: '#00FF00' },
-  { _id: 'team5', tournamentId: 't1', name: 'Colombo', shortCode: 'COL', ownerName: 'Kumara', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/34D399/111827/png?text=CO', primaryColor: '#34D399', secondaryColor: '#06B6D4' },
-  { _id: 'team6', tournamentId: 't1', name: 'Mannar', shortCode: 'MAN', ownerName: 'Kuyil', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/60A5FA/111827/png?text=MA', primaryColor: '#60A5FA', secondaryColor: '#818CF8' },
-  { _id: 'team7', tournamentId: 't1', name: 'Jaffna', shortCode: 'JCC', ownerName: 'Kili', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/F43F5E/111827/png?text=J', primaryColor: '#F43F5E', secondaryColor: '#EC4899' },
-  { _id: 'team8', tournamentId: 't1', name: 'Puttalam', shortCode: 'PCC', ownerName: 'Nimal', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/8B5CF6/111827/png?text=P', primaryColor: '#8B5CF6', secondaryColor: '#D946EF' },
+  { _id: 'team1', tournamentId: 't1', name: 'Wariyapola', shortCode: 'WCC', ownerName: 'Masan', initialBudget: 10000000, currentBalance: 8500000, playersPurchased: ['p1'], logoURL: 'https://placehold.co/64/E879F9/111827/png?text=W' },
+  { _id: 'team2', tournamentId: 't1', name: 'Chilaw', shortCode: 'CCC', ownerName: 'Sandun', initialBudget: 10000000, currentBalance: 7500000, playersPurchased: ['p2'], logoURL: 'https://placehold.co/64/F472B6/111827/png?text=C' },
+  { _id: 'team3', tournamentId: 't1', name: 'Matara', shortCode: 'MCC', ownerName: 'Kumar', initialBudget: 10000000, currentBalance: 9200000, playersPurchased: ['p3'], logoURL: 'https://placehold.co/64/A78BFA/111827/png?text=M' },
+  { _id: 'team4', tournamentId: 't1', name: 'Galle', shortCode: 'GCC', ownerName: 'Madu', initialBudget: 10000000, currentBalance: 6800000, playersPurchased: ['p4'], logoURL: 'https://placehold.co/64/FBBF24/111827/png?text=G' },
+  { _id: 'team5', tournamentId: 't1', name: 'Colombo', shortCode: 'COL', ownerName: 'Kumara', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/34D399/111827/png?text=CO' },
+  { _id: 'team6', tournamentId: 't1', name: 'Mannar', shortCode: 'MAN', ownerName: 'Kuyil', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/60A5FA/111827/png?text=MA' },
+  { _id: 'team7', tournamentId: 't1', name: 'Jaffna', shortCode: 'JCC', ownerName: 'Kili', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/F43F5E/111827/png?text=J' },
+  { _id: 'team8', tournamentId: 't1', name: 'Puttalam', shortCode: 'PCC', ownerName: 'Nimal', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/8B5CF6/111827/png?text=P' },
 ];
 
 let players: Player[] = [
-  { _id: 'p1', tournamentId: 't1', name: 'Shadow', stats: { matchesPlayed: 50, totalScore: 1200, totalWickets: 5 }, imageURL: 'https://picsum.photos/seed/shadow/200', isSold: false },
-  { _id: 'p2', tournamentId: 't1', name: 'Vortex', stats: { matchesPlayed: 65, totalScore: 850, totalWickets: 75 }, imageURL: 'https://picsum.photos/seed/vortex/200', isSold: false },
-  { _id: 'p3', tournamentId: 't1', name: 'Blitz', stats: { matchesPlayed: 45, totalScore: 1500, totalWickets: 10 }, imageURL: 'https://picsum.photos/seed/blitz/200', isSold: false },
-  { _id: 'p4', tournamentId: 't1', name: 'Rogue', stats: { matchesPlayed: 55, totalScore: 980, totalWickets: 30 }, imageURL: 'https://picsum.photos/seed/rogue/200', isSold: false }
+  { _id: 'p1', tournamentId: 't1', name: 'Shadow', stats: { matchesPlayed: 50, totalScore: 1200, totalWickets: 5 }, photoURL: 'https://picsum.photos/seed/shadow/200', isSold: false },
+  { _id: 'p2', tournamentId: 't1', name: 'Vortex', stats: { matchesPlayed: 65, totalScore: 850, totalWickets: 75 }, photoURL: 'https://picsum.photos/seed/vortex/200', isSold: false },
+  { _id: 'p3', tournamentId: 't1', name: 'Blitz', stats: { matchesPlayed: 45, totalScore: 1500, totalWickets: 10 }, photoURL: 'https://picsum.photos/seed/blitz/200', isSold: false },
+  { _id: 'p4', tournamentId: 't1', name: 'Rogue', stats: { matchesPlayed: 55, totalScore: 980, totalWickets: 30 }, photoURL: 'https://picsum.photos/seed/rogue/200', isSold: false }
 ];
 
 // Helper function to generate IDs

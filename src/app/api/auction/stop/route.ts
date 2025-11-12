@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { TournamentModel } from '@/models/Tournament';
 import { PlayerModel } from '@/models/Player';
+import { AuctionStateModel } from '@/models/AuctionState';
+import { triggerAuctionStopped } from '@/lib/pusher-server';
 
 // POST /api/auction/stop - Stop auction (can be incomplete or complete)
 export async function POST(request: NextRequest) {
@@ -49,6 +51,20 @@ export async function POST(request: NextRequest) {
       { $set: { status: newStatus } },
       { new: true }
     ).lean();
+
+    // Get auction state
+    const auctionState = await AuctionStateModel.findOne({ tournamentId }).lean();
+
+    // Trigger Pusher event
+    try {
+      await triggerAuctionStopped({
+        tournament: updatedTournament as any,
+        auctionState: auctionState as any,
+        message: `Auction ${newStatus.toLowerCase()} successfully`,
+      });
+    } catch (pusherError) {
+      console.error('Failed to trigger Pusher event:', pusherError);
+    }
 
     return NextResponse.json({
       message: `Auction ${newStatus.toLowerCase()} successfully`,

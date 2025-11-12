@@ -11,21 +11,21 @@ const MOCK_TOURNAMENTS: Tournament[] = [
 ];
 
 const MOCK_TEAMS: Team[] = [
-    { _id: 'team1', tournamentId: 't1', name: 'Wariyapola', shortCode: 'WCC', ownerName: 'Masan', initialBudget: 10000000, currentBalance: 8500000, playersPurchased: ['p1'], logoURL: 'https://placehold.co/64/E879F9/111827/png?text=W', primaryColor: '#FF0000', secondaryColor: '#0000FF' },
-    { _id: 'team2', tournamentId: 't1', name: 'Chilaw', shortCode: 'CCC', ownerName: 'Sandun', initialBudget: 10000000, currentBalance: 7500000, playersPurchased: ['p2'], logoURL: 'https://placehold.co/64/F472B6/111827/png?text=C', primaryColor: '#00FF00', secondaryColor: '#FFFF00' },
-    { _id: 'team3', tournamentId: 't1', name: 'Matara', shortCode: 'MCC', ownerName: 'Kumar', initialBudget: 10000000, currentBalance: 9200000, playersPurchased: ['p3'], logoURL: 'https://placehold.co/64/A78BFA/111827/png?text=M', primaryColor: '#0000FF', secondaryColor: '#FF0000' },
-    { _id: 'team4', tournamentId: 't1', name: 'Galle', shortCode: 'GCC', ownerName: 'Madu', initialBudget: 10000000, currentBalance: 6800000, playersPurchased: ['p4'], logoURL: 'https://placehold.co/64/FBBF24/111827/png?text=G', primaryColor: '#FFFF00', secondaryColor: '#00FF00' },
-    { _id: 'team5', tournamentId: 't1', name: 'Colombo', shortCode: 'COL', ownerName: 'Kumara', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/34D399/111827/png?text=CO', primaryColor: '#34D399', secondaryColor: '#06B6D4' },
-    { _id: 'team6', tournamentId: 't1', name: 'Mannar', shortCode: 'MAN', ownerName: 'Kuyil', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/60A5FA/111827/png?text=MA', primaryColor: '#60A5FA', secondaryColor: '#818CF8' },
-    { _id: 'team7', tournamentId: 't1', name: 'Jaffna', shortCode: 'JCC', ownerName: 'Kili', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/F43F5E/111827/png?text=J', primaryColor: '#F43F5E', secondaryColor: '#EC4899' },
-    { _id: 'team8', tournamentId: 't1', name: 'Puttalam', shortCode: 'PCC', ownerName: 'Nimal', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/8B5CF6/111827/png?text=P', primaryColor: '#8B5CF6', secondaryColor: '#D946EF' },
+    { _id: 'team1', tournamentId: 't1', name: 'Wariyapola', shortCode: 'WCC', ownerName: 'Masan', initialBudget: 10000000, currentBalance: 8500000, playersPurchased: ['p1'], logoURL: 'https://placehold.co/64/E879F9/111827/png?text=W' },
+    { _id: 'team2', tournamentId: 't1', name: 'Chilaw', shortCode: 'CCC', ownerName: 'Sandun', initialBudget: 10000000, currentBalance: 7500000, playersPurchased: ['p2'], logoURL: 'https://placehold.co/64/F472B6/111827/png?text=C' },
+    { _id: 'team3', tournamentId: 't1', name: 'Matara', shortCode: 'MCC', ownerName: 'Kumar', initialBudget: 10000000, currentBalance: 9200000, playersPurchased: ['p3'], logoURL: 'https://placehold.co/64/A78BFA/111827/png?text=M' },
+    { _id: 'team4', tournamentId: 't1', name: 'Galle', shortCode: 'GCC', ownerName: 'Madu', initialBudget: 10000000, currentBalance: 6800000, playersPurchased: ['p4'], logoURL: 'https://placehold.co/64/FBBF24/111827/png?text=G' },
+    { _id: 'team5', tournamentId: 't1', name: 'Colombo', shortCode: 'COL', ownerName: 'Kumara', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/34D399/111827/png?text=CO' },
+    { _id: 'team6', tournamentId: 't1', name: 'Mannar', shortCode: 'MAN', ownerName: 'Kuyil', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/60A5FA/111827/png?text=MA' },
+    { _id: 'team7', tournamentId: 't1', name: 'Jaffna', shortCode: 'JCC', ownerName: 'Kili', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/F43F5E/111827/png?text=J' },
+    { _id: 'team8', tournamentId: 't1', name: 'Puttalam', shortCode: 'PCC', ownerName: 'Nimal', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/8B5CF6/111827/png?text=P' },
 ];
 
 const MOCK_PLAYERS: Player[] = [
-  { _id: 'p1', tournamentId: 't1', name: 'Shadow', stats: { matchesPlayed: 50, totalScore: 1200, totalWickets: 5 }, imageURL: 'https://picsum.photos/seed/shadow/200', isSold: false },
-  { _id: 'p2', tournamentId: 't1', name: 'Vortex', stats: { matchesPlayed: 65, totalScore: 850, totalWickets: 75 }, imageURL: 'https://picsum.photos/seed/vortex/200', isSold: false },
-  { _id: 'p3', tournamentId: 't1', name: 'Blitz', stats: { matchesPlayed: 45, totalScore: 1500, totalWickets: 10 }, imageURL: 'https://picsum.photos/seed/blitz/200', isSold: false },
-  { _id: 'p4', tournamentId: 't1', name: 'Rogue', stats: { matchesPlayed: 55, totalScore: 980, totalWickets: 30 }, imageURL: 'https://picsum.photos/seed/rogue/200', isSold: false }
+  { _id: 'p1', tournamentId: 't1', name: 'Shadow', stats: { matchesPlayed: 50, totalScore: 1200, totalWickets: 5 }, photoURL: 'https://picsum.photos/seed/shadow/200', isSold: false },
+  { _id: 'p2', tournamentId: 't1', name: 'Vortex', stats: { matchesPlayed: 65, totalScore: 850, totalWickets: 75 }, photoURL: 'https://picsum.photos/seed/vortex/200', isSold: false },
+  { _id: 'p3', tournamentId: 't1', name: 'Blitz', stats: { matchesPlayed: 45, totalScore: 1500, totalWickets: 10 }, photoURL: 'https://picsum.photos/seed/blitz/200', isSold: false },
+  { _id: 'p4', tournamentId: 't1', name: 'Rogue', stats: { matchesPlayed: 55, totalScore: 980, totalWickets: 30 }, photoURL: 'https://picsum.photos/seed/rogue/200', isSold: false }
 ];
 
 const MOCK_AUCTION_STATE: AuctionState = {
@@ -134,13 +134,22 @@ interface AuctionContextType {
 const AuctionContext = createContext<AuctionContextType | undefined>(undefined);
 
 export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [tournaments, setTournaments] = useState<Tournament[]>(MOCK_TOURNAMENTS);
-  const [teams, setTeams] = useState<Team[]>(MOCK_TEAMS);
-  const [players, setPlayers] = useState<Player[]>(MOCK_PLAYERS);
-  const [auctionState, setAuctionState] = useState<AuctionState>(MOCK_AUCTION_STATE);
+  // Initialize with empty arrays - data should come from database via API calls
+  // MOCK data was causing stale data to persist in memory after database deletions
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [auctionState, setAuctionState] = useState<AuctionState>({
+    tournamentId: '',
+    currentPlayerId: null,
+    currentBid: 0,
+    winningTeamId: null,
+    currentAuctionStatus: 'Pending',
+    history: [],
+  });
   const [overlayTemplates, setOverlayTemplates] = useState<OverlayTemplate[]>(MOCK_OVERLAY_TEMPLATES);
   const [overlayInstances, setOverlayInstances] = useState<OverlayInstance[]>(MOCK_OVERLAY_INSTANCES);
-  const [activeTemplateId, setActiveTemplateId] = useState<string>(MOCK_OVERLAY_TEMPLATES[0]._id);
+  const [activeTemplateId, setActiveTemplateId] = useState<string>(MOCK_OVERLAY_TEMPLATES[0]?._id || '');
 
   const activeTemplate = useMemo(() => overlayTemplates.find(t => t._id === activeTemplateId), [overlayTemplates, activeTemplateId]);
   
@@ -235,7 +244,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!tournament) return "No tournament configured.";
     if (amount <= auctionState.currentBid) return "Bid must be higher than the current bid.";
     if (auctionState.currentBid === 0 && amount < tournament.basePricePerPlayer) return `The first bid must be at least the base price of ${tournament.basePricePerPlayer.toLocaleString()}.`;
-    if (amount > team.currentBalance) return "Team does not have enough balance for this bid.";
+    if (amount > (team.currentBalance || 0)) return "Team does not have enough balance for this bid.";
 
     const newBid: Bid = { teamId, amount, timestamp: Date.now() };
     setAuctionState(prev => ({
@@ -325,7 +334,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     ));
 
     setTeams(prevTeams => prevTeams.map(t =>
-      t._id === winningTeamId ? { ...t, currentBalance: t.currentBalance - currentBid, playersPurchased: [...t.playersPurchased, currentPlayerId] } : t
+      t._id === winningTeamId ? { ...t, currentBalance: (t.currentBalance || 0) - currentBid, playersPurchased: [...(t.playersPurchased || []), currentPlayerId] } : t
     ));
 
     setAuctionState(prev => ({ ...prev, currentAuctionStatus: 'Sold' }));
@@ -342,8 +351,8 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       p._id === playerId ? { ...p, isSold: false, finalPrice: undefined, winningTeamId: undefined } : p
     ));
 
-    setTeams(prev => prev.map(t => 
-      t._id === winningTeamId ? { ...t, currentBalance: t.currentBalance + finalPrice, playersPurchased: t.playersPurchased.filter(pId => pId !== playerId) } : t
+    setTeams(prev => prev.map(t =>
+      t._id === winningTeamId ? { ...t, currentBalance: (t.currentBalance || 0) + finalPrice, playersPurchased: (t.playersPurchased || []).filter(pId => pId !== playerId) } : t
     ));
 
      setAuctionState(prev => ({

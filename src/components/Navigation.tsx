@@ -16,9 +16,13 @@ const Navigation: React.FC = () => {
         <div className="grid grid-cols-3 items-center gap-4">
           {/* Left: Logo and Title */}
           <div className="flex items-center gap-3">
-            <ProStreamIcon className="h-10 w-10 text-brand-primary" />
+            <img
+              src="https://res.cloudinary.com/diitsd6nz/image/upload/v1760794476/ProSteam_logo_h9pb8b.png"
+              alt="ProStream Logo"
+              className="h-10 w-10 object-contain"
+            />
             <h1 className="text-2xl font-bold">
-              <span className="text-brand-primary">Pro</span>Stream Auction
+              <span style={{ color: '#0F84D0' }}>Pro</span><span style={{ color: '#78CA2A' }}>Stream</span> Auction
             </h1>
           </div>
 

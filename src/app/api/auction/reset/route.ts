@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
+import { triggerAuctionReset } from '@/lib/pusher-server';
 
 // POST /api/auction/reset - Reset the current auction (remove player from bidding board and return to available players list)
 export async function POST(request: NextRequest) {
@@ -45,6 +46,16 @@ export async function POST(request: NextRequest) {
       },
       { new: true }
     ).lean();
+
+    // Trigger Pusher event
+    try {
+      await triggerAuctionReset(tournamentId, {
+        auctionState: updatedState as any,
+        message: 'Auction reset successfully',
+      });
+    } catch (pusherError) {
+      console.error('Failed to trigger Pusher event:', pusherError);
+    }
 
     return NextResponse.json(updatedState);
   } catch (error) {

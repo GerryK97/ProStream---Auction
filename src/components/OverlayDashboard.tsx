@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { CopyIcon, ExternalLinkIcon } from './icons';
+import ParameterEditor, { ParameterConfig } from './overlays/parameters/ParameterEditor';
 
 interface OverlayType {
     id: string;
@@ -10,6 +11,7 @@ interface OverlayType {
     route: string;
     tags: string[];
     defaultParams: { [key: string]: string };
+    parameterSchema?: { [key: string]: ParameterConfig };
     imageURL: string;
     dimensions: { width: number; height: number };
 }
@@ -22,6 +24,10 @@ const overlayTypes: OverlayType[] = [
         route: '/overlays/player-card',
         tags: ['Player', 'Auction', 'Main'],
         defaultParams: { size: 'medium', position: 'top' },
+        parameterSchema: {
+            size: { type: 'select', label: 'Size', options: ['small', 'medium', 'large'] },
+            position: { type: 'select', label: 'Position', options: ['top', 'center', 'bottom'] }
+        },
         imageURL: 'https://placehold.co/400x200/1e293b/06b6d4?text=Player+Card',
         dimensions: { width: 800, height: 300 }
     },
@@ -32,6 +38,9 @@ const overlayTypes: OverlayType[] = [
         route: '/overlays/premium-player-card',
         tags: ['Player', 'Auction', 'Premium'],
         defaultParams: { position: 'center' },
+        parameterSchema: {
+            position: { type: 'select', label: 'Position', options: ['center', 'left', 'right'] }
+        },
         imageURL: 'https://placehold.co/400x450/ff5411/ffcc00?text=Premium+Card',
         dimensions: { width: 380, height: 650 }
     },
@@ -42,6 +51,10 @@ const overlayTypes: OverlayType[] = [
         route: '/overlays/teams',
         tags: ['Teams', 'Auction'],
         defaultParams: { layout: 'horizontal', position: 'bottom' },
+        parameterSchema: {
+            layout: { type: 'select', label: 'Layout', options: ['horizontal', 'vertical', 'grid'] },
+            position: { type: 'select', label: 'Position', options: ['top', 'bottom', 'left', 'right'] }
+        },
         imageURL: 'https://placehold.co/400x200/1e293b/22c55e?text=Team+Cards',
         dimensions: { width: 1200, height: 200 }
     },
@@ -52,8 +65,31 @@ const overlayTypes: OverlayType[] = [
         route: '/overlays/ticker',
         tags: ['Players', 'Info'],
         defaultParams: { speed: 'medium', position: 'bottom' },
+        parameterSchema: {
+            speed: { type: 'select', label: 'Speed', options: ['slow', 'medium', 'fast'], description: 'Scroll speed (slow: 60s, medium: 30s, fast: 15s)' },
+            position: { type: 'select', label: 'Position', options: ['top', 'bottom'] }
+        },
         imageURL: 'https://placehold.co/400x200/1e293b/eab308?text=Ticker',
         dimensions: { width: 1920, height: 60 }
+    },
+    {
+        id: 'premium-ticker',
+        name: 'Premium Breaking News Ticker',
+        description: 'Single player display with slide transitions - breaking news style ticker with auto-play',
+        route: '/overlays/premium-ticker',
+        tags: ['Players', 'Premium', 'Sold'],
+        defaultParams: { size: 'default', effect: 'slide-h', color: 'blue', autoplay: 'true', timer: '5000', border: 'true', position: 'bottom' },
+        parameterSchema: {
+            size: { type: 'select', label: 'Size', options: ['small', 'default', 'large'] },
+            effect: { type: 'select', label: 'Animation Effect', options: ['slide-h', 'slide-v', 'fade'], description: 'Transition effect between players' },
+            color: { type: 'select', label: 'Color Theme', options: ['blue', 'green', 'purple', 'orange', 'yellow'] },
+            autoplay: { type: 'toggle', label: 'Auto-play' },
+            timer: { type: 'number', label: 'Timer (ms)', min: 1000, max: 30000, step: 1000, description: 'Time to show each player' },
+            border: { type: 'toggle', label: 'Show Border' },
+            position: { type: 'select', label: 'Position', options: ['top', 'bottom'] }
+        },
+        imageURL: 'https://placehold.co/400x200/0F84D0/78CA2A?text=Premium+Ticker',
+        dimensions: { width: 1920, height: 40 }
     },
     {
         id: 'current-bid',
@@ -62,6 +98,10 @@ const overlayTypes: OverlayType[] = [
         route: '/overlays/current-bid',
         tags: ['Auction', 'Minimal'],
         defaultParams: { size: 'medium', position: 'top-right' },
+        parameterSchema: {
+            size: { type: 'select', label: 'Size', options: ['small', 'medium', 'large'] },
+            position: { type: 'select', label: 'Position', options: ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'] }
+        },
         imageURL: 'https://placehold.co/400x200/1e293b/10b981?text=Current+Bid',
         dimensions: { width: 400, height: 200 }
     },
@@ -82,6 +122,10 @@ const overlayTypes: OverlayType[] = [
         route: '/overlays/leaderboard',
         tags: ['Teams', 'Stats'],
         defaultParams: { sortBy: 'players', position: 'top-right' },
+        parameterSchema: {
+            sortBy: { type: 'select', label: 'Sort By', options: ['players', 'balance', 'spent'], description: 'Sort teams by players count, remaining balance, or money spent' },
+            position: { type: 'select', label: 'Position', options: ['top-left', 'top-right', 'bottom-left', 'bottom-right'] }
+        },
         imageURL: 'https://placehold.co/400x200/1e293b/f59e0b?text=Leaderboard',
         dimensions: { width: 320, height: 400 }
     },
@@ -102,8 +146,82 @@ const overlayTypes: OverlayType[] = [
         route: '/overlays/sold-summary',
         tags: ['Summary', 'Stats', 'Final'],
         defaultParams: { position: 'center' },
+        parameterSchema: {
+            position: { type: 'select', label: 'Position', options: ['center', 'top', 'bottom'] }
+        },
         imageURL: 'https://placehold.co/400x200/1e293b/10b981?text=Final+Summary',
         dimensions: { width: 1200, height: 800 }
+    },
+    {
+        id: 'auction-overview',
+        name: 'Auction Overview LED',
+        description: 'Full-screen comprehensive auction display with auto-flipping team pages and complex animations - perfect for LED screens (1920x1080)',
+        route: '/overlays/auction-overview',
+        tags: ['Full Screen', 'LED', 'Premium', 'Comprehensive'],
+        defaultParams: {
+            size: 'default',
+            showBackground: 'true',
+            theme: 'premium',
+            animationSpeed: 'normal',
+            teamFlipDuration: '8',
+            showStats: 'true',
+            showRecentSold: 'true',
+            maxRecentSold: '5',
+            teamsPerPage: '10'
+        },
+        parameterSchema: {
+            size: {
+                type: 'select',
+                label: 'Size',
+                options: ['default', 'large'],
+                description: 'default: 1920x1080, large: 3840x2160'
+            },
+            showBackground: {
+                type: 'toggle',
+                label: 'Show Animated Background'
+            },
+            theme: {
+                type: 'select',
+                label: 'Color Theme',
+                options: ['dark', 'premium', 'vibrant']
+            },
+            animationSpeed: {
+                type: 'select',
+                label: 'Animation Speed',
+                options: ['slow', 'normal', 'fast']
+            },
+            teamFlipDuration: {
+                type: 'number',
+                label: 'Team Page Duration (sec)',
+                min: 5,
+                max: 20,
+                step: 1,
+                description: 'Time before flipping to next team page'
+            },
+            showStats: {
+                type: 'toggle',
+                label: 'Show Auction Statistics'
+            },
+            showRecentSold: {
+                type: 'toggle',
+                label: 'Show Recent Sold Players'
+            },
+            maxRecentSold: {
+                type: 'number',
+                label: 'Recent Sold Count',
+                min: 3,
+                max: 10,
+                description: 'Number of recent sales to display'
+            },
+            teamsPerPage: {
+                type: 'select',
+                label: 'Teams Per Page',
+                options: ['10', '15', '20'],
+                description: 'More teams = smaller cards'
+            }
+        },
+        imageURL: 'https://placehold.co/1920x1080/0F84D0/FFFFFF?text=Auction+Overview+LED',
+        dimensions: { width: 1920, height: 1080 }
     },
 ];
 
@@ -112,6 +230,8 @@ const OverlayDashboard: React.FC = () => {
     const [selectedTag, setSelectedTag] = useState('All');
     const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
     const [activeTournamentId, setActiveTournamentId] = useState<string | null>(null);
+    const [customParams, setCustomParams] = useState<{ [overlayId: string]: { [key: string]: string } }>({});
+    const [expandedEditor, setExpandedEditor] = useState<string | null>(null);
 
     // Fetch active tournament on mount
     useEffect(() => {
@@ -145,11 +265,35 @@ const OverlayDashboard: React.FC = () => {
 
     const generateOverlayUrl = (overlay: OverlayType) => {
         const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-        const params = new URLSearchParams(overlay.defaultParams);
+        // Use custom params if set, otherwise use defaults
+        const paramsToUse = customParams[overlay.id] || overlay.defaultParams;
+        const params = new URLSearchParams(paramsToUse);
         if (activeTournamentId) {
             params.set('tournament', activeTournamentId);
         }
         return `${baseUrl}${overlay.route}?${params.toString()}`;
+    };
+
+    const handleParameterChange = (overlayId: string, key: string, value: string) => {
+        setCustomParams(prev => ({
+            ...prev,
+            [overlayId]: {
+                ...(prev[overlayId] || overlayTypes.find(o => o.id === overlayId)?.defaultParams || {}),
+                [key]: value
+            }
+        }));
+    };
+
+    const handleResetParameters = (overlayId: string) => {
+        setCustomParams(prev => {
+            const newParams = { ...prev };
+            delete newParams[overlayId];
+            return newParams;
+        });
+    };
+
+    const toggleEditor = (overlayId: string) => {
+        setExpandedEditor(prev => prev === overlayId ? null : overlayId);
     };
 
     const handleCopy = (url: string) => {
@@ -205,9 +349,26 @@ const OverlayDashboard: React.FC = () => {
                             </div>
                             <div className="p-4 bg-neutral-900/50 border-t border-neutral-700 space-y-2">
                                 <div className="flex gap-2">
+                                    {overlay.parameterSchema && (
+                                        <button
+                                            onClick={() => toggleEditor(overlay.id)}
+                                            className={`flex-1 flex items-center justify-center gap-2 font-bold py-2 px-4 rounded-md transition-colors text-sm ${
+                                                expandedEditor === overlay.id
+                                                    ? 'bg-brand-primary hover:bg-brand-primary/80 text-white'
+                                                    : 'bg-neutral-700 hover:bg-neutral-600 text-neutral-200'
+                                            }`}
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                                            </svg>
+                                            {expandedEditor === overlay.id ? 'Hide' : 'Customize'}
+                                        </button>
+                                    )}
                                     <button
                                         onClick={() => handleCopy(overlayUrl)}
-                                        className="flex-1 flex items-center justify-center gap-2 bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm"
+                                        className={`flex-1 flex items-center justify-center gap-2 bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm ${
+                                            !overlay.parameterSchema ? 'flex-[2]' : ''
+                                        }`}
                                     >
                                         <CopyIcon className="h-4 w-4" />
                                         {copiedUrl === overlayUrl ? 'Copied!' : 'Copy URL'}
@@ -227,6 +388,16 @@ const OverlayDashboard: React.FC = () => {
                                     <p className="mt-2 font-mono bg-neutral-800 p-2 rounded break-all">{overlayUrl}</p>
                                 </details>
                             </div>
+
+                            {/* Parameter Editor */}
+                            {overlay.parameterSchema && expandedEditor === overlay.id && (
+                                <ParameterEditor
+                                    parameterSchema={overlay.parameterSchema}
+                                    values={customParams[overlay.id] || overlay.defaultParams}
+                                    onChange={(key, value) => handleParameterChange(overlay.id, key, value)}
+                                    onReset={() => handleResetParameters(overlay.id)}
+                                />
+                            )}
                         </div>
                     );
                 })}

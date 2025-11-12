@@ -4,6 +4,7 @@ import { AuctionStateModel } from '@/models/AuctionState';
 import { TournamentModel } from '@/models/Tournament';
 import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
+import { triggerBidPlaced } from '@/lib/pusher-server';
 
 // POST /api/auction/bid - Place a bid for the current player
 export async function POST(request: NextRequest) {
@@ -81,6 +82,8 @@ export async function POST(request: NextRequest) {
       timestamp: Date.now(),
     };
 
+    const previousBid = auctionState.currentBid;
+
     const updatedState = await AuctionStateModel.findOneAndUpdate(
       { tournamentId },
       {
@@ -92,6 +95,26 @@ export async function POST(request: NextRequest) {
       },
       { new: true }
     ).lean();
+
+    // Get winning team if teamId provided
+    let winningTeam = null;
+    if (teamId) {
+      winningTeam = await TeamModel.findById(teamId).lean();
+    }
+
+    // Trigger Pusher event
+    try {
+      await triggerBidPlaced(tournamentId, {
+        auctionState: updatedState as any,
+        currentPlayer: player as any,
+        winningTeam: winningTeam as any,
+        currentBid: amount,
+        previousBid,
+        message: `New bid placed: ${amount.toLocaleString()}`,
+      });
+    } catch (pusherError) {
+      console.error('Failed to trigger Pusher event:', pusherError);
+    }
 
     return NextResponse.json(updatedState);
   } catch (error) {

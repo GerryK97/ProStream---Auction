@@ -4,6 +4,7 @@ import { AuctionStateModel } from '@/models/AuctionState';
 import { TournamentModel } from '@/models/Tournament';
 import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
+import { triggerPlayerSold } from '@/lib/pusher-server';
 
 // POST /api/auction/sell - Sell the current player to the winning team
 export async function POST(request: NextRequest) {
@@ -110,6 +111,27 @@ export async function POST(request: NextRequest) {
       },
       { new: true }
     ).lean();
+
+    // Count remaining unsold players
+    const remainingPlayers = await PlayerModel.countDocuments({
+      tournamentId,
+      isSold: false,
+    });
+
+    // Trigger Pusher event
+    try {
+      await triggerPlayerSold(tournamentId, {
+        soldPlayer: updatedPlayer as any,
+        winningTeam: updatedTeam as any,
+        finalPrice: currentBid,
+        remainingPlayers,
+        remainingBudget: (updatedTeam as any).currentBalance,
+        auctionState: updatedState as any,
+        message: `${(updatedPlayer as any).name} sold to ${(updatedTeam as any).name} for ${currentBid.toLocaleString()}`,
+      });
+    } catch (pusherError) {
+      console.error('Failed to trigger Pusher event:', pusherError);
+    }
 
     return NextResponse.json({
       auctionState: updatedState,

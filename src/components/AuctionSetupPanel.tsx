@@ -2,53 +2,81 @@
 
 import React, { useState } from 'react';
 import { useAuction } from '@/hooks/useAuction';
-import { Player, Team, Tournament, PlayerStats } from '@/types';
+import { Player, Team, Tournament, PlayerStats, MasterTeam, MasterPlayer } from '@/types';
 import Modal from './Modal';
 import { PlusIcon, DeleteIcon, EditIcon } from './icons';
+import { imageOptimizers } from '@/lib/imageOptimization';
+import ImageUpload from './ImageUpload';
 
 
 interface AddPlayerFromDatabaseProps {
     selectedTournament: Tournament;
-    allPlayers: Player[];
+    masterPlayers: MasterPlayer[];
     tournamentPlayers: Player[];
-    onAdd: (playerId: string) => Promise<void>;
+    onAdd: (masterPlayerId: string) => Promise<void>;
     onCreateNew: () => void;
+    onError?: (error: string) => void;
 }
 
 interface AddTeamFromDatabaseProps {
     selectedTournament: Tournament;
-    allTeams: Team[];
+    masterTeams: MasterTeam[];
     tournamentTeams: Team[];
-    onAdd: (teamId: string) => Promise<void>;
+    onAdd: (masterTeamId: string) => Promise<void>;
     onCreateNew: () => void;
 }
 
 const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
     selectedTournament,
-    allPlayers,
+    masterPlayers,
     tournamentPlayers,
     onAdd,
     onCreateNew,
+    onError,
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [addingPlayerId, setAddingPlayerId] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
-    // Filter out players already in this tournament
-    const tournamentPlayerIds = new Set(tournamentPlayers.map(p => p._id));
-    const availablePlayers = allPlayers.filter(p => !tournamentPlayerIds.has(p._id));
+    // Filter out master players already in this tournament
+    const tournamentMasterPlayerIds = new Set(tournamentPlayers.map(p => p.masterPlayerId).filter(Boolean));
+    const availablePlayers = masterPlayers.filter(p => !tournamentMasterPlayerIds.has(p._id));
 
     const filteredPlayers = availablePlayers.filter(p =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase())
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.position.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.currentClub.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const handleAddPlayer = async (playerId: string) => {
-        setAddingPlayerId(playerId);
-        await onAdd(playerId);
+    const handleAddPlayer = async (masterPlayerId: string) => {
+        setAddingPlayerId(masterPlayerId);
+        setError(null);
+        try {
+            await onAdd(masterPlayerId);
+        } catch (err: any) {
+            const errorMsg = err.message || 'Failed to add player';
+            setError(errorMsg);
+            if (onError) onError(errorMsg);
+        }
         setAddingPlayerId(null);
     };
 
     return (
         <div className="space-y-4">
+            {error && (
+                <div className="bg-red-900/50 border border-red-700 text-red-200 rounded-md p-3 flex items-start justify-between">
+                    <div>
+                        <p className="font-semibold">Error Adding Player</p>
+                        <p className="text-sm">{error}</p>
+                    </div>
+                    <button
+                        onClick={() => setError(null)}
+                        className="text-red-200 hover:text-white"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
             <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-neutral-400">
                     {availablePlayers.length} player(s) available to add
@@ -83,17 +111,18 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
                         >
                             <div className="flex items-center gap-3">
                                 <img
-                                    src={player.imageURL}
+                                    src={imageOptimizers.playerThumbnail(player.photoURL)}
                                     alt={player.name}
                                     className="w-12 h-12 rounded-full object-cover"
+                                    loading="lazy"
                                 />
                                 <div>
                                     <p className="font-semibold">{player.name}</p>
                                     <p className="text-xs text-neutral-400">
-                                        Matches: {player.stats.matchesPlayed} | Score: {player.stats.totalScore}
+                                        {player.position} | {player.currentClub}
                                     </p>
                                     <p className="text-xs text-neutral-500">
-                                        From: {player.tournamentId || 'Unassigned'}
+                                        Matches: {player.careerStats?.matchesPlayed || 0} | Score: {player.careerStats?.totalScore || 0}
                                     </p>
                                 </div>
                             </div>
@@ -118,7 +147,7 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
 
 const AddTeamFromDatabase: React.FC<AddTeamFromDatabaseProps> = ({
     selectedTournament,
-    allTeams,
+    masterTeams,
     tournamentTeams,
     onAdd,
     onCreateNew,
@@ -126,18 +155,18 @@ const AddTeamFromDatabase: React.FC<AddTeamFromDatabaseProps> = ({
     const [searchTerm, setSearchTerm] = useState('');
     const [addingTeamId, setAddingTeamId] = useState<string | null>(null);
 
-    // Filter out teams already in this tournament
-    const tournamentTeamIds = new Set(tournamentTeams.map(t => t._id));
-    const availableTeams = allTeams.filter(t => !tournamentTeamIds.has(t._id));
+    // Filter out master teams already in this tournament
+    const tournamentMasterTeamIds = new Set(tournamentTeams.map(t => t.masterTeamId).filter(Boolean));
+    const availableTeams = masterTeams.filter(t => !tournamentMasterTeamIds.has(t._id));
 
     const filteredTeams = availableTeams.filter(t =>
         t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         t.ownerName.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const handleAddTeam = async (teamId: string) => {
-        setAddingTeamId(teamId);
-        await onAdd(teamId);
+    const handleAddTeam = async (masterTeamId: string) => {
+        setAddingTeamId(masterTeamId);
+        await onAdd(masterTeamId);
         setAddingTeamId(null);
     };
 
@@ -177,17 +206,15 @@ const AddTeamFromDatabase: React.FC<AddTeamFromDatabaseProps> = ({
                         >
                             <div className="flex items-center gap-3">
                                 <img
-                                    src={team.logoURL}
+                                    src={imageOptimizers.teamThumbnail(team.logoURL)}
                                     alt={team.name}
                                     className="w-12 h-12 rounded-md object-cover"
+                                    loading="lazy"
                                 />
                                 <div>
                                     <p className="font-semibold">{team.name}</p>
                                     <p className="text-xs text-neutral-400">
-                                        Owner: {team.ownerName}
-                                    </p>
-                                    <p className="text-xs text-neutral-500">
-                                        From: {team.tournamentId || 'Unassigned'}
+                                        Owner: {team.ownerName} | {team.shortCode}
                                     </p>
                                 </div>
                             </div>
@@ -220,26 +247,13 @@ interface PlayerFormProps {
 const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, tournament, playerToEdit }) => {
     const isEditing = !!playerToEdit;
     const [name, setName] = useState(playerToEdit?.name || '');
-    const [imageURL, setImageURL] = useState(playerToEdit?.imageURL || '');
-    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imageURL, setImageURL] = useState(playerToEdit?.photoURL || '');
     const [stats, setStats] = useState<PlayerStats>(playerToEdit?.stats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 });
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            setImageFile(file);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setImageURL(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (name) {
-            onSave({ name, imageURL: imageURL || `https://picsum.photos/seed/${name}/200`, stats });
+            onSave({ name, photoURL: imageURL || `https://picsum.photos/seed/${name}/200`, stats });
         }
     };
 
@@ -275,37 +289,16 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, tournament, playerToEdi
                  </div>
             </div>
 
-             <div>
-                <label className="block text-sm font-medium text-neutral-300 mb-1">Player Profile Image</label>
-                 <div className="flex items-center gap-4">
-                    <img
-                        src={imageURL || 'https://placehold.co/100x100/374151/F3F4F6/png?text=No+Image'}
-                        alt="Player Preview"
-                        className="w-16 h-16 rounded-full object-cover bg-neutral-700"
-                    />
-                    <div className="flex-grow">
-                        <div className="flex items-center justify-between bg-neutral-700 border-neutral-600 rounded-md p-2">
-                            <label htmlFor="player-image-file-setup" className="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-3 rounded-md text-sm transition-colors">
-                                Choose File
-                            </label>
-                            <input type="file" id="player-image-file-setup" className="hidden" onChange={handleFileChange} accept="image/*" />
-                            <span className="text-sm text-neutral-400 truncate ml-2">{imageFile?.name ?? 'No file chosen'}</span>
-                        </div>
-                        <p className="text-center text-xs text-neutral-500 my-1">or enter a URL below</p>
-                        <input
-                            type="text"
-                            id="imageURL"
-                            value={imageURL}
-                            onChange={(e) => {
-                                setImageURL(e.target.value);
-                                setImageFile(null);
-                            }}
-                            placeholder="Image URL (optional)"
-                            className="w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2 text-sm"
-                        />
-                    </div>
-                </div>
-            </div>
+            <ImageUpload
+                value={imageURL}
+                onChange={setImageURL}
+                folder="players"
+                label="Player Profile Image"
+                placeholder="Image URL (optional)"
+                previewClassName="w-16 h-16"
+                previewShape="circle"
+                id="player-image-file-setup"
+            />
             <div className="pt-2 text-right">
                 <button type="submit" className="inline-flex justify-center items-center gap-2 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
                     {isEditing ? <EditIcon className="h-5 w-5" /> : <PlusIcon className="h-5 w-5" />}
@@ -324,19 +317,6 @@ const TeamForm: React.FC<TeamFormProps> = ({ onSave }) => {
     const [name, setName] = useState('');
     const [ownerName, setOwnerName] = useState('');
     const [logoURL, setLogoURL] = useState('');
-    const [logoFile, setLogoFile] = useState<File | null>(null);
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            setLogoFile(file);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setLogoURL(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -346,7 +326,6 @@ const TeamForm: React.FC<TeamFormProps> = ({ onSave }) => {
             setName('');
             setOwnerName('');
             setLogoURL('');
-            setLogoFile(null);
         }
     };
 
@@ -360,16 +339,16 @@ const TeamForm: React.FC<TeamFormProps> = ({ onSave }) => {
                 <label htmlFor="ownerName" className="block text-sm font-medium text-neutral-300">Owner Name</label>
                 <input type="text" id="ownerName" value={ownerName} onChange={(e) => setOwnerName(e.target.value)} required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary" />
             </div>
-            <div>
-                 <label className="block text-sm font-medium text-neutral-300 mb-1">Team Logo</label>
-                <div className="flex items-center justify-between bg-neutral-700 border-neutral-600 rounded-md p-2">
-                    <label htmlFor="logo-file-auction-setup" className="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-3 rounded-md text-sm transition-colors">Choose File</label>
-                    <input type="file" id="logo-file-auction-setup" className="hidden" onChange={handleFileChange} accept="image/*" />
-                    <span className="text-sm text-neutral-400 truncate ml-2">{logoFile?.name ?? 'No file chosen'}</span>
-                </div>
-                <p className="text-center text-xs text-neutral-500 my-1">or enter a URL below</p>
-                <input type="text" id="logoURL" value={logoURL} onChange={(e) => setLogoURL(e.target.value)} placeholder="Logo URL (optional)" className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary" />
-            </div>
+            <ImageUpload
+                value={logoURL}
+                onChange={setLogoURL}
+                folder="teams"
+                label="Team Logo"
+                placeholder="Logo URL (optional)"
+                previewClassName="w-16 h-16"
+                previewShape="square"
+                id="logo-file-auction-setup"
+            />
             <div className="pt-2 text-right">
                 <button type="submit" className="inline-flex justify-center items-center gap-2 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
                     <PlusIcon className="h-5 w-5" />
@@ -387,20 +366,18 @@ const AuctionSetupPanel: React.FC = () => {
     const [isAddTeamModalOpen, setAddTeamModalOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [selectedTournamentId, setSelectedTournamentId] = useState(tournament?._id || '');
-    const [allPlayers, setAllPlayers] = useState<Player[]>([]);
-    const [allTeams, setAllTeams] = useState<Team[]>([]);
+    const [masterPlayers, setMasterPlayers] = useState<MasterPlayer[]>([]);
+    const [masterTeams, setMasterTeams] = useState<MasterTeam[]>([]);
     const [tournaments, setTournaments] = useState<Tournament[]>([]);
     const [tournamentPlayers, setTournamentPlayers] = useState<Player[]>([]);
     const [tournamentTeams, setTournamentTeams] = useState<Team[]>([]);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-    // Handle player removal from tournament
+    // Handle player removal from tournament (delete tournament instance)
     const handleRemovePlayer = async (playerId: string) => {
         try {
             const response = await fetch(`/api/players/${playerId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tournamentId: null }),
+                method: 'DELETE',
             });
             if (response.ok) {
                 setRefreshTrigger(prev => prev + 1);
@@ -410,13 +387,11 @@ const AuctionSetupPanel: React.FC = () => {
         }
     };
 
-    // Handle team removal from tournament
+    // Handle team removal from tournament (delete tournament instance)
     const handleRemoveTeam = async (teamId: string) => {
         try {
             const response = await fetch(`/api/teams/${teamId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tournamentId: null }),
+                method: 'DELETE',
             });
             if (response.ok) {
                 setRefreshTrigger(prev => prev + 1);
@@ -426,46 +401,52 @@ const AuctionSetupPanel: React.FC = () => {
         }
     };
 
-    // Fetch all players, teams, and tournaments from database on mount and when refresh is triggered
+    // Fetch master players, master teams, and tournaments from database on mount and when refresh is triggered
     React.useEffect(() => {
         const fetchData = async () => {
             try {
-                // Fetch all tournaments
-                const tournamentsResponse = await fetch('/api/tournaments');
-                if (tournamentsResponse.ok) {
-                    const tournamentsData = await tournamentsResponse.json();
+                const startTime = Date.now();
+                console.log('[AuctionSetup] Starting data fetch...');
+
+                // Build parallel fetch requests
+                const requests = [
+                    fetch('/api/tournaments'),
+                    fetch('/api/master-players'),
+                    fetch('/api/master-teams'),
+                ];
+
+                // Add tournament-specific requests if tournament is selected
+                if (selectedTournamentId) {
+                    requests.push(
+                        fetch(`/api/players?tournamentId=${selectedTournamentId}`),
+                        fetch(`/api/teams?tournamentId=${selectedTournamentId}`)
+                    );
+                }
+
+                // Execute all requests in parallel
+                const responses = await Promise.all(requests);
+                console.log(`[AuctionSetup] All requests completed in ${Date.now() - startTime}ms`);
+
+                // Parse responses in parallel
+                const [
+                    tournamentsData,
+                    masterPlayersData,
+                    masterTeamsData,
+                    tournamentPlayersData,
+                    tournamentTeamsData
+                ] = await Promise.all(responses.map(res => res.ok ? res.json() : null));
+
+                // Update state
+                if (tournamentsData) {
+                    console.log('[AuctionSetup] Loaded tournaments:', tournamentsData.length, tournamentsData.map((t: Tournament) => ({ id: t._id, name: t.name })));
                     setTournaments(tournamentsData);
                 }
+                if (masterPlayersData) setMasterPlayers(masterPlayersData);
+                if (masterTeamsData) setMasterTeams(masterTeamsData);
+                if (tournamentPlayersData) setTournamentPlayers(tournamentPlayersData);
+                if (tournamentTeamsData) setTournamentTeams(tournamentTeamsData);
 
-                // Fetch all players
-                const playersResponse = await fetch('/api/players');
-                if (playersResponse.ok) {
-                    const allPlayersData = await playersResponse.json();
-                    setAllPlayers(allPlayersData);
-
-                    // Filter players for current tournament
-                    if (selectedTournamentId) {
-                        const tournamentPlayersData = allPlayersData.filter(
-                            (p: Player) => p.tournamentId === selectedTournamentId
-                        );
-                        setTournamentPlayers(tournamentPlayersData);
-                    }
-                }
-
-                // Fetch all teams
-                const teamsResponse = await fetch('/api/teams');
-                if (teamsResponse.ok) {
-                    const allTeamsData = await teamsResponse.json();
-                    setAllTeams(allTeamsData);
-
-                    // Filter teams for current tournament
-                    if (selectedTournamentId) {
-                        const tournamentTeamsData = allTeamsData.filter(
-                            (t: Team) => t.tournamentId === selectedTournamentId
-                        );
-                        setTournamentTeams(tournamentTeamsData);
-                    }
-                }
+                console.log(`[AuctionSetup] Total fetch time: ${Date.now() - startTime}ms`);
             } catch (error) {
                 console.error('Failed to fetch data:', error);
             }
@@ -473,8 +454,54 @@ const AuctionSetupPanel: React.FC = () => {
         fetchData();
     }, [refreshTrigger, selectedTournamentId]);
 
+    // Initialize selectedTournamentId from context or first tournament
+    React.useEffect(() => {
+        console.log('[AuctionSetup] Checking tournament selection:', {
+            selectedTournamentId,
+            tournamentFromContext: tournament?._id,
+            tournamentsLoaded: tournaments.length
+        });
+
+        if (!selectedTournamentId && tournaments.length > 0) {
+            // Initialize to first tournament if no selection
+            const firstTournamentId = tournaments[0]._id;
+            console.log('[AuctionSetup] Initializing to first tournament:', firstTournamentId);
+            setSelectedTournamentId(firstTournamentId);
+        } else if (selectedTournamentId && !tournaments.find(t => t._id === selectedTournamentId) && tournaments.length > 0) {
+            // If selected tournament doesn't exist in loaded tournaments, switch to first
+            const firstTournamentId = tournaments[0]._id;
+            console.log('[AuctionSetup] Selected tournament not found, switching to first:', firstTournamentId);
+            setSelectedTournamentId(firstTournamentId);
+        }
+    }, [tournaments, selectedTournamentId, tournament]);
+
     // Get selected tournament
-    const selectedTournament = tournaments.find(t => t._id === selectedTournamentId) || tournament;
+    const selectedTournament = tournaments.find(t => t._id === selectedTournamentId);
+    console.log('[AuctionSetup] Selected tournament result:', {
+        selectedTournamentId,
+        found: !!selectedTournament,
+        tournamentName: selectedTournament?.name
+    });
+
+    // Show message when no tournaments exist
+    if (tournaments.length === 0) {
+        return (
+            <div className="text-center p-12">
+                <div className="bg-neutral-800 border border-neutral-700 rounded-lg p-8 max-w-2xl mx-auto">
+                    <h2 className="text-2xl font-bold mb-2">No Tournaments Found</h2>
+                    <p className="text-neutral-400 mb-6">
+                        Create a tournament in the Management Dashboard to get started with auction setup.
+                    </p>
+                    <a
+                        href="/management"
+                        className="inline-block bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                    >
+                        Go to Management Dashboard
+                    </a>
+                </div>
+            </div>
+        );
+    }
 
     if (!selectedTournament) {
         return <div className="text-center p-8 text-neutral-400">Loading tournament data...</div>;
@@ -744,9 +771,14 @@ const AuctionSetupPanel: React.FC = () => {
                             tournamentPlayers.map(player => (
                                 <li key={player._id} className="bg-neutral-900/50 p-3 rounded-md flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <img src={player.imageURL} alt={player.name} className="w-12 h-12 rounded-full object-cover"/>
+                                        <img
+                                            src={imageOptimizers.playerThumbnail(player.photoURL)}
+                                            alt={player.name}
+                                            className="w-12 h-12 rounded-full object-cover"
+                                            loading="lazy"
+                                        />
                                         <div>
-                                            <p className="font-semibold">{player.name}</p>
+                                            <p className="font-semibold">#{player.playerNo || player._id} {player.name}</p>
                                             <p className="text-sm text-neutral-400">Matches: {player.stats.matchesPlayed}</p>
                                             <p className={`text-xs font-semibold ${player.isSold ? 'text-red-400' : 'text-green-400'} tracking-wider`}>
                                                 {player.isSold ? 'SOLD' : 'AVAILABLE'}
@@ -771,11 +803,16 @@ const AuctionSetupPanel: React.FC = () => {
                             tournamentTeams.map(team => (
                                 <li key={team._id} className="bg-neutral-900/50 p-3 rounded-md flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <img src={team.logoURL} alt={team.name} className="w-12 h-12 rounded-md object-cover"/>
+                                        <img
+                                            src={imageOptimizers.teamThumbnail(team.logoURL)}
+                                            alt={team.name}
+                                            className="w-12 h-12 rounded-md object-cover"
+                                            loading="lazy"
+                                        />
                                         <div>
                                             <p className="font-semibold">{team.name}</p>
-                                            <p className="text-sm text-neutral-400">Budget: {team.initialBudget.toLocaleString()}</p>
-                                            <p className="text-xs text-neutral-400">Remaining: {team.currentBalance.toLocaleString()} | Players: {team.playersPurchased.length}</p>
+                                            <p className="text-sm text-neutral-400">Budget: {team.initialBudget?.toLocaleString() || 'Not set'}</p>
+                                            <p className="text-xs text-neutral-400">Remaining: {team.currentBalance?.toLocaleString() || 'N/A'} | Players: {team.playersPurchased?.length || 0}</p>
                                         </div>
                                     </div>
                                     <button onClick={() => handleRemoveTeam(team._id)} className="bg-red-600 hover:bg-red-500 text-white font-bold py-1 px-3 rounded-lg text-sm transition-colors">Remove</button>
@@ -789,27 +826,30 @@ const AuctionSetupPanel: React.FC = () => {
             <Modal isOpen={isAddPlayerModalOpen} onClose={() => setAddPlayerModalOpen(false)} title="Add Players to Tournament" size="2xl">
                 <AddPlayerFromDatabase
                     selectedTournament={selectedTournament}
-                    allPlayers={allPlayers}
+                    masterPlayers={masterPlayers}
                     tournamentPlayers={tournamentPlayers}
-                    onAdd={async (playerId) => {
-                        // Update player's tournamentId to add them to this tournament
-                        try {
-                            const response = await fetch(`/api/players/${playerId}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ tournamentId: selectedTournament._id }),
-                            });
-                            if (response.ok) {
-                                // Refresh player list without closing modal
-                                setRefreshTrigger(prev => prev + 1);
-                            }
-                        } catch (error) {
-                            console.error('Failed to add player:', error);
+                    onAdd={async (masterPlayerId) => {
+                        // Create tournament player instance from master player
+                        const response = await fetch('/api/players/create-from-master', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                masterPlayerId,
+                                tournamentId: selectedTournament._id
+                            }),
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.error || 'Failed to add player to tournament');
                         }
+
+                        // Refresh player list without closing modal
+                        setRefreshTrigger(prev => prev + 1);
                     }}
                     onCreateNew={() => {
                         setAddPlayerModalOpen(false);
-                        // You can add a modal for creating new players here
+                        // Navigate to Management Dashboard to create new master players
                     }}
                 />
             </Modal>
@@ -817,15 +857,18 @@ const AuctionSetupPanel: React.FC = () => {
             <Modal isOpen={isAddTeamModalOpen} onClose={() => setAddTeamModalOpen(false)} title="Add Teams to Tournament" size="2xl">
                 <AddTeamFromDatabase
                     selectedTournament={selectedTournament}
-                    allTeams={allTeams}
+                    masterTeams={masterTeams}
                     tournamentTeams={tournamentTeams}
-                    onAdd={async (teamId) => {
-                        // Update team's tournamentId to add them to this tournament
+                    onAdd={async (masterTeamId) => {
+                        // Create tournament team instance from master team
                         try {
-                            const response = await fetch(`/api/teams/${teamId}`, {
-                                method: 'PUT',
+                            const response = await fetch('/api/teams/create-from-master', {
+                                method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ tournamentId: selectedTournament._id }),
+                                body: JSON.stringify({
+                                    masterTeamId,
+                                    tournamentId: selectedTournament._id
+                                }),
                             });
                             if (response.ok) {
                                 // Refresh team list without closing modal
@@ -837,7 +880,7 @@ const AuctionSetupPanel: React.FC = () => {
                     }}
                     onCreateNew={() => {
                         setAddTeamModalOpen(false);
-                        // You can add a modal for creating new teams here
+                        // Navigate to Management Dashboard to create new master teams
                     }}
                 />
             </Modal>

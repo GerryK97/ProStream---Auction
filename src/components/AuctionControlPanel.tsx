@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Player, Team, Tournament } from '@/types';
-import { useAuctionSSE } from '@/hooks/useAuctionSSE';
+import { usePusherAuction } from '@/hooks/usePusherAuction';
+import { imageOptimizers } from '@/lib/imageOptimization';
 
 const formatCurrency = (amount: number) => amount.toLocaleString();
 
@@ -18,7 +19,7 @@ const AvailablePlayersPanel: React.FC<{
         .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
     return (
-        <div className="bg-neutral-800 rounded-lg p-4 flex flex-col h-[calc(100vh-15rem)] border border-neutral-700">
+        <div className="bg-neutral-800 rounded-lg p-4 flex flex-col min-h-[calc(100vh-15rem)] border border-neutral-700">
             <h3 className="font-bold text-lg mb-2">Available Players</h3>
             {isAuctioning && (
                 <div className="bg-yellow-900/50 border border-yellow-700 text-yellow-200 text-xs rounded-md p-2 mb-3">
@@ -34,11 +35,11 @@ const AvailablePlayersPanel: React.FC<{
             />
             <div className="flex-grow overflow-y-auto pr-2">
                 <ul className="space-y-2">
-                    {availablePlayers.map(player => (
+                    {availablePlayers.map((player, index) => (
                         <li key={player._id} className="flex items-center justify-between bg-neutral-700/50 p-2 rounded-md">
                             <div>
-                                <p className="font-semibold text-cyan-400">#{player._id.replace('p', '').padStart(3, '0')} {player.name}</p>
-                                <p className="text-xs text-neutral-400">Batsman</p>
+                                <p className="font-semibold text-cyan-400">#{player.playerNo || player._id} {player.name}</p>
+                                <p className="text-xs text-neutral-400">{player.position || 'Player'}</p>
                             </div>
                             <button
                                 onClick={() => onSelectPlayer(player._id)}
@@ -90,7 +91,7 @@ const CurrentAuctionPanel: React.FC<{
 
     if (!currentPlayer || !tournament) {
         return (
-            <div className="bg-neutral-800 rounded-lg p-4 flex items-center justify-center h-[calc(100vh-15rem)] border border-neutral-700">
+            <div className="bg-neutral-800 rounded-lg p-4 flex items-center justify-center min-h-[calc(100vh-15rem)] border border-neutral-700">
                 <p className="text-neutral-400 text-lg">{!tournament ? "No tournament data" : "Select a player to start the auction"}</p>
             </div>
         );
@@ -101,14 +102,19 @@ const CurrentAuctionPanel: React.FC<{
     const bidIncrements = [1000, 5000, 10000, 25000, 50000];
 
     return (
-        <div className="bg-neutral-800 rounded-lg p-6 border border-neutral-700 h-[calc(100vh-15rem)] flex flex-col justify-between">
+        <div className="bg-neutral-800 rounded-lg p-6 border border-neutral-700 min-h-[calc(100vh-15rem)] flex flex-col justify-between">
             <div>
                 <div className="text-center mb-4">
-                    <p className="text-3xl font-bold text-cyan-400">#{currentPlayer._id.replace('p', '').padStart(3, '0')} {currentPlayer.name}</p>
-                    <p className="text-neutral-400">Batsman</p>
+                    <p className="text-3xl font-bold text-cyan-400">#{currentPlayer.playerNo || currentPlayer._id} {currentPlayer.name}</p>
+                    <p className="text-neutral-400">{currentPlayer.position || 'Player'}</p>
                 </div>
                 <div className="flex justify-center items-center gap-6 mb-4">
-                    <img src={currentPlayer.imageURL} alt={currentPlayer.name} className="w-40 h-40 rounded-lg object-cover border-4 border-neutral-700 shadow-lg" />
+                    <img
+                        src={imageOptimizers.playerCard(currentPlayer.photoURL)}
+                        alt={currentPlayer.name}
+                        className="w-40 h-40 rounded-lg object-cover border-4 border-neutral-700 shadow-lg"
+                        loading="lazy"
+                    />
                     <div>
                         <p className="text-neutral-400 text-sm">Current Bid</p>
                         <p className="text-6xl font-bold text-green-400">{formatCurrency(currentBid)}</p>
@@ -189,11 +195,11 @@ const TeamsAndSoldPlayersPanel: React.FC<{
     onCleanup: () => void;
 }> = ({ teams, soldPlayers, tournament, winningTeamId, onUndo, onCleanup }) => {
     const calculateMaxBid = (team: Team) => {
-        if (!tournament) return 0;
+        if (!tournament || !team.currentBalance) return 0;
 
         const squadSize = tournament.squadSize;
         const basePrice = tournament.basePricePerPlayer;
-        const playersPurchased = team.playersPurchased.length;
+        const playersPurchased = team.playersPurchased?.length || 0;
         const remainingPlayers = squadSize - playersPurchased;
 
         // If squad is complete or it's the last player, team can spend all remaining balance
@@ -210,13 +216,13 @@ const TeamsAndSoldPlayersPanel: React.FC<{
     };
 
     return (
-        <div className="space-y-6 h-full flex flex-col">
-            <div className="bg-neutral-800 rounded-lg p-4 border border-neutral-700 flex-grow h-1/2 overflow-hidden flex flex-col">
+        <div className="space-y-6 flex flex-col">
+            <div className="bg-neutral-800 rounded-lg p-4 border border-neutral-700 flex flex-col">
                  <h3 className="font-bold text-lg mb-3">Teams</h3>
-                 <ul className="space-y-2 overflow-y-auto pr-2 flex-grow">
+                 <ul className="space-y-2 overflow-y-auto pr-2 max-h-[400px]">
                      {teams.map(team => {
                          const maxBid = calculateMaxBid(team);
-                         const playersPurchased = team.playersPurchased.length;
+                         const playersPurchased = team.playersPurchased?.length || 0;
                          const squadSize = tournament?.squadSize || 0;
                          const remainingPlayers = squadSize - playersPurchased;
                          const hasInsufficientFunds = maxBid <= 0 && remainingPlayers > 0;
@@ -224,7 +230,12 @@ const TeamsAndSoldPlayersPanel: React.FC<{
                          return (
                              <li key={team._id} className={`p-2 rounded-md flex items-center gap-3 relative overflow-hidden transition-all duration-300 ${winningTeamId === team._id ? 'bg-neutral-700' : 'bg-neutral-700/40'}`}>
                                 {winningTeamId === team._id && <div className="absolute left-0 top-0 h-full w-1.5 bg-red-500 animate-pulse"></div>}
-                                <img src={team.logoURL} alt={team.name} className="w-10 h-10 rounded-full object-cover"/>
+                                <img
+                                    src={imageOptimizers.teamThumbnail(team.logoURL)}
+                                    alt={team.name}
+                                    className="w-10 h-10 rounded-full object-cover"
+                                    loading="lazy"
+                                />
                                 <div className="flex-grow">
                                     <div className="flex items-center gap-2">
                                         <p className="font-semibold">{team.name}</p>
@@ -232,7 +243,7 @@ const TeamsAndSoldPlayersPanel: React.FC<{
                                             <span className="text-red-500 text-xs" title="Insufficient funds for remaining players">⚠️</span>
                                         )}
                                     </div>
-                                    <p className="text-xs text-neutral-300">Budget: <span className="text-green-400">{formatCurrency(team.currentBalance)}</span></p>
+                                    <p className="text-xs text-neutral-300">Budget: <span className="text-green-400">{formatCurrency(team.currentBalance || 0)}</span></p>
                                     <p className="text-xs text-neutral-300">
                                         Max Bid: <span className={hasInsufficientFunds ? "text-red-500 font-semibold" : "text-cyan-400"}>{formatCurrency(maxBid)}</span>
                                     </p>
@@ -243,13 +254,13 @@ const TeamsAndSoldPlayersPanel: React.FC<{
                      })}
                  </ul>
             </div>
-             <div className="bg-neutral-800 rounded-lg p-4 border border-neutral-700 flex-grow h-1/2 overflow-hidden flex flex-col">
+             <div className="bg-neutral-800 rounded-lg p-4 border border-neutral-700 flex flex-col">
                 <h3 className="font-bold text-lg mb-3">Sold Players ({soldPlayers.length})</h3>
                 <div className="flex gap-2 mb-3">
                     <button onClick={onUndo} className="btn-secondary w-full text-sm py-1.5">Undo Last Sale</button>
                     <button onClick={onCleanup} className="btn-danger w-full text-sm py-1.5">Cleanup All</button>
                 </div>
-                <div className="overflow-y-auto pr-2 flex-grow">
+                <div className="overflow-y-auto pr-2 max-h-[400px]">
                     {soldPlayers.length === 0 ? (
                         <p className="text-center text-neutral-400 py-8 text-sm">No players sold yet</p>
                     ) : (
@@ -259,7 +270,12 @@ const TeamsAndSoldPlayersPanel: React.FC<{
                                 return (
                                     <li key={player._id} className="bg-neutral-700/50 p-2 rounded-md">
                                         <div className="flex items-center gap-2">
-                                            <img src={player.imageURL} alt={player.name} className="w-10 h-10 rounded-full object-cover"/>
+                                            <img
+                                                src={imageOptimizers.playerThumbnail(player.photoURL)}
+                                                alt={player.name}
+                                                className="w-10 h-10 rounded-full object-cover"
+                                                loading="lazy"
+                                            />
                                             <div className="flex-grow min-w-0">
                                                 <p className="font-semibold text-sm truncate">{player.name}</p>
                                                 <p className="text-xs text-green-400">{formatCurrency(player.finalPrice || 0)}</p>
@@ -309,22 +325,22 @@ const AuctionControlPanel: React.FC = () => {
         // Re-check when actions are performed
     }, [refreshTrigger]);
 
-    // Use SSE hook to get real-time auction updates
+    // Use Pusher hook to get real-time auction updates
     const {
         tournament: liveTournament,
         auctionState,
         players,
         teams,
         isConnected,
-        error: sseError,
-    } = useAuctionSSE(liveTournamentId);
+        error: pusherError,
+    } = usePusherAuction(liveTournamentId);
 
-    // Display SSE errors
+    // Display Pusher errors
     useEffect(() => {
-        if (sseError && !error) {
-            setError(sseError);
+        if (pusherError && !error) {
+            setError(pusherError);
         }
-    }, [sseError, error]);
+    }, [pusherError, error]);
 
     useEffect(() => {
         if (error) {

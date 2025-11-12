@@ -4,6 +4,7 @@ import { TournamentModel } from '@/models/Tournament';
 import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
 import { AuctionStateModel } from '@/models/AuctionState';
+import { triggerAuctionStarted } from '@/lib/pusher-server';
 
 // POST /api/auction/start - Start auction with validation
 export async function POST(request: NextRequest) {
@@ -80,6 +81,23 @@ export async function POST(request: NextRequest) {
       },
       { upsert: true, new: true }
     );
+
+    // Fetch teams and players for Pusher event
+    const teams = await TeamModel.find({ tournamentId }).lean();
+    const players = await PlayerModel.find({ tournamentId }).lean();
+
+    // Trigger Pusher event
+    try {
+      await triggerAuctionStarted({
+        tournament: updatedTournament as any,
+        teams: teams as any,
+        players: players as any,
+        message: 'Auction started successfully',
+      });
+    } catch (pusherError) {
+      console.error('Failed to trigger Pusher event:', pusherError);
+      // Don't fail the request if Pusher fails
+    }
 
     return NextResponse.json({
       message: 'Auction started successfully',

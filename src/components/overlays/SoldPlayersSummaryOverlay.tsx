@@ -55,8 +55,7 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
         return null;
     }
 
-    // Extract player number from ID
-    const getPlayerNumber = (playerId: string) => playerId.replace('p', '');
+    // Player ID is already in correct format (001, 002, 003...)
 
     return (
         <div className="w-full h-full flex justify-center items-center animate-fade-in">
@@ -102,7 +101,7 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                         {currentPagePlayers.map((player, pageIndex) => {
                             const globalIndex = startIndex + pageIndex;
                             const playerTeam = teams.find(t => t._id === player.winningTeamId);
-                            const playerNumber = getPlayerNumber(player._id);
+                            const playerNumber = player.playerNo || player._id;
                             const isTopThree = globalIndex < 3;
 
                             return (

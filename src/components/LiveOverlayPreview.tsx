@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuctionSSE } from '@/hooks/useAuctionSSE';
+import { usePusherAuction } from '@/hooks/usePusherAuction';
 import SaleBanner from './overlays/SaleBanner';
 import { Player, Team } from '@/types';
 import '../styles/animations.css';
@@ -40,14 +40,14 @@ const LiveOverlayPreview: React.FC<LiveOverlayPreviewProps> = ({ tournamentId })
         }
     }, [tournamentId]);
 
-    // Use SSE hook for real-time updates
+    // Use Pusher hook for real-time updates
     const {
         tournament,
         auctionState,
         players,
         teams,
         isConnected,
-    } = useAuctionSSE(liveTournamentId);
+    } = usePusherAuction(liveTournamentId);
 
     const currentPlayer = players.find(p => p._id === auctionState.currentPlayerId);
     const soldPlayers = players.filter(p => p.isSold);
@@ -92,11 +92,11 @@ const LiveOverlayPreview: React.FC<LiveOverlayPreviewProps> = ({ tournamentId })
     const calculateMaxBid = (teamId: string) => {
         if (!tournament) return 0;
         const team = teams.find(t => t._id === teamId);
-        if (!team) return 0;
+        if (!team || !team.currentBalance) return 0;
 
         const squadSize = tournament.squadSize;
         const basePrice = tournament.basePricePerPlayer;
-        const playersPurchased = team.playersPurchased.length;
+        const playersPurchased = team.playersPurchased?.length || 0;
         const remainingPlayers = squadSize - playersPurchased;
 
         if (remainingPlayers <= 1) {
@@ -122,7 +122,7 @@ const LiveOverlayPreview: React.FC<LiveOverlayPreviewProps> = ({ tournamentId })
                         )}
 
                         <img
-                            src={currentPlayer.imageURL}
+                            src={currentPlayer.photoURL}
                             alt={currentPlayer.name}
                             className="w-32 h-32 rounded-md object-cover border-4 border-cyan-500 shadow-lg"
                         />
@@ -170,7 +170,7 @@ const LiveOverlayPreview: React.FC<LiveOverlayPreviewProps> = ({ tournamentId })
                         {teams.map(team => {
                             const maxBid = calculateMaxBid(team._id);
                             const isWinningTeam = currentPlayer?.winningTeamId === team._id;
-                            const playersPurchased = team.playersPurchased.length;
+                            const playersPurchased = team.playersPurchased?.length || 0;
                             const squadSize = tournament?.squadSize || 0;
 
                             return (
@@ -184,7 +184,7 @@ const LiveOverlayPreview: React.FC<LiveOverlayPreviewProps> = ({ tournamentId })
                                     <div className="flex-grow">
                                         <p className="font-bold truncate text-white">{team.name}</p>
                                         <p className="text-sm text-neutral-400">{playersPurchased}/{squadSize} players</p>
-                                        <p className="text-lg font-mono text-green-400">{formatCurrency(team.currentBalance)}</p>
+                                        <p className="text-lg font-mono text-green-400">{formatCurrency(team.currentBalance || 0)}</p>
                                         <p className="text-xs text-cyan-400">Max: {formatCurrency(maxBid)}</p>
                                     </div>
                                 </div>
@@ -202,7 +202,7 @@ const LiveOverlayPreview: React.FC<LiveOverlayPreviewProps> = ({ tournamentId })
                                 const playerTeam = teams.find(t => t._id === player.winningTeamId);
                                 return (
                                     <div key={`${player._id}-${index}`} className="inline-flex items-center gap-2 px-4">
-                                        <img src={player.imageURL} alt={player.name} className="w-8 h-8 rounded-full object-cover" />
+                                        <img src={player.photoURL} alt={player.name} className="w-8 h-8 rounded-full object-cover" />
                                         <span className="text-white font-semibold">{player.name}</span>
                                         <span className="text-neutral-400">→</span>
                                         <span className="text-cyan-400">{playerTeam?.name || 'Unknown'}</span>

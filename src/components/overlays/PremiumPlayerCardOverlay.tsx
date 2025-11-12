@@ -31,8 +31,8 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
         'right': 'justify-end pr-8'
     };
 
-    // Extract player number from ID (e.g., 'p26' -> '26')
-    const playerNumber = currentPlayer._id.replace('p', '');
+    // Extract player number from ID (master player IDs are already formatted as '001', '002', etc.)
+    const playerNumber = currentPlayer.playerNo || currentPlayer._id;
 
     return (
         <div className={`w-full h-full flex items-center ${positionConfig[position]}`}>
@@ -51,7 +51,7 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
 
                                     {/* Player Image */}
                                     <img
-                                        src={currentPlayer.imageURL}
+                                        src={currentPlayer.photoURL}
                                         alt={currentPlayer.name}
                                         className="absolute left-1/2 top-2 max-w-[calc(100%+60px)] -translate-x-1/2 h-[380px] object-contain"
                                     />
@@ -60,7 +60,7 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
 
                             {/* Jersey Number Badge */}
                             <div className="absolute start-1/2 bottom-0 flex h-12 w-12 -translate-x-1/2 items-center justify-center rounded-2xl bg-gradient-to-b from-custom-orange to-custom-yellow text-2xl/none font-extrabold tracking-tighter text-white">
-                                {playerNumber}
+                                #{playerNumber}
                             </div>
 
                             {/* White Cutout Badge (Top Left) */}

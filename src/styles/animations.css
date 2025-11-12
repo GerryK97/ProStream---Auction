@@ -145,6 +145,17 @@
   }
 }
 
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
 @keyframes slideOutToLeft {
   from {
     transform: translateX(0);
@@ -265,6 +276,10 @@
   animation: slideInFromRight 500ms ease-out forwards;
 }
 
+.animate-slide-in-left {
+  animation: slideInFromLeft 500ms ease-out forwards;
+}
+
 .animate-slide-out-left {
   animation: slideOutToLeft 500ms ease-in forwards;
 }
@@ -287,4 +302,41 @@
 
 .animate-shake {
   animation: shake 300ms ease-in-out;
+}
+
+/* Landing Page Animations */
+@keyframes floatParticle {
+  0%, 100% {
+    transform: translate(0, 0);
+    opacity: 0.3;
+  }
+  25% {
+    transform: translate(10px, -10px);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate(-5px, -15px);
+    opacity: 0.7;
+  }
+  75% {
+    transform: translate(-10px, -5px);
+    opacity: 0.5;
+  }
+}
+
+@keyframes gradientShift {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.animate-float-particle {
+  animation: floatParticle 30s ease-in-out infinite;
+}
+
+.animate-gradient-shift {
+  animation: gradientShift 10s ease-in-out infinite;
 }

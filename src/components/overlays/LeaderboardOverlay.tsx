@@ -25,12 +25,12 @@ const LeaderboardOverlay: React.FC<LeaderboardOverlayProps> = ({
     // Sort teams based on sortBy parameter
     const sortedTeams = [...teams].sort((a, b) => {
         if (sortBy === 'players') {
-            return b.playersPurchased.length - a.playersPurchased.length;
+            return (b.playersPurchased?.length || 0) - (a.playersPurchased?.length || 0);
         } else if (sortBy === 'balance') {
-            return b.currentBalance - a.currentBalance;
+            return (b.currentBalance || 0) - (a.currentBalance || 0);
         } else if (sortBy === 'spent') {
-            const aSpent = (a.initialBudget || tournament.budgetPerTeam) - a.currentBalance;
-            const bSpent = (b.initialBudget || tournament.budgetPerTeam) - b.currentBalance;
+            const aSpent = (a.initialBudget || tournament.budgetPerTeam) - (a.currentBalance || 0);
+            const bSpent = (b.initialBudget || tournament.budgetPerTeam) - (b.currentBalance || 0);
             return bSpent - aSpent;
         }
         return 0;
@@ -52,9 +52,9 @@ const LeaderboardOverlay: React.FC<LeaderboardOverlayProps> = ({
                 </h3>
                 <ul className="space-y-2">
                     {sortedTeams.map((team, index) => {
-                        const playersPurchased = team.playersPurchased.length;
+                        const playersPurchased = team.playersPurchased?.length || 0;
                         const squadSize = tournament.squadSize;
-                        const moneySpent = (team.initialBudget || tournament.budgetPerTeam) - team.currentBalance;
+                        const moneySpent = (team.initialBudget || tournament.budgetPerTeam) - (team.currentBalance || 0);
 
                         return (
                             <li key={team._id} className={`flex items-center gap-3 p-2 rounded-md ${index === 0 ? 'border-2 border-yellow-400' : 'border border-cyan-500'}`}>
@@ -66,7 +66,7 @@ const LeaderboardOverlay: React.FC<LeaderboardOverlayProps> = ({
                                     <p className="font-semibold text-white truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{team.name}</p>
                                     <div className="flex gap-3 text-xs">
                                         <span className="text-neutral-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{playersPurchased}/{squadSize}</span>
-                                        <span className="text-green-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{formatCurrency(team.currentBalance)}</span>
+                                        <span className="text-green-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{formatCurrency(team.currentBalance || 0)}</span>
                                         {sortBy === 'spent' && (
                                             <span className="text-red-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Spent: {formatCurrency(moneySpent)}</span>
                                         )}

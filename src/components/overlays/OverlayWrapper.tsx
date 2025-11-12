@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, ReactNode } from 'react';
-import { useAuctionSSE } from '@/hooks/useAuctionSSE';
+import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { Tournament, AuctionState, Player, Team } from '@/types';
 import '../../styles/animations.css';
 
@@ -42,14 +42,14 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
         }
     }, [tournamentId]);
 
-    // Use SSE hook for real-time updates
+    // Use Pusher hook for real-time updates
     const {
         tournament,
         auctionState,
         players,
         teams,
         isConnected,
-    } = useAuctionSSE(liveTournamentId);
+    } = usePusherAuction(liveTournamentId);
 
     const currentPlayer = players.find(p => p._id === auctionState.currentPlayerId);
     const soldPlayers = players.filter(p => p.isSold);
