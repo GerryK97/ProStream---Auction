@@ -40,27 +40,27 @@ const RecentSoldPlayers: React.FC<RecentSoldPlayersProps> = ({
 
     if (displayedPlayers.length === 0) {
         return (
-            <div className="bg-neutral-800/80 backdrop-blur-sm rounded-2xl border-2 border-pink-500 p-6 flex items-center justify-center min-h-[280px]">
+            <div className="bg-neutral-800/80 backdrop-blur-sm rounded-2xl border-2 border-pink-500 p-4 flex items-center justify-center min-h-[240px]">
                 <div className="text-center">
-                    <div className="text-4xl mb-2">📋</div>
-                    <p className="text-neutral-400">No players sold yet</p>
+                    <div className="text-3xl mb-2">📋</div>
+                    <p className="text-sm text-neutral-400">No players sold yet</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="bg-neutral-800/80 backdrop-blur-sm rounded-2xl border-2 border-pink-500 p-6">
+        <div className="bg-neutral-800/80 backdrop-blur-sm rounded-2xl border-2 border-pink-500 p-4">
             {/* Header */}
-            <div className="text-center mb-4">
-                <h3 className="text-xl font-bold text-pink-400 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] mb-2">
+            <div className="text-center mb-3">
+                <h3 className="text-lg font-bold text-pink-400 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] mb-1">
                     RECENT SOLD
                 </h3>
-                <div className="h-1 w-24 mx-auto bg-gradient-to-r from-transparent via-pink-500 to-transparent rounded-full" />
+                <div className="h-1 w-20 mx-auto bg-gradient-to-r from-transparent via-pink-500 to-transparent rounded-full" />
             </div>
 
             {/* Recent Players List */}
-            <div className="space-y-3">
+            <div className="space-y-2">
                 {displayedPlayers.map((player, index) => {
                     const playerTeam = teams.find(t => t._id === player.winningTeamId);
                     const playerNumber = player.playerNo || player._id;
@@ -70,7 +70,7 @@ const RecentSoldPlayers: React.FC<RecentSoldPlayersProps> = ({
                     return (
                         <div
                             key={`${player._id}-${index}`}
-                            className={`flex items-center gap-3 p-3 rounded-lg bg-neutral-900/50 border border-neutral-700 ${
+                            className={`flex items-center gap-2 p-2 rounded-lg bg-neutral-900/50 border border-neutral-700 ${
                                 isLatest ? 'animate-slide-in-right' : ''
                             } ${isHighValue ? 'border-yellow-500/50' : ''}`}
                         >

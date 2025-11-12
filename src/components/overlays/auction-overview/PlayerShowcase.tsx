@@ -24,10 +24,10 @@ const PlayerShowcase: React.FC<PlayerShowcaseProps> = ({ player, size = 'default
 
     if (!player) {
         return (
-            <div className="bg-neutral-800/80 backdrop-blur-sm rounded-2xl border-2 border-neutral-700 p-6 flex items-center justify-center min-h-[280px]">
+            <div className="bg-neutral-800/80 backdrop-blur-sm rounded-2xl border-2 border-neutral-700 p-4 flex items-center justify-center min-h-[240px]">
                 <div className="text-center animate-breathing">
-                    <div className="text-6xl mb-4">⏳</div>
-                    <p className="text-xl text-neutral-400 animate-fade-pulse">
+                    <div className="text-5xl mb-3">⏳</div>
+                    <p className="text-lg text-neutral-400 animate-fade-pulse">
                         Waiting for next player...
                     </p>
                 </div>
@@ -37,10 +37,10 @@ const PlayerShowcase: React.FC<PlayerShowcaseProps> = ({ player, size = 'default
 
     const sizeConfig = {
         default: {
-            photoSize: 'w-32 h-32',
-            nameSize: 'text-2xl',
-            statsSize: 'text-lg',
-            padding: 'p-6'
+            photoSize: 'w-28 h-28',
+            nameSize: 'text-xl',
+            statsSize: 'text-base',
+            padding: 'p-4'
         },
         large: {
             photoSize: 'w-40 h-40',

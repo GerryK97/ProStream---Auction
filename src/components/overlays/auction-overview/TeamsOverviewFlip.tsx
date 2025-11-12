@@ -84,13 +84,13 @@ const TeamsOverviewFlip: React.FC<TeamsOverviewFlipProps> = ({
     }, [totalPages, flipDuration]);
 
     return (
-        <div className="bg-neutral-800/80 backdrop-blur-sm rounded-2xl border-2 border-purple-500 p-6 relative overflow-hidden">
+        <div className="bg-neutral-800/80 backdrop-blur-sm rounded-2xl border-2 border-purple-500 p-4 relative overflow-hidden">
             {/* Header */}
-            <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-purple-400 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] mb-2">
+            <div className="text-center mb-4">
+                <h3 className="text-xl font-bold text-purple-400 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] mb-1">
                     TEAMS OVERVIEW
                 </h3>
-                <div className="h-1 w-32 mx-auto bg-gradient-to-r from-transparent via-purple-500 to-transparent rounded-full" />
+                <div className="h-1 w-24 mx-auto bg-gradient-to-r from-transparent via-purple-500 to-transparent rounded-full" />
             </div>
 
             {/* Teams Grid */}
@@ -101,7 +101,7 @@ const TeamsOverviewFlip: React.FC<TeamsOverviewFlipProps> = ({
                 key={currentPage}
             >
                 {/* Row 1 */}
-                <div className="grid grid-cols-5 gap-4 mb-4">
+                <div className="grid grid-cols-5 gap-3 mb-3">
                     {row1.map((team, index) => (
                         <TeamCard
                             key={team._id}
@@ -118,7 +118,7 @@ const TeamsOverviewFlip: React.FC<TeamsOverviewFlipProps> = ({
                 </div>
 
                 {/* Row 2 */}
-                <div className="grid grid-cols-5 gap-4">
+                <div className="grid grid-cols-5 gap-3">
                     {row2.map((team, index) => (
                         <TeamCard
                             key={team._id}

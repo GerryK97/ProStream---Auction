@@ -89,24 +89,24 @@ const AuctionOverviewLED: React.FC<AuctionOverviewLEDProps> = ({
             )}
 
             {/* Main Content Container */}
-            <div className="relative z-10 w-full h-full p-8 flex flex-col gap-6">
+            <div className="relative z-10 w-full h-full p-6 flex flex-col gap-4">
                 {/* Tournament Header */}
-                <div className="bg-gradient-to-r from-cyan-900/80 via-blue-900/80 to-purple-900/80 backdrop-blur-sm rounded-2xl border-2 border-cyan-500 p-4">
+                <div className="bg-gradient-to-r from-cyan-900/80 via-blue-900/80 to-purple-900/80 backdrop-blur-sm rounded-2xl border-2 border-cyan-500 p-3">
                     <div className="flex items-center justify-between">
                         {/* Tournament Info */}
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
                             {tournament?.logoURL && (
                                 <img
                                     src={tournament.logoURL}
                                     alt={tournament.name}
-                                    className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-lg"
+                                    className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-lg"
                                 />
                             )}
                             <div>
-                                <h1 className="text-3xl font-black text-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)] tracking-wide">
+                                <h1 className="text-2xl font-black text-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)] tracking-wide">
                                     {tournament?.name || 'AUCTION OVERVIEW'}
                                 </h1>
-                                <div className="flex items-center gap-4 text-sm text-cyan-300 mt-1">
+                                <div className="flex items-center gap-3 text-xs text-cyan-300 mt-1">
                                     <span>Budget: {tournament?.budgetPerTeam.toLocaleString()}</span>
                                     <span>•</span>
                                     <span>Squad: {tournament?.squadSize}</span>
@@ -138,7 +138,7 @@ const AuctionOverviewLED: React.FC<AuctionOverviewLEDProps> = ({
                 </div>
 
                 {/* Top Row: Player and Bidding */}
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 gap-4">
                     <PlayerShowcase player={currentPlayer} size={size} />
                     <LiveBiddingPanel auctionState={auctionState} tournament={tournament} size={size} />
                 </div>
@@ -155,7 +155,7 @@ const AuctionOverviewLED: React.FC<AuctionOverviewLEDProps> = ({
                 </div>
 
                 {/* Bottom Row: Stats and Recent Sold */}
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 gap-4">
                     {showStats && (
                         <AuctionStats players={players} soldPlayers={soldPlayers} />
                     )}

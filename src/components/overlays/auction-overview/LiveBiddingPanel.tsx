@@ -33,9 +33,9 @@ const LiveBiddingPanel: React.FC<LiveBiddingPanelProps> = ({
 
     const sizeConfig = {
         default: {
-            bidSize: 'text-6xl',
-            labelSize: 'text-sm',
-            padding: 'p-6'
+            bidSize: 'text-5xl',
+            labelSize: 'text-xs',
+            padding: 'p-4'
         },
         large: {
             bidSize: 'text-7xl',
@@ -68,17 +68,17 @@ const LiveBiddingPanel: React.FC<LiveBiddingPanelProps> = ({
     const currentStatus = statusConfig[auctionState.currentAuctionStatus] || statusConfig.Pending;
 
     return (
-        <div className={`bg-neutral-800/80 backdrop-blur-sm rounded-2xl border-2 border-green-500 ${config.padding} min-h-[280px] flex flex-col justify-center`}>
+        <div className={`bg-neutral-800/80 backdrop-blur-sm rounded-2xl border-2 border-green-500 ${config.padding} min-h-[240px] flex flex-col justify-center`}>
             {/* Header */}
-            <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-green-400 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] mb-2">
+            <div className="text-center mb-4">
+                <h3 className="text-xl font-bold text-green-400 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] mb-1">
                     LIVE BIDDING
                 </h3>
-                <div className="h-1 w-32 mx-auto bg-gradient-to-r from-transparent via-green-500 to-transparent rounded-full" />
+                <div className="h-1 w-24 mx-auto bg-gradient-to-r from-transparent via-green-500 to-transparent rounded-full" />
             </div>
 
             {/* Current Bid Amount */}
-            <div className="text-center mb-6">
+            <div className="text-center mb-4">
                 <p className={`${config.labelSize} text-neutral-400 uppercase tracking-wide mb-2`}>
                     Current Bid
                 </p>

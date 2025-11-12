@@ -58,7 +58,7 @@ const TeamCard: React.FC<TeamCardProps> = ({ team, tournament, delay = 0, isWinn
 
     return (
         <div
-            className={`bg-neutral-800/80 backdrop-blur-sm rounded-xl border-2 p-3 transition-all duration-300 animate-team-card-cascade gpu-accelerated
+            className={`bg-neutral-800/80 backdrop-blur-sm rounded-xl border-2 p-2 transition-all duration-300 animate-team-card-cascade gpu-accelerated
                 ${isWinning ? 'border-yellow-400 shadow-lg shadow-yellow-400/50 animate-team-highlight' : 'border-neutral-700'}
                 ${isHighSpender ? 'border-gold-500' : ''}
                 ${hasInsufficientFunds ? 'animate-team-glow-warning' : ''}
@@ -66,21 +66,21 @@ const TeamCard: React.FC<TeamCardProps> = ({ team, tournament, delay = 0, isWinn
             style={{ animationDelay: `${delay}ms` }}
         >
             {/* Team Logo */}
-            <div className="flex justify-center mb-2">
+            <div className="flex justify-center mb-1.5">
                 <img
                     src={imageOptimizers.teamThumbnail(team.logoURL)}
                     alt={team.name}
-                    className={`w-16 h-16 rounded-full object-cover border-2 ${isWinning ? 'border-yellow-400' : 'border-neutral-600'} shadow-lg`}
+                    className={`w-12 h-12 rounded-full object-cover border-2 ${isWinning ? 'border-yellow-400' : 'border-neutral-600'} shadow-lg`}
                 />
             </div>
 
             {/* Team Name */}
-            <h4 className="text-sm font-bold text-white text-center truncate mb-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+            <h4 className="text-xs font-bold text-white text-center truncate mb-1.5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                 {team.name}
             </h4>
 
             {/* Stats */}
-            <div className="space-y-1.5 text-xs">
+            <div className="space-y-1 text-xs">
                 {/* Balance */}
                 <div className="flex justify-between items-center">
                     <span className="text-neutral-400">Balance:</span>
@@ -114,21 +114,21 @@ const TeamCard: React.FC<TeamCardProps> = ({ team, tournament, delay = 0, isWinn
 
             {/* Warning Indicators */}
             {hasInsufficientFunds && !isSquadComplete && (
-                <div className="mt-2 flex items-center justify-center gap-1 text-red-400 text-xs animate-team-low-balance">
+                <div className="mt-1 flex items-center justify-center gap-1 text-red-400 text-xs animate-team-low-balance">
                     <span>⚠️</span>
-                    <span className="font-semibold">Low Funds</span>
+                    <span className="font-semibold text-[10px]">Low Funds</span>
                 </div>
             )}
 
             {isHighSpender && !isSquadComplete && !hasInsufficientFunds && (
-                <div className="mt-2 text-center text-xs text-orange-400 font-semibold">
+                <div className="mt-1 text-center text-[10px] text-orange-400 font-semibold">
                     💰 High Spender
                 </div>
             )}
 
             {isSquadComplete && (
-                <div className="mt-2 text-center text-xs text-green-400 font-semibold">
-                    🎉 Squad Complete
+                <div className="mt-1 text-center text-[10px] text-green-400 font-semibold">
+                    🎉 Complete
                 </div>
             )}
         </div>
