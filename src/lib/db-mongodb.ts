@@ -386,7 +386,8 @@ export const playerDB = {
   // Create tournament player from master player
   createFromMaster: async (
     masterPlayerId: string,
-    tournamentId: string
+    tournamentId: string,
+    playerClass?: string
   ): Promise<Player> => {
     try {
       await connectToDatabase();
@@ -433,6 +434,8 @@ export const playerDB = {
         photoURL: masterPlayer.photoURL, // Same field name as master
         // Copy career stats from master player
         stats: masterPlayer.careerStats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 },
+        // Use provided playerClass or fall back to master's suggestedClass
+        playerClass: playerClass || masterPlayer.suggestedClass,
         isSold: false,
       };
 

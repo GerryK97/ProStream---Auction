@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { AuctionState, Tournament } from '@/types';
+import { AuctionState, Tournament, Player } from '@/types';
+import { getFormattedBasePrice } from '@/lib/playerClassUtils';
 
 interface LiveBiddingPanelProps {
     auctionState: AuctionState;
     tournament: Tournament | null;
+    player?: Player | null;
     size?: 'default' | 'large';
 }
 
@@ -18,6 +20,7 @@ const formatCurrency = (amount: number) => amount.toLocaleString();
 const LiveBiddingPanel: React.FC<LiveBiddingPanelProps> = ({
     auctionState,
     tournament,
+    player,
     size = 'default'
 }) => {
     const [bidKey, setBidKey] = useState(0);
@@ -111,7 +114,7 @@ const LiveBiddingPanel: React.FC<LiveBiddingPanelProps> = ({
                         Base Price
                     </p>
                     <span className="text-lg font-bold text-cyan-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                        {tournament ? formatCurrency(tournament.basePricePerPlayer) : '-'}
+                        {tournament ? getFormattedBasePrice(tournament, player || null) : '-'}
                     </span>
                 </div>
             </div>

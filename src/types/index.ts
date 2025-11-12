@@ -1,3 +1,10 @@
+export interface PlayerClassConfig {
+  name: string;           // e.g., "Platinum", "Gold", "Silver", "Bronze"
+  basePrice?: number;     // Optional class-specific base price
+  color: string;          // Hex color for badge display (e.g., "#FFD700")
+  icon?: string;          // Optional icon/emoji
+  order: number;          // Display order (lower = higher tier)
+}
 
 export interface Tournament {
   _id: string;
@@ -8,6 +15,8 @@ export interface Tournament {
   basePricePerPlayer: number;
   logoURL?: string;
   status: 'Draft' | 'Completed' | 'Setup' | 'Pending' | 'Live' | 'Paused' | 'Stopped' | 'Archived';
+  usePlayerClasses?: boolean;           // Toggle to enable/disable player classes
+  playerClasses?: PlayerClassConfig[];  // Custom player classes for this tournament
 }
 
 // Master Team (Global Registry - never changes across tournaments)
@@ -27,6 +36,7 @@ export interface MasterPlayer {
   currentClub: string;     // e.g., "Mumbai Indians"
   photoURL?: string;
   careerStats?: PlayerStats; // Career-wide stats
+  suggestedClass?: string; // Suggested player class (used as default when adding to tournament)
 }
 
 export interface PlayerStats {
@@ -64,6 +74,7 @@ export interface Player {
   photoURL?: string;            // Player photo (same field name as MasterPlayer)
   // Tournament-specific data
   stats: PlayerStats;           // Tournament stats (separate from career)
+  playerClass?: string;         // Player class for this tournament (e.g., "Platinum", "Gold")
   isSold?: boolean;
   finalPrice?: number;
   winningTeamId?: string;

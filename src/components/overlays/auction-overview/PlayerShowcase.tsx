@@ -1,18 +1,20 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Player } from '@/types';
+import { Player, Tournament } from '@/types';
 import { imageOptimizers } from '@/lib/imageOptimization';
+import ClassBadge from '@/components/shared/ClassBadge';
 
 interface PlayerShowcaseProps {
     player: Player | undefined;
+    tournament?: Tournament | null;
     size?: 'default' | 'large';
 }
 
 /**
  * Displays the current player being auctioned with photo, stats, and glow animations
  */
-const PlayerShowcase: React.FC<PlayerShowcaseProps> = ({ player, size = 'default' }) => {
+const PlayerShowcase: React.FC<PlayerShowcaseProps> = ({ player, tournament, size = 'default' }) => {
     const [animationKey, setAnimationKey] = useState(0);
 
     // Trigger entrance animation when player changes
@@ -56,8 +58,11 @@ const PlayerShowcase: React.FC<PlayerShowcaseProps> = ({ player, size = 'default
     return (
         <div
             key={animationKey}
-            className={`bg-neutral-800/80 backdrop-blur-sm rounded-2xl border-2 border-cyan-500 ${config.padding} animate-player-entrance gpu-accelerated`}
+            className={`bg-neutral-800/80 backdrop-blur-sm rounded-2xl border-2 border-cyan-500 ${config.padding} animate-player-entrance gpu-accelerated relative`}
         >
+            {/* Player Class Badge */}
+            <ClassBadge tournament={tournament || null} player={player} variant="corner" />
+
             {/* Player Header */}
             <div className="flex items-center gap-6 mb-4">
                 {/* Player Photo with Glow */}

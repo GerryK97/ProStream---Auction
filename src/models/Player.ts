@@ -23,6 +23,7 @@ const playerSchema = new Schema<Player>(
     photoURL: { type: String, required: false },              // Player photo (same field as MasterPlayer)
     // Tournament-specific data
     stats: { type: playerStatsSchema, required: true },       // Tournament stats (separate from career)
+    playerClass: { type: String, required: false },           // Player class for this tournament
     isSold: { type: Boolean, default: false },
     finalPrice: { type: Number },
     winningTeamId: { type: String },
