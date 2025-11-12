@@ -32,12 +32,16 @@ const generateTournamentPlayerId = async (tournamentId: string): Promise<string>
 const generatePlayerNo = async (tournamentId: string): Promise<string> => {
   await connectToDatabase();
 
+  console.log(`[generatePlayerNo] Generating playerNo for tournament: ${tournamentId}`);
+
   // Get the highest playerNo for this tournament
   const result = await PlayerModel.find({ tournamentId, playerNo: { $exists: true } })
-    .select('playerNo')
+    .select('playerNo tournamentId')
     .sort({ playerNo: -1 })
     .limit(1)
     .lean();
+
+  console.log(`[generatePlayerNo] Found existing players:`, result);
 
   let nextNumber = 1;
 
@@ -47,10 +51,16 @@ const generatePlayerNo = async (tournamentId: string): Promise<string> => {
     if (match) {
       nextNumber = parseInt(match[0], 10) + 1;
     }
+    console.log(`[generatePlayerNo] Highest playerNo found: ${result[0].playerNo}, next will be: ${nextNumber}`);
+  } else {
+    console.log(`[generatePlayerNo] No existing players found, starting at: 001`);
   }
 
   // Pad with leading zeros (001, 002, ... 099, 100, ...)
-  return nextNumber.toString().padStart(3, '0');
+  const playerNo = nextNumber.toString().padStart(3, '0');
+  console.log(`[generatePlayerNo] Generated playerNo: ${playerNo} for tournament: ${tournamentId}`);
+
+  return playerNo;
 };
 
 // Tournament operations
