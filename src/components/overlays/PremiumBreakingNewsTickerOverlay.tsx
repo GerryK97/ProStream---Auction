@@ -182,7 +182,7 @@ const PremiumBreakingNewsTickerOverlay: React.FC<PremiumBreakingNewsTickerProps>
 
                                     {/* Price */}
                                     <span className="text-green-600 font-bold">
-                                        ₹ {formatCurrency(player.finalPrice || 0)}
+                                        {formatCurrency(player.finalPrice || 0)}
                                     </span>
                                 </div>
                             );
