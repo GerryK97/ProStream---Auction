@@ -134,13 +134,22 @@ interface AuctionContextType {
 const AuctionContext = createContext<AuctionContextType | undefined>(undefined);
 
 export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [tournaments, setTournaments] = useState<Tournament[]>(MOCK_TOURNAMENTS);
-  const [teams, setTeams] = useState<Team[]>(MOCK_TEAMS);
-  const [players, setPlayers] = useState<Player[]>(MOCK_PLAYERS);
-  const [auctionState, setAuctionState] = useState<AuctionState>(MOCK_AUCTION_STATE);
+  // Initialize with empty arrays - data should come from database via API calls
+  // MOCK data was causing stale data to persist in memory after database deletions
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [auctionState, setAuctionState] = useState<AuctionState>({
+    tournamentId: '',
+    currentPlayerId: null,
+    currentBid: 0,
+    winningTeamId: null,
+    currentAuctionStatus: 'Pending',
+    history: [],
+  });
   const [overlayTemplates, setOverlayTemplates] = useState<OverlayTemplate[]>(MOCK_OVERLAY_TEMPLATES);
   const [overlayInstances, setOverlayInstances] = useState<OverlayInstance[]>(MOCK_OVERLAY_INSTANCES);
-  const [activeTemplateId, setActiveTemplateId] = useState<string>(MOCK_OVERLAY_TEMPLATES[0]._id);
+  const [activeTemplateId, setActiveTemplateId] = useState<string>(MOCK_OVERLAY_TEMPLATES[0]?._id || '');
 
   const activeTemplate = useMemo(() => overlayTemplates.find(t => t._id === activeTemplateId), [overlayTemplates, activeTemplateId]);
   

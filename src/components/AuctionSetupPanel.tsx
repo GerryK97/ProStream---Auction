@@ -452,7 +452,27 @@ const AuctionSetupPanel: React.FC = () => {
     }, [refreshTrigger, selectedTournamentId]);
 
     // Get selected tournament
-    const selectedTournament = tournaments.find(t => t._id === selectedTournamentId) || tournament;
+    const selectedTournament = tournaments.find(t => t._id === selectedTournamentId);
+
+    // Show message when no tournaments exist
+    if (tournaments.length === 0) {
+        return (
+            <div className="text-center p-12">
+                <div className="bg-neutral-800 border border-neutral-700 rounded-lg p-8 max-w-2xl mx-auto">
+                    <h2 className="text-2xl font-bold mb-2">No Tournaments Found</h2>
+                    <p className="text-neutral-400 mb-6">
+                        Create a tournament in the Management Dashboard to get started with auction setup.
+                    </p>
+                    <a
+                        href="/management"
+                        className="inline-block bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                    >
+                        Go to Management Dashboard
+                    </a>
+                </div>
+            </div>
+        );
+    }
 
     if (!selectedTournament) {
         return <div className="text-center p-8 text-neutral-400">Loading tournament data...</div>;
