@@ -49,7 +49,7 @@ const SaleBanner: React.FC<SaleBannerProps> = ({ player, team, onComplete }) => 
                         </div>
                         <div className="flex items-center gap-2">
                             <img
-                                src={player.imageURL}
+                                src={player.photoURL}
                                 alt={player.name}
                                 className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-lg"
                             />

@@ -44,7 +44,7 @@ const SoldPlayersTickerOverlay: React.FC<SoldPlayersTickerOverlayProps> = ({
                         const playerTeam = teams.find(t => t._id === player.winningTeamId);
                         return (
                             <div key={`${player._id}-${index}`} className="inline-flex items-center gap-2 px-4">
-                                <img src={player.imageURL} alt={player.name} className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-lg" />
+                                <img src={player.photoURL} alt={player.name} className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-lg" />
                                 <span className="text-white font-semibold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{player.name}</span>
                                 <span className="text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">→</span>
                                 <span className="text-cyan-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{playerTeam?.name || 'Unknown'}</span>

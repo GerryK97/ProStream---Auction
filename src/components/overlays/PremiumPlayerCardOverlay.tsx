@@ -51,7 +51,7 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
 
                                     {/* Player Image */}
                                     <img
-                                        src={currentPlayer.imageURL}
+                                        src={currentPlayer.photoURL}
                                         alt={currentPlayer.name}
                                         className="absolute left-1/2 top-2 max-w-[calc(100%+60px)] -translate-x-1/2 h-[380px] object-contain"
                                     />

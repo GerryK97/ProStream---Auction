@@ -110,7 +110,7 @@ const CurrentAuctionPanel: React.FC<{
                 </div>
                 <div className="flex justify-center items-center gap-6 mb-4">
                     <img
-                        src={imageOptimizers.playerCard(currentPlayer.imageURL)}
+                        src={imageOptimizers.playerCard(currentPlayer.photoURL)}
                         alt={currentPlayer.name}
                         className="w-40 h-40 rounded-lg object-cover border-4 border-neutral-700 shadow-lg"
                         loading="lazy"
@@ -271,7 +271,7 @@ const TeamsAndSoldPlayersPanel: React.FC<{
                                     <li key={player._id} className="bg-neutral-700/50 p-2 rounded-md">
                                         <div className="flex items-center gap-2">
                                             <img
-                                                src={imageOptimizers.playerThumbnail(player.imageURL)}
+                                                src={imageOptimizers.playerThumbnail(player.photoURL)}
                                                 alt={player.name}
                                                 className="w-10 h-10 rounded-full object-cover"
                                                 loading="lazy"

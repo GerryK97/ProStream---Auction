@@ -188,7 +188,7 @@ export const masterPlayerDB = {
     if (data.position) updateFields.position = data.position;
     if (data.currentClub) updateFields.currentClub = data.currentClub;
     if (data.photoURL !== undefined) {
-      updateFields.imageURL = data.photoURL; // Copy photoURL to imageURL in tournament players
+      updateFields.photoURL = data.photoURL; // Same field name in both schemas
     }
 
     if (Object.keys(updateFields).length > 0) {
@@ -330,8 +330,8 @@ export const playerDB = {
       stats: data.stats,
       // No tournamentId - player is unassigned
       isSold: false,
-      // Provide default image if not provided
-      imageURL: data.imageURL || `https://placehold.co/100x100/374151/F3F4F6/png?text=No+Image`,
+      // Provide default photo if not provided
+      photoURL: data.photoURL || `https://placehold.co/100x100/374151/F3F4F6/png?text=No+Image`,
     };
     const doc = await PlayerModel.create(newPlayer);
     return doc.toObject();
@@ -390,7 +390,7 @@ export const playerDB = {
         name: masterPlayer.name,
         position: masterPlayer.position,
         currentClub: masterPlayer.currentClub,
-        imageURL: masterPlayer.photoURL, // Copy from master photoURL
+        photoURL: masterPlayer.photoURL, // Same field name as master
         // Copy career stats from master player
         stats: masterPlayer.careerStats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 },
         isSold: false,

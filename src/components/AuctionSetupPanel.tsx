@@ -247,7 +247,7 @@ interface PlayerFormProps {
 const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, tournament, playerToEdit }) => {
     const isEditing = !!playerToEdit;
     const [name, setName] = useState(playerToEdit?.name || '');
-    const [imageURL, setImageURL] = useState(playerToEdit?.imageURL || '');
+    const [imageURL, setImageURL] = useState(playerToEdit?.photoURL || '');
     const [stats, setStats] = useState<PlayerStats>(playerToEdit?.stats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -743,7 +743,7 @@ const AuctionSetupPanel: React.FC = () => {
                                 <li key={player._id} className="bg-neutral-900/50 p-3 rounded-md flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <img
-                                            src={imageOptimizers.playerThumbnail(player.imageURL)}
+                                            src={imageOptimizers.playerThumbnail(player.photoURL)}
                                             alt={player.name}
                                             className="w-12 h-12 rounded-full object-cover"
                                             loading="lazy"

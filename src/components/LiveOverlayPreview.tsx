@@ -122,7 +122,7 @@ const LiveOverlayPreview: React.FC<LiveOverlayPreviewProps> = ({ tournamentId })
                         )}
 
                         <img
-                            src={currentPlayer.imageURL}
+                            src={currentPlayer.photoURL}
                             alt={currentPlayer.name}
                             className="w-32 h-32 rounded-md object-cover border-4 border-cyan-500 shadow-lg"
                         />
@@ -202,7 +202,7 @@ const LiveOverlayPreview: React.FC<LiveOverlayPreviewProps> = ({ tournamentId })
                                 const playerTeam = teams.find(t => t._id === player.winningTeamId);
                                 return (
                                     <div key={`${player._id}-${index}`} className="inline-flex items-center gap-2 px-4">
-                                        <img src={player.imageURL} alt={player.name} className="w-8 h-8 rounded-full object-cover" />
+                                        <img src={player.photoURL} alt={player.name} className="w-8 h-8 rounded-full object-cover" />
                                         <span className="text-white font-semibold">{player.name}</span>
                                         <span className="text-neutral-400">→</span>
                                         <span className="text-cyan-400">{playerTeam?.name || 'Unknown'}</span>
