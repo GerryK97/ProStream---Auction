@@ -145,6 +145,17 @@
   }
 }
 
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
 @keyframes slideOutToLeft {
   from {
     transform: translateX(0);
@@ -263,6 +274,10 @@
 
 .animate-slide-in-right {
   animation: slideInFromRight 500ms ease-out forwards;
+}
+
+.animate-slide-in-left {
+  animation: slideInFromLeft 500ms ease-out forwards;
 }
 
 .animate-slide-out-left {
