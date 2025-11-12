@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import { Player, Team } from '@/types';
 
 interface PremiumBreakingNewsTickerProps {
@@ -19,7 +19,7 @@ const formatCurrency = (amount: number) => amount.toLocaleString();
 
 /**
  * Premium Breaking News Style Ticker
- * Shows one sold player at a time with smooth transitions
+ * Shows all sold players scrolling horizontally like a news feed
  * Based on breaking news ticker design pattern
  */
 const PremiumBreakingNewsTickerOverlay: React.FC<PremiumBreakingNewsTickerProps> = ({
@@ -33,10 +33,10 @@ const PremiumBreakingNewsTickerOverlay: React.FC<PremiumBreakingNewsTickerProps>
     border = true,
     position = 'bottom'
 }) => {
-    const [activeIndex, setActiveIndex] = useState(0);
-    const [isAnimating, setIsAnimating] = useState(false);
-    const [isHovered, setIsHovered] = useState(false);
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    // Early return if no sold players
+    if (!soldPlayers || soldPlayers.length === 0) {
+        return null;
+    }
 
     // Size configurations
     const sizeConfig = {
@@ -103,77 +103,26 @@ const PremiumBreakingNewsTickerOverlay: React.FC<PremiumBreakingNewsTickerProps>
         }
     };
 
+    // Speed configurations based on timer
+    const getSpeedClass = () => {
+        if (timer >= 10000) return 'animate-[ticker_60s_linear_infinite]';
+        if (timer >= 5000) return 'animate-[ticker_30s_linear_infinite]';
+        return 'animate-[ticker_15s_linear_infinite]';
+    };
+
     const currentSize = sizeConfig[size];
     const currentColor = colorConfig[color];
-    const currentPlayer = soldPlayers[activeIndex];
-    const playerTeam = teams.find(t => t._id === currentPlayer?.winningTeamId);
-
-    const handleNext = () => {
-        if (isAnimating || !soldPlayers || soldPlayers.length === 0) return;
-        setIsAnimating(true);
-        setActiveIndex((prev) => (prev + 1) % soldPlayers.length);
-        setTimeout(() => setIsAnimating(false), 500);
-    };
-
-    const handlePrevious = () => {
-        if (isAnimating || !soldPlayers || soldPlayers.length === 0) return;
-        setIsAnimating(true);
-        setActiveIndex((prev) => (prev - 1 + soldPlayers.length) % soldPlayers.length);
-        setTimeout(() => setIsAnimating(false), 500);
-    };
-
-    // Auto-play functionality
-    useEffect(() => {
-        if (autoplay && !isHovered && soldPlayers && soldPlayers.length > 0) {
-            timerRef.current = setInterval(() => {
-                setActiveIndex((prev) => (prev + 1) % soldPlayers.length);
-            }, timer);
-
-            return () => {
-                if (timerRef.current) clearInterval(timerRef.current);
-            };
-        } else if (timerRef.current) {
-            clearInterval(timerRef.current);
-        }
-    }, [autoplay, isHovered, soldPlayers, timer]);
-
-    // Position config
     const positionClass = position === 'top' ? 'top-8' : 'bottom-8';
 
-    // Animation effect classes
-    const getEffectClass = () => {
-        if (!isAnimating) return 'opacity-100';
-
-        switch (effect) {
-            case 'fade':
-                return 'animate-fade-in';
-            case 'slide-h':
-                return 'animate-slide-in-right';
-            case 'slide-v':
-                return 'animate-slide-in-bottom';
-            default:
-                return 'animate-fade-in';
-        }
-    };
-
-    // Early return if no sold players
-    if (!soldPlayers || soldPlayers.length === 0) {
-        return null;
-    }
-
     return (
-        <div
-            className={`fixed ${positionClass} left-0 right-0 px-8 z-50`}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-        >
+        <div className={`fixed ${positionClass} left-0 right-0 px-8 z-50`}>
             <div
                 className={`relative ${currentSize.height} bg-white overflow-hidden ${
                     border ? `border-2 ${currentColor.border}` : ''
                 }`}
             >
                 {/* Title Section */}
-                <div className={`inline-block ${currentSize.titleHeight} ${currentColor.bg} relative`}>
+                <div className={`inline-block ${currentSize.titleHeight} ${currentColor.bg} relative z-10`}>
                     <h2 className={`inline-block m-0 ${currentSize.padding} leading-none ${currentSize.titleFont} text-white ${currentSize.titleHeight} flex items-center`}>
                         SOLD PLAYERS
                     </h2>
@@ -183,94 +132,62 @@ const PremiumBreakingNewsTickerOverlay: React.FC<PremiumBreakingNewsTickerProps>
                     />
                 </div>
 
-                {/* Content Area */}
-                <div className={`absolute left-[220px] right-[50px] top-0 ${currentSize.height} ${currentSize.fontSize}`}>
-                    {currentPlayer && (
-                        <div
-                            key={activeIndex}
-                            className={`absolute w-full ${currentSize.height} flex items-center whitespace-nowrap overflow-hidden ${getEffectClass()}`}
-                        >
-                            {/* Player Photo */}
-                            <img
-                                src={currentPlayer.photoURL}
-                                alt={currentPlayer.name}
-                                className={`${currentSize.imgSize} rounded-full object-cover border-2 border-white shadow-lg mr-2`}
-                            />
+                {/* Scrolling Content Area */}
+                <div className={`absolute left-[220px] right-0 top-0 ${currentSize.height} overflow-hidden`}>
+                    <div className={`flex gap-4 ${autoplay ? getSpeedClass() : ''} whitespace-nowrap`}>
+                        {/* Duplicate for seamless loop */}
+                        {[...soldPlayers, ...soldPlayers].map((player, index) => {
+                            const playerTeam = teams.find(t => t._id === player.winningTeamId);
+                            return (
+                                <div
+                                    key={`${player._id}-${index}`}
+                                    className={`inline-flex items-center gap-2 px-4 ${currentSize.height}`}
+                                >
+                                    {/* Player Photo */}
+                                    <img
+                                        src={player.photoURL}
+                                        alt={player.name}
+                                        className={`${currentSize.imgSize} rounded-full object-cover border-2 border-white shadow-lg`}
+                                    />
 
-                            {/* Player Number */}
-                            <span className={`${currentColor.accent} font-mono mr-2`}>
-                                #{currentPlayer.playerNo || currentPlayer._id}
-                            </span>
+                                    {/* Player Number */}
+                                    <span className={`${currentColor.accent} font-mono`}>
+                                        #{player.playerNo || player._id}
+                                    </span>
 
-                            {/* Player Name */}
-                            <span className="font-semibold text-gray-800 mr-2">
-                                {currentPlayer.name}
-                            </span>
+                                    {/* Player Name */}
+                                    <span className="font-semibold text-gray-800">
+                                        {player.name}
+                                    </span>
 
-                            {/* Separator */}
-                            <span className="text-gray-400 mr-2">→</span>
+                                    {/* Separator */}
+                                    <span className="text-gray-400">→</span>
 
-                            {/* Team Logo */}
-                            {playerTeam?.logoURL && (
-                                <img
-                                    src={playerTeam.logoURL}
-                                    alt={playerTeam.name}
-                                    className={`${currentSize.imgSize} rounded-full object-cover border-2 border-gray-300 mr-2`}
-                                />
-                            )}
+                                    {/* Team Logo */}
+                                    {playerTeam?.logoURL && (
+                                        <img
+                                            src={playerTeam.logoURL}
+                                            alt={playerTeam.name}
+                                            className={`${currentSize.imgSize} rounded-full object-cover border-2 border-gray-300`}
+                                        />
+                                    )}
 
-                            {/* Team Name */}
-                            <span className={`${currentColor.accent} font-semibold mr-2`}>
-                                {playerTeam?.name || 'Unknown'}
-                            </span>
+                                    {/* Team Name */}
+                                    <span className={`${currentColor.accent} font-semibold`}>
+                                        {playerTeam?.name || 'Unknown'}
+                                    </span>
 
-                            {/* Separator */}
-                            <span className="text-gray-400 mr-2">•</span>
+                                    {/* Separator */}
+                                    <span className="text-gray-400">•</span>
 
-                            {/* Price */}
-                            <span className="text-green-600 font-bold">
-                                ₹ {formatCurrency(currentPlayer.finalPrice || 0)}
-                            </span>
-                        </div>
-                    )}
-                </div>
-
-                {/* Navigation Arrows */}
-                <div
-                    className={`absolute right-0 top-0 ${currentSize.height} w-[50px] transition-opacity duration-250 ${
-                        isHovered ? 'opacity-100' : 'opacity-0'
-                    }`}
-                >
-                    {/* Previous Arrow */}
-                    <button
-                        onClick={handlePrevious}
-                        className={`absolute left-0 top-0 w-[25px] ${currentSize.height} opacity-30 hover:opacity-100 transition-opacity cursor-pointer bg-transparent border-none`}
-                    >
-                        <svg className="w-4 h-4 mx-auto" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                    </button>
-
-                    {/* Next Arrow */}
-                    <button
-                        onClick={handleNext}
-                        className={`absolute right-0 top-0 w-[25px] ${currentSize.height} opacity-30 hover:opacity-100 transition-opacity cursor-pointer bg-transparent border-none`}
-                    >
-                        <svg className="w-4 h-4 mx-auto" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                        </svg>
-                    </button>
-                </div>
-
-                {/* Progress Indicator (optional) */}
-                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gray-200">
-                    <div
-                        className={`h-full ${currentColor.bg} transition-all duration-${timer}`}
-                        style={{
-                            width: isHovered ? '0%' : '100%',
-                            transition: isHovered ? 'none' : `width ${timer}ms linear`
-                        }}
-                    />
+                                    {/* Price */}
+                                    <span className="text-green-600 font-bold">
+                                        ₹ {formatCurrency(player.finalPrice || 0)}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
         </div>
