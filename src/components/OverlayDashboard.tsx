@@ -152,6 +152,77 @@ const overlayTypes: OverlayType[] = [
         imageURL: 'https://placehold.co/400x200/1e293b/10b981?text=Final+Summary',
         dimensions: { width: 1200, height: 800 }
     },
+    {
+        id: 'auction-overview',
+        name: 'Auction Overview LED',
+        description: 'Full-screen comprehensive auction display with auto-flipping team pages and complex animations - perfect for LED screens (1920x1080)',
+        route: '/overlays/auction-overview',
+        tags: ['Full Screen', 'LED', 'Premium', 'Comprehensive'],
+        defaultParams: {
+            size: 'default',
+            showBackground: 'true',
+            theme: 'premium',
+            animationSpeed: 'normal',
+            teamFlipDuration: '8',
+            showStats: 'true',
+            showRecentSold: 'true',
+            maxRecentSold: '5',
+            teamsPerPage: '10'
+        },
+        parameterSchema: {
+            size: {
+                type: 'select',
+                label: 'Size',
+                options: ['default', 'large'],
+                description: 'default: 1920x1080, large: 3840x2160'
+            },
+            showBackground: {
+                type: 'toggle',
+                label: 'Show Animated Background'
+            },
+            theme: {
+                type: 'select',
+                label: 'Color Theme',
+                options: ['dark', 'premium', 'vibrant']
+            },
+            animationSpeed: {
+                type: 'select',
+                label: 'Animation Speed',
+                options: ['slow', 'normal', 'fast']
+            },
+            teamFlipDuration: {
+                type: 'number',
+                label: 'Team Page Duration (sec)',
+                min: 5,
+                max: 20,
+                step: 1,
+                description: 'Time before flipping to next team page'
+            },
+            showStats: {
+                type: 'toggle',
+                label: 'Show Auction Statistics'
+            },
+            showRecentSold: {
+                type: 'toggle',
+                label: 'Show Recent Sold Players'
+            },
+            maxRecentSold: {
+                type: 'number',
+                label: 'Recent Sold Count',
+                min: 3,
+                max: 10,
+                description: 'Number of recent sales to display'
+            },
+            teamsPerPage: {
+                type: 'select',
+                label: 'Teams Per Page',
+                options: ['10', '15', '20'],
+                description: 'More teams = smaller cards'
+            }
+        },
+        imageURL: 'https://placehold.co/1920x1080/0F84D0/FFFFFF?text=Auction+Overview+LED',
+        dimensions: { width: 1920, height: 1080 }
+    },
 ];
 
 const OverlayDashboard: React.FC = () => {

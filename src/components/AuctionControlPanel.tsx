@@ -105,7 +105,7 @@ const CurrentAuctionPanel: React.FC<{
         <div className="bg-neutral-800 rounded-lg p-6 border border-neutral-700 min-h-[calc(100vh-15rem)] flex flex-col justify-between">
             <div>
                 <div className="text-center mb-4">
-                    <p className="text-3xl font-bold text-cyan-400">#{currentPlayer._id} {currentPlayer.name}</p>
+                    <p className="text-3xl font-bold text-cyan-400">#{currentPlayer.playerNo || currentPlayer._id} {currentPlayer.name}</p>
                     <p className="text-neutral-400">{currentPlayer.position || 'Player'}</p>
                 </div>
                 <div className="flex justify-center items-center gap-6 mb-4">
