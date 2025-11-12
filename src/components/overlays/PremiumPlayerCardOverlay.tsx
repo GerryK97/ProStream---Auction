@@ -32,7 +32,7 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
     };
 
     // Extract player number from ID (master player IDs are already formatted as '001', '002', etc.)
-    const playerNumber = currentPlayer._id;
+    const playerNumber = currentPlayer.playerNo || currentPlayer._id;
 
     return (
         <div className={`w-full h-full flex items-center ${positionConfig[position]}`}>

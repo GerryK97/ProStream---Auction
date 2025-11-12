@@ -101,7 +101,7 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                         {currentPagePlayers.map((player, pageIndex) => {
                             const globalIndex = startIndex + pageIndex;
                             const playerTeam = teams.find(t => t._id === player.winningTeamId);
-                            const playerNumber = player._id;
+                            const playerNumber = player.playerNo || player._id;
                             const isTopThree = globalIndex < 3;
 
                             return (
