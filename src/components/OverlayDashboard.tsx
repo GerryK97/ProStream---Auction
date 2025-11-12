@@ -56,6 +56,16 @@ const overlayTypes: OverlayType[] = [
         dimensions: { width: 1920, height: 60 }
     },
     {
+        id: 'premium-ticker',
+        name: 'Premium Breaking News Ticker',
+        description: 'Single player display with slide transitions - breaking news style ticker with auto-play',
+        route: '/overlays/premium-ticker',
+        tags: ['Players', 'Premium', 'Sold'],
+        defaultParams: { size: 'default', effect: 'slide-h', color: 'blue', autoplay: 'true', timer: '5000', border: 'true', position: 'bottom' },
+        imageURL: 'https://placehold.co/400x200/0F84D0/78CA2A?text=Premium+Ticker',
+        dimensions: { width: 1920, height: 40 }
+    },
+    {
         id: 'current-bid',
         name: 'Current Bid',
         description: 'Large display showing only the current bid amount',
