@@ -381,50 +381,45 @@ const AuctionSetupPanel: React.FC = () => {
     React.useEffect(() => {
         const fetchData = async () => {
             try {
-                // Fetch all tournaments
-                const tournamentsResponse = await fetch('/api/tournaments');
-                if (tournamentsResponse.ok) {
-                    const tournamentsData = await tournamentsResponse.json();
-                    setTournaments(tournamentsData);
-                }
+                const startTime = Date.now();
+                console.log('[AuctionSetup] Starting data fetch...');
 
-                // Fetch master players
-                const masterPlayersResponse = await fetch('/api/master-players');
-                if (masterPlayersResponse.ok) {
-                    const masterPlayersData = await masterPlayersResponse.json();
-                    setMasterPlayers(masterPlayersData);
-                }
+                // Build parallel fetch requests
+                const requests = [
+                    fetch('/api/tournaments'),
+                    fetch('/api/master-players'),
+                    fetch('/api/master-teams'),
+                ];
 
-                // Fetch tournament players (instances)
+                // Add tournament-specific requests if tournament is selected
                 if (selectedTournamentId) {
-                    const playersResponse = await fetch('/api/players');
-                    if (playersResponse.ok) {
-                        const allPlayersData = await playersResponse.json();
-                        const tournamentPlayersData = allPlayersData.filter(
-                            (p: Player) => p.tournamentId === selectedTournamentId
-                        );
-                        setTournamentPlayers(tournamentPlayersData);
-                    }
+                    requests.push(
+                        fetch(`/api/players?tournamentId=${selectedTournamentId}`),
+                        fetch(`/api/teams?tournamentId=${selectedTournamentId}`)
+                    );
                 }
 
-                // Fetch master teams
-                const masterTeamsResponse = await fetch('/api/master-teams');
-                if (masterTeamsResponse.ok) {
-                    const masterTeamsData = await masterTeamsResponse.json();
-                    setMasterTeams(masterTeamsData);
-                }
+                // Execute all requests in parallel
+                const responses = await Promise.all(requests);
+                console.log(`[AuctionSetup] All requests completed in ${Date.now() - startTime}ms`);
 
-                // Fetch tournament teams (instances)
-                if (selectedTournamentId) {
-                    const teamsResponse = await fetch('/api/teams');
-                    if (teamsResponse.ok) {
-                        const allTeamsData = await teamsResponse.json();
-                        const tournamentTeamsData = allTeamsData.filter(
-                            (t: Team) => t.tournamentId === selectedTournamentId
-                        );
-                        setTournamentTeams(tournamentTeamsData);
-                    }
-                }
+                // Parse responses in parallel
+                const [
+                    tournamentsData,
+                    masterPlayersData,
+                    masterTeamsData,
+                    tournamentPlayersData,
+                    tournamentTeamsData
+                ] = await Promise.all(responses.map(res => res.ok ? res.json() : null));
+
+                // Update state
+                if (tournamentsData) setTournaments(tournamentsData);
+                if (masterPlayersData) setMasterPlayers(masterPlayersData);
+                if (masterTeamsData) setMasterTeams(masterTeamsData);
+                if (tournamentPlayersData) setTournamentPlayers(tournamentPlayersData);
+                if (tournamentTeamsData) setTournamentTeams(tournamentTeamsData);
+
+                console.log(`[AuctionSetup] Total fetch time: ${Date.now() - startTime}ms`);
             } catch (error) {
                 console.error('Failed to fetch data:', error);
             }
