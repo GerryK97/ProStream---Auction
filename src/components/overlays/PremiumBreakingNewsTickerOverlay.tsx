@@ -38,10 +38,6 @@ const PremiumBreakingNewsTickerOverlay: React.FC<PremiumBreakingNewsTickerProps>
     const [isHovered, setIsHovered] = useState(false);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-    if (!soldPlayers || soldPlayers.length === 0) {
-        return null;
-    }
-
     // Size configurations
     const sizeConfig = {
         small: {
@@ -112,11 +108,25 @@ const PremiumBreakingNewsTickerOverlay: React.FC<PremiumBreakingNewsTickerProps>
     const currentPlayer = soldPlayers[activeIndex];
     const playerTeam = teams.find(t => t._id === currentPlayer?.winningTeamId);
 
+    const handleNext = () => {
+        if (isAnimating || !soldPlayers || soldPlayers.length === 0) return;
+        setIsAnimating(true);
+        setActiveIndex((prev) => (prev + 1) % soldPlayers.length);
+        setTimeout(() => setIsAnimating(false), 500);
+    };
+
+    const handlePrevious = () => {
+        if (isAnimating || !soldPlayers || soldPlayers.length === 0) return;
+        setIsAnimating(true);
+        setActiveIndex((prev) => (prev - 1 + soldPlayers.length) % soldPlayers.length);
+        setTimeout(() => setIsAnimating(false), 500);
+    };
+
     // Auto-play functionality
     useEffect(() => {
-        if (autoplay && !isHovered) {
+        if (autoplay && !isHovered && soldPlayers && soldPlayers.length > 0) {
             timerRef.current = setInterval(() => {
-                handleNext();
+                setActiveIndex((prev) => (prev + 1) % soldPlayers.length);
             }, timer);
 
             return () => {
@@ -125,21 +135,7 @@ const PremiumBreakingNewsTickerOverlay: React.FC<PremiumBreakingNewsTickerProps>
         } else if (timerRef.current) {
             clearInterval(timerRef.current);
         }
-    }, [autoplay, isHovered, activeIndex, timer]);
-
-    const handleNext = () => {
-        if (isAnimating) return;
-        setIsAnimating(true);
-        setActiveIndex((prev) => (prev + 1) % soldPlayers.length);
-        setTimeout(() => setIsAnimating(false), 500);
-    };
-
-    const handlePrevious = () => {
-        if (isAnimating) return;
-        setIsAnimating(true);
-        setActiveIndex((prev) => (prev - 1 + soldPlayers.length) % soldPlayers.length);
-        setTimeout(() => setIsAnimating(false), 500);
-    };
+    }, [autoplay, isHovered, soldPlayers, timer]);
 
     // Position config
     const positionClass = position === 'top' ? 'top-8' : 'bottom-8';
@@ -159,6 +155,11 @@ const PremiumBreakingNewsTickerOverlay: React.FC<PremiumBreakingNewsTickerProps>
                 return 'animate-fade-in';
         }
     };
+
+    // Early return if no sold players
+    if (!soldPlayers || soldPlayers.length === 0) {
+        return null;
+    }
 
     return (
         <div
