@@ -19,13 +19,14 @@ const generateSequentialPlayerId = async (): Promise<string> => {
   return `PS${playerNumber}`;
 };
 
-// Helper function to generate sequential tournament player ID (unique per tournament)
+// Helper function to generate sequential tournament player ID (globally unique across all tournaments)
 const generateTournamentPlayerId = async (tournamentId: string): Promise<string> => {
   await connectToDatabase();
 
-  // Use aggregation to get max player ID for this tournament instead of count
-  // This is faster and handles gaps in numbering
-  const result = await PlayerModel.find({ tournamentId })
+  // Get the highest player ID across ALL players (not filtered by tournament)
+  // Player IDs must be globally unique since _id is the primary key
+  // Only consider new format IDs (p + digits) to avoid conflicts with legacy IDs
+  const result = await PlayerModel.find({ _id: /^p\d+$/ })
     .select('_id')
     .sort({ _id: -1 })
     .limit(1)
@@ -35,10 +36,10 @@ const generateTournamentPlayerId = async (tournamentId: string): Promise<string>
 
   if (result.length > 0 && result[0]._id) {
     const currentId = result[0]._id.toString();
-    // Extract number from ID (e.g., "p001" -> 1, "001" -> 1)
-    const match = currentId.match(/\d+$/);
+    // Extract number from ID (e.g., "p001" -> 1, "p999" -> 999)
+    const match = currentId.match(/^p(\d+)$/);
     if (match) {
-      nextNumber = parseInt(match[0], 10) + 1;
+      nextNumber = parseInt(match[1], 10) + 1;
     }
   }
 
