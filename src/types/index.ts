@@ -53,16 +53,17 @@ export interface Team {
 
 // Tournament Player (Tournament-specific instance - READ ONLY after creation)
 export interface Player {
-  _id: string;
-  masterPlayerId?: string;  // Reference to MasterPlayer (optional for backward compatibility)
+  _id: string;                  // Globally unique timestamp-based ID (e.g., "p1736723456789abc")
+  playerNo?: string;            // Sequential number within tournament (e.g., "001", "002", "003")
+  masterPlayerId?: string;      // Reference to MasterPlayer (optional for backward compatibility)
   tournamentId?: string | null;
   // Copied from master (read-only - edit master to update)
   name: string;
   position?: string;
   currentClub?: string;
-  photoURL?: string;        // Player photo (same field name as MasterPlayer)
+  photoURL?: string;            // Player photo (same field name as MasterPlayer)
   // Tournament-specific data
-  stats: PlayerStats;       // Tournament stats (separate from career)
+  stats: PlayerStats;           // Tournament stats (separate from career)
   isSold?: boolean;
   finalPrice?: number;
   winningTeamId?: string;

@@ -27,6 +27,32 @@ const generateTournamentPlayerId = async (tournamentId: string): Promise<string>
   return generateId('p');
 };
 
+// Helper function to generate sequential player number within tournament
+// Returns "001", "002", "003", etc. (unique per tournament)
+const generatePlayerNo = async (tournamentId: string): Promise<string> => {
+  await connectToDatabase();
+
+  // Get the highest playerNo for this tournament
+  const result = await PlayerModel.find({ tournamentId, playerNo: { $exists: true } })
+    .select('playerNo')
+    .sort({ playerNo: -1 })
+    .limit(1)
+    .lean();
+
+  let nextNumber = 1;
+
+  if (result.length > 0 && result[0].playerNo) {
+    // Extract number from playerNo (e.g., "001" -> 1, "099" -> 99)
+    const match = result[0].playerNo.match(/^\d+$/);
+    if (match) {
+      nextNumber = parseInt(match[0], 10) + 1;
+    }
+  }
+
+  // Pad with leading zeros (001, 002, ... 099, 100, ...)
+  return nextNumber.toString().padStart(3, '0');
+};
+
 // Tournament operations
 export const tournamentDB = {
   getAll: async (): Promise<Tournament[]> => {
@@ -377,13 +403,17 @@ export const playerDB = {
         throw new Error('Player already added to this tournament');
       }
 
-      // Generate tournament-specific sequential ID
+      // Generate globally unique ID (timestamp-based)
       const idGenStart = Date.now();
       const tournamentPlayerId = await generateTournamentPlayerId(tournamentId);
-      console.log(`[playerDB.createFromMaster] ID generation took ${Date.now() - idGenStart}ms, generated: ${tournamentPlayerId}`);
+
+      // Generate sequential player number within tournament (001, 002, 003)
+      const playerNo = await generatePlayerNo(tournamentId);
+      console.log(`[playerDB.createFromMaster] ID generation took ${Date.now() - idGenStart}ms, generated: ${tournamentPlayerId}, playerNo: ${playerNo}`);
 
       const newPlayer: Player = {
         _id: tournamentPlayerId,
+        playerNo: playerNo,
         masterPlayerId,
         tournamentId,
         // Copy from master (read-only)

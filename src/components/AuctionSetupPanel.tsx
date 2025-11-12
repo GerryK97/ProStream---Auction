@@ -749,7 +749,7 @@ const AuctionSetupPanel: React.FC = () => {
                                             loading="lazy"
                                         />
                                         <div>
-                                            <p className="font-semibold">{player.name}</p>
+                                            <p className="font-semibold">#{player.playerNo || player._id} {player.name}</p>
                                             <p className="text-sm text-neutral-400">Matches: {player.stats.matchesPlayed}</p>
                                             <p className={`text-xs font-semibold ${player.isSold ? 'text-red-400' : 'text-green-400'} tracking-wider`}>
                                                 {player.isSold ? 'SOLD' : 'AVAILABLE'}
