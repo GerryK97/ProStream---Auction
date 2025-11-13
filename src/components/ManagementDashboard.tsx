@@ -8,6 +8,7 @@ import Modal from './Modal';
 import { imageOptimizers } from '@/lib/imageOptimization';
 import ImageUpload from './ImageUpload';
 import { getDefaultClasses } from '@/lib/playerClassUtils';
+import BulkPlayerUpload from './BulkPlayerUpload';
 
 type ManagementView = 'tournaments' | 'teams' | 'players';
 
@@ -693,59 +694,87 @@ const TeamCreationForm: React.FC<{
     );
 };
 
-const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => void; onEditPlayer: (player: MasterPlayer) => void; onDeletePlayer: (player: MasterPlayer) => void; }> = ({ players, onAddPlayer, onEditPlayer, onDeletePlayer }) => (
-    <section>
-        <SectionHeader title="Players" subtitle="Eligible players for the auction.">
-             <button onClick={onAddPlayer} className="flex items-center gap-2 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
-                <PlusIcon className="h-5 w-5" />
-                Add Player
-            </button>
-        </SectionHeader>
-        <div className="bg-neutral-800 rounded-lg overflow-hidden">
-             <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                    <thead className="bg-neutral-700/50">
-                        <tr>
-                            <th className="p-4 text-sm font-semibold text-neutral-300">Player ID</th>
-                            <th className="p-4 text-sm font-semibold text-neutral-300">Player</th>
-                            <th className="p-4 text-sm font-semibold text-neutral-300">Position</th>
-                            <th className="p-4 text-sm font-semibold text-neutral-300">Current Club</th>
-                            <th className="p-4 text-sm font-semibold text-neutral-300">Matches</th>
-                            <th className="p-4 text-sm font-semibold text-neutral-300">Score</th>
-                            <th className="p-4 text-sm font-semibold text-neutral-300">Wickets</th>
-                            <th className="p-4 text-sm font-semibold text-neutral-300 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {players.map((player, idx) => (
-                            <tr key={player._id} className={`border-t border-neutral-700 ${idx % 2 === 0 ? 'bg-neutral-800' : 'bg-neutral-800/50'}`}>
-                                <td className="p-4 text-neutral-400 text-xs font-mono">{player._id}</td>
-                                <td className="p-4 flex items-center gap-4">
-                                    <img
-                                        src={imageOptimizers.playerThumbnail(player.photoURL)}
-                                        alt={player.name}
-                                        className="w-10 h-10 rounded-full object-cover"
-                                        loading="lazy"
-                                    />
-                                    <span className="font-medium">{player.name}</span>
-                                </td>
-                                <td className="p-4 text-neutral-300">{player.position}</td>
-                                <td className="p-4 text-neutral-300">{player.currentClub}</td>
-                                <td className="p-4 text-neutral-300">{player.careerStats?.matchesPlayed || 0}</td>
-                                <td className="p-4 text-neutral-300">{player.careerStats?.totalScore.toLocaleString() || 0}</td>
-                                <td className="p-4 text-neutral-300">{player.careerStats?.totalWickets || 0}</td>
-                                <td className="p-4 text-right">
-                                    <button onClick={() => onEditPlayer(player)} className="p-2 text-neutral-400 hover:text-brand-primary"><EditIcon className="h-5 w-5"/></button>
-                                    <button onClick={() => onDeletePlayer(player)} className="p-2 text-neutral-400 hover:text-red-500"><DeleteIcon className="h-5 w-5"/></button>
-                                </td>
+const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => void; onEditPlayer: (player: MasterPlayer) => void; onDeletePlayer: (player: MasterPlayer) => void; }> = ({ players, onAddPlayer, onEditPlayer, onDeletePlayer }) => {
+    const [showBulkUpload, setShowBulkUpload] = useState(false);
+    const [refreshKey, setRefreshKey] = useState(0);
+
+    return (
+        <section>
+            <SectionHeader title="Players" subtitle="Eligible players for the auction.">
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setShowBulkUpload(!showBulkUpload)}
+                        className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200"
+                    >
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        Bulk Upload
+                    </button>
+                    <button onClick={onAddPlayer} className="flex items-center gap-2 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
+                        <PlusIcon className="h-5 w-5" />
+                        Add Player
+                    </button>
+                </div>
+            </SectionHeader>
+
+            {showBulkUpload && (
+                <div className="mb-6 animate-fade-in">
+                    <BulkPlayerUpload
+                        onSuccess={() => {
+                            setRefreshKey(prev => prev + 1);
+                            window.location.reload();
+                        }}
+                    />
+                </div>
+            )}
+
+            <div className="bg-neutral-800 rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="bg-neutral-700/50">
+                            <tr>
+                                <th className="p-4 text-sm font-semibold text-neutral-300">Player ID</th>
+                                <th className="p-4 text-sm font-semibold text-neutral-300">Player</th>
+                                <th className="p-4 text-sm font-semibold text-neutral-300">Position</th>
+                                <th className="p-4 text-sm font-semibold text-neutral-300">Current Club</th>
+                                <th className="p-4 text-sm font-semibold text-neutral-300">Matches</th>
+                                <th className="p-4 text-sm font-semibold text-neutral-300">Score</th>
+                                <th className="p-4 text-sm font-semibold text-neutral-300">Wickets</th>
+                                <th className="p-4 text-sm font-semibold text-neutral-300 text-right">Actions</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {players.map((player, idx) => (
+                                <tr key={player._id} className={`border-t border-neutral-700 ${idx % 2 === 0 ? 'bg-neutral-800' : 'bg-neutral-800/50'}`}>
+                                    <td className="p-4 text-neutral-400 text-xs font-mono">{player._id}</td>
+                                    <td className="p-4 flex items-center gap-4">
+                                        <img
+                                            src={imageOptimizers.playerThumbnail(player.photoURL)}
+                                            alt={player.name}
+                                            className="w-10 h-10 rounded-full object-cover"
+                                            loading="lazy"
+                                        />
+                                        <span className="font-medium">{player.name}</span>
+                                    </td>
+                                    <td className="p-4 text-neutral-300">{player.position}</td>
+                                    <td className="p-4 text-neutral-300">{player.currentClub}</td>
+                                    <td className="p-4 text-neutral-300">{player.careerStats?.matchesPlayed || 0}</td>
+                                    <td className="p-4 text-neutral-300">{player.careerStats?.totalScore.toLocaleString() || 0}</td>
+                                    <td className="p-4 text-neutral-300">{player.careerStats?.totalWickets || 0}</td>
+                                    <td className="p-4 text-right">
+                                        <button onClick={() => onEditPlayer(player)} className="p-2 text-neutral-400 hover:text-brand-primary"><EditIcon className="h-5 w-5"/></button>
+                                        <button onClick={() => onDeletePlayer(player)} className="p-2 text-neutral-400 hover:text-red-500"><DeleteIcon className="h-5 w-5"/></button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
-    </section>
-);
+        </section>
+    );
+};
 
 interface PlayerFormProps {
     onSave: (player: Omit<MasterPlayer, '_id'>) => void;
