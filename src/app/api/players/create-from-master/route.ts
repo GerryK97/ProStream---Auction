@@ -4,7 +4,7 @@ import { playerDB } from '@/lib/db-mongodb';
 // POST /api/players/create-from-master - Create tournament player from master player
 export async function POST(request: NextRequest) {
   try {
-    const { masterPlayerId, tournamentId } = await request.json();
+    const { masterPlayerId, tournamentId, playerClass } = await request.json();
 
     if (!masterPlayerId || !tournamentId) {
       return NextResponse.json(
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newPlayer = await playerDB.createFromMaster(masterPlayerId, tournamentId);
+    const newPlayer = await playerDB.createFromMaster(masterPlayerId, tournamentId, playerClass);
     return NextResponse.json(newPlayer, { status: 201 });
   } catch (error: any) {
     console.error('Error creating player from master:', error);

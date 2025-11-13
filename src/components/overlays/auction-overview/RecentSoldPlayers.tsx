@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Player, Team } from '@/types';
+import { Player, Team, Tournament } from '@/types';
 import { imageOptimizers } from '@/lib/imageOptimization';
+import ClassBadge from '@/components/shared/ClassBadge';
 
 interface RecentSoldPlayersProps {
     soldPlayers: Player[];
     teams: Team[];
+    tournament?: Tournament | null;
     maxRecent?: number;
 }
 
@@ -18,6 +20,7 @@ const formatCurrency = (amount: number) => amount.toLocaleString();
 const RecentSoldPlayers: React.FC<RecentSoldPlayersProps> = ({
     soldPlayers,
     teams,
+    tournament,
     maxRecent = 5
 }) => {
     const [displayedPlayers, setDisplayedPlayers] = useState<Player[]>([]);
@@ -77,6 +80,7 @@ const RecentSoldPlayers: React.FC<RecentSoldPlayersProps> = ({
                             {/* Player Info */}
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
+                                    <ClassBadge tournament={tournament || null} player={player} variant="dot" />
                                     <span className="text-xs font-mono text-cyan-400">#{playerNumber}</span>
                                     <span className="text-sm font-semibold text-white truncate">
                                         {player.name}

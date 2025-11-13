@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuction } from '@/hooks/useAuction';
-import { Player, Team, Tournament, PlayerStats, MasterTeam, MasterPlayer } from '@/types';
+import { Player, Team, Tournament, PlayerStats, MasterTeam, MasterPlayer, PlayerClassConfig } from '@/types';
 import { PlusIcon, EditIcon, DeleteIcon, LoadingSpinner, CheckCircleIcon, DocumentTextIcon } from './icons';
 import Modal from './Modal';
 import { imageOptimizers } from '@/lib/imageOptimization';
 import ImageUpload from './ImageUpload';
+import { getDefaultClasses } from '@/lib/playerClassUtils';
 
 type ManagementView = 'tournaments' | 'teams' | 'players';
 
@@ -312,7 +313,7 @@ const getStatusBadge = (status: Tournament['status']) => {
     }
 };
 
-const CreateTournamentForm: React.FC<{ 
+const CreateTournamentForm: React.FC<{
     onSave: (data: Omit<Tournament, '_id' | 'status'>) => void;
     tournamentToEdit?: Tournament | null;
     onCancelEdit?: () => void;
@@ -323,6 +324,10 @@ const CreateTournamentForm: React.FC<{
     const [squadSize, setSquadSize] = useState(tournamentToEdit?.squadSize.toString() || '');
     const [basePrice, setBasePrice] = useState(tournamentToEdit?.basePricePerPlayer.toString() || '');
     const [logoURL, setLogoURL] = useState(tournamentToEdit?.logoURL || '');
+    const [usePlayerClasses, setUsePlayerClasses] = useState(tournamentToEdit?.usePlayerClasses || false);
+    const [playerClasses, setPlayerClasses] = useState<PlayerClassConfig[]>(
+        tournamentToEdit?.playerClasses || []
+    );
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -332,10 +337,13 @@ const CreateTournamentForm: React.FC<{
             squadSize: parseInt(squadSize, 10),
             basePricePerPlayer: parseInt(basePrice, 10),
             logoURL,
+            usePlayerClasses,
+            playerClasses: usePlayerClasses ? playerClasses : [],
             year: parseInt(name.split(' ').pop() || new Date().getFullYear().toString(), 10) || new Date().getFullYear()
         });
         if (!isEditing) {
            setName(''); setBudget(''); setSquadSize(''); setBasePrice(''); setLogoURL('');
+           setUsePlayerClasses(false); setPlayerClasses([]);
         }
     }
 
@@ -357,6 +365,111 @@ const CreateTournamentForm: React.FC<{
                     previewShape="square"
                     id="tournament-logo"
                 />
+
+                {/* Player Classes Section */}
+                <div className="border-t border-neutral-700 pt-4">
+                    <div className="flex items-center justify-between mb-3">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={usePlayerClasses}
+                                onChange={(e) => setUsePlayerClasses(e.target.checked)}
+                                className="w-4 h-4 rounded border-neutral-600 bg-neutral-700 text-brand-primary focus:ring-brand-primary"
+                            />
+                            <span className="text-sm font-medium text-neutral-300">Enable Player Classes</span>
+                        </label>
+                        {usePlayerClasses && playerClasses.length === 0 && (
+                            <button
+                                type="button"
+                                onClick={() => setPlayerClasses(getDefaultClasses())}
+                                className="text-xs bg-neutral-700 hover:bg-neutral-600 text-white px-3 py-1 rounded transition-colors"
+                            >
+                                Load Defaults
+                            </button>
+                        )}
+                    </div>
+
+                    {usePlayerClasses && (
+                        <div className="space-y-3 bg-neutral-700/50 p-4 rounded-lg">
+                            <p className="text-xs text-neutral-400 mb-2">Configure player classes for this tournament:</p>
+                            {playerClasses.map((cls, index) => (
+                                <div key={index} className="flex items-start gap-2 bg-neutral-800 p-3 rounded border border-neutral-600">
+                                    <div className="flex-1 grid grid-cols-2 gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="Class Name"
+                                            value={cls.name}
+                                            onChange={(e) => {
+                                                const updated = [...playerClasses];
+                                                updated[index].name = e.target.value;
+                                                setPlayerClasses(updated);
+                                            }}
+                                            className="bg-neutral-700 border-neutral-600 rounded p-2 text-sm"
+                                            required
+                                        />
+                                        <input
+                                            type="number"
+                                            placeholder="Base Price (optional)"
+                                            value={cls.basePrice || ''}
+                                            onChange={(e) => {
+                                                const updated = [...playerClasses];
+                                                updated[index].basePrice = e.target.value ? parseInt(e.target.value) : undefined;
+                                                setPlayerClasses(updated);
+                                            }}
+                                            className="bg-neutral-700 border-neutral-600 rounded p-2 text-sm"
+                                        />
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="color"
+                                                value={cls.color}
+                                                onChange={(e) => {
+                                                    const updated = [...playerClasses];
+                                                    updated[index].color = e.target.value;
+                                                    setPlayerClasses(updated);
+                                                }}
+                                                className="w-10 h-8 rounded cursor-pointer"
+                                            />
+                                            <span className="text-xs text-neutral-400">Color</span>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder="Icon (emoji)"
+                                            value={cls.icon || ''}
+                                            onChange={(e) => {
+                                                const updated = [...playerClasses];
+                                                updated[index].icon = e.target.value;
+                                                setPlayerClasses(updated);
+                                            }}
+                                            className="bg-neutral-700 border-neutral-600 rounded p-2 text-sm"
+                                            maxLength={2}
+                                        />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPlayerClasses(playerClasses.filter((_, i) => i !== index))}
+                                        className="text-red-400 hover:text-red-300 p-2"
+                                        title="Remove class"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                            ))}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setPlayerClasses([
+                                        ...playerClasses,
+                                        { name: '', color: '#3B82F6', order: playerClasses.length + 1 }
+                                    ]);
+                                }}
+                                className="w-full text-sm bg-neutral-700 hover:bg-neutral-600 text-white py-2 rounded transition-colors"
+                            >
+                                + Add Class
+                            </button>
+                        </div>
+                    )}
+                </div>
+
                 <div className="border-t border-neutral-700 pt-4 flex justify-end gap-3">
                     {isEditing && <button type="button" onClick={onCancelEdit} className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">Cancel</button>}
                     <button type="submit" className="bg-brand-primary hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">
@@ -615,6 +728,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, playerToEdit }) => {
     const [currentClub, setCurrentClub] = useState(playerToEdit?.currentClub || '');
     const [photoURL, setPhotoURL] = useState(playerToEdit?.photoURL || '');
     const [careerStats, setCareerStats] = useState<PlayerStats>(playerToEdit?.careerStats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 });
+    const [suggestedClass, setSuggestedClass] = useState(playerToEdit?.suggestedClass || '');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -624,7 +738,8 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, playerToEdit }) => {
                 position,
                 currentClub,
                 photoURL: photoURL || `https://placehold.co/200x200/4B5563/FFFFFF/png?text=${name.charAt(0)}`,
-                careerStats
+                careerStats,
+                suggestedClass: suggestedClass || undefined
             });
         }
     };
@@ -651,6 +766,24 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, playerToEdit }) => {
             <div>
                 <label htmlFor="currentClub" className="block text-sm font-medium text-neutral-300">Current Club</label>
                 <input type="text" id="currentClub" value={currentClub} onChange={(e) => setCurrentClub(e.target.value)} placeholder="e.g., Mumbai Indians, CSK" required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2" />
+            </div>
+
+            <div>
+                <label htmlFor="suggestedClass" className="block text-sm font-medium text-neutral-300">Suggested Class (Optional)</label>
+                <select
+                    id="suggestedClass"
+                    value={suggestedClass}
+                    onChange={(e) => setSuggestedClass(e.target.value)}
+                    className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2"
+                >
+                    <option value="">None</option>
+                    {getDefaultClasses().map(cls => (
+                        <option key={cls.name} value={cls.name}>
+                            {cls.icon} {cls.name}
+                        </option>
+                    ))}
+                </select>
+                <p className="mt-1 text-xs text-neutral-400">Default class when adding player to tournaments</p>
             </div>
 
             <div className="bg-neutral-700/50 p-3 rounded-md space-y-3 animate-fade-in">

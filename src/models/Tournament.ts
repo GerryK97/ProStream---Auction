@@ -15,6 +15,19 @@ const tournamentSchema = new Schema<Tournament>(
       enum: ['Draft', 'Completed', 'Setup', 'Pending', 'Live', 'Paused', 'Stopped', 'Archived'],
       default: 'Draft',
     },
+    usePlayerClasses: { type: Boolean, default: false },
+    playerClasses: {
+      type: [
+        {
+          name: { type: String, required: true },
+          basePrice: { type: Number },
+          color: { type: String, required: true },
+          icon: { type: String },
+          order: { type: Number, required: true },
+        },
+      ],
+      default: [],
+    },
   },
   {
     timestamps: true,

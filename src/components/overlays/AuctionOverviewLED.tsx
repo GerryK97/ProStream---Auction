@@ -139,8 +139,8 @@ const AuctionOverviewLED: React.FC<AuctionOverviewLEDProps> = ({
 
                 {/* Top Row: Player and Bidding */}
                 <div className="grid grid-cols-2 gap-4">
-                    <PlayerShowcase player={currentPlayer} size={size} />
-                    <LiveBiddingPanel auctionState={auctionState} tournament={tournament} size={size} />
+                    <PlayerShowcase player={currentPlayer} tournament={tournament} size={size} />
+                    <LiveBiddingPanel auctionState={auctionState} tournament={tournament} player={currentPlayer} size={size} />
                 </div>
 
                 {/* Middle Row: Teams Overview */}
@@ -163,6 +163,7 @@ const AuctionOverviewLED: React.FC<AuctionOverviewLEDProps> = ({
                         <RecentSoldPlayers
                             soldPlayers={soldPlayers}
                             teams={teams}
+                            tournament={tournament}
                             maxRecent={maxRecentSold}
                         />
                     )}

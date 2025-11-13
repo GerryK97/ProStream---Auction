@@ -7,13 +7,14 @@ import Modal from './Modal';
 import { PlusIcon, DeleteIcon, EditIcon } from './icons';
 import { imageOptimizers } from '@/lib/imageOptimization';
 import ImageUpload from './ImageUpload';
+import { getSortedClasses, getClassConfig } from '@/lib/playerClassUtils';
 
 
 interface AddPlayerFromDatabaseProps {
     selectedTournament: Tournament;
     masterPlayers: MasterPlayer[];
     tournamentPlayers: Player[];
-    onAdd: (masterPlayerId: string) => Promise<void>;
+    onAdd: (masterPlayerId: string, playerClass?: string) => Promise<void>;
     onCreateNew: () => void;
     onError?: (error: string) => void;
 }
@@ -37,6 +38,7 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
     const [searchTerm, setSearchTerm] = useState('');
     const [addingPlayerId, setAddingPlayerId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [selectedPlayerClasses, setSelectedPlayerClasses] = useState<Record<string, string>>({});
 
     // Filter out master players already in this tournament
     const tournamentMasterPlayerIds = new Set(tournamentPlayers.map(p => p.masterPlayerId).filter(Boolean));
@@ -52,7 +54,7 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
         setAddingPlayerId(masterPlayerId);
         setError(null);
         try {
-            await onAdd(masterPlayerId);
+            await onAdd(masterPlayerId, selectedPlayerClasses[masterPlayerId]);
         } catch (err: any) {
             const errorMsg = err.message || 'Failed to add player';
             setError(errorMsg);
@@ -60,6 +62,25 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
         }
         setAddingPlayerId(null);
     };
+
+    // Get player class for a master player (use selected or suggested)
+    const getPlayerClass = (player: MasterPlayer) => {
+        if (!selectedTournament.usePlayerClasses) return undefined;
+        return selectedPlayerClasses[player._id] || player.suggestedClass || '';
+    };
+
+    // Initialize selected class to suggested class for each player
+    React.useEffect(() => {
+        if (selectedTournament.usePlayerClasses) {
+            const initialClasses: Record<string, string> = {};
+            availablePlayers.forEach(player => {
+                if (player.suggestedClass) {
+                    initialClasses[player._id] = player.suggestedClass;
+                }
+            });
+            setSelectedPlayerClasses(initialClasses);
+        }
+    }, [availablePlayers, selectedTournament.usePlayerClasses]);
 
     return (
         <div className="space-y-4">
@@ -104,41 +125,85 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
                         {searchTerm ? 'No players found matching your search' : 'No available players in database'}
                     </p>
                 ) : (
-                    filteredPlayers.map((player) => (
-                        <div
-                            key={player._id}
-                            className="bg-neutral-700/50 p-3 rounded-md flex items-center justify-between hover:bg-neutral-700 transition-colors"
-                        >
-                            <div className="flex items-center gap-3">
-                                <img
-                                    src={imageOptimizers.playerThumbnail(player.photoURL)}
-                                    alt={player.name}
-                                    className="w-12 h-12 rounded-full object-cover"
-                                    loading="lazy"
-                                />
-                                <div>
-                                    <p className="font-semibold">{player.name}</p>
-                                    <p className="text-xs text-neutral-400">
-                                        {player.position} | {player.currentClub}
-                                    </p>
-                                    <p className="text-xs text-neutral-500">
-                                        Matches: {player.careerStats?.matchesPlayed || 0} | Score: {player.careerStats?.totalScore || 0}
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => handleAddPlayer(player._id)}
-                                disabled={addingPlayerId === player._id}
-                                className={`font-bold py-2 px-4 rounded-md text-sm transition-colors whitespace-nowrap ${
-                                    addingPlayerId === player._id
-                                        ? 'bg-neutral-600 text-neutral-400 cursor-not-allowed'
-                                        : 'bg-blue-600 hover:bg-blue-500 text-white'
-                                }`}
+                    filteredPlayers.map((player) => {
+                        const selectedClass = getPlayerClass(player);
+                        const classConfig = selectedClass ? getClassConfig(selectedTournament, selectedClass) : null;
+
+                        return (
+                            <div
+                                key={player._id}
+                                className="bg-neutral-700/50 p-3 rounded-md hover:bg-neutral-700 transition-colors"
                             >
-                                {addingPlayerId === player._id ? 'Adding...' : 'Add Player'}
-                            </button>
-                        </div>
-                    ))
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-3 flex-1">
+                                        <img
+                                            src={imageOptimizers.playerThumbnail(player.photoURL)}
+                                            alt={player.name}
+                                            className="w-12 h-12 rounded-full object-cover"
+                                            loading="lazy"
+                                        />
+                                        <div className="flex-1">
+                                            <p className="font-semibold">{player.name}</p>
+                                            <p className="text-xs text-neutral-400">
+                                                {player.position} | {player.currentClub}
+                                            </p>
+                                            <p className="text-xs text-neutral-500">
+                                                Matches: {player.careerStats?.matchesPlayed || 0} | Score: {player.careerStats?.totalScore || 0}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => handleAddPlayer(player._id)}
+                                        disabled={addingPlayerId === player._id}
+                                        className={`font-bold py-2 px-4 rounded-md text-sm transition-colors whitespace-nowrap ${
+                                            addingPlayerId === player._id
+                                                ? 'bg-neutral-600 text-neutral-400 cursor-not-allowed'
+                                                : 'bg-blue-600 hover:bg-blue-500 text-white'
+                                        }`}
+                                    >
+                                        {addingPlayerId === player._id ? 'Adding...' : 'Add Player'}
+                                    </button>
+                                </div>
+
+                                {/* Player Class Dropdown - Only show if tournament uses player classes */}
+                                {selectedTournament.usePlayerClasses && selectedTournament.playerClasses && selectedTournament.playerClasses.length > 0 && (
+                                    <div className="ml-15 flex items-center gap-2">
+                                        <label htmlFor={`class-${player._id}`} className="text-xs text-neutral-400 whitespace-nowrap">
+                                            Player Class:
+                                        </label>
+                                        <select
+                                            id={`class-${player._id}`}
+                                            value={selectedClass}
+                                            onChange={(e) => setSelectedPlayerClasses(prev => ({
+                                                ...prev,
+                                                [player._id]: e.target.value
+                                            }))}
+                                            className="flex-1 bg-neutral-600 border-neutral-500 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                                            style={{
+                                                color: classConfig?.color || 'inherit'
+                                            }}
+                                        >
+                                            <option value="">None</option>
+                                            {getSortedClasses(selectedTournament).map(cls => (
+                                                <option
+                                                    key={cls.name}
+                                                    value={cls.name}
+                                                    style={{ color: cls.color }}
+                                                >
+                                                    {cls.icon} {cls.name} {cls.basePrice ? `(${cls.basePrice.toLocaleString()})` : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {player.suggestedClass && (
+                                            <span className="text-xs text-neutral-500 italic">
+                                                (Suggested: {player.suggestedClass})
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })
                 )}
             </div>
         </div>
@@ -828,14 +893,15 @@ const AuctionSetupPanel: React.FC = () => {
                     selectedTournament={selectedTournament}
                     masterPlayers={masterPlayers}
                     tournamentPlayers={tournamentPlayers}
-                    onAdd={async (masterPlayerId) => {
+                    onAdd={async (masterPlayerId, playerClass) => {
                         // Create tournament player instance from master player
                         const response = await fetch('/api/players/create-from-master', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 masterPlayerId,
-                                tournamentId: selectedTournament._id
+                                tournamentId: selectedTournament._id,
+                                playerClass: playerClass || undefined
                             }),
                         });
 

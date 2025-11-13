@@ -18,6 +18,7 @@ const masterPlayerSchema = new Schema<MasterPlayer>(
     currentClub: { type: String, required: true },
     photoURL: { type: String, required: false },
     careerStats: { type: playerStatsSchema, required: false },
+    suggestedClass: { type: String, required: false },
   },
   {
     timestamps: true,

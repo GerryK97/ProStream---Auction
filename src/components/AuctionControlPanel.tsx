@@ -4,14 +4,17 @@ import React, { useState, useEffect } from 'react';
 import { Player, Team, Tournament } from '@/types';
 import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { imageOptimizers } from '@/lib/imageOptimization';
+import ClassBadge from '@/components/shared/ClassBadge';
+import { getFormattedBasePrice } from '@/lib/playerClassUtils';
 
 const formatCurrency = (amount: number) => amount.toLocaleString();
 
 const AvailablePlayersPanel: React.FC<{
     players: Player[];
+    tournament: Tournament | null;
     onSelectPlayer: (id: string) => void;
     isAuctioning: boolean;
-}> = ({ players, onSelectPlayer, isAuctioning }) => {
+}> = ({ players, tournament, onSelectPlayer, isAuctioning }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const availablePlayers = players
         .filter(p => !p.isSold)
@@ -37,8 +40,11 @@ const AvailablePlayersPanel: React.FC<{
                 <ul className="space-y-2">
                     {availablePlayers.map((player, index) => (
                         <li key={player._id} className="flex items-center justify-between bg-neutral-700/50 p-2 rounded-md">
-                            <div>
-                                <p className="font-semibold text-cyan-400">#{player.playerNo || player._id} {player.name}</p>
+                            <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                    <p className="font-semibold text-cyan-400">#{player.playerNo || player._id} {player.name}</p>
+                                    <ClassBadge tournament={tournament} player={player} variant="inline" />
+                                </div>
                                 <p className="text-xs text-neutral-400">{player.position || 'Player'}</p>
                             </div>
                             <button
@@ -105,7 +111,10 @@ const CurrentAuctionPanel: React.FC<{
         <div className="bg-neutral-800 rounded-lg p-6 border border-neutral-700 min-h-[calc(100vh-15rem)] flex flex-col justify-between">
             <div>
                 <div className="text-center mb-4">
-                    <p className="text-3xl font-bold text-cyan-400">#{currentPlayer.playerNo || currentPlayer._id} {currentPlayer.name}</p>
+                    <div className="flex items-center justify-center gap-2">
+                        <p className="text-3xl font-bold text-cyan-400">#{currentPlayer.playerNo || currentPlayer._id} {currentPlayer.name}</p>
+                        <ClassBadge tournament={tournament} player={currentPlayer} variant="inline" />
+                    </div>
                     <p className="text-neutral-400">{currentPlayer.position || 'Player'}</p>
                 </div>
                 <div className="flex justify-center items-center gap-6 mb-4">
@@ -121,7 +130,7 @@ const CurrentAuctionPanel: React.FC<{
                     </div>
                 </div>
                  <div className="text-center mb-6">
-                    <p>Base Price: <span className="font-semibold">{formatCurrency(tournament.basePricePerPlayer)}</span></p>
+                    <p>Base Price: <span className="font-semibold">{getFormattedBasePrice(tournament, currentPlayer)}</span></p>
                 </div>
                 <div className="bg-neutral-900/50 p-4 rounded-lg max-w-lg mx-auto">
                     <p className="text-center mb-3 font-semibold text-neutral-300">Quick Bid (Auto Submit)</p>
@@ -277,7 +286,10 @@ const TeamsAndSoldPlayersPanel: React.FC<{
                                                 loading="lazy"
                                             />
                                             <div className="flex-grow min-w-0">
-                                                <p className="font-semibold text-sm truncate">{player.name}</p>
+                                                <div className="flex items-center gap-1.5">
+                                                    <ClassBadge tournament={tournament} player={player} variant="dot" />
+                                                    <p className="font-semibold text-sm truncate">{player.name}</p>
+                                                </div>
                                                 <p className="text-xs text-green-400">{formatCurrency(player.finalPrice || 0)}</p>
                                                 <p className="text-xs text-neutral-400 truncate">
                                                     {playerTeam ? playerTeam.name : 'Unknown Team'}
@@ -629,6 +641,7 @@ const AuctionControlPanel: React.FC = () => {
                 <div className="xl:col-span-2">
                     <AvailablePlayersPanel
                         players={players}
+                        tournament={liveTournament}
                         onSelectPlayer={handleSelectPlayer}
                         isAuctioning={isAuctioning}
                     />
