@@ -65,7 +65,8 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
                             const teamsRes = responses[responseIndex];
                             if (teamsRes.ok) {
                                 const teamsData = await teamsRes.json();
-                                setMasterTeams(teamsData);
+                                // Handle paginated response
+                                setMasterTeams(Array.isArray(teamsData) ? teamsData : teamsData.data || []);
                             }
                         }
                         break;
@@ -74,7 +75,8 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
                             const playersRes = responses[responseIndex];
                             if (playersRes.ok) {
                                 const playersData = await playersRes.json();
-                                setMasterPlayers(playersData);
+                                // Handle paginated response
+                                setMasterPlayers(Array.isArray(playersData) ? playersData : playersData.data || []);
                             }
                         }
                         break;
