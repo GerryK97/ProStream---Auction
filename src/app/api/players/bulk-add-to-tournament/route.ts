@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import { MasterPlayerModel } from '@/models/MasterPlayer';
 import { PlayerModel } from '@/models/Player';
-import TournamentModel from '@/models/Tournament';
+import { TournamentModel } from '@/models/Tournament';
 import { playerDB } from '@/lib/db-mongodb';
+import { Tournament } from '@/types';
 
 interface ExcelRow {
   'Master Player ID'?: string;
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch tournament
-    const tournament = await TournamentModel.findById(tournamentId).lean();
+    const tournament = await TournamentModel.findById(tournamentId).lean() as Tournament | null;
     if (!tournament) {
       return NextResponse.json(
         { error: 'Tournament not found' },
@@ -163,7 +164,7 @@ export async function POST(request: NextRequest) {
       const existing = await PlayerModel.findOne({
         masterPlayerId,
         tournamentId
-      }).lean();
+      }).lean() as { _id: string } | null;
 
       if (existing) {
         result.duplicates.push({
@@ -195,10 +196,7 @@ export async function POST(request: NextRequest) {
 
     result.message = `Successfully added ${result.imported} players. ${result.failed} failed, ${result.skipped} skipped.`;
 
-    return NextResponse.json({
-      success: true,
-      ...result
-    });
+    return NextResponse.json(result);
 
   } catch (error: any) {
     console.error('Bulk add to tournament error:', error);

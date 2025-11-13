@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import { MasterPlayerModel } from '@/models/MasterPlayer';
 import { PlayerModel } from '@/models/Player';
-import TournamentModel from '@/models/Tournament';
+import { TournamentModel } from '@/models/Tournament';
+import { Tournament } from '@/types';
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch tournament to get player classes
-    const tournament = await TournamentModel.findById(tournamentId).lean();
+    const tournament = await TournamentModel.findById(tournamentId).lean() as Tournament | null;
     if (!tournament) {
       return NextResponse.json(
         { error: 'Tournament not found' },
@@ -151,7 +152,7 @@ export async function GET(request: NextRequest) {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Available Players');
 
     // Create instructions sheet
-    const instructions = [
+    const instructions: Array<{ 'Step': number | string; 'Instruction': string }> = [
       { 'Step': 1, 'Instruction': 'Review the list of available players' },
       { 'Step': 2, 'Instruction': 'Set "Add (Yes/No)" to "Yes" for players you want to add to the tournament' },
     ];
