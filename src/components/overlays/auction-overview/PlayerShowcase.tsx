@@ -22,6 +22,7 @@ const PlayerShowcase: React.FC<PlayerShowcaseProps> = ({ player, tournament, siz
         if (player) {
             setAnimationKey(prev => prev + 1);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [player?._id]);
 
     if (!player) {
