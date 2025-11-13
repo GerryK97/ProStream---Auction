@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import PlayerModel from '@/models/Player';
+import { PlayerModel } from '@/models/Player';
 
 /**
  * Diagnostic endpoint to check for duplicate players in tournaments
