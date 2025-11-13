@@ -25,29 +25,59 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
     const [editingPlayer, setEditingPlayer] = useState<MasterPlayer | null>(null);
     const [playerToDelete, setPlayerToDelete] = useState<MasterPlayer | null>(null);
 
-    // Fetch tournaments, master teams, and master players from API
+    // View-based data fetching - only fetch data needed for the active view
+    // This reduces network requests by 33-67% depending on the current view
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [tournamentsRes, teamsRes, playersRes] = await Promise.all([
-                    fetch('/api/tournaments'),
-                    fetch('/api/master-teams'),
-                    fetch('/api/master-players')
-                ]);
+                const requests: Promise<Response>[] = [];
 
+                // Always fetch tournaments as it's used for context
+                requests.push(fetch('/api/tournaments'));
+
+                // Fetch view-specific data only
+                switch (view) {
+                    case 'teams':
+                        requests.push(fetch('/api/master-teams'));
+                        break;
+                    case 'players':
+                        requests.push(fetch('/api/master-players'));
+                        break;
+                    case 'tournaments':
+                        // Tournaments already fetched above
+                        break;
+                }
+
+                const responses = await Promise.all(requests);
+                let responseIndex = 0;
+
+                // Parse tournaments response
+                const tournamentsRes = responses[responseIndex++];
                 if (tournamentsRes.ok) {
                     const tournamentsData = await tournamentsRes.json();
                     setTournaments(tournamentsData);
                 }
 
-                if (teamsRes.ok) {
-                    const teamsData = await teamsRes.json();
-                    setMasterTeams(teamsData);
-                }
-
-                if (playersRes.ok) {
-                    const playersData = await playersRes.json();
-                    setMasterPlayers(playersData);
+                // Parse view-specific responses
+                switch (view) {
+                    case 'teams':
+                        if (responseIndex < responses.length) {
+                            const teamsRes = responses[responseIndex];
+                            if (teamsRes.ok) {
+                                const teamsData = await teamsRes.json();
+                                setMasterTeams(teamsData);
+                            }
+                        }
+                        break;
+                    case 'players':
+                        if (responseIndex < responses.length) {
+                            const playersRes = responses[responseIndex];
+                            if (playersRes.ok) {
+                                const playersData = await playersRes.json();
+                                setMasterPlayers(playersData);
+                            }
+                        }
+                        break;
                 }
             } catch (error) {
                 console.error('Failed to fetch data:', error);
@@ -55,7 +85,7 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
         };
 
         fetchData();
-    }, [refreshTrigger]);
+    }, [refreshTrigger, view]);
 
     useEffect(() => {
         setAddPlayerModalOpen(false);

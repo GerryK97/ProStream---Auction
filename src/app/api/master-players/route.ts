@@ -1,11 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { masterPlayerDB } from '@/lib/db-mongodb';
 
-// GET /api/master-players - Get all master players
-export async function GET() {
+// GET /api/master-players - Get all master players with pagination
+export async function GET(request: NextRequest) {
   try {
-    const players = await masterPlayerDB.getAll();
-    return NextResponse.json(players);
+    const searchParams = request.nextUrl.searchParams;
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50')));
+    const skip = (page - 1) * limit;
+
+    // Get paginated data and total count
+    const players = await masterPlayerDB.getPaginated(skip, limit);
+    const total = await masterPlayerDB.count();
+
+    return NextResponse.json({
+      data: players,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+        hasNextPage: page < Math.ceil(total / limit),
+        hasPrevPage: page > 1,
+      },
+    });
   } catch (error) {
     console.error('Error fetching master players:', error);
     return NextResponse.json(

@@ -11,7 +11,7 @@ interface SoldCelebrationProps {
  * Shows confetti burst and "SOLD!" banner
  */
 const SoldCelebration: React.FC<SoldCelebrationProps> = ({ show }) => {
-    // Generate confetti particles
+    // Generate confetti particles once and reuse across renders
     const confettiParticles = useMemo(() => {
         return Array.from({ length: 50 }, (_, i) => ({
             id: i,
@@ -21,7 +21,7 @@ const SoldCelebration: React.FC<SoldCelebrationProps> = ({ show }) => {
             color: ['#fbbf24', '#34d399', '#60a5fa', '#f472b6', '#a78bfa'][Math.floor(Math.random() * 5)],
             size: 8 + Math.random() * 8
         }));
-    }, [show]);
+    }, []);
 
     if (!show) {
         return null;

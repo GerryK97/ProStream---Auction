@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Player, Team, Tournament } from '@/types';
 import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { imageOptimizers } from '@/lib/imageOptimization';
@@ -312,9 +312,9 @@ const AuctionControlPanel: React.FC = () => {
     const [biddingTeamId, setBiddingTeamId] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [liveTournamentId, setLiveTournamentId] = useState<string | null>(null);
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-    // Fetch active tournament ID (one-time check, then SSE handles updates)
+    // Fetch active tournament ID on component mount only
+    // Real-time updates are handled by Pusher, no need to refresh after every action
     useEffect(() => {
         const loadActiveTournament = async () => {
             try {
@@ -333,9 +333,7 @@ const AuctionControlPanel: React.FC = () => {
         };
 
         loadActiveTournament();
-
-        // Re-check when actions are performed
-    }, [refreshTrigger]);
+    }, []);
 
     // Use Pusher hook to get real-time auction updates
     const {
@@ -367,9 +365,21 @@ const AuctionControlPanel: React.FC = () => {
         }
     }, [teams, biddingTeamId]);
 
-    const currentPlayer = players.find(p => p._id === auctionState.currentPlayerId);
-    const soldPlayers = players.filter(p => p.isSold);
-    const isAuctioning = !!currentPlayer && auctionState.currentAuctionStatus !== 'Sold';
+    // Memoize computed values to prevent expensive operations on every render
+    const currentPlayer = useMemo(
+        () => players.find(p => p._id === auctionState.currentPlayerId),
+        [players, auctionState.currentPlayerId]
+    );
+
+    const soldPlayers = useMemo(
+        () => players.filter(p => p.isSold),
+        [players]
+    );
+
+    const isAuctioning = useMemo(
+        () => !!currentPlayer && auctionState.currentAuctionStatus !== 'Sold',
+        [currentPlayer, auctionState.currentAuctionStatus]
+    );
 
     // Check if tournament is live
     if (!liveTournament) {
@@ -404,12 +414,11 @@ const AuctionControlPanel: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tournamentId: liveTournament._id, playerId }),
             });
-            if (response.ok) {
-                setRefreshTrigger(prev => prev + 1);
-            } else {
+            if (!response.ok) {
                 const data = await response.json();
                 setError(data.error || 'Failed to select player');
             }
+            // Pusher will handle real-time updates, no need to refresh
         } catch (error) {
             console.error('Failed to select player:', error);
             setError('An error occurred while selecting the player');
@@ -446,13 +455,12 @@ const AuctionControlPanel: React.FC = () => {
                 }),
             });
             console.log('Bid response status:', response.status);
-            if (response.ok) {
-                setRefreshTrigger(prev => prev + 1);
-            } else {
+            if (!response.ok) {
                 const data = await response.json();
                 console.log('Bid error:', data);
                 setError(data.error || 'Failed to place bid');
             }
+            // Pusher will handle real-time updates, no need to refresh
         } catch (error) {
             console.error('Failed to place bid:', error);
             setError('An error occurred while placing the bid');
@@ -480,13 +488,12 @@ const AuctionControlPanel: React.FC = () => {
                 }),
             });
             console.log('Sell response status:', response.status);
-            if (response.ok) {
-                setRefreshTrigger(prev => prev + 1);
-            } else {
+            if (!response.ok) {
                 const data = await response.json();
                 console.log('Sell error:', data);
                 setError(data.error || 'Failed to sell player');
             }
+            // Pusher will handle real-time updates, no need to refresh
         } catch (error) {
             console.error('Failed to sell player:', error);
             setError('An error occurred while selling the player');
@@ -501,12 +508,11 @@ const AuctionControlPanel: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tournamentId: liveTournament._id }),
             });
-            if (response.ok) {
-                setRefreshTrigger(prev => prev + 1);
-            } else {
+            if (!response.ok) {
                 const data = await response.json();
                 setError(data.error || 'Failed to reset auction');
             }
+            // Pusher will handle real-time updates, no need to refresh
         } catch (error) {
             console.error('Failed to reset auction:', error);
             setError('An error occurred while resetting the auction');
@@ -521,12 +527,11 @@ const AuctionControlPanel: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tournamentId: liveTournament._id }),
             });
-            if (response.ok) {
-                setRefreshTrigger(prev => prev + 1);
-            } else {
+            if (!response.ok) {
                 const data = await response.json();
                 setError(data.error || 'Failed to undo sale');
             }
+            // Pusher will handle real-time updates, no need to refresh
         } catch (error) {
             console.error('Failed to undo sale:', error);
             setError('An error occurred while undoing the sale');
@@ -544,12 +549,11 @@ const AuctionControlPanel: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tournamentId: liveTournament._id }),
             });
-            if (response.ok) {
-                setRefreshTrigger(prev => prev + 1);
-            } else {
+            if (!response.ok) {
                 const data = await response.json();
                 setError(data.error || 'Failed to reset all sales');
             }
+            // Pusher will handle real-time updates, no need to refresh
         } catch (error) {
             console.error('Failed to reset all sales:', error);
             setError('An error occurred while resetting all sales');
@@ -566,12 +570,12 @@ const AuctionControlPanel: React.FC = () => {
             });
             const data = await response.json();
 
-            if (response.ok) {
-                setRefreshTrigger(prev => prev + 1);
-                setError(null);
-            } else {
+            if (!response.ok) {
                 setError(data.error || 'Failed to restart auction');
+            } else {
+                setError(null);
             }
+            // Pusher will handle real-time updates, no need to refresh
         } catch (error) {
             console.error('Failed to restart auction:', error);
             setError('An error occurred while restarting the auction');
