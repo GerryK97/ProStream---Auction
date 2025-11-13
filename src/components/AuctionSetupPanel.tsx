@@ -8,6 +8,7 @@ import { PlusIcon, DeleteIcon, EditIcon } from './icons';
 import { imageOptimizers } from '@/lib/imageOptimization';
 import ImageUpload from './ImageUpload';
 import { getSortedClasses, getClassConfig } from '@/lib/playerClassUtils';
+import BulkAddTournamentPlayers from './BulkAddTournamentPlayers';
 
 
 interface AddPlayerFromDatabaseProps {
@@ -452,6 +453,7 @@ const AuctionSetupPanel: React.FC = () => {
     const { tournament, setTournamentStatus, addPlayer, deletePlayer, addTeam, deleteTeam } = useAuction();
 
     const [isAddPlayerModalOpen, setAddPlayerModalOpen] = useState(false);
+    const [isBulkAddPlayerModalOpen, setBulkAddPlayerModalOpen] = useState(false);
     const [isAddTeamModalOpen, setAddTeamModalOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [selectedTournamentId, setSelectedTournamentId] = useState(tournament?._id || '');
@@ -875,6 +877,12 @@ const AuctionSetupPanel: React.FC = () => {
                         <h3 className="text-xl font-bold">Registered Players</h3>
                         <div className="flex gap-2">
                              <button className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors">Sync All</button>
+                             <button onClick={() => setBulkAddPlayerModalOpen(true)} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors flex items-center gap-1">
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                                Bulk Add
+                             </button>
                              <button onClick={() => setAddPlayerModalOpen(true)} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors flex items-center gap-1"><PlusIcon className="h-4 w-4" /> Add Players</button>
                         </div>
                     </div>
@@ -936,6 +944,16 @@ const AuctionSetupPanel: React.FC = () => {
                     </ul>
                 </div>
             </div>
+
+            <Modal isOpen={isBulkAddPlayerModalOpen} onClose={() => setBulkAddPlayerModalOpen(false)} title="Bulk Add Players to Tournament" size="2xl">
+                <BulkAddTournamentPlayers
+                    tournament={selectedTournament}
+                    onSuccess={() => {
+                        setRefreshTrigger(prev => prev + 1);
+                        setBulkAddPlayerModalOpen(false);
+                    }}
+                />
+            </Modal>
 
             <Modal isOpen={isAddPlayerModalOpen} onClose={() => setAddPlayerModalOpen(false)} title="Add Players to Tournament" size="2xl">
                 <AddPlayerFromDatabase
