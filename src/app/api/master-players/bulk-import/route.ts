@@ -135,11 +135,11 @@ export async function POST(request: NextRequest) {
 
       uploadedNames.set(playerKey, rowNumber);
 
-      // Prepare player data
+      // Prepare player data (we've already validated these fields exist)
       const playerData: any = {
-        name: row.Name.trim(),
-        position: row.Position.trim(),
-        currentClub: row['Current Club'].trim(),
+        name: row.Name!.trim(),
+        position: row.Position!.trim(),
+        currentClub: row['Current Club']!.trim(),
       };
 
       if (row['Photo URL'] && row['Photo URL'].trim()) {
