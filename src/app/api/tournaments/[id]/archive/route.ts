@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { TournamentModel } from '@/models/Tournament';
 import { PlayerModel } from '@/models/Player';
+import { verifyTournamentManagement } from '@/lib/api-auth';
 
 // POST /api/tournaments/[id]/archive - Archive a completed tournament
 export async function POST(
@@ -9,8 +10,15 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectToDatabase();
     const { id } = await params;
+
+    // Verify user can manage this tournament
+    const auth = await verifyTournamentManagement(request, id);
+    if (!auth.authorized) {
+      return auth.error;
+    }
+
+    await connectToDatabase();
 
     // Get tournament
     const tournament = await TournamentModel.findById(id).lean();

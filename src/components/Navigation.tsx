@@ -1,12 +1,15 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { signOut, useSession } from 'next-auth/react';
 import { ProStreamIcon } from './icons';
 
 const Navigation: React.FC = () => {
   const pathname = usePathname();
+  const { data: session, status } = useSession();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const isActive = (path: string) => pathname.startsWith(path);
 
@@ -72,13 +75,41 @@ const Navigation: React.FC = () => {
 
           {/* Right: User Info and Logout */}
           <div className="flex items-center justify-end gap-4">
-            <div className="bg-neutral-800 px-4 py-2 rounded-lg border border-neutral-700">
-              <p className="text-sm text-neutral-400">Logged in as</p>
-              <p className="font-semibold">Admin User</p>
-            </div>
-            <button className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-              Logout
-            </button>
+            {status === 'loading' ? (
+              <div className="bg-neutral-800 px-4 py-2 rounded-lg border border-neutral-700">
+                <p className="text-sm text-neutral-400">Loading...</p>
+              </div>
+            ) : session?.user ? (
+              <>
+                <div className="bg-neutral-800 px-4 py-2 rounded-lg border border-neutral-700">
+                  <p className="text-sm text-neutral-400">Logged in as</p>
+                  <p className="font-semibold">{session.user.name}</p>
+                  <p className="text-xs text-neutral-500">{session.user.email}</p>
+                  {(session.user as any).role && (
+                    <p className="text-xs text-brand-primary capitalize font-medium">
+                      {(session.user as any).role}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={async () => {
+                    setIsLoggingOut(true);
+                    await signOut({ redirect: true, callbackUrl: '/login' });
+                  }}
+                  disabled={isLoggingOut}
+                  className="bg-red-600 hover:bg-red-500 disabled:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                >
+                  {isLoggingOut ? 'Logging out...' : 'Logout'}
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="bg-brand-primary hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+              >
+                Login
+              </Link>
+            )}
           </div>
         </div>
       </div>

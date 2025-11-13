@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { TournamentModel } from '@/models/Tournament';
+import { verifyTournamentManagement } from '@/lib/api-auth';
 
 // PATCH /api/tournaments/[id]/status - Update tournament status
 export async function PATCH(
@@ -8,8 +9,15 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectToDatabase();
     const { id } = await params;
+
+    // Verify user can manage this tournament
+    const auth = await verifyTournamentManagement(request, id);
+    if (!auth.authorized) {
+      return auth.error;
+    }
+
+    await connectToDatabase();
     const { status } = await request.json();
 
     if (!status) {

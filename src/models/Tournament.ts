@@ -28,6 +28,7 @@ const tournamentSchema = new Schema<Tournament>(
       ],
       default: [],
     },
+    createdBy: { type: String }, // User ID who created the tournament
   },
   {
     timestamps: true,

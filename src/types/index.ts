@@ -17,6 +17,21 @@ export interface Tournament {
   status: 'Draft' | 'Completed' | 'Setup' | 'Pending' | 'Live' | 'Paused' | 'Stopped' | 'Archived';
   usePlayerClasses?: boolean;           // Toggle to enable/disable player classes
   playerClasses?: PlayerClassConfig[];  // Custom player classes for this tournament
+  createdBy?: string;                   // User ID who created the tournament
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface User {
+  _id: string;
+  name: string;
+  email: string;
+  image?: string;
+  role: 'admin' | 'manager' | 'viewer';
+  googleId?: string;
+  assignedTournaments: string[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Master Team (Global Registry - never changes across tournaments)
