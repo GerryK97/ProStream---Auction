@@ -6,7 +6,8 @@ ProStream Auction is a comprehensive real-time auction management system with bu
 
 ### ✨ Features
 
-- **Google OAuth Authentication** - Secure sign-in with Google
+- **Dual Authentication** - Sign in with Email/Password OR Google OAuth
+- **Admin Credentials** - Pre-seeded admin account for immediate access
 - **User Management** - Admin dashboard for user and role management
 - **Role-Based Access Control** - Admin, Manager, and Viewer roles
 - **Tournament Access Control** - Users see only assigned tournaments
@@ -51,11 +52,22 @@ CLOUDINARY_API_KEY=<your-api-key>
 CLOUDINARY_API_SECRET=<your-api-secret>
 ```
 
-3. **Run Development Server**
+3. **Create Admin User**
+```bash
+npm run seed:admin
+# Creates admin@prostream.com with password Admin123!
+```
+
+4. **Run Development Server**
 ```bash
 npm run dev
 # Opens on http://localhost:3001
 ```
+
+5. **Login**
+- Go to http://localhost:3001/login
+- Use: `admin@prostream.com` / `Admin123!`
+- Or sign in with Google
 
 ---
 
@@ -67,6 +79,7 @@ npm run dev
 - **[SETUP_STATUS.md](./SETUP_STATUS.md)** - Current configuration status
 
 ### Authentication & Deployment
+- **[CREDENTIALS_AUTH_GUIDE.md](./CREDENTIALS_AUTH_GUIDE.md)** - 🆕 Email/Password authentication guide
 - **[PRE_DEPLOYMENT_STEPS.md](./PRE_DEPLOYMENT_STEPS.md)** - Step-by-step deployment (START HERE)
 - **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** - Comprehensive deployment guide
 - **[SETUP_CHECKLIST.md](./SETUP_CHECKLIST.md)** - Interactive deployment checklist

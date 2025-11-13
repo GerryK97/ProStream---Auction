@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export type UserRole = 'admin' | 'manager' | 'viewer';
+export type AuthMethod = 'google' | 'credentials' | 'both';
 
 export interface IUser extends Document {
   _id: string;
@@ -9,6 +10,8 @@ export interface IUser extends Document {
   image?: string;
   role: UserRole;
   googleId?: string;
+  password?: string; // Hashed password for credential authentication
+  authMethod: AuthMethod; // Track authentication method
   assignedTournaments: string[]; // Array of tournament IDs
   createdAt: Date;
   updatedAt: Date;
@@ -42,6 +45,15 @@ const userSchema = new Schema<IUser>(
       type: String,
       unique: true,
       sparse: true,
+    },
+    password: {
+      type: String,
+      select: false, // Don't return password in queries by default
+    },
+    authMethod: {
+      type: String,
+      enum: ['google', 'credentials', 'both'],
+      default: 'google',
     },
     assignedTournaments: {
       type: [String],

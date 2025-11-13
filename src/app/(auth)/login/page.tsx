@@ -9,6 +9,10 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Credentials form state
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setError(null);
@@ -21,6 +25,32 @@ export default function LoginPage() {
 
       if (result?.error) {
         setError('Failed to sign in with Google. Please try again.');
+      } else if (result?.ok) {
+        router.push('/');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+      console.error('Sign in error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCredentialsSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+        callbackUrl: '/',
+      });
+
+      if (result?.error) {
+        setError('Invalid email or password. Please try again.');
       } else if (result?.ok) {
         router.push('/');
       }
@@ -56,10 +86,71 @@ export default function LoginPage() {
             </div>
           )}
 
+          {/* Credentials Sign In Form */}
+          <form onSubmit={handleCredentialsSignIn} className="space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-neutral-300 mb-2">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={isLoading}
+                placeholder="admin@prostream.com"
+                className="w-full px-4 py-3 bg-neutral-700 border border-neutral-600 rounded-lg text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-neutral-300 mb-2">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={isLoading}
+                placeholder="Enter your password"
+                className="w-full px-4 py-3 bg-neutral-700 border border-neutral-600 rounded-lg text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200"
+            >
+              {isLoading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>
+                  <span>Signing in...</span>
+                </div>
+              ) : (
+                'Sign in with Email'
+              )}
+            </button>
+          </form>
+
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-neutral-700"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-neutral-800 text-neutral-400">Or continue with</span>
+            </div>
+          </div>
+
           {/* Google Sign In Button */}
           <button
             onClick={handleGoogleSignIn}
             disabled={isLoading}
+            type="button"
             className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 disabled:bg-gray-200 disabled:cursor-not-allowed text-neutral-900 font-semibold py-3 px-4 rounded-lg transition-colors duration-200"
           >
             {isLoading ? (
@@ -79,25 +170,6 @@ export default function LoginPage() {
               </>
             )}
           </button>
-
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-neutral-700"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-neutral-800 text-neutral-400">Or continue with</span>
-            </div>
-          </div>
-
-          {/* Demo Info */}
-          <div className="bg-neutral-700/50 border border-neutral-600 rounded-lg p-4 text-sm text-neutral-300">
-            <p className="font-semibold mb-2">Demo Access</p>
-            <p className="text-neutral-400">
-              Sign in with your Google account to access ProStream Auction. Admin will assign you tournaments
-              based on your role.
-            </p>
-          </div>
         </div>
 
         {/* Footer */}
