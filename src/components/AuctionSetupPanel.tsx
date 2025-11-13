@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuction } from '@/hooks/useAuction';
 import { Player, Team, Tournament, PlayerStats, MasterTeam, MasterPlayer } from '@/types';
 import Modal from './Modal';
@@ -40,14 +40,26 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
     const [error, setError] = useState<string | null>(null);
     const [selectedPlayerClasses, setSelectedPlayerClasses] = useState<Record<string, string>>({});
 
-    // Filter out master players already in this tournament
-    const tournamentMasterPlayerIds = new Set(tournamentPlayers.map(p => p.masterPlayerId).filter(Boolean));
-    const availablePlayers = masterPlayers.filter(p => !tournamentMasterPlayerIds.has(p._id));
+    // Memoize tournament player IDs set to avoid recreating on every render
+    const tournamentMasterPlayerIds = useMemo(
+        () => new Set(tournamentPlayers.map(p => p.masterPlayerId).filter(Boolean)),
+        [tournamentPlayers]
+    );
 
-    const filteredPlayers = availablePlayers.filter(p =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.position.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.currentClub.toLowerCase().includes(searchTerm.toLowerCase())
+    // Memoize available players to avoid filtering on every render
+    const availablePlayers = useMemo(
+        () => masterPlayers.filter(p => !tournamentMasterPlayerIds.has(p._id)),
+        [masterPlayers, tournamentMasterPlayerIds]
+    );
+
+    // Memoize filtered players based on search term
+    const filteredPlayers = useMemo(
+        () => availablePlayers.filter(p =>
+            p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            p.position.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            p.currentClub.toLowerCase().includes(searchTerm.toLowerCase())
+        ),
+        [availablePlayers, searchTerm]
     );
 
     const handleAddPlayer = async (masterPlayerId: string) => {
@@ -220,13 +232,25 @@ const AddTeamFromDatabase: React.FC<AddTeamFromDatabaseProps> = ({
     const [searchTerm, setSearchTerm] = useState('');
     const [addingTeamId, setAddingTeamId] = useState<string | null>(null);
 
-    // Filter out master teams already in this tournament
-    const tournamentMasterTeamIds = new Set(tournamentTeams.map(t => t.masterTeamId).filter(Boolean));
-    const availableTeams = masterTeams.filter(t => !tournamentMasterTeamIds.has(t._id));
+    // Memoize tournament team IDs set to avoid recreating on every render
+    const tournamentMasterTeamIds = useMemo(
+        () => new Set(tournamentTeams.map(t => t.masterTeamId).filter(Boolean)),
+        [tournamentTeams]
+    );
 
-    const filteredTeams = availableTeams.filter(t =>
-        t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.ownerName.toLowerCase().includes(searchTerm.toLowerCase())
+    // Memoize available teams to avoid filtering on every render
+    const availableTeams = useMemo(
+        () => masterTeams.filter(t => !tournamentMasterTeamIds.has(t._id)),
+        [masterTeams, tournamentMasterTeamIds]
+    );
+
+    // Memoize filtered teams based on search term
+    const filteredTeams = useMemo(
+        () => availableTeams.filter(t =>
+            t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            t.ownerName.toLowerCase().includes(searchTerm.toLowerCase())
+        ),
+        [availableTeams, searchTerm]
     );
 
     const handleAddTeam = async (masterTeamId: string) => {
@@ -466,58 +490,76 @@ const AuctionSetupPanel: React.FC = () => {
         }
     };
 
-    // Fetch master players, master teams, and tournaments from database on mount and when refresh is triggered
+    // Fetch master data only on mount (not when tournament selection changes)
     React.useEffect(() => {
-        const fetchData = async () => {
+        const fetchMasterData = async () => {
             try {
                 const startTime = Date.now();
-                console.log('[AuctionSetup] Starting data fetch...');
+                console.log('[AuctionSetup] Starting master data fetch...');
 
-                // Build parallel fetch requests
-                const requests = [
+                // Only fetch master data that doesn't depend on tournament selection
+                const responses = await Promise.all([
                     fetch('/api/tournaments'),
                     fetch('/api/master-players'),
                     fetch('/api/master-teams'),
-                ];
+                ]);
 
-                // Add tournament-specific requests if tournament is selected
-                if (selectedTournamentId) {
-                    requests.push(
-                        fetch(`/api/players?tournamentId=${selectedTournamentId}`),
-                        fetch(`/api/teams?tournamentId=${selectedTournamentId}`)
-                    );
-                }
+                const [tournamentsData, masterPlayersData, masterTeamsData] = await Promise.all(
+                    responses.map(res => res.ok ? res.json() : null)
+                );
 
-                // Execute all requests in parallel
-                const responses = await Promise.all(requests);
-                console.log(`[AuctionSetup] All requests completed in ${Date.now() - startTime}ms`);
-
-                // Parse responses in parallel
-                const [
-                    tournamentsData,
-                    masterPlayersData,
-                    masterTeamsData,
-                    tournamentPlayersData,
-                    tournamentTeamsData
-                ] = await Promise.all(responses.map(res => res.ok ? res.json() : null));
-
-                // Update state
                 if (tournamentsData) {
-                    console.log('[AuctionSetup] Loaded tournaments:', tournamentsData.length, tournamentsData.map((t: Tournament) => ({ id: t._id, name: t.name })));
+                    console.log('[AuctionSetup] Loaded tournaments:', tournamentsData.length);
                     setTournaments(tournamentsData);
                 }
                 if (masterPlayersData) setMasterPlayers(masterPlayersData);
                 if (masterTeamsData) setMasterTeams(masterTeamsData);
+
+                console.log(`[AuctionSetup] Master data fetch completed in ${Date.now() - startTime}ms`);
+            } catch (error) {
+                console.error('Failed to fetch master data:', error);
+            }
+        };
+
+        // Fetch master data only on component mount and when refresh is triggered
+        // Selective invalidation: only refetch when explicitly requested via refreshTrigger
+        fetchMasterData();
+    }, [refreshTrigger]);
+
+    // Fetch tournament-specific data only when tournament selection changes
+    React.useEffect(() => {
+        const fetchTournamentData = async () => {
+            if (!selectedTournamentId) {
+                setTournamentPlayers([]);
+                setTournamentTeams([]);
+                return;
+            }
+
+            try {
+                const startTime = Date.now();
+                console.log(`[AuctionSetup] Starting tournament-specific data fetch for ${selectedTournamentId}...`);
+
+                // Only fetch tournament-specific data
+                const responses = await Promise.all([
+                    fetch(`/api/players?tournamentId=${selectedTournamentId}`),
+                    fetch(`/api/teams?tournamentId=${selectedTournamentId}`)
+                ]);
+
+                const [tournamentPlayersData, tournamentTeamsData] = await Promise.all(
+                    responses.map(res => res.ok ? res.json() : null)
+                );
+
                 if (tournamentPlayersData) setTournamentPlayers(tournamentPlayersData);
                 if (tournamentTeamsData) setTournamentTeams(tournamentTeamsData);
 
-                console.log(`[AuctionSetup] Total fetch time: ${Date.now() - startTime}ms`);
+                console.log(`[AuctionSetup] Tournament data fetch completed in ${Date.now() - startTime}ms`);
             } catch (error) {
-                console.error('Failed to fetch data:', error);
+                console.error('Failed to fetch tournament data:', error);
             }
         };
-        fetchData();
-    }, [refreshTrigger, selectedTournamentId]);
+
+        fetchTournamentData();
+    }, [selectedTournamentId]);
 
     // Initialize selectedTournamentId from context or first tournament
     React.useEffect(() => {
