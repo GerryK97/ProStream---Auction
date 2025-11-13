@@ -441,7 +441,13 @@ export const playerDB = {
 
       if (existing) {
         console.warn(`[playerDB.createFromMaster] Player already exists: ${existing._id}`);
-        throw new Error('Player already added to this tournament');
+        console.warn(`[playerDB.createFromMaster] Duplicate details - masterPlayerId: ${masterPlayerId}, tournamentId: ${tournamentId}, existingPlayerId: ${existing._id}`);
+
+        // Get full player details for debugging
+        const fullExisting = await PlayerModel.findById(existing._id).lean();
+        console.warn(`[playerDB.createFromMaster] Full duplicate player:`, fullExisting);
+
+        throw new Error(`Player "${masterPlayer.name}" is already added to this tournament (Player ID: ${existing._id})`);
       }
 
       // Generate globally unique ID (timestamp-based)
