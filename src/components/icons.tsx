@@ -110,3 +110,15 @@ export const DocumentTextIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props)
      <path d="M5.75 2a.75.75 0 00-.75.75v14.5a.75.75 0 00.75.75h8.5a.75.75 0 00.75-.75V6.664a.75.75 0 00-.22-.53l-4.164-4.163a.75.75 0 00-.53-.22H5.75zm3.5 1.5a.75.75 0 01.75.75v2.5a.75.75 0 01-1.5 0V4.25a.75.75 0 01.75-.75z" />
   </svg>
 );
+
+export const UploadIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+  </svg>
+);
+
+export const XCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+  </svg>
+);

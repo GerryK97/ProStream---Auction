@@ -3,11 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAuction } from '@/hooks/useAuction';
 import { Player, Team, Tournament, PlayerStats, MasterTeam, MasterPlayer, PlayerClassConfig } from '@/types';
-import { PlusIcon, EditIcon, DeleteIcon, LoadingSpinner, CheckCircleIcon, DocumentTextIcon } from './icons';
+import { PlusIcon, EditIcon, DeleteIcon, LoadingSpinner, CheckCircleIcon, DocumentTextIcon, UploadIcon } from './icons';
 import Modal from './Modal';
 import { imageOptimizers } from '@/lib/imageOptimization';
 import ImageUpload from './ImageUpload';
 import { getDefaultClasses } from '@/lib/playerClassUtils';
+import BulkPlayerUploadPanel from './BulkPlayerUploadPanel';
 
 type ManagementView = 'tournaments' | 'teams' | 'players';
 
@@ -21,6 +22,7 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const [isAddPlayerModalOpen, setAddPlayerModalOpen] = useState(false);
+    const [isBulkUploadModalOpen, setBulkUploadModalOpen] = useState(false);
     const [editingTeam, setEditingTeam] = useState<MasterTeam | null>(null);
     const [editingPlayer, setEditingPlayer] = useState<MasterPlayer | null>(null);
     const [playerToDelete, setPlayerToDelete] = useState<MasterPlayer | null>(null);
@@ -118,6 +120,7 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
                 return <PlayersSection
                             players={masterPlayers}
                             onAddPlayer={() => setAddPlayerModalOpen(true)}
+                            onBulkUpload={() => setBulkUploadModalOpen(true)}
                             onEditPlayer={setEditingPlayer}
                             onDeletePlayer={setPlayerToDelete}
                         />;
@@ -197,6 +200,15 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
                         </div>
                     </div>
                 )}
+            </Modal>
+
+            <Modal isOpen={isBulkUploadModalOpen} onClose={() => setBulkUploadModalOpen(false)} title="">
+                <BulkPlayerUploadPanel
+                    onImportComplete={() => {
+                        setRefreshTrigger(prev => prev + 1);
+                    }}
+                    onClose={() => setBulkUploadModalOpen(false)}
+                />
             </Modal>
         </div>
     );
@@ -693,13 +705,19 @@ const TeamCreationForm: React.FC<{
     );
 };
 
-const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => void; onEditPlayer: (player: MasterPlayer) => void; onDeletePlayer: (player: MasterPlayer) => void; }> = ({ players, onAddPlayer, onEditPlayer, onDeletePlayer }) => (
+const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => void; onBulkUpload: () => void; onEditPlayer: (player: MasterPlayer) => void; onDeletePlayer: (player: MasterPlayer) => void; }> = ({ players, onAddPlayer, onBulkUpload, onEditPlayer, onDeletePlayer }) => (
     <section>
         <SectionHeader title="Players" subtitle="Eligible players for the auction.">
-             <button onClick={onAddPlayer} className="flex items-center gap-2 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
-                <PlusIcon className="h-5 w-5" />
-                Add Player
-            </button>
+            <div className="flex gap-3">
+                <button onClick={onBulkUpload} className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
+                    <UploadIcon className="h-5 w-5" />
+                    Bulk Upload
+                </button>
+                <button onClick={onAddPlayer} className="flex items-center gap-2 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
+                    <PlusIcon className="h-5 w-5" />
+                    Add Player
+                </button>
+            </div>
         </SectionHeader>
         <div className="bg-neutral-800 rounded-lg overflow-hidden">
              <div className="overflow-x-auto">

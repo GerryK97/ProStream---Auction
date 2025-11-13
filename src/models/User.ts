@@ -66,8 +66,7 @@ const userSchema = new Schema<IUser>(
 );
 
 // Indexes for fast lookups
-userSchema.index({ email: 1 });
-userSchema.index({ googleId: 1 });
+// Note: email and googleId already have unique indexes from schema definition
 userSchema.index({ assignedTournaments: 1 });
 
 export const UserModel = mongoose.models.User || mongoose.model<IUser>('User', userSchema);
