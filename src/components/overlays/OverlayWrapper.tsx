@@ -32,7 +32,8 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
                     const response = await fetch('/api/tournaments/active');
                     if (response.ok) {
                         const tournament = await response.json();
-                        setLiveTournamentId(tournament._id);
+                        // Handle null response (no active tournament)
+                        setLiveTournamentId(tournament?._id || null);
                     }
                 } catch (error) {
                     console.error('Failed to fetch active tournament:', error);
