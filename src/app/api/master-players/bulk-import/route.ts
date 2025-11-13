@@ -22,12 +22,6 @@ interface ImportResult {
   duplicates: Array<{ row: number; name: string; reason: string }>;
 }
 
-async function generateSequentialPlayerId(): Promise<string> {
-  const count = await MasterPlayerModel.countDocuments();
-  const playerNumber = (count + 1).toString().padStart(3, '0');
-  return `PS${playerNumber}`;
-}
-
 function validateRow(row: ExcelRow, rowNumber: number): { valid: boolean; error?: string } {
   if (!row.Name || row.Name.trim() === '') {
     return { valid: false, error: `Row ${rowNumber}: Name is required` };
@@ -164,10 +158,15 @@ export async function POST(request: NextRequest) {
     // Bulk insert valid players
     if (validPlayers.length > 0) {
       try {
-        for (const player of validPlayers) {
+        // Get the starting count once to generate sequential IDs
+        const startingCount = await MasterPlayerModel.countDocuments();
+
+        for (let i = 0; i < validPlayers.length; i++) {
+          const player = validPlayers[i];
           try {
-            // Generate sequential ID for each player
-            const playerId = await generateSequentialPlayerId();
+            // Generate sequential ID based on starting count + index
+            const playerNumber = (startingCount + i + 1).toString().padStart(3, '0');
+            const playerId = `PS${playerNumber}`;
             const playerWithId = { ...player.data, _id: playerId };
 
             await masterPlayerDB.create(playerWithId);

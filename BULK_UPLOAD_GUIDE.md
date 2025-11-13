@@ -72,6 +72,7 @@ The system checks for duplicates using **Name + Position** combination:
 ### ✅ Automatic ID Generation
 - Players are automatically assigned sequential IDs: `PS001`, `PS002`, `PS003`, etc.
 - IDs continue from the last player in the database
+- **Batch-safe**: Multiple players in one upload get unique, sequential IDs without conflicts
 
 ### ✅ Error Reporting
 Each failed row includes:
