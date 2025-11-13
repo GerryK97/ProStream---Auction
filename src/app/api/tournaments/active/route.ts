@@ -14,11 +14,10 @@ export async function GET() {
       .sort({ _id: -1 }) // Get most recent if multiple
       .lean();
 
+    // Return null with 200 status if no active tournament (this is an expected state, not an error)
+    // This prevents console errors when no auction is running
     if (!activeTournament) {
-      return NextResponse.json(
-        { error: 'No active tournament found' },
-        { status: 404 }
-      );
+      return NextResponse.json(null);
     }
 
     return NextResponse.json(activeTournament);

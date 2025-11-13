@@ -322,9 +322,8 @@ const AuctionControlPanel: React.FC = () => {
 
                 if (response.ok) {
                     const tournament = await response.json();
-                    setLiveTournamentId(tournament._id);
-                } else if (response.status === 404) {
-                    setLiveTournamentId(null);
+                    // Handle null response (no active tournament)
+                    setLiveTournamentId(tournament?._id || null);
                 }
             } catch (error) {
                 console.error('Failed to fetch active tournament:', error);
