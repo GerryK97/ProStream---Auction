@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import { masterPlayerDB } from '@/lib/db-mongodb';
-import MasterPlayerModel from '@/models/MasterPlayer';
+import { MasterPlayerModel } from '@/models/MasterPlayer';
 
 interface ExcelRow {
   Name?: string;
