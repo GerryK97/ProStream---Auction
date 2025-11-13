@@ -5,6 +5,7 @@ import { PlayerModel } from '@/models/Player';
 import { TournamentModel } from '@/models/Tournament';
 import { playerDB } from '@/lib/db-mongodb';
 import { Tournament } from '@/types';
+import { connectToDatabase } from '@/lib/mongodb';
 
 interface ExcelRow {
   'Master Player ID'?: string;
@@ -31,6 +32,8 @@ interface ImportResult {
 
 export async function POST(request: NextRequest) {
   try {
+    await connectToDatabase();
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const tournamentId = formData.get('tournamentId') as string;

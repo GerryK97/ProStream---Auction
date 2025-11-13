@@ -4,9 +4,12 @@ import { MasterPlayerModel } from '@/models/MasterPlayer';
 import { PlayerModel } from '@/models/Player';
 import { TournamentModel } from '@/models/Tournament';
 import { Tournament } from '@/types';
+import { connectToDatabase } from '@/lib/mongodb';
 
 export async function GET(request: NextRequest) {
   try {
+    await connectToDatabase();
+
     const { searchParams } = new URL(request.url);
     const tournamentId = searchParams.get('tournamentId');
 
