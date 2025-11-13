@@ -512,8 +512,15 @@ const AuctionSetupPanel: React.FC = () => {
                     console.log('[AuctionSetup] Loaded tournaments:', tournamentsData.length);
                     setTournaments(tournamentsData);
                 }
-                if (masterPlayersData) setMasterPlayers(masterPlayersData);
-                if (masterTeamsData) setMasterTeams(masterTeamsData);
+                // Handle paginated responses from master-players and master-teams APIs
+                if (masterPlayersData) {
+                    const players = Array.isArray(masterPlayersData) ? masterPlayersData : masterPlayersData.data || [];
+                    setMasterPlayers(players);
+                }
+                if (masterTeamsData) {
+                    const teams = Array.isArray(masterTeamsData) ? masterTeamsData : masterTeamsData.data || [];
+                    setMasterTeams(teams);
+                }
 
                 console.log(`[AuctionSetup] Master data fetch completed in ${Date.now() - startTime}ms`);
             } catch (error) {
