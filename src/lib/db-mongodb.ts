@@ -29,17 +29,19 @@ const generateTournamentPlayerId = async (tournamentId: string): Promise<string>
 
 // Helper function to generate sequential player number within tournament
 // Returns "001", "002", "003", etc. (unique per tournament)
+// Uses aggregation pipeline for better performance with large datasets
 const generatePlayerNo = async (tournamentId: string): Promise<string> => {
   await connectToDatabase();
 
   console.log(`[generatePlayerNo] Generating playerNo for tournament: ${tournamentId}`);
 
-  // Get the highest playerNo for this tournament
-  const result = await PlayerModel.find({ tournamentId, playerNo: { $exists: true } })
-    .select('playerNo tournamentId')
-    .sort({ playerNo: -1 })
-    .limit(1)
-    .lean();
+  // Use aggregation pipeline to find max playerNo efficiently
+  const result = await PlayerModel.aggregate([
+    { $match: { tournamentId, playerNo: { $exists: true } } },
+    { $project: { playerNo: 1 } },
+    { $sort: { playerNo: -1 } },
+    { $limit: 1 },
+  ]);
 
   console.log(`[generatePlayerNo] Found existing players:`, result);
 
@@ -110,6 +112,21 @@ export const masterTeamDB = {
     return await MasterTeamModel.find().sort({ name: 1 }).lean() as any;
   },
 
+  getPaginated: async (skip: number, limit: number): Promise<MasterTeam[]> => {
+    await connectToDatabase();
+    return await MasterTeamModel.find()
+      .sort({ name: 1 })
+      .skip(skip)
+      .limit(limit)
+      .select('_id name ownerName shortCode logoURL')
+      .lean() as any;
+  },
+
+  count: async (): Promise<number> => {
+    await connectToDatabase();
+    return await MasterTeamModel.countDocuments();
+  },
+
   getById: async (id: string): Promise<MasterTeam | null> => {
     await connectToDatabase();
     return await MasterTeamModel.findOne({ _id: id }).lean() as any;
@@ -119,7 +136,7 @@ export const masterTeamDB = {
     await connectToDatabase();
 
     // Check for duplicate shortCode
-    const existing = await MasterTeamModel.findOne({ shortCode: data.shortCode });
+    const existing = await MasterTeamModel.findOne({ shortCode: data.shortCode }).select('_id').lean();
     if (existing) {
       throw new Error(`Team with shortCode "${data.shortCode}" already exists`);
     }
@@ -186,6 +203,21 @@ export const masterPlayerDB = {
   getAll: async (): Promise<MasterPlayer[]> => {
     await connectToDatabase();
     return await MasterPlayerModel.find().sort({ name: 1 }).lean() as any;
+  },
+
+  getPaginated: async (skip: number, limit: number): Promise<MasterPlayer[]> => {
+    await connectToDatabase();
+    return await MasterPlayerModel.find()
+      .sort({ name: 1 })
+      .skip(skip)
+      .limit(limit)
+      .select('_id name position currentClub photoURL careerStats suggestedClass')
+      .lean() as any;
+  },
+
+  count: async (): Promise<number> => {
+    await connectToDatabase();
+    return await MasterPlayerModel.countDocuments();
   },
 
   getById: async (id: string): Promise<MasterPlayer | null> => {
@@ -394,20 +426,18 @@ export const playerDB = {
 
       console.log(`[playerDB.createFromMaster] Starting: masterPlayerId=${masterPlayerId}, tournamentId=${tournamentId}`);
 
-      // Get master player data
+      // Batch fetch master player and duplicate check in parallel for better performance
       const startTime = Date.now();
-      const masterPlayer = await MasterPlayerModel.findOne({ _id: masterPlayerId }).lean() as MasterPlayer | null;
-      console.log(`[playerDB.createFromMaster] Master player fetch took ${Date.now() - startTime}ms`);
+      const [masterPlayer, existing] = await Promise.all([
+        MasterPlayerModel.findOne({ _id: masterPlayerId }).lean() as Promise<MasterPlayer | null>,
+        PlayerModel.findOne({ masterPlayerId, tournamentId }).select('_id').lean() as Promise<any>,
+      ]);
+      console.log(`[playerDB.createFromMaster] Batch fetch took ${Date.now() - startTime}ms`);
 
       if (!masterPlayer) {
         console.error(`[playerDB.createFromMaster] Master player not found: ${masterPlayerId}`);
         throw new Error('Master player not found');
       }
-
-      // Check if player already exists in tournament
-      const checkStart = Date.now();
-      const existing = await PlayerModel.findOne({ masterPlayerId, tournamentId });
-      console.log(`[playerDB.createFromMaster] Duplicate check took ${Date.now() - checkStart}ms`);
 
       if (existing) {
         console.warn(`[playerDB.createFromMaster] Player already exists: ${existing._id}`);

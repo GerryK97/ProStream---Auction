@@ -18,6 +18,6 @@ const masterTeamSchema = new Schema<MasterTeam>(
 
 // Indexes for efficient queries
 masterTeamSchema.index({ name: 1 });
-masterTeamSchema.index({ shortCode: 1 });
+// Note: shortCode index is automatically created by unique: true constraint on line 8
 
 export const MasterTeamModel = models.MasterTeam || model<MasterTeam>('MasterTeam', masterTeamSchema);

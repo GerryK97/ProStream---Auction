@@ -107,6 +107,6 @@ export const CheckCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) 
 
 export const DocumentTextIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-     <path d="M5.75 2a.75.75 0 00-.75.75v14.5a.75.75 0 00.75.75h8.5a.75.75 0 00.75-.75V6.664a.75.75 0 00-.22-  .53l-4.164-4.163a.75.75 0 00-.53-.22H5.75zm3.5 1.5a.75.75 0 01.75.75v2.5a.75.75 0 01-1.5 0V4.25a.75.75 0 01.75-.75z" />
+     <path d="M5.75 2a.75.75 0 00-.75.75v14.5a.75.75 0 00.75.75h8.5a.75.75 0 00.75-.75V6.664a.75.75 0 00-.22-.53l-4.164-4.163a.75.75 0 00-.53-.22H5.75zm3.5 1.5a.75.75 0 01.75.75v2.5a.75.75 0 01-1.5 0V4.25a.75.75 0 01.75-.75z" />
   </svg>
 );
