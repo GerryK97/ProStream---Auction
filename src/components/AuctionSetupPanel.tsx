@@ -661,7 +661,7 @@ const AuctionSetupPanel: React.FC = () => {
         };
 
         fetchTournamentData();
-    }, [selectedTournamentId]);
+    }, [selectedTournamentId, refreshTrigger]);
 
     // Initialize selectedTournamentId from context or first tournament
     React.useEffect(() => {
