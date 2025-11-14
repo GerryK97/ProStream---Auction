@@ -270,11 +270,11 @@ export default function BulkPlayerUpload({ onSuccess }: BulkPlayerUploadProps) {
           {/* Errors */}
           {result.errors && result.errors.length > 0 && (
             <div className="mt-4 border-t border-gray-600 pt-3">
-              <h5 className="text-red-400 font-medium mb-2 text-sm">Errors:</h5>
+              <h5 className="text-red-400 font-medium mb-2 text-sm">Errors ({result.errors.length}):</h5>
               <div className="max-h-40 overflow-y-auto space-y-1">
                 {result.errors.map((error, index) => (
                   <p key={index} className="text-xs text-red-300">
-                    Row {error.row}: {error.error}
+                    Row {error.row}{error.data?.Name ? ` (${error.data.Name})` : ''}: {error.error}
                   </p>
                 ))}
               </div>

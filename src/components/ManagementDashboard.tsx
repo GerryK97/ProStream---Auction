@@ -833,6 +833,32 @@ const TeamCreationForm: React.FC<{
 const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => void; onEditPlayer: (player: MasterPlayer) => void; onDeletePlayer: (player: MasterPlayer) => void; onClearAll: () => void; }> = ({ players, onAddPlayer, onEditPlayer, onDeletePlayer, onClearAll }) => {
     const [showBulkUpload, setShowBulkUpload] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
+    const [downloading, setDownloading] = useState(false);
+
+    const handleDownloadMasterPlayers = async () => {
+        setDownloading(true);
+        try {
+            const response = await fetch('/api/master-players/export');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Download failed');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `master_players_export_${Date.now()}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error: any) {
+            alert(`Download failed: ${error.message}`);
+        } finally {
+            setDownloading(false);
+        }
+    };
 
     return (
         <section>
@@ -850,6 +876,16 @@ const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => voi
                     <button onClick={onAddPlayer} className="flex items-center gap-2 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
                         <PlusIcon className="h-5 w-5" />
                         Add Player
+                    </button>
+                    <button
+                        onClick={handleDownloadMasterPlayers}
+                        disabled={players.length === 0 || downloading}
+                        className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200"
+                    >
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        {downloading ? 'Downloading...' : 'Download List'}
                     </button>
                     <button
                         onClick={onClearAll}
@@ -877,6 +913,7 @@ const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => voi
                     <table className="w-full text-left">
                         <thead className="bg-neutral-700/50">
                             <tr>
+                                <th className="p-4 text-sm font-semibold text-neutral-300">#</th>
                                 <th className="p-4 text-sm font-semibold text-neutral-300">Player ID</th>
                                 <th className="p-4 text-sm font-semibold text-neutral-300">Player</th>
                                 <th className="p-4 text-sm font-semibold text-neutral-300">Position</th>
@@ -890,6 +927,7 @@ const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => voi
                         <tbody>
                             {players.map((player, idx) => (
                                 <tr key={player._id} className={`border-t border-neutral-700 ${idx % 2 === 0 ? 'bg-neutral-800' : 'bg-neutral-800/50'}`}>
+                                    <td className="p-4 text-neutral-400 text-sm font-medium w-12">{idx + 1}</td>
                                     <td className="p-4 text-neutral-400 text-xs font-mono">{player._id}</td>
                                     <td className="p-4 flex items-center gap-4">
                                         <img
