@@ -28,6 +28,11 @@ const tournamentSchema = new Schema<Tournament>(
       ],
       default: [],
     },
+    basePriceStrategy: {
+      type: String,
+      enum: ['tournament-level', 'player-class-based'],
+      default: 'tournament-level',
+    },
   },
   {
     timestamps: true,

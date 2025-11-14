@@ -5,6 +5,7 @@ import { TournamentModel } from '@/models/Tournament';
 import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
 import { triggerBidPlaced } from '@/lib/pusher-server';
+import { getClassBasePrice } from '@/lib/playerClassUtils';
 
 // POST /api/auction/bid - Place a bid for the current player
 export async function POST(request: NextRequest) {
@@ -68,9 +69,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (auctionState.currentBid === 0 && amount < (tournament as any).basePricePerPlayer) {
+    // Get the actual base price based on tournament strategy
+    const actualBasePrice = getClassBasePrice(tournament as any, player as any);
+
+    if (auctionState.currentBid === 0 && amount < actualBasePrice) {
       return NextResponse.json(
-        { error: `The first bid must be at least the base price of ${(tournament as any).basePricePerPlayer.toLocaleString()}` },
+        { error: `The first bid must be at least the base price of ${actualBasePrice.toLocaleString()}` },
         { status: 400 }
       );
     }
