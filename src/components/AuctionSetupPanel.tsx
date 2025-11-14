@@ -463,6 +463,7 @@ const AuctionSetupPanel: React.FC = () => {
     const [tournamentPlayers, setTournamentPlayers] = useState<Player[]>([]);
     const [tournamentTeams, setTournamentTeams] = useState<Team[]>([]);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [exportingPlayers, setExportingPlayers] = useState(false);
 
     // Handle player removal from tournament (delete tournament instance)
     const handleRemovePlayer = async (playerId: string) => {
@@ -489,6 +490,38 @@ const AuctionSetupPanel: React.FC = () => {
             }
         } catch (error) {
             console.error('Failed to remove team:', error);
+        }
+    };
+
+    // Export tournament players to Excel
+    const handleExportPlayers = async () => {
+        if (!selectedTournament || tournamentPlayers.length === 0) {
+            alert('No players to export');
+            return;
+        }
+
+        setExportingPlayers(true);
+        try {
+            const response = await fetch(`/api/players/tournament-export?tournamentId=${selectedTournament._id}`);
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to export players');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `tournament_players_export_${selectedTournament.name.replace(/\s+/g, '_')}_${Date.now()}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error: any) {
+            alert(`Failed to export players: ${error.message}`);
+        } finally {
+            setExportingPlayers(false);
         }
     };
 
@@ -877,6 +910,16 @@ const AuctionSetupPanel: React.FC = () => {
                         <h3 className="text-xl font-bold">Registered Players</h3>
                         <div className="flex gap-2">
                              <button className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors">Sync All</button>
+                             <button
+                                onClick={handleExportPlayers}
+                                disabled={exportingPlayers || tournamentPlayers.length === 0}
+                                className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors flex items-center gap-1"
+                             >
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                {exportingPlayers ? 'Exporting...' : 'Export to Excel'}
+                             </button>
                              <button onClick={() => setBulkAddPlayerModalOpen(true)} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors flex items-center gap-1">
                                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
