@@ -76,14 +76,14 @@ const CurrentAuctionPanel: React.FC<{
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
-        const base = getClassBasePrice(tournament, currentPlayer);
+        const base = getClassBasePrice(tournament, currentPlayer ?? null);
         const nextBid = auctionState.currentBid > 0 ? auctionState.currentBid + 1000 : base;
         setBidAmount(nextBid);
     }, [auctionState.currentBid, currentPlayer, tournament]);
 
     const handleQuickBid = async (increment: number) => {
         // If no bid yet, start from base price, otherwise add to current bid
-        const basePrice = getClassBasePrice(tournament, currentPlayer);
+        const basePrice = getClassBasePrice(tournament, currentPlayer ?? null);
         const startingPoint = auctionState.currentBid > 0 ? auctionState.currentBid : basePrice;
         const newAmount = startingPoint + increment;
 
