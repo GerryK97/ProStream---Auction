@@ -1,3 +1,5 @@
+export type BasePriceStrategy = 'tournament-level' | 'player-class-based';
+
 export interface PlayerClassConfig {
   name: string;           // e.g., "Platinum", "Gold", "Silver", "Bronze"
   basePrice?: number;     // Optional class-specific base price
@@ -17,6 +19,7 @@ export interface Tournament {
   status: 'Draft' | 'Completed' | 'Setup' | 'Pending' | 'Live' | 'Paused' | 'Stopped' | 'Archived';
   usePlayerClasses?: boolean;           // Toggle to enable/disable player classes
   playerClasses?: PlayerClassConfig[];  // Custom player classes for this tournament
+  basePriceStrategy?: BasePriceStrategy; // Strategy for determining base prices (default: 'tournament-level')
 }
 
 // Master Team (Global Registry - never changes across tournaments)

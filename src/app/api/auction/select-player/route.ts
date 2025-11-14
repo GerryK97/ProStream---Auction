@@ -4,6 +4,7 @@ import { AuctionStateModel } from '@/models/AuctionState';
 import { PlayerModel } from '@/models/Player';
 import { TournamentModel } from '@/models/Tournament';
 import { triggerPlayerSelected } from '@/lib/pusher-server';
+import { getClassBasePrice } from '@/lib/playerClassUtils';
 
 // POST /api/auction/select-player - Select a specific player for auction
 export async function POST(request: NextRequest) {
@@ -64,9 +65,9 @@ export async function POST(request: NextRequest) {
       { new: true }
     ).lean();
 
-    // Get tournament for base price
+    // Get tournament for base price using strategy-based calculation
     const tournament = await TournamentModel.findById(tournamentId).lean();
-    const basePrice = (tournament as any)?.basePricePerPlayer || 0;
+    const basePrice = getClassBasePrice(tournament as any, player as any);
 
     // Trigger Pusher event
     try {

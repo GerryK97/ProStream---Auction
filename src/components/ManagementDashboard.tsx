@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuction } from '@/hooks/useAuction';
-import { Player, Team, Tournament, PlayerStats, MasterTeam, MasterPlayer, PlayerClassConfig } from '@/types';
+import { Player, Team, Tournament, PlayerStats, MasterTeam, MasterPlayer, PlayerClassConfig, BasePriceStrategy } from '@/types';
 import { PlusIcon, EditIcon, DeleteIcon, LoadingSpinner, CheckCircleIcon, DocumentTextIcon } from './icons';
 import Modal from './Modal';
 import { imageOptimizers } from '@/lib/imageOptimization';
@@ -487,6 +487,9 @@ const CreateTournamentForm: React.FC<{
     const [playerClasses, setPlayerClasses] = useState<PlayerClassConfig[]>(
         tournamentToEdit?.playerClasses || []
     );
+    const [basePriceStrategy, setBasePriceStrategy] = useState<BasePriceStrategy>(
+        tournamentToEdit?.basePriceStrategy || 'tournament-level'
+    );
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -498,11 +501,12 @@ const CreateTournamentForm: React.FC<{
             logoURL,
             usePlayerClasses,
             playerClasses: usePlayerClasses ? playerClasses : [],
+            basePriceStrategy,
             year: parseInt(name.split(' ').pop() || new Date().getFullYear().toString(), 10) || new Date().getFullYear()
         });
         if (!isEditing) {
            setName(''); setBudget(''); setSquadSize(''); setBasePrice(''); setLogoURL('');
-           setUsePlayerClasses(false); setPlayerClasses([]);
+           setUsePlayerClasses(false); setPlayerClasses([]); setBasePriceStrategy('tournament-level');
         }
     }
 
@@ -628,6 +632,57 @@ const CreateTournamentForm: React.FC<{
                         </div>
                     )}
                 </div>
+
+                {/* Base Price Strategy Selection - Only show when Player Classes enabled */}
+                {usePlayerClasses && playerClasses.length > 0 && (
+                    <div className="border-t border-neutral-700 pt-4">
+                        <label className="block text-sm font-medium text-neutral-300 mb-3">
+                            Base Price Strategy
+                        </label>
+                        <div className="space-y-2 bg-neutral-700/50 p-4 rounded-lg">
+                            <label className="flex items-start gap-3 cursor-pointer p-3 rounded border border-neutral-600 hover:bg-neutral-700/50 transition-colors">
+                                <input
+                                    type="radio"
+                                    name="basePriceStrategy"
+                                    value="tournament-level"
+                                    checked={basePriceStrategy === 'tournament-level'}
+                                    onChange={(e) => setBasePriceStrategy(e.target.value as BasePriceStrategy)}
+                                    className="mt-1 w-4 h-4 text-brand-primary focus:ring-brand-primary"
+                                />
+                                <div className="flex-1">
+                                    <span className="text-sm font-medium text-white">Tournament Level Base Price</span>
+                                    <p className="text-xs text-neutral-400 mt-1">
+                                        All players use the same base price ({parseInt(basePrice || '0').toLocaleString()}) regardless of their class.
+                                        Player classes are only used for visual categorization.
+                                    </p>
+                                </div>
+                            </label>
+
+                            <label className="flex items-start gap-3 cursor-pointer p-3 rounded border border-neutral-600 hover:bg-neutral-700/50 transition-colors">
+                                <input
+                                    type="radio"
+                                    name="basePriceStrategy"
+                                    value="player-class-based"
+                                    checked={basePriceStrategy === 'player-class-based'}
+                                    onChange={(e) => setBasePriceStrategy(e.target.value as BasePriceStrategy)}
+                                    className="mt-1 w-4 h-4 text-brand-primary focus:ring-brand-primary"
+                                />
+                                <div className="flex-1">
+                                    <span className="text-sm font-medium text-white">Player Class Based Pricing</span>
+                                    <p className="text-xs text-neutral-400 mt-1">
+                                        Each player class has its own base price. Tournament base price ({parseInt(basePrice || '0').toLocaleString()})
+                                        is used as fallback for classes without a specific price.
+                                    </p>
+                                    {basePriceStrategy === 'player-class-based' && (
+                                        <div className="mt-2 p-2 bg-yellow-900/30 border border-yellow-700 rounded text-xs text-yellow-200">
+                                            <strong>Important:</strong> Ensure all player classes above have base prices defined for this strategy to work effectively.
+                                        </div>
+                                    )}
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                )}
 
                 <div className="border-t border-neutral-700 pt-4 flex justify-end gap-3">
                     {isEditing && <button type="button" onClick={onCancelEdit} className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">Cancel</button>}

@@ -5,7 +5,7 @@ import { Player, Team, Tournament } from '@/types';
 import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { imageOptimizers } from '@/lib/imageOptimization';
 import ClassBadge from '@/components/shared/ClassBadge';
-import { getFormattedBasePrice } from '@/lib/playerClassUtils';
+import { getFormattedBasePrice, getClassBasePrice } from '@/lib/playerClassUtils';
 
 const formatCurrency = (amount: number) => amount.toLocaleString();
 
@@ -76,14 +76,14 @@ const CurrentAuctionPanel: React.FC<{
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
-        const base = tournament?.basePricePerPlayer || 0;
+        const base = getClassBasePrice(tournament, currentPlayer ?? null);
         const nextBid = auctionState.currentBid > 0 ? auctionState.currentBid + 1000 : base;
         setBidAmount(nextBid);
     }, [auctionState.currentBid, currentPlayer, tournament]);
 
     const handleQuickBid = async (increment: number) => {
         // If no bid yet, start from base price, otherwise add to current bid
-        const basePrice = tournament?.basePricePerPlayer || 0;
+        const basePrice = getClassBasePrice(tournament, currentPlayer ?? null);
         const startingPoint = auctionState.currentBid > 0 ? auctionState.currentBid : basePrice;
         const newAmount = startingPoint + increment;
 

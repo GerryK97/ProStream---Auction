@@ -47,8 +47,12 @@ export function getClassConfig(
 }
 
 /**
- * Get base price for a player based on their class
- * Falls back to tournament base price if no class-specific price
+ * Get base price for a player based on tournament's pricing strategy
+ *
+ * Strategy: 'tournament-level' - Always use tournament base price
+ * Strategy: 'player-class-based' - Use class base price if available
+ *
+ * Falls back to tournament base price if no class-specific price is defined
  */
 export function getClassBasePrice(
     tournament: Tournament | null,
@@ -56,14 +60,27 @@ export function getClassBasePrice(
 ): number {
     if (!tournament) return 0;
 
-    if (!player?.playerClass || !tournament.usePlayerClasses) {
+    // Strategy 1: Tournament Level (default for backward compatibility)
+    if (!tournament.basePriceStrategy ||
+        tournament.basePriceStrategy === 'tournament-level') {
         return tournament.basePricePerPlayer;
     }
 
-    const classConfig = getClassConfig(tournament, player.playerClass);
+    // Strategy 2: Player Class Based
+    if (tournament.basePriceStrategy === 'player-class-based') {
+        // Require player classes to be enabled
+        if (!player?.playerClass || !tournament.usePlayerClasses) {
+            return tournament.basePricePerPlayer;
+        }
 
-    // Use class-specific base price if available, otherwise fall back to tournament base
-    return classConfig?.basePrice ?? tournament.basePricePerPlayer;
+        const classConfig = getClassConfig(tournament, player.playerClass);
+
+        // Use class-specific base price if available, otherwise fall back to tournament base
+        return classConfig?.basePrice ?? tournament.basePricePerPlayer;
+    }
+
+    // Fallback
+    return tournament.basePricePerPlayer;
 }
 
 /**
