@@ -34,12 +34,205 @@ const overlayTypes: OverlayType[] = [
     {
         id: 'premium-player-card',
         name: 'Premium Player Card',
-        description: 'Stylish premium player card with gradient background, jersey number, and stats',
+        description: 'Stylish premium player card with gradient background, jersey number, and stats - fully customizable',
         route: '/overlays/premium-player-card',
-        tags: ['Player', 'Auction', 'Premium'],
-        defaultParams: { position: 'center' },
+        tags: ['Player', 'Auction', 'Premium', 'Customizable'],
+        defaultParams: {
+            // Position
+            position: 'center',
+            // Visibility
+            showPlayerImage: 'true',
+            showBackgroundText: 'true',
+            showJerseyNumber: 'true',
+            showDecorativeBadges: 'true',
+            showPlayerName: 'true',
+            showRoleLabel: 'true',
+            showStatsSection: 'true',
+            showMatches: 'true',
+            showScore: 'true',
+            showWickets: 'true',
+            // Colors
+            gradientStart: '#ff5411',
+            gradientEnd: '#ffcc00',
+            cardBackground: '#ffffff',
+            playerNameColor: '#1e293b',
+            statValueColor: '#1e293b',
+            statLabelColor: '#9ca3af',
+            jerseyBadgeGradientStart: '#ff5411',
+            jerseyBadgeGradientEnd: '#ffcc00',
+            decorativeBadgeColor: '#ffffff',
+            watermarkColor: '#ffffff',
+            // Layout
+            cardSize: 'medium',
+            borderRadius: 'large',
+            opacity: '100',
+            // Content
+            roleLabel: 'Player',
+            usePlayerNameAsWatermark: 'true',
+            backgroundTextLine1: '',
+            backgroundTextLine2: ''
+        },
         parameterSchema: {
-            position: { type: 'select', label: 'Position', options: ['center', 'left', 'right'] }
+            // === POSITION ===
+            position: {
+                type: 'select',
+                label: 'Position',
+                options: ['center', 'left', 'right'],
+                description: 'Overlay position on screen'
+            },
+
+            // === VISIBILITY CONTROLS ===
+            showPlayerImage: {
+                type: 'toggle',
+                label: 'Show Player Image',
+                description: 'Display player photo'
+            },
+            showBackgroundText: {
+                type: 'toggle',
+                label: 'Show Background Text',
+                description: 'Player name watermark behind image'
+            },
+            showJerseyNumber: {
+                type: 'toggle',
+                label: 'Show Jersey Number',
+                description: 'Display player number badge'
+            },
+            showDecorativeBadges: {
+                type: 'toggle',
+                label: 'Show Corner Badges',
+                description: 'White decorative circles at corners'
+            },
+            showPlayerName: {
+                type: 'toggle',
+                label: 'Show Player Name',
+                description: 'Display player name below image'
+            },
+            showRoleLabel: {
+                type: 'toggle',
+                label: 'Show Role Label',
+                description: 'Display role text (e.g., "Player")'
+            },
+            showStatsSection: {
+                type: 'toggle',
+                label: 'Show Stats Section',
+                description: 'Display entire statistics section'
+            },
+            showMatches: {
+                type: 'toggle',
+                label: 'Show Matches Stat',
+                description: 'Display matches played'
+            },
+            showScore: {
+                type: 'toggle',
+                label: 'Show Score Stat',
+                description: 'Display total score'
+            },
+            showWickets: {
+                type: 'toggle',
+                label: 'Show Wickets Stat',
+                description: 'Display total wickets'
+            },
+
+            // === BACKGROUND TEXT CUSTOMIZATION ===
+            usePlayerNameAsWatermark: {
+                type: 'toggle',
+                label: 'Use Player Name as Watermark',
+                description: 'Use player name or custom text for background'
+            },
+            backgroundTextLine1: {
+                type: 'text',
+                label: 'Background Text Line 1',
+                description: 'Custom watermark text (first line) - only if player name disabled',
+                placeholder: 'e.g., AUCTION'
+            },
+            backgroundTextLine2: {
+                type: 'text',
+                label: 'Background Text Line 2',
+                description: 'Custom watermark text (second line) - only if player name disabled',
+                placeholder: 'e.g., 2025'
+            },
+
+            // === COLOR CONTROLS ===
+            gradientStart: {
+                type: 'color',
+                label: 'Gradient Start Color',
+                description: 'Top gradient color for image background'
+            },
+            gradientEnd: {
+                type: 'color',
+                label: 'Gradient End Color',
+                description: 'Bottom gradient color for image background'
+            },
+            cardBackground: {
+                type: 'color',
+                label: 'Card Background',
+                description: 'Main card background color'
+            },
+            playerNameColor: {
+                type: 'color',
+                label: 'Player Name Color',
+                description: 'Color of player name text'
+            },
+            statValueColor: {
+                type: 'color',
+                label: 'Stat Values Color',
+                description: 'Color of statistics numbers'
+            },
+            statLabelColor: {
+                type: 'color',
+                label: 'Stat Labels Color',
+                description: 'Color of statistics labels'
+            },
+            jerseyBadgeGradientStart: {
+                type: 'color',
+                label: 'Jersey Badge Top Color',
+                description: 'Top gradient color for jersey number badge'
+            },
+            jerseyBadgeGradientEnd: {
+                type: 'color',
+                label: 'Jersey Badge Bottom Color',
+                description: 'Bottom gradient color for jersey number badge'
+            },
+            decorativeBadgeColor: {
+                type: 'color',
+                label: 'Corner Badges Color',
+                description: 'Color of decorative corner circles'
+            },
+            watermarkColor: {
+                type: 'color',
+                label: 'Watermark Text Color',
+                description: 'Color of background watermark text'
+            },
+
+            // === LAYOUT CONTROLS ===
+            cardSize: {
+                type: 'select',
+                label: 'Card Size',
+                options: ['small', 'medium', 'large'],
+                description: 'Overall card dimensions'
+            },
+            borderRadius: {
+                type: 'select',
+                label: 'Border Radius',
+                options: ['none', 'small', 'medium', 'large'],
+                description: 'Corner rounding style'
+            },
+            opacity: {
+                type: 'number',
+                label: 'Opacity (%)',
+                min: 0,
+                max: 100,
+                step: 5,
+                description: 'Card transparency (0=invisible, 100=solid)'
+            },
+
+            // === CONTENT CONTROLS ===
+            roleLabel: {
+                type: 'text',
+                label: 'Role Label Text',
+                description: 'Custom text for role label',
+                placeholder: 'e.g., Player, Star, Legend'
+            }
         },
         imageURL: 'https://placehold.co/400x450/ff5411/ffcc00?text=Premium+Card',
         dimensions: { width: 380, height: 650 }

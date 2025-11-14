@@ -4,15 +4,18 @@ import React from 'react';
 import ParameterSelect from './ParameterSelect';
 import ParameterToggle from './ParameterToggle';
 import ParameterNumber from './ParameterNumber';
+import ParameterColor from './ParameterColor';
+import ParameterText from './ParameterText';
 
 export interface ParameterConfig {
-    type: 'select' | 'toggle' | 'number';
+    type: 'select' | 'toggle' | 'number' | 'color' | 'text';
     label: string;
     description?: string;
     options?: string[]; // for select
     min?: number; // for number
     max?: number; // for number
     step?: number; // for number
+    placeholder?: string; // for text
 }
 
 interface ParameterEditorProps {
@@ -70,6 +73,29 @@ const ParameterEditor: React.FC<ParameterEditorProps> = ({
                         max={config.max}
                         step={config.step}
                         description={config.description}
+                    />
+                );
+
+            case 'color':
+                return (
+                    <ParameterColor
+                        key={key}
+                        label={config.label}
+                        value={value}
+                        onChange={(newValue) => onChange(key, newValue)}
+                        description={config.description}
+                    />
+                );
+
+            case 'text':
+                return (
+                    <ParameterText
+                        key={key}
+                        label={config.label}
+                        value={value}
+                        onChange={(newValue) => onChange(key, newValue)}
+                        description={config.description}
+                        placeholder={config.placeholder}
                     />
                 );
 
