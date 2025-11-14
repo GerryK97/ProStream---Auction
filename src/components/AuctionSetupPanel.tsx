@@ -464,6 +464,10 @@ const AuctionSetupPanel: React.FC = () => {
     const [tournamentTeams, setTournamentTeams] = useState<Team[]>([]);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [exportingPlayers, setExportingPlayers] = useState(false);
+    const [showClearPlayersConfirm, setShowClearPlayersConfirm] = useState(false);
+    const [showClearTeamsConfirm, setShowClearTeamsConfirm] = useState(false);
+    const [clearingPlayers, setClearingPlayers] = useState(false);
+    const [clearingTeams, setClearingTeams] = useState(false);
 
     // Handle player removal from tournament (delete tournament instance)
     const handleRemovePlayer = async (playerId: string) => {
@@ -522,6 +526,62 @@ const AuctionSetupPanel: React.FC = () => {
             alert(`Failed to export players: ${error.message}`);
         } finally {
             setExportingPlayers(false);
+        }
+    };
+
+    // Clear all tournament players
+    const handleClearAllPlayers = async () => {
+        if (!selectedTournament) return;
+
+        setClearingPlayers(true);
+        try {
+            const response = await fetch('/api/players/bulk-delete', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tournamentId: selectedTournament._id }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to clear players');
+            }
+
+            alert(`Successfully cleared ${data.deletedCount} player(s) from the tournament`);
+            setShowClearPlayersConfirm(false);
+            setRefreshTrigger(prev => prev + 1);
+        } catch (error: any) {
+            alert(`Failed to clear players: ${error.message}`);
+        } finally {
+            setClearingPlayers(false);
+        }
+    };
+
+    // Clear all tournament teams
+    const handleClearAllTeams = async () => {
+        if (!selectedTournament) return;
+
+        setClearingTeams(true);
+        try {
+            const response = await fetch('/api/teams/bulk-delete', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tournamentId: selectedTournament._id }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to clear teams');
+            }
+
+            alert(`Successfully cleared ${data.deletedCount} team(s) from the tournament`);
+            setShowClearTeamsConfirm(false);
+            setRefreshTrigger(prev => prev + 1);
+        } catch (error: any) {
+            alert(`Failed to clear teams: ${error.message}`);
+        } finally {
+            setClearingTeams(false);
         }
     };
 
@@ -927,6 +987,13 @@ const AuctionSetupPanel: React.FC = () => {
                                 Bulk Add
                              </button>
                              <button onClick={() => setAddPlayerModalOpen(true)} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors flex items-center gap-1"><PlusIcon className="h-4 w-4" /> Add Players</button>
+                             <button
+                                onClick={() => setShowClearPlayersConfirm(true)}
+                                disabled={tournamentPlayers.length === 0}
+                                className="bg-red-600 hover:bg-red-700 disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"
+                             >
+                                Clear All
+                             </button>
                         </div>
                     </div>
                     <ul className="space-y-3 h-96 overflow-y-auto pr-2">
@@ -959,7 +1026,16 @@ const AuctionSetupPanel: React.FC = () => {
                  <div className="bg-neutral-800 border border-neutral-700 rounded-lg p-6">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-xl font-bold">Registered Teams</h3>
-                        <button onClick={() => setAddTeamModalOpen(true)} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors flex items-center gap-1"><PlusIcon className="h-4 w-4" /> Add Teams</button>
+                        <div className="flex gap-2">
+                            <button onClick={() => setAddTeamModalOpen(true)} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors flex items-center gap-1"><PlusIcon className="h-4 w-4" /> Add Teams</button>
+                            <button
+                                onClick={() => setShowClearTeamsConfirm(true)}
+                                disabled={totalTeams === 0}
+                                className="bg-red-600 hover:bg-red-700 disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"
+                            >
+                                Clear All
+                            </button>
+                        </div>
                     </div>
                      <ul className="space-y-3 h-96 overflow-y-auto pr-2">
                         {totalTeams === 0 ? (
@@ -1059,6 +1135,56 @@ const AuctionSetupPanel: React.FC = () => {
                         // Navigate to Management Dashboard to create new master teams
                     }}
                 />
+            </Modal>
+
+            <Modal isOpen={showClearPlayersConfirm} onClose={() => setShowClearPlayersConfirm(false)} title="Clear All Tournament Players" size="sm">
+                <div className="space-y-4">
+                    <div className="bg-red-900/30 border border-red-700 rounded-lg p-4">
+                        <p className="text-red-200 font-semibold mb-2">Warning: This action cannot be undone</p>
+                        <p className="text-red-100 text-sm">You are about to delete all {tournamentPlayers.length} registered players from this tournament.</p>
+                    </div>
+                    <p className="text-neutral-300 text-sm">Are you sure you want to clear all players?</p>
+                    <div className="flex gap-3 justify-end pt-4">
+                        <button
+                            onClick={() => setShowClearPlayersConfirm(false)}
+                            className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleClearAllPlayers}
+                            disabled={clearingPlayers}
+                            className="bg-red-600 hover:bg-red-700 disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                        >
+                            {clearingPlayers ? 'Clearing...' : 'Clear All Players'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal isOpen={showClearTeamsConfirm} onClose={() => setShowClearTeamsConfirm(false)} title="Clear All Tournament Teams" size="sm">
+                <div className="space-y-4">
+                    <div className="bg-red-900/30 border border-red-700 rounded-lg p-4">
+                        <p className="text-red-200 font-semibold mb-2">Warning: This action cannot be undone</p>
+                        <p className="text-red-100 text-sm">You are about to delete all {tournamentTeams.length} registered teams from this tournament.</p>
+                    </div>
+                    <p className="text-neutral-300 text-sm">Are you sure you want to clear all teams?</p>
+                    <div className="flex gap-3 justify-end pt-4">
+                        <button
+                            onClick={() => setShowClearTeamsConfirm(false)}
+                            className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleClearAllTeams}
+                            disabled={clearingTeams}
+                            className="bg-red-600 hover:bg-red-700 disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                        >
+                            {clearingTeams ? 'Clearing...' : 'Clear All Teams'}
+                        </button>
+                    </div>
+                </div>
             </Modal>
         </div>
     );

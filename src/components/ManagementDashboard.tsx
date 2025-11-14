@@ -26,6 +26,12 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
     const [editingPlayer, setEditingPlayer] = useState<MasterPlayer | null>(null);
     const [playerToDelete, setPlayerToDelete] = useState<MasterPlayer | null>(null);
 
+    // Clear All confirmation modals
+    const [showClearPlayersConfirm, setShowClearPlayersConfirm] = useState(false);
+    const [showClearTeamsConfirm, setShowClearTeamsConfirm] = useState(false);
+    const [clearConfirmText, setClearConfirmText] = useState('');
+    const [clearingMasterData, setClearingMasterData] = useState(false);
+
     // View-based data fetching - only fetch data needed for the active view
     // This reduces network requests by 33-67% depending on the current view
     useEffect(() => {
@@ -97,10 +103,64 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
         setPlayerToDelete(null);
     }, [view]);
 
+    // Clear all master players
+    const handleClearAllMasterPlayers = async () => {
+        setClearingMasterData(true);
+        try {
+            const response = await fetch('/api/master-players/bulk-delete', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ confirm: clearConfirmText }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to clear master players');
+            }
+
+            alert(`Successfully cleared ${data.deletedMasterPlayers} master player(s) and their ${data.deletedTournamentInstances} tournament instance(s)`);
+            setShowClearPlayersConfirm(false);
+            setClearConfirmText('');
+            setRefreshTrigger(prev => prev + 1);
+        } catch (error: any) {
+            alert(`Failed to clear master players: ${error.message}`);
+        } finally {
+            setClearingMasterData(false);
+        }
+    };
+
+    // Clear all master teams
+    const handleClearAllMasterTeams = async () => {
+        setClearingMasterData(true);
+        try {
+            const response = await fetch('/api/master-teams/bulk-delete', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ confirm: clearConfirmText }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to clear master teams');
+            }
+
+            alert(`Successfully cleared ${data.deletedMasterTeams} master team(s) and their ${data.deletedTournamentInstances} tournament instance(s)`);
+            setShowClearTeamsConfirm(false);
+            setClearConfirmText('');
+            setRefreshTrigger(prev => prev + 1);
+        } catch (error: any) {
+            alert(`Failed to clear master teams: ${error.message}`);
+        } finally {
+            setClearingMasterData(false);
+        }
+    };
+
     if (!tournaments) {
         return <div className="text-center p-8">No tournament data available.</div>;
     }
-    
+
     const renderView = () => {
         switch (view) {
             case 'tournaments':
@@ -114,6 +174,7 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
                     editingTeam={editingTeam}
                     setEditingTeam={setEditingTeam}
                     onRefresh={() => setRefreshTrigger(prev => prev + 1)}
+                    onClearAll={() => setShowClearTeamsConfirm(true)}
                 />;
             case 'players':
                 return <PlayersSection
@@ -121,6 +182,7 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
                             onAddPlayer={() => setAddPlayerModalOpen(true)}
                             onEditPlayer={setEditingPlayer}
                             onDeletePlayer={setPlayerToDelete}
+                            onClearAll={() => setShowClearPlayersConfirm(true)}
                         />;
             default:
                 return <div className="text-center p-8 text-neutral-500">This section is under construction.</div>;
@@ -198,6 +260,70 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
                         </div>
                     </div>
                 )}
+            </Modal>
+
+            <Modal isOpen={showClearPlayersConfirm} onClose={() => { setShowClearPlayersConfirm(false); setClearConfirmText(''); }} title="Clear All Master Players" size="sm">
+                <div className="space-y-4">
+                    <div className="bg-red-900/30 border border-red-700 rounded-lg p-4">
+                        <p className="text-red-200 font-semibold mb-2">Warning: This action affects multiple tournaments</p>
+                        <p className="text-red-100 text-sm">This will delete all {masterPlayers.length} master players and remove them from all tournaments. This action cannot be undone.</p>
+                    </div>
+                    <p className="text-neutral-300 text-sm">To proceed, type <strong>DELETE ALL MASTER PLAYERS</strong> in the field below:</p>
+                    <input
+                        type="text"
+                        value={clearConfirmText}
+                        onChange={(e) => setClearConfirmText(e.target.value)}
+                        placeholder="Type confirmation text"
+                        className="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-4 py-2 text-white placeholder-neutral-400 focus:outline-none focus:border-red-500"
+                    />
+                    <div className="flex gap-3 justify-end pt-4">
+                        <button
+                            onClick={() => { setShowClearPlayersConfirm(false); setClearConfirmText(''); }}
+                            className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleClearAllMasterPlayers}
+                            disabled={clearingMasterData || clearConfirmText !== 'DELETE ALL MASTER PLAYERS'}
+                            className="bg-red-600 hover:bg-red-700 disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                        >
+                            {clearingMasterData ? 'Clearing...' : 'Clear All Players'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal isOpen={showClearTeamsConfirm} onClose={() => { setShowClearTeamsConfirm(false); setClearConfirmText(''); }} title="Clear All Master Teams" size="sm">
+                <div className="space-y-4">
+                    <div className="bg-red-900/30 border border-red-700 rounded-lg p-4">
+                        <p className="text-red-200 font-semibold mb-2">Warning: This action affects multiple tournaments</p>
+                        <p className="text-red-100 text-sm">This will delete all {masterTeams.length} master teams and remove them from all tournaments. This action cannot be undone.</p>
+                    </div>
+                    <p className="text-neutral-300 text-sm">To proceed, type <strong>DELETE ALL MASTER TEAMS</strong> in the field below:</p>
+                    <input
+                        type="text"
+                        value={clearConfirmText}
+                        onChange={(e) => setClearConfirmText(e.target.value)}
+                        placeholder="Type confirmation text"
+                        className="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-4 py-2 text-white placeholder-neutral-400 focus:outline-none focus:border-red-500"
+                    />
+                    <div className="flex gap-3 justify-end pt-4">
+                        <button
+                            onClick={() => { setShowClearTeamsConfirm(false); setClearConfirmText(''); }}
+                            className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleClearAllMasterTeams}
+                            disabled={clearingMasterData || clearConfirmText !== 'DELETE ALL MASTER TEAMS'}
+                            className="bg-red-600 hover:bg-red-700 disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                        >
+                            {clearingMasterData ? 'Clearing...' : 'Clear All Teams'}
+                        </button>
+                    </div>
+                </div>
             </Modal>
         </div>
     );
@@ -536,7 +662,8 @@ const TeamManagementPanel: React.FC<{
     editingTeam: MasterTeam | null;
     setEditingTeam: (team: MasterTeam | null) => void;
     onRefresh: () => void;
-}> = ({ teams, editingTeam, setEditingTeam, onRefresh }) => {
+    onClearAll?: () => void;
+}> = ({ teams, editingTeam, setEditingTeam, onRefresh, onClearAll }) => {
     const [teamToDelete, setTeamToDelete] = useState<MasterTeam | null>(null);
 
     const handleConfirmDelete = async () => {
@@ -592,7 +719,16 @@ const TeamManagementPanel: React.FC<{
             </div>
             <div className="lg:col-span-3">
                 <div className="bg-neutral-800 rounded-lg p-6 border border-neutral-700">
-                    <h3 className="text-xl font-bold mb-4">Master Team List</h3>
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-xl font-bold">Master Team List</h3>
+                        <button
+                            onClick={onClearAll}
+                            disabled={teams.length === 0}
+                            className="bg-red-600 hover:bg-red-700 disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"
+                        >
+                            Clear All
+                        </button>
+                    </div>
                     <ul className="space-y-2 max-h-[calc(100vh-20rem)] overflow-y-auto pr-2">
                         {teams.map(team => (
                              <li key={team._id} className="bg-neutral-900/50 p-3 rounded-lg flex items-center justify-between gap-4 hover:bg-neutral-700/50 transition-colors">
@@ -694,7 +830,7 @@ const TeamCreationForm: React.FC<{
     );
 };
 
-const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => void; onEditPlayer: (player: MasterPlayer) => void; onDeletePlayer: (player: MasterPlayer) => void; }> = ({ players, onAddPlayer, onEditPlayer, onDeletePlayer }) => {
+const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => void; onEditPlayer: (player: MasterPlayer) => void; onDeletePlayer: (player: MasterPlayer) => void; onClearAll: () => void; }> = ({ players, onAddPlayer, onEditPlayer, onDeletePlayer, onClearAll }) => {
     const [showBulkUpload, setShowBulkUpload] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
 
@@ -714,6 +850,13 @@ const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => voi
                     <button onClick={onAddPlayer} className="flex items-center gap-2 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
                         <PlusIcon className="h-5 w-5" />
                         Add Player
+                    </button>
+                    <button
+                        onClick={onClearAll}
+                        disabled={players.length === 0}
+                        className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200"
+                    >
+                        Clear All
                     </button>
                 </div>
             </SectionHeader>
