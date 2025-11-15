@@ -203,7 +203,7 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
                                                     value={cls.name}
                                                     style={{ color: cls.color }}
                                                 >
-                                                    {cls.icon} {cls.name} {cls.basePrice ? `(${cls.basePrice.toLocaleString()})` : ''}
+                                                    {cls.code} - {cls.icon} {cls.name} {cls.basePrice ? `(${cls.basePrice.toLocaleString()})` : ''}
                                                 </option>
                                             ))}
                                         </select>

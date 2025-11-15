@@ -1,6 +1,7 @@
 export type BasePriceStrategy = 'tournament-level' | 'player-class-based';
 
 export interface PlayerClassConfig {
+  code: string;           // Short code (user-defined, e.g., "PT", "AR-A", "BATB")
   name: string;           // e.g., "Platinum", "Gold", "Silver", "Bronze"
   basePrice?: number;     // Optional class-specific base price
   color: string;          // Hex color for badge display (e.g., "#FFD700")

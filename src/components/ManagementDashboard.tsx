@@ -493,6 +493,25 @@ const CreateTournamentForm: React.FC<{
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Validate player classes if enabled
+        if (usePlayerClasses && playerClasses.length > 0) {
+            // Check for empty codes
+            const hasEmptyCode = playerClasses.some(cls => !cls.code || cls.code.trim() === '');
+            if (hasEmptyCode) {
+                alert('Error: All player classes must have a code. Please fill in all code fields.');
+                return;
+            }
+
+            // Check for duplicate codes
+            const codes = playerClasses.map(cls => cls.code.toUpperCase());
+            const hasDuplicates = codes.some((code, index) => codes.indexOf(code) !== index);
+            if (hasDuplicates) {
+                alert('Error: Duplicate player class codes detected. Each class must have a unique code.');
+                return;
+            }
+        }
+
         onSave({
             name,
             budgetPerTeam: parseInt(budget, 10),
@@ -555,74 +574,113 @@ const CreateTournamentForm: React.FC<{
                     {usePlayerClasses && (
                         <div className="space-y-3 bg-neutral-700/50 p-4 rounded-lg">
                             <p className="text-xs text-neutral-400 mb-2">Configure player classes for this tournament:</p>
-                            {playerClasses.map((cls, index) => (
-                                <div key={index} className="flex items-start gap-2 bg-neutral-800 p-3 rounded border border-neutral-600">
-                                    <div className="flex-1 grid grid-cols-2 gap-2">
-                                        <input
-                                            type="text"
-                                            placeholder="Class Name"
-                                            value={cls.name}
-                                            onChange={(e) => {
-                                                const updated = [...playerClasses];
-                                                updated[index].name = e.target.value;
-                                                setPlayerClasses(updated);
-                                            }}
-                                            className="bg-neutral-700 border-neutral-600 rounded p-2 text-sm"
-                                            required
-                                        />
-                                        <input
-                                            type="number"
-                                            placeholder="Base Price (optional)"
-                                            value={cls.basePrice || ''}
-                                            onChange={(e) => {
-                                                const updated = [...playerClasses];
-                                                updated[index].basePrice = e.target.value ? parseInt(e.target.value) : undefined;
-                                                setPlayerClasses(updated);
-                                            }}
-                                            className="bg-neutral-700 border-neutral-600 rounded p-2 text-sm"
-                                        />
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                type="color"
-                                                value={cls.color}
-                                                onChange={(e) => {
-                                                    const updated = [...playerClasses];
-                                                    updated[index].color = e.target.value;
-                                                    setPlayerClasses(updated);
-                                                }}
-                                                className="w-10 h-8 rounded cursor-pointer"
-                                            />
-                                            <span className="text-xs text-neutral-400">Color</span>
+                            {playerClasses.map((cls, index) => {
+                                // Check for duplicate codes
+                                const isDuplicateCode = playerClasses.some((c, i) =>
+                                    i !== index && c.code && cls.code && c.code.toUpperCase() === cls.code.toUpperCase()
+                                );
+                                const isCodeEmpty = !cls.code || cls.code.trim() === '';
+
+                                return (
+                                    <div key={index} className="flex items-start gap-2 bg-neutral-800 p-3 rounded border border-neutral-600">
+                                        <div className="flex-1 space-y-2">
+                                            {/* First Row: Code and Name */}
+                                            <div className="grid grid-cols-[120px_1fr] gap-2">
+                                                <div>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Code *"
+                                                        value={cls.code || ''}
+                                                        onChange={(e) => {
+                                                            const updated = [...playerClasses];
+                                                            updated[index].code = e.target.value.toUpperCase();
+                                                            setPlayerClasses(updated);
+                                                        }}
+                                                        className={`w-full bg-neutral-700 border rounded p-2 text-sm font-mono ${
+                                                            isCodeEmpty || isDuplicateCode
+                                                                ? 'border-red-500 focus:border-red-400'
+                                                                : 'border-neutral-600 focus:border-blue-500'
+                                                        }`}
+                                                        maxLength={10}
+                                                        required
+                                                    />
+                                                    {(isCodeEmpty || isDuplicateCode) && (
+                                                        <p className="text-xs text-red-400 mt-1">
+                                                            {isCodeEmpty ? 'Required' : 'Duplicate code'}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Class Name *"
+                                                    value={cls.name}
+                                                    onChange={(e) => {
+                                                        const updated = [...playerClasses];
+                                                        updated[index].name = e.target.value;
+                                                        setPlayerClasses(updated);
+                                                    }}
+                                                    className="bg-neutral-700 border-neutral-600 rounded p-2 text-sm"
+                                                    required
+                                                />
+                                            </div>
+                                            {/* Second Row: Base Price, Color, Icon */}
+                                            <div className="grid grid-cols-[1fr_auto_100px] gap-2">
+                                                <input
+                                                    type="number"
+                                                    placeholder="Base Price (optional)"
+                                                    value={cls.basePrice || ''}
+                                                    onChange={(e) => {
+                                                        const updated = [...playerClasses];
+                                                        updated[index].basePrice = e.target.value ? parseInt(e.target.value) : undefined;
+                                                        setPlayerClasses(updated);
+                                                    }}
+                                                    className="bg-neutral-700 border-neutral-600 rounded p-2 text-sm"
+                                                />
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="color"
+                                                        value={cls.color}
+                                                        onChange={(e) => {
+                                                            const updated = [...playerClasses];
+                                                            updated[index].color = e.target.value;
+                                                            setPlayerClasses(updated);
+                                                        }}
+                                                        className="w-10 h-8 rounded cursor-pointer"
+                                                        title="Color"
+                                                    />
+                                                    <span className="text-xs text-neutral-400">Color</span>
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Icon"
+                                                    value={cls.icon || ''}
+                                                    onChange={(e) => {
+                                                        const updated = [...playerClasses];
+                                                        updated[index].icon = e.target.value;
+                                                        setPlayerClasses(updated);
+                                                    }}
+                                                    className="bg-neutral-700 border-neutral-600 rounded p-2 text-sm"
+                                                    maxLength={2}
+                                                />
+                                            </div>
                                         </div>
-                                        <input
-                                            type="text"
-                                            placeholder="Icon (emoji)"
-                                            value={cls.icon || ''}
-                                            onChange={(e) => {
-                                                const updated = [...playerClasses];
-                                                updated[index].icon = e.target.value;
-                                                setPlayerClasses(updated);
-                                            }}
-                                            className="bg-neutral-700 border-neutral-600 rounded p-2 text-sm"
-                                            maxLength={2}
-                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setPlayerClasses(playerClasses.filter((_, i) => i !== index))}
+                                            className="text-red-400 hover:text-red-300 p-2"
+                                            title="Remove class"
+                                        >
+                                            ×
+                                        </button>
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => setPlayerClasses(playerClasses.filter((_, i) => i !== index))}
-                                        className="text-red-400 hover:text-red-300 p-2"
-                                        title="Remove class"
-                                    >
-                                        ×
-                                    </button>
-                                </div>
-                            ))}
+                                );
+                            })}
                             <button
                                 type="button"
                                 onClick={() => {
                                     setPlayerClasses([
                                         ...playerClasses,
-                                        { name: '', color: '#3B82F6', order: playerClasses.length + 1 }
+                                        { code: '', name: '', color: '#3B82F6', order: playerClasses.length + 1 }
                                     ]);
                                 }}
                                 className="w-full text-sm bg-neutral-700 hover:bg-neutral-600 text-white py-2 rounded transition-colors"
