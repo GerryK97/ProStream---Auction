@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "migrate:player-class-codes": "ts-node --compiler-options '{\"module\":\"commonjs\"}' src/scripts/migratePlayerClassCodes.ts"
   },
   "dependencies": {
     "@google/genai": "^1.28.0",

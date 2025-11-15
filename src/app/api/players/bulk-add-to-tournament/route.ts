@@ -31,64 +31,64 @@ interface ImportResult {
 }
 
 /**
- * Map short codes to full player class names
- * Short codes are case-insensitive and reduce typo errors during bulk import
- *
- * Common short codes:
- * - P, Plat, Platinum -> Platinum
- * - G, Gold -> Gold
- * - S, Sil, Silver -> Silver
- * - B, Bro, Bronze -> Bronze
- * - D, Dia, Diamond -> Diamond
- * - E, Elite -> Elite
- * - Pr, Prem, Premium -> Premium
- * - St, Std, Standard -> Standard
+ * Map short codes or full names to player class names
+ * Supports:
+ * - Exact class name match (case-insensitive)
+ * - Official short code from tournament config (e.g., "PT" -> "Platinum")
+ * - Legacy short codes for backward compatibility
  */
-function resolvePlayerClassShortCode(input: string, availableClasses: string[]): string | null {
+function resolvePlayerClassShortCode(
+  input: string,
+  tournament: Tournament
+): string | null {
   const trimmedInput = input.trim();
   const normalizedInput = trimmedInput.toLowerCase();
 
-  // First, check for exact match (case-insensitive)
-  const exactMatch = availableClasses.find(c => c.toLowerCase() === normalizedInput);
-  if (exactMatch) {
-    return exactMatch;
+  // Get available classes from tournament
+  const playerClasses = tournament.playerClasses || [];
+
+  // First, check for exact class name match (case-insensitive)
+  const exactNameMatch = playerClasses.find(
+    c => c.name.toLowerCase() === normalizedInput
+  );
+  if (exactNameMatch) {
+    return exactNameMatch.name;
   }
 
-  // Define short code mappings
-  // Each entry maps: short code (lowercase) -> full class name (exact case)
-  const shortCodeMap: Record<string, string[]> = {
+  // Second, check for official short code match (case-insensitive)
+  const codeMatch = playerClasses.find(
+    c => c.code && c.code.toLowerCase() === normalizedInput
+  );
+  if (codeMatch) {
+    return codeMatch.name;
+  }
+
+  // Third, legacy short code support for backward compatibility
+  // Only used if no official code matches
+  const legacyShortCodeMap: Record<string, string[]> = {
     'p': ['Platinum', 'Premium'],
     'plat': ['Platinum'],
-    'platinum': ['Platinum'],
     'prem': ['Premium'],
-    'premium': ['Premium'],
     'pr': ['Premium'],
     'g': ['Gold'],
-    'gold': ['Gold'],
     's': ['Silver', 'Standard'],
     'sil': ['Silver'],
-    'silver': ['Silver'],
     'std': ['Standard'],
-    'standard': ['Standard'],
     'st': ['Standard'],
     'b': ['Bronze'],
     'bro': ['Bronze'],
-    'bronze': ['Bronze'],
     'd': ['Diamond'],
     'dia': ['Diamond'],
-    'diamond': ['Diamond'],
     'e': ['Elite'],
-    'elite': ['Elite'],
   };
 
-  // Try to find a match using short codes
-  const possibleClasses = shortCodeMap[normalizedInput] || [];
-
-  // Find which of the possible classes actually exists in available classes
+  const possibleClasses = legacyShortCodeMap[normalizedInput] || [];
   for (const className of possibleClasses) {
-    const match = availableClasses.find(c => c.toLowerCase() === className.toLowerCase());
+    const match = playerClasses.find(
+      c => c.name.toLowerCase() === className.toLowerCase()
+    );
     if (match) {
-      return match;
+      return match.name;
     }
   }
 
@@ -140,6 +140,11 @@ export async function POST(request: NextRequest) {
     const tournamentClasses = tournament.usePlayerClasses && tournament.playerClasses
       ? tournament.playerClasses.map((c: any) => c.name)
       : [];
+
+    // Get tournament's player class codes for display in error messages
+    const classCodesDisplay = tournament.usePlayerClasses && tournament.playerClasses
+      ? tournament.playerClasses.map((c: any) => `${c.code} (${c.name})`).join(', ')
+      : '';
 
     // Parse Excel file
     const arrayBuffer = await file.arrayBuffer();
@@ -206,13 +211,13 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Try to resolve short code to full class name
-        const resolvedClass = resolvePlayerClassShortCode(playerClass, tournamentClasses);
+        // Try to resolve code or name to full class name
+        const resolvedClass = resolvePlayerClassShortCode(playerClass, tournament);
 
         if (!resolvedClass) {
           result.errors.push({
             row: rowNumber,
-            error: `Invalid Player Class '${playerClass}'. Available: ${tournamentClasses.join(', ')} (or use short codes: P, G, S, B, etc.)`,
+            error: `Invalid Player Class '${playerClass}'. Available: ${classCodesDisplay || tournamentClasses.join(', ')}`,
             player: playerName
           });
           result.failed++;

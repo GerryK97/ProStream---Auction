@@ -19,6 +19,14 @@ const tournamentSchema = new Schema<Tournament>(
     playerClasses: {
       type: [
         {
+          code: {
+            type: String,
+            required: true,
+            trim: true,
+            uppercase: true,
+            minlength: 1,
+            maxlength: 10,
+          },
           name: { type: String, required: true },
           basePrice: { type: Number },
           color: { type: String, required: true },

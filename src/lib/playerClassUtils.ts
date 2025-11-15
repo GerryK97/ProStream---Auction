@@ -6,24 +6,28 @@ import { Tournament, Player, PlayerClassConfig } from '@/types';
 export function getDefaultClasses(): PlayerClassConfig[] {
     return [
         {
+            code: 'PT',
             name: 'Platinum',
             color: '#E5E4E2',
             icon: '💎',
             order: 1,
         },
         {
+            code: 'GD',
             name: 'Gold',
             color: '#FFD700',
             icon: '🏆',
             order: 2,
         },
         {
+            code: 'SV',
             name: 'Silver',
             color: '#C0C0C0',
             icon: '🥈',
             order: 3,
         },
         {
+            code: 'BZ',
             name: 'Bronze',
             color: '#CD7F32',
             icon: '🥉',
