@@ -165,10 +165,16 @@ export async function GET(request: NextRequest) {
         { 'Step': 3, 'Instruction': `Select Player Class from dropdown: ${playerClasses.join(', ')}` }
       );
       instructions.push(
-        { 'Step': 4, 'Instruction': 'Player Class MUST match tournament\'s configured classes' }
+        { 'Step': 4, 'Instruction': 'TIP: You can use SHORT CODES to reduce typos! (e.g., P=Platinum, G=Gold, S=Silver, B=Bronze, E=Elite, Pr=Premium, St=Standard)' }
       );
       instructions.push(
-        { 'Step': 5, 'Instruction': 'Save the file and upload it back to the application' }
+        { 'Step': 5, 'Instruction': 'Short codes are case-insensitive and automatically resolve to full class names' }
+      );
+      instructions.push(
+        { 'Step': 6, 'Instruction': 'Examples: "P" or "p" or "Plat" -> Platinum, "G" or "g" -> Gold, "S" or "Sil" -> Silver' }
+      );
+      instructions.push(
+        { 'Step': 7, 'Instruction': 'Save the file and upload it back to the application' }
       );
     } else {
       instructions.push(
@@ -189,6 +195,12 @@ export async function GET(request: NextRequest) {
     if (playerClasses.length > 0) {
       instructions.push(
         { 'Step': 'Classes', 'Instruction': `Configured Classes: ${playerClasses.join(', ')}` }
+      );
+      instructions.push(
+        { 'Step': 'Short Codes', 'Instruction': 'Available: P/Plat (Platinum), Pr/Prem (Premium), G (Gold), S/Sil (Silver), St/Std (Standard), B/Bro (Bronze), D/Dia (Diamond), E (Elite)' }
+      );
+      instructions.push(
+        { 'Step': 'Tip', 'Instruction': 'Using short codes like "P" instead of "Platinum" reduces typing errors and speeds up data entry!' }
       );
     }
 
