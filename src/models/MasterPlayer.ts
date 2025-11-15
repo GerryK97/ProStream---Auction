@@ -16,6 +16,7 @@ const masterPlayerSchema = new Schema<MasterPlayer>(
     name: { type: String, required: true },
     position: { type: String, required: true },
     currentClub: { type: String, required: true },
+    shortCode: { type: String, required: false },
     photoURL: { type: String, required: false },
     careerStats: { type: playerStatsSchema, required: false },
     suggestedClass: { type: String, required: false },

@@ -211,7 +211,7 @@ export const masterPlayerDB = {
       .sort({ name: 1 })
       .skip(skip)
       .limit(limit)
-      .select('_id name position currentClub photoURL careerStats suggestedClass')
+      .select('_id name position currentClub shortCode photoURL careerStats suggestedClass')
       .lean() as any;
   },
 
@@ -255,6 +255,7 @@ export const masterPlayerDB = {
     if (data.name) updateFields.name = data.name;
     if (data.position) updateFields.position = data.position;
     if (data.currentClub) updateFields.currentClub = data.currentClub;
+    if (data.shortCode !== undefined) updateFields.shortCode = data.shortCode;
     if (data.photoURL !== undefined) {
       updateFields.photoURL = data.photoURL; // Same field name in both schemas
     }
@@ -467,6 +468,7 @@ export const playerDB = {
         name: masterPlayer.name,
         position: masterPlayer.position,
         currentClub: masterPlayer.currentClub,
+        shortCode: masterPlayer.shortCode,
         photoURL: masterPlayer.photoURL, // Same field name as master
         // Copy career stats from master player
         stats: masterPlayer.careerStats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 },

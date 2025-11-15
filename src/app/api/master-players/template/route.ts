@@ -9,6 +9,7 @@ export async function GET() {
         'Name': 'Virat Kohli',
         'Position': 'Batsman',
         'Current Club': 'Royal Challengers Bangalore',
+        'Short Code': 'VK',
         'Photo URL': 'https://example.com/virat.jpg',
         'Matches Played': 223,
         'Total Score': 7263,
@@ -19,6 +20,7 @@ export async function GET() {
         'Name': 'Jasprit Bumrah',
         'Position': 'Bowler',
         'Current Club': 'Mumbai Indians',
+        'Short Code': 'JB',
         'Photo URL': '',
         'Matches Played': 120,
         'Total Score': 56,
@@ -29,6 +31,7 @@ export async function GET() {
         'Name': 'Ravindra Jadeja',
         'Position': 'All-rounder',
         'Current Club': 'Chennai Super Kings',
+        'Short Code': 'RJ',
         'Photo URL': '',
         'Matches Played': 210,
         'Total Score': 2500,
@@ -46,6 +49,7 @@ export async function GET() {
       { wch: 20 }, // Name
       { wch: 15 }, // Position
       { wch: 30 }, // Current Club
+      { wch: 15 }, // Short Code
       { wch: 40 }, // Photo URL
       { wch: 15 }, // Matches Played
       { wch: 15 }, // Total Score
@@ -62,6 +66,7 @@ export async function GET() {
       { 'Field': 'Name', 'Required': 'YES', 'Description': 'Full name of the player' },
       { 'Field': 'Position', 'Required': 'YES', 'Description': 'Player position: Batsman | Bowler | All-rounder | Wicket-keeper' },
       { 'Field': 'Current Club', 'Required': 'YES', 'Description': 'Current IPL or cricket team' },
+      { 'Field': 'Short Code', 'Required': 'NO', 'Description': 'Short code for the player (e.g., VK, JB, RJ)' },
       { 'Field': 'Photo URL', 'Required': 'NO', 'Description': 'URL to player photo (optional)' },
       { 'Field': 'Matches Played', 'Required': 'NO', 'Description': 'Total career matches played (optional)' },
       { 'Field': 'Total Score', 'Required': 'NO', 'Description': 'Total career runs scored (optional)' },

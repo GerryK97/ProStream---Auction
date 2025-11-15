@@ -37,6 +37,7 @@ export interface MasterPlayer {
   name: string;
   position: string;        // e.g., "Batsman", "Bowler", "All-rounder", "Wicket-keeper"
   currentClub: string;     // e.g., "Mumbai Indians"
+  shortCode?: string;      // Short code for player
   photoURL?: string;
   careerStats?: PlayerStats; // Career-wide stats
   suggestedClass?: string; // Suggested player class (used as default when adding to tournament)
@@ -74,6 +75,7 @@ export interface Player {
   name: string;
   position?: string;
   currentClub?: string;
+  shortCode?: string;           // Short code (same field name as MasterPlayer)
   photoURL?: string;            // Player photo (same field name as MasterPlayer)
   // Tournament-specific data
   stats: PlayerStats;           // Tournament stats (separate from career)

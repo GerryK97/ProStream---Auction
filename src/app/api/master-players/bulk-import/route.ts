@@ -7,6 +7,7 @@ interface ExcelRow {
   Name?: string;
   Position?: string;
   'Current Club'?: string;
+  'Short Code'?: string;
   'Photo URL'?: string;
   'Matches Played'?: number;
   'Total Score'?: number;
@@ -135,6 +136,10 @@ export async function POST(request: NextRequest) {
         position: row.Position!.trim(),
         currentClub: row['Current Club']!.trim(),
       };
+
+      if (row['Short Code'] && row['Short Code'].trim()) {
+        playerData.shortCode = row['Short Code'].trim();
+      }
 
       if (row['Photo URL'] && row['Photo URL'].trim()) {
         playerData.photoURL = row['Photo URL'].trim();
