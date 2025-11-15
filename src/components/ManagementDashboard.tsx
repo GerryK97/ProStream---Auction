@@ -1018,6 +1018,14 @@ interface PlayerFormProps {
     playerToEdit?: MasterPlayer;
 }
 
+// Standard player positions
+const PLAYER_POSITIONS = [
+    'Batsman',
+    'Bowler',
+    'All-rounder',
+    'Wicket-keeper'
+];
+
 const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, playerToEdit }) => {
     const isEditing = !!playerToEdit;
     const [name, setName] = useState(playerToEdit?.name || '');
@@ -1057,7 +1065,18 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, playerToEdit }) => {
 
             <div>
                 <label htmlFor="position" className="block text-sm font-medium text-neutral-300">Position</label>
-                <input type="text" id="position" value={position} onChange={(e) => setPosition(e.target.value)} placeholder="e.g., Batsman, Bowler, All-rounder" required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2" />
+                <select
+                    id="position"
+                    value={position}
+                    onChange={(e) => setPosition(e.target.value)}
+                    required
+                    className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2"
+                >
+                    <option value="">Select Position</option>
+                    {PLAYER_POSITIONS.map(pos => (
+                        <option key={pos} value={pos}>{pos}</option>
+                    ))}
+                </select>
             </div>
 
             <div>

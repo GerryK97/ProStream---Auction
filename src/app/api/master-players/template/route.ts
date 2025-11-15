@@ -60,7 +60,7 @@ export async function GET() {
     // Add instructions sheet
     const instructions = [
       { 'Field': 'Name', 'Required': 'YES', 'Description': 'Full name of the player' },
-      { 'Field': 'Position', 'Required': 'YES', 'Description': 'Player position (e.g., Batsman, Bowler, All-rounder, Wicket-keeper)' },
+      { 'Field': 'Position', 'Required': 'YES', 'Description': 'Player position: Batsman | Bowler | All-rounder | Wicket-keeper' },
       { 'Field': 'Current Club', 'Required': 'YES', 'Description': 'Current IPL or cricket team' },
       { 'Field': 'Photo URL', 'Required': 'NO', 'Description': 'URL to player photo (optional)' },
       { 'Field': 'Matches Played', 'Required': 'NO', 'Description': 'Total career matches played (optional)' },
