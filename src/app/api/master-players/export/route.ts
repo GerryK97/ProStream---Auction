@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch all master players
     const masterPlayers = await MasterPlayerModel.find({})
-      .select('_id name position currentClub shortCode photoURL careerStats suggestedClass')
+      .select('_id name position currentClub photoURL careerStats suggestedClass')
       .sort({ name: 1 })
       .lean();
 
@@ -27,7 +27,6 @@ export async function GET(request: NextRequest) {
         'Name': player.name,
         'Position': player.position,
         'Current Club': player.currentClub,
-        'Short Code': player.shortCode || '',
         'Photo URL': player.photoURL || '',
         'Matches Played': player.careerStats?.matchesPlayed || 0,
         'Total Score': player.careerStats?.totalScore || 0,
@@ -46,7 +45,6 @@ export async function GET(request: NextRequest) {
       { wch: 25 }, // Name
       { wch: 12 }, // Position
       { wch: 25 }, // Current Club
-      { wch: 12 }, // Short Code
       { wch: 30 }, // Photo URL
       { wch: 14 }, // Matches Played
       { wch: 12 }, // Total Score

@@ -973,7 +973,6 @@ const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => voi
                                 <th className="p-4 text-sm font-semibold text-neutral-300">Player</th>
                                 <th className="p-4 text-sm font-semibold text-neutral-300">Position</th>
                                 <th className="p-4 text-sm font-semibold text-neutral-300">Current Club</th>
-                                <th className="p-4 text-sm font-semibold text-neutral-300">Short Code</th>
                                 <th className="p-4 text-sm font-semibold text-neutral-300">Matches</th>
                                 <th className="p-4 text-sm font-semibold text-neutral-300">Score</th>
                                 <th className="p-4 text-sm font-semibold text-neutral-300">Wickets</th>
@@ -996,7 +995,6 @@ const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => voi
                                     </td>
                                     <td className="p-4 text-neutral-300">{player.position}</td>
                                     <td className="p-4 text-neutral-300">{player.currentClub}</td>
-                                    <td className="p-4 text-neutral-300">{player.shortCode || '-'}</td>
                                     <td className="p-4 text-neutral-300">{player.careerStats?.matchesPlayed || 0}</td>
                                     <td className="p-4 text-neutral-300">{player.careerStats?.totalScore.toLocaleString() || 0}</td>
                                     <td className="p-4 text-neutral-300">{player.careerStats?.totalWickets || 0}</td>
@@ -1033,7 +1031,6 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, playerToEdit }) => {
     const [name, setName] = useState(playerToEdit?.name || '');
     const [position, setPosition] = useState(playerToEdit?.position || '');
     const [currentClub, setCurrentClub] = useState(playerToEdit?.currentClub || '');
-    const [shortCode, setShortCode] = useState(playerToEdit?.shortCode || '');
     const [photoURL, setPhotoURL] = useState(playerToEdit?.photoURL || '');
     const [careerStats, setCareerStats] = useState<PlayerStats>(playerToEdit?.careerStats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 });
     const [suggestedClass, setSuggestedClass] = useState(playerToEdit?.suggestedClass || '');
@@ -1045,7 +1042,6 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, playerToEdit }) => {
                 name,
                 position,
                 currentClub,
-                shortCode: shortCode || undefined,
                 photoURL: photoURL || `https://placehold.co/200x200/4B5563/FFFFFF/png?text=${name.charAt(0)}`,
                 careerStats,
                 suggestedClass: suggestedClass || undefined
@@ -1086,11 +1082,6 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, playerToEdit }) => {
             <div>
                 <label htmlFor="currentClub" className="block text-sm font-medium text-neutral-300">Current Club</label>
                 <input type="text" id="currentClub" value={currentClub} onChange={(e) => setCurrentClub(e.target.value)} placeholder="e.g., Mumbai Indians, CSK" required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2" />
-            </div>
-
-            <div>
-                <label htmlFor="shortCode" className="block text-sm font-medium text-neutral-300">Short Code (Optional)</label>
-                <input type="text" id="shortCode" value={shortCode} onChange={(e) => setShortCode(e.target.value)} placeholder="e.g., VK, JB, RJ" className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2" />
             </div>
 
             <div>

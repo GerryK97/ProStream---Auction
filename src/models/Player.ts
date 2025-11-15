@@ -20,7 +20,6 @@ const playerSchema = new Schema<Player>(
     name: { type: String, required: true },
     position: { type: String, required: false },
     currentClub: { type: String, required: false },
-    shortCode: { type: String, required: false },             // Short code (same field as MasterPlayer)
     photoURL: { type: String, required: false },              // Player photo (same field as MasterPlayer)
     // Tournament-specific data
     stats: { type: playerStatsSchema, required: true },       // Tournament stats (separate from career)
