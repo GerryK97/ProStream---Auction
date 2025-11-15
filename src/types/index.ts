@@ -135,3 +135,43 @@ export interface OverlayInstance {
   status: 'Active';
   url: string;
 }
+
+// Premium Player Card Customization Settings
+export interface PremiumPlayerCardVisibility {
+  showPlayerImage: boolean;
+  showBackgroundText: boolean;
+  showJerseyNumber: boolean;
+  showDecorativeBadges: boolean;
+  showPlayerName: boolean;
+  showRoleLabel: boolean;
+  showStatsSection: boolean;
+  showMatches: boolean;
+  showScore: boolean;
+  showWickets: boolean;
+}
+
+export interface PremiumPlayerCardColors {
+  gradientStart: string;
+  gradientEnd: string;
+  cardBackground: string;
+  playerNameColor: string;
+  statValueColor: string;
+  statLabelColor: string;
+  jerseyBadgeGradientStart: string;
+  jerseyBadgeGradientEnd: string;
+  decorativeBadgeColor: string;
+  watermarkColor: string;
+}
+
+export interface PremiumPlayerCardLayout {
+  cardSize: 'small' | 'medium' | 'large';
+  borderRadius: 'none' | 'small' | 'medium' | 'large';
+  opacity: number;
+}
+
+export interface PremiumPlayerCardContent {
+  roleLabel: string;
+  backgroundTextLine1: string;  // Custom text for watermark line 1
+  backgroundTextLine2: string;  // Custom text for watermark line 2
+  usePlayerNameAsWatermark: boolean;  // Use player name or custom text
+}
