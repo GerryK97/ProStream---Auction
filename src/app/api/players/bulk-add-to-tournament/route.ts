@@ -30,6 +30,72 @@ interface ImportResult {
   message: string;
 }
 
+/**
+ * Map short codes to full player class names
+ * Short codes are case-insensitive and reduce typo errors during bulk import
+ *
+ * Common short codes:
+ * - P, Plat, Platinum -> Platinum
+ * - G, Gold -> Gold
+ * - S, Sil, Silver -> Silver
+ * - B, Bro, Bronze -> Bronze
+ * - D, Dia, Diamond -> Diamond
+ * - E, Elite -> Elite
+ * - Pr, Prem, Premium -> Premium
+ * - St, Std, Standard -> Standard
+ */
+function resolvePlayerClassShortCode(input: string, availableClasses: string[]): string | null {
+  const trimmedInput = input.trim();
+  const normalizedInput = trimmedInput.toLowerCase();
+
+  // First, check for exact match (case-insensitive)
+  const exactMatch = availableClasses.find(c => c.toLowerCase() === normalizedInput);
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  // Define short code mappings
+  // Each entry maps: short code (lowercase) -> full class name (exact case)
+  const shortCodeMap: Record<string, string[]> = {
+    'p': ['Platinum', 'Premium'],
+    'plat': ['Platinum'],
+    'platinum': ['Platinum'],
+    'prem': ['Premium'],
+    'premium': ['Premium'],
+    'pr': ['Premium'],
+    'g': ['Gold'],
+    'gold': ['Gold'],
+    's': ['Silver', 'Standard'],
+    'sil': ['Silver'],
+    'silver': ['Silver'],
+    'std': ['Standard'],
+    'standard': ['Standard'],
+    'st': ['Standard'],
+    'b': ['Bronze'],
+    'bro': ['Bronze'],
+    'bronze': ['Bronze'],
+    'd': ['Diamond'],
+    'dia': ['Diamond'],
+    'diamond': ['Diamond'],
+    'e': ['Elite'],
+    'elite': ['Elite'],
+  };
+
+  // Try to find a match using short codes
+  const possibleClasses = shortCodeMap[normalizedInput] || [];
+
+  // Find which of the possible classes actually exists in available classes
+  for (const className of possibleClasses) {
+    const match = availableClasses.find(c => c.toLowerCase() === className.toLowerCase());
+    if (match) {
+      return match;
+    }
+  }
+
+  // No match found
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
@@ -140,15 +206,21 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        if (!tournamentClasses.includes(playerClass)) {
+        // Try to resolve short code to full class name
+        const resolvedClass = resolvePlayerClassShortCode(playerClass, tournamentClasses);
+
+        if (!resolvedClass) {
           result.errors.push({
             row: rowNumber,
-            error: `Invalid Player Class '${playerClass}'. Available: ${tournamentClasses.join(', ')}`,
+            error: `Invalid Player Class '${playerClass}'. Available: ${tournamentClasses.join(', ')} (or use short codes: P, G, S, B, etc.)`,
             player: playerName
           });
           result.failed++;
           continue;
         }
+
+        // Use resolved class name for consistency
+        playerClass = resolvedClass;
       }
 
       // Check if master player exists

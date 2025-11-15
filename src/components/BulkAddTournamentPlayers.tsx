@@ -184,6 +184,23 @@ export default function BulkAddTournamentPlayers({
         <p className="mt-2 text-xs text-gray-400">
           Download Excel file with all available players. Select which players to add and their classes.
         </p>
+        {playerClasses.length > 0 && (
+          <div className="mt-3 p-3 bg-blue-900/30 border border-blue-700/50 rounded-lg">
+            <p className="text-xs font-semibold text-blue-300 mb-1">💡 TIP: Use Short Codes to Reduce Typos!</p>
+            <p className="text-xs text-gray-300">
+              Instead of typing full class names, use short codes: <span className="font-mono text-blue-200">P</span> (Platinum),
+              <span className="font-mono text-blue-200"> G</span> (Gold),
+              <span className="font-mono text-blue-200"> S</span> (Silver),
+              <span className="font-mono text-blue-200"> B</span> (Bronze),
+              <span className="font-mono text-blue-200"> E</span> (Elite),
+              <span className="font-mono text-blue-200"> Pr</span> (Premium),
+              <span className="font-mono text-blue-200"> St</span> (Standard)
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              Codes are case-insensitive. See the Instructions sheet in the template for full details.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* File Drop Zone */}
