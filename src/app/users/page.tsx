@@ -18,11 +18,17 @@ interface EditingUser extends User {
   // Same as User, used for edit modal
 }
 
+interface Tournament {
+  _id: string;
+  name: string;
+}
+
 export default function UsersPage() {
   const { user: currentUser, token, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [pendingUsers, setPendingUsers] = useState<User[]>([]);
+  const [availableTournaments, setAvailableTournaments] = useState<Tournament[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'active' | 'pending' | 'all'>('active');
@@ -33,6 +39,7 @@ export default function UsersPage() {
     email: '',
     role: 'Audience',
     status: 'Active',
+    assignedTournaments: [] as string[],
   });
   const [formData, setFormData] = useState({
     username: '',
@@ -189,12 +196,30 @@ export default function UsersPage() {
     }
   };
 
-  const handleEditClick = (user: User) => {
+  const handleEditClick = async (user: User) => {
     setEditingUser(user);
+
+    // Fetch available tournaments
+    try {
+      if (!token) return;
+      const response = await fetch('/api/tournaments', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.ok) {
+        const tournaments = await response.json();
+        setAvailableTournaments(tournaments);
+      }
+    } catch (err) {
+      console.error('Failed to fetch tournaments:', err);
+    }
+
     setEditFormData({
       email: user.email,
       role: user.role,
       status: user.status,
+      assignedTournaments: (user as any).assignedTournaments || [],
     });
     setShowEditModal(true);
   };
@@ -225,6 +250,7 @@ export default function UsersPage() {
         email: '',
         role: 'Audience',
         status: 'Active',
+        assignedTournaments: [],
       });
 
       // Refresh users list
@@ -547,6 +573,41 @@ export default function UsersPage() {
                     <option value="Suspended">Suspended</option>
                     <option value="PendingApproval">Pending Approval</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-3">Assign Tournaments</label>
+                  <div className="space-y-2 max-h-48 overflow-y-auto bg-neutral-700 border border-neutral-600 rounded p-3">
+                    {availableTournaments.length > 0 ? (
+                      availableTournaments.map((tournament) => (
+                        <label key={tournament._id} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editFormData.assignedTournaments.includes(tournament._id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setEditFormData({
+                                  ...editFormData,
+                                  assignedTournaments: [...editFormData.assignedTournaments, tournament._id],
+                                });
+                              } else {
+                                setEditFormData({
+                                  ...editFormData,
+                                  assignedTournaments: editFormData.assignedTournaments.filter(
+                                    (id) => id !== tournament._id
+                                  ),
+                                });
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-neutral-500 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-100">{tournament.name}</span>
+                        </label>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-400">No tournaments available</p>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex gap-4 pt-4">
