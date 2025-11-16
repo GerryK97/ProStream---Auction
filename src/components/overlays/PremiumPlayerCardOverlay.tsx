@@ -102,9 +102,9 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
 
     // Size configurations
     const sizeConfig = {
-        small: { width: 300, imageHeight: 300, jerseySize: 10, nameFontSize: '18px' },
-        medium: { width: 380, imageHeight: 400, jerseySize: 12, nameFontSize: '22px' },
-        large: { width: 460, imageHeight: 480, jerseySize: 14, nameFontSize: '26px' }
+        small: { width: 300, imageHeight: 300, circleSize: 240, jerseySize: 10, nameFontSize: '18px' },
+        medium: { width: 380, imageHeight: 400, circleSize: 320, jerseySize: 12, nameFontSize: '22px' },
+        large: { width: 460, imageHeight: 480, circleSize: 400, jerseySize: 14, nameFontSize: '26px' }
     };
 
     const size = sizeConfig[cardSize];
@@ -186,14 +186,19 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
                                         </div>
                                     )}
 
-                                    {/* Player Image */}
+                                    {/* Player Image - Circular */}
                                     {showPlayerImage && currentPlayer.photoURL && (
-                                        <img
-                                            src={currentPlayer.photoURL}
-                                            alt={currentPlayer.name}
-                                            className="absolute left-1/2 top-2 max-w-[calc(100%+60px)] -translate-x-1/2 object-contain"
-                                            style={{ height: `${size.imageHeight - 20}px` }}
-                                        />
+                                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center rounded-full border-4 overflow-hidden" style={{
+                                            width: `${size.circleSize}px`,
+                                            height: `${size.circleSize}px`,
+                                            borderColor: 'rgba(255, 255, 255, 0.3)'
+                                        }}>
+                                            <img
+                                                src={currentPlayer.photoURL}
+                                                alt={currentPlayer.name}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
                                     )}
                                 </div>
                             </div>
