@@ -182,3 +182,146 @@ export function getAllowedTeams(
 export function shouldAutoApproveRole(role: UserRole): boolean {
   return role !== 'Audience';
 }
+
+/**
+ * Check if user can access a tournament
+ * User can access if:
+ * - User is Admin (can access all)
+ * - User created the tournament (createdBy === userId)
+ * - Tournament is assigned to user (in assignedTournaments)
+ */
+export function canAccessTournament(
+  userId: string,
+  userRole: UserRole | string,
+  tournament: { _id: string; createdBy?: string },
+  assignedTournaments: string[] = []
+): boolean {
+  // Admin can access all tournaments
+  if (userRole === 'Admin') return true;
+
+  // User can access if they created it
+  if (tournament.createdBy === userId) return true;
+
+  // User can access if it's assigned to them
+  if (assignedTournaments.includes(tournament._id)) return true;
+
+  return false;
+}
+
+/**
+ * Check if user can access a team
+ * User can access if:
+ * - User is Admin (can access all)
+ * - User has access to team's tournament
+ * - User created the team (createdBy === userId)
+ */
+export function canAccessTeam(
+  userId: string,
+  userRole: UserRole | string,
+  team: { _id: string; tournamentId?: string; createdBy?: string },
+  canAccessTournament: boolean
+): boolean {
+  // Admin can access all teams
+  if (userRole === 'Admin') return true;
+
+  // User can access if tournament is accessible
+  if (canAccessTournament) return true;
+
+  // User can access if they created the team
+  if (team.createdBy === userId) return true;
+
+  return false;
+}
+
+/**
+ * Check if user can access a player
+ * User can access if:
+ * - User is Admin (can access all)
+ * - User has access to player's tournament
+ * - User created the player (createdBy === userId)
+ */
+export function canAccessPlayer(
+  userId: string,
+  userRole: UserRole | string,
+  player: { _id: string; tournamentId?: string; createdBy?: string },
+  canAccessTournament: boolean
+): boolean {
+  // Admin can access all players
+  if (userRole === 'Admin') return true;
+
+  // User can access if tournament is accessible
+  if (canAccessTournament) return true;
+
+  // User can access if they created the player
+  if (player.createdBy === userId) return true;
+
+  return false;
+}
+
+/**
+ * Check if user can access master team
+ * User can access if:
+ * - User is Admin (can access all)
+ * - User is MasterManager and created it
+ */
+export function canAccessMasterTeam(
+  userId: string,
+  userRole: UserRole | string,
+  masterTeam: { _id: string; createdBy?: string }
+): boolean {
+  // Admin can access all
+  if (userRole === 'Admin') return true;
+
+  // MasterManager can only see their own
+  if (userRole === 'MasterManager' && masterTeam.createdBy === userId) return true;
+
+  return false;
+}
+
+/**
+ * Check if user can access master player
+ * User can access if:
+ * - User is Admin (can access all)
+ * - User is MasterManager and created it
+ */
+export function canAccessMasterPlayer(
+  userId: string,
+  userRole: UserRole | string,
+  masterPlayer: { _id: string; createdBy?: string }
+): boolean {
+  // Admin can access all
+  if (userRole === 'Admin') return true;
+
+  // MasterManager can only see their own
+  if (userRole === 'MasterManager' && masterPlayer.createdBy === userId) return true;
+
+  return false;
+}
+
+/**
+ * Check if user can modify (edit/delete) a resource
+ * User can modify if:
+ * - User is Admin (can modify all)
+ * - User created the resource (createdBy === userId)
+ */
+export function canModifyResource(
+  userId: string,
+  userRole: UserRole | string,
+  resource: { createdBy?: string }
+): boolean {
+  // Admin can modify all
+  if (userRole === 'Admin') return true;
+
+  // User can modify if they created it
+  if (resource.createdBy === userId) return true;
+
+  return false;
+}
+
+/**
+ * Check if user can transfer ownership
+ * Only Admin can transfer ownership
+ */
+export function canTransferOwnership(userRole: UserRole | string): boolean {
+  return userRole === 'Admin';
+}

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { tournamentDB } from '@/lib/db-mongodb';
 import { PlayerClassConfig } from '@/types';
+import { getUserFromRequest } from '@/lib/request-helpers';
+import { canPerformAction, canAccessTournament } from '@/lib/permissions';
 
 /**
  * Validate player class codes
@@ -39,6 +41,17 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Authenticate user
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user has permission to read tournaments
+    if (!canPerformAction(user.role, 'read', 'tournament')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const { id } = await params;
     const tournament = await tournamentDB.getById(id);
     if (!tournament) {
@@ -47,6 +60,12 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    // Check if user has access to this tournament
+    if (!canAccessTournament(user.userId, user.role, tournament, user.assignedTournaments)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     return NextResponse.json(tournament);
   } catch (error) {
     return NextResponse.json(
@@ -62,7 +81,31 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Authenticate user
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user has permission to update tournaments
+    if (!canPerformAction(user.role, 'update', 'tournament')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const { id } = await params;
+    const tournament = await tournamentDB.getById(id);
+    if (!tournament) {
+      return NextResponse.json(
+        { error: 'Tournament not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if user has access to this tournament
+    if (!canAccessTournament(user.userId, user.role, tournament, user.assignedTournaments)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const body = await request.json();
 
     // Validate player class codes if player classes are enabled
@@ -98,7 +141,31 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Authenticate user
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user has permission to delete tournaments
+    if (!canPerformAction(user.role, 'delete', 'tournament')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const { id } = await params;
+    const tournament = await tournamentDB.getById(id);
+    if (!tournament) {
+      return NextResponse.json(
+        { error: 'Tournament not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if user has access to this tournament
+    if (!canAccessTournament(user.userId, user.role, tournament, user.assignedTournaments)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const success = await tournamentDB.delete(id);
     if (!success) {
       return NextResponse.json(
