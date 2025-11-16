@@ -6,6 +6,7 @@ import { PlayerModel } from '@/models/Player';
 import { MasterTeamModel } from '@/models/MasterTeam';
 import { MasterPlayerModel } from '@/models/MasterPlayer';
 import { Tournament, Team, Player, MasterTeam, MasterPlayer } from '@/types';
+import { canAccessTournament, canAccessTeam, canAccessPlayer, canAccessMasterTeam, canAccessMasterPlayer } from './permissions';
 
 // Helper function to generate IDs
 const generateId = (prefix: string) =>
@@ -72,17 +73,48 @@ export const tournamentDB = {
     return await TournamentModel.find().lean() as any;
   },
 
+  /**
+   * Get all tournaments accessible to a user based on their role and permissions
+   * Admin: sees all tournaments
+   * Tournament/Team: sees tournaments they created or were assigned to
+   * MasterManager: sees tournaments they created
+   * Player/Audience: no tournament access (empty array)
+   */
+  getAllForUser: async (
+    userId: string,
+    userRole: string,
+    assignedTournaments: string[] = []
+  ): Promise<Tournament[]> => {
+    await connectToDatabase();
+
+    // Admin sees all tournaments
+    if (userRole === 'Admin') {
+      return await TournamentModel.find().lean() as any;
+    }
+
+    // Build query: tournaments created by user OR assigned to user
+    const tournaments = await TournamentModel.find({
+      $or: [
+        { createdBy: userId },
+        { _id: { $in: assignedTournaments } },
+      ],
+    }).lean() as any;
+
+    return tournaments;
+  },
+
   getById: async (id: string): Promise<Tournament | null> => {
     await connectToDatabase();
     return await TournamentModel.findOne({ _id: id }).lean() as any;
   },
 
-  create: async (data: Omit<Tournament, '_id' | 'status'>): Promise<Tournament> => {
+  create: async (data: Omit<Tournament, '_id' | 'status'>, createdBy?: string): Promise<Tournament> => {
     await connectToDatabase();
     const newTournament = {
       _id: generateId('t'),
       ...data,
       status: 'Draft' as const,
+      ...(createdBy && { createdBy }),
     };
     const doc = await TournamentModel.create(newTournament);
     return doc.toObject();
@@ -112,6 +144,29 @@ export const masterTeamDB = {
     return await MasterTeamModel.find().sort({ name: 1 }).lean() as any;
   },
 
+  /**
+   * Get master teams accessible to a user
+   * Admin: sees all master teams
+   * MasterManager: sees only teams they created
+   * Others: no access (empty array)
+   */
+  getAllForUser: async (userId: string, userRole: string): Promise<MasterTeam[]> => {
+    await connectToDatabase();
+
+    // Admin sees all master teams
+    if (userRole === 'Admin') {
+      return await MasterTeamModel.find().sort({ name: 1 }).lean() as any;
+    }
+
+    // MasterManager sees only teams they created
+    if (userRole === 'MasterManager') {
+      return await MasterTeamModel.find({ createdBy: userId }).sort({ name: 1 }).lean() as any;
+    }
+
+    // Other roles have no access to master teams
+    return [];
+  },
+
   getPaginated: async (skip: number, limit: number): Promise<MasterTeam[]> => {
     await connectToDatabase();
     return await MasterTeamModel.find()
@@ -122,9 +177,58 @@ export const masterTeamDB = {
       .lean() as any;
   },
 
+  /**
+   * Get paginated master teams for a specific user
+   */
+  getPaginatedForUser: async (
+    userId: string,
+    userRole: string,
+    skip: number,
+    limit: number
+  ): Promise<MasterTeam[]> => {
+    await connectToDatabase();
+
+    if (userRole === 'Admin') {
+      return await MasterTeamModel.find()
+        .sort({ name: 1 })
+        .skip(skip)
+        .limit(limit)
+        .select('_id name ownerName shortCode logoURL')
+        .lean() as any;
+    }
+
+    if (userRole === 'MasterManager') {
+      return await MasterTeamModel.find({ createdBy: userId })
+        .sort({ name: 1 })
+        .skip(skip)
+        .limit(limit)
+        .select('_id name ownerName shortCode logoURL')
+        .lean() as any;
+    }
+
+    return [];
+  },
+
   count: async (): Promise<number> => {
     await connectToDatabase();
     return await MasterTeamModel.countDocuments();
+  },
+
+  /**
+   * Get count of master teams for a specific user
+   */
+  countForUser: async (userId: string, userRole: string): Promise<number> => {
+    await connectToDatabase();
+
+    if (userRole === 'Admin') {
+      return await MasterTeamModel.countDocuments();
+    }
+
+    if (userRole === 'MasterManager') {
+      return await MasterTeamModel.countDocuments({ createdBy: userId });
+    }
+
+    return 0;
   },
 
   getById: async (id: string): Promise<MasterTeam | null> => {
@@ -132,7 +236,7 @@ export const masterTeamDB = {
     return await MasterTeamModel.findOne({ _id: id }).lean() as any;
   },
 
-  create: async (data: Omit<MasterTeam, '_id'>): Promise<MasterTeam> => {
+  create: async (data: Omit<MasterTeam, '_id'>, createdBy?: string): Promise<MasterTeam> => {
     await connectToDatabase();
 
     // Check for duplicate shortCode
@@ -144,6 +248,7 @@ export const masterTeamDB = {
     const newMasterTeam: MasterTeam = {
       _id: generateId('mt'),
       ...data,
+      ...(createdBy && { createdBy }),
       logoURL: data.logoURL || `https://placehold.co/100x100/374151/F3F4F6/png?text=${encodeURIComponent(data.name.charAt(0))}`,
     };
     const doc = await MasterTeamModel.create(newMasterTeam);
@@ -205,6 +310,29 @@ export const masterPlayerDB = {
     return await MasterPlayerModel.find().sort({ name: 1 }).lean() as any;
   },
 
+  /**
+   * Get master players accessible to a user
+   * Admin: sees all master players
+   * MasterManager: sees only players they created
+   * Others: no access (empty array)
+   */
+  getAllForUser: async (userId: string, userRole: string): Promise<MasterPlayer[]> => {
+    await connectToDatabase();
+
+    // Admin sees all master players
+    if (userRole === 'Admin') {
+      return await MasterPlayerModel.find().sort({ name: 1 }).lean() as any;
+    }
+
+    // MasterManager sees only players they created
+    if (userRole === 'MasterManager') {
+      return await MasterPlayerModel.find({ createdBy: userId }).sort({ name: 1 }).lean() as any;
+    }
+
+    // Other roles have no access to master players
+    return [];
+  },
+
   getPaginated: async (skip: number, limit: number): Promise<MasterPlayer[]> => {
     await connectToDatabase();
     return await MasterPlayerModel.find()
@@ -215,9 +343,58 @@ export const masterPlayerDB = {
       .lean() as any;
   },
 
+  /**
+   * Get paginated master players for a specific user
+   */
+  getPaginatedForUser: async (
+    userId: string,
+    userRole: string,
+    skip: number,
+    limit: number
+  ): Promise<MasterPlayer[]> => {
+    await connectToDatabase();
+
+    if (userRole === 'Admin') {
+      return await MasterPlayerModel.find()
+        .sort({ name: 1 })
+        .skip(skip)
+        .limit(limit)
+        .select('_id name position currentClub photoURL careerStats suggestedClass')
+        .lean() as any;
+    }
+
+    if (userRole === 'MasterManager') {
+      return await MasterPlayerModel.find({ createdBy: userId })
+        .sort({ name: 1 })
+        .skip(skip)
+        .limit(limit)
+        .select('_id name position currentClub photoURL careerStats suggestedClass')
+        .lean() as any;
+    }
+
+    return [];
+  },
+
   count: async (): Promise<number> => {
     await connectToDatabase();
     return await MasterPlayerModel.countDocuments();
+  },
+
+  /**
+   * Get count of master players for a specific user
+   */
+  countForUser: async (userId: string, userRole: string): Promise<number> => {
+    await connectToDatabase();
+
+    if (userRole === 'Admin') {
+      return await MasterPlayerModel.countDocuments();
+    }
+
+    if (userRole === 'MasterManager') {
+      return await MasterPlayerModel.countDocuments({ createdBy: userId });
+    }
+
+    return 0;
   },
 
   getById: async (id: string): Promise<MasterPlayer | null> => {
@@ -225,12 +402,13 @@ export const masterPlayerDB = {
     return await MasterPlayerModel.findOne({ _id: id }).lean() as any;
   },
 
-  create: async (data: Omit<MasterPlayer, '_id'>): Promise<MasterPlayer> => {
+  create: async (data: Omit<MasterPlayer, '_id'>, createdBy?: string): Promise<MasterPlayer> => {
     await connectToDatabase();
     const playerId = await generateSequentialPlayerId();
     const newMasterPlayer: MasterPlayer = {
       _id: playerId,
       ...data,
+      ...(createdBy && { createdBy }),
       photoURL: data.photoURL || `https://placehold.co/100x100/374151/F3F4F6/png?text=No+Image`,
       careerStats: data.careerStats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 },
     };
@@ -295,13 +473,42 @@ export const teamDB = {
     return await TeamModel.find().lean() as any;
   },
 
+  /**
+   * Get all teams accessible to a user within specific tournaments
+   * Admin: sees all teams
+   * Others: see teams they created OR teams in tournaments they have access to
+   */
+  getAllForUser: async (
+    userId: string,
+    userRole: string,
+    accessibleTournamentIds: string[] = []
+  ): Promise<Team[]> => {
+    await connectToDatabase();
+
+    // Admin sees all teams
+    if (userRole === 'Admin') {
+      return await TeamModel.find().lean() as any;
+    }
+
+    // Build query: teams created by user OR teams in accessible tournaments
+    const teams = await TeamModel.find({
+      $or: [
+        { createdBy: userId },
+        { tournamentId: { $in: accessibleTournamentIds } },
+      ],
+    }).lean() as any;
+
+    return teams;
+  },
+
   getById: async (id: string): Promise<Team | null> => {
     await connectToDatabase();
     return await TeamModel.findOne({ _id: id }).lean() as any;
   },
 
   create: async (
-    data: Omit<Team, '_id' | 'tournamentId' | 'initialBudget' | 'currentBalance' | 'playersPurchased'>
+    data: Omit<Team, '_id' | 'tournamentId' | 'initialBudget' | 'currentBalance' | 'playersPurchased'>,
+    createdBy?: string
   ): Promise<Team> => {
     await connectToDatabase();
     const newTeam: Team = {
@@ -312,6 +519,7 @@ export const teamDB = {
       // No tournamentId - team is unassigned
       // No budget fields - only set when assigned to tournament
       playersPurchased: [],
+      ...(createdBy && { createdBy }),
       // Provide default logo if not provided
       logoURL: data.logoURL || `https://placehold.co/100x100/374151/F3F4F6/png?text=${encodeURIComponent(data.name.charAt(0))}`,
     };
@@ -332,7 +540,8 @@ export const teamDB = {
   // Create tournament team from master team
   createFromMaster: async (
     masterTeamId: string,
-    tournamentId: string
+    tournamentId: string,
+    createdBy?: string
   ): Promise<Team> => {
     await connectToDatabase();
 
@@ -363,6 +572,7 @@ export const teamDB = {
       initialBudget: tournament.budgetPerTeam,
       currentBalance: tournament.budgetPerTeam,
       playersPurchased: [],
+      ...(createdBy && { createdBy }),
     };
 
     const doc = await TeamModel.create(newTeam);
@@ -383,13 +593,42 @@ export const playerDB = {
     return await PlayerModel.find().lean() as any;
   },
 
+  /**
+   * Get all players accessible to a user within specific tournaments
+   * Admin: sees all players
+   * Others: see players they created OR players in tournaments they have access to
+   */
+  getAllForUser: async (
+    userId: string,
+    userRole: string,
+    accessibleTournamentIds: string[] = []
+  ): Promise<Player[]> => {
+    await connectToDatabase();
+
+    // Admin sees all players
+    if (userRole === 'Admin') {
+      return await PlayerModel.find().lean() as any;
+    }
+
+    // Build query: players created by user OR players in accessible tournaments
+    const players = await PlayerModel.find({
+      $or: [
+        { createdBy: userId },
+        { tournamentId: { $in: accessibleTournamentIds } },
+      ],
+    }).lean() as any;
+
+    return players;
+  },
+
   getById: async (id: string): Promise<Player | null> => {
     await connectToDatabase();
     return await PlayerModel.findOne({ _id: id }).lean() as any;
   },
 
   create: async (
-    data: Omit<Player, '_id' | 'tournamentId' | 'isSold' | 'finalPrice' | 'winningTeamId'>
+    data: Omit<Player, '_id' | 'tournamentId' | 'isSold' | 'finalPrice' | 'winningTeamId'>,
+    createdBy?: string
   ): Promise<Player> => {
     await connectToDatabase();
     const newPlayer: Player = {
@@ -398,6 +637,7 @@ export const playerDB = {
       stats: data.stats,
       // No tournamentId - player is unassigned
       isSold: false,
+      ...(createdBy && { createdBy }),
       // Provide default photo if not provided
       photoURL: data.photoURL || `https://placehold.co/100x100/374151/F3F4F6/png?text=No+Image`,
     };
@@ -419,7 +659,8 @@ export const playerDB = {
   createFromMaster: async (
     masterPlayerId: string,
     tournamentId: string,
-    playerClass?: string
+    playerClass?: string,
+    createdBy?: string
   ): Promise<Player> => {
     try {
       await connectToDatabase();
@@ -473,6 +714,7 @@ export const playerDB = {
         // Use provided playerClass or fall back to master's suggestedClass
         playerClass: playerClass || masterPlayer.suggestedClass,
         isSold: false,
+        ...(createdBy && { createdBy }),
       };
 
       const createStart = Date.now();
