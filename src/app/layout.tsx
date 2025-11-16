@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { AuctionProvider } from '@/hooks/useAuction';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 export const metadata: Metadata = {
   title: 'ProStream Auction',
@@ -19,7 +20,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <AuctionProvider>{children}</AuctionProvider>
+        <AuthProvider>
+          <AuctionProvider>{children}</AuctionProvider>
+        </AuthProvider>
       </body>
     </html>
   );
