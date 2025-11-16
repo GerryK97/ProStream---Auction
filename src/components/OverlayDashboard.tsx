@@ -240,13 +240,109 @@ const overlayTypes: OverlayType[] = [
     {
         id: 'teams',
         name: 'Team Cards',
-        description: 'Show all teams with balances, max bids, and players purchased',
+        description: 'Show all teams with balances, max bids, and players purchased - fully customizable backgrounds and colors',
         route: '/overlays/teams',
-        tags: ['Teams', 'Auction'],
-        defaultParams: { layout: 'horizontal', position: 'bottom' },
+        tags: ['Teams', 'Auction', 'Customizable'],
+        defaultParams: {
+            layout: 'horizontal',
+            position: 'bottom',
+            useGradient: 'false',
+            cardBackground: '#000000',
+            gradientStart: '#0891b2',
+            gradientEnd: '#06b6d4',
+            borderColor: '#06b6d4',
+            borderRadius: '8',
+            backgroundOpacity: '80',
+            teamNameColor: '#ffffff',
+            balanceColor: '#4ade80',
+            statsColor: '#d4d4d8',
+            maxBidColor: '#22d3ee',
+            winningBorderColor: '#ef4444'
+        },
         parameterSchema: {
-            layout: { type: 'select', label: 'Layout', options: ['horizontal', 'vertical', 'grid'] },
-            position: { type: 'select', label: 'Position', options: ['top', 'bottom', 'left', 'right'] }
+            // Layout & Position
+            layout: {
+                type: 'select',
+                label: 'Layout',
+                options: ['horizontal', 'vertical', 'grid'],
+                description: 'Card arrangement style'
+            },
+            position: {
+                type: 'select',
+                label: 'Position',
+                options: ['top', 'bottom', 'left', 'right'],
+                description: 'Overlay position on screen'
+            },
+
+            // Background Style
+            useGradient: {
+                type: 'toggle',
+                label: 'Use Gradient Background',
+                description: 'Enable gradient instead of solid color'
+            },
+            cardBackground: {
+                type: 'color',
+                label: 'Card Background',
+                description: 'Solid background color (when gradient is off)'
+            },
+            gradientStart: {
+                type: 'color',
+                label: 'Gradient Start Color',
+                description: 'Starting color for gradient background'
+            },
+            gradientEnd: {
+                type: 'color',
+                label: 'Gradient End Color',
+                description: 'Ending color for gradient background'
+            },
+            backgroundOpacity: {
+                type: 'number',
+                label: 'Background Opacity (%)',
+                min: 0,
+                max: 100,
+                description: 'Transparency level (0=transparent, 100=opaque)'
+            },
+
+            // Border & Shape
+            borderColor: {
+                type: 'color',
+                label: 'Border Color',
+                description: 'Color of card border (default state)'
+            },
+            winningBorderColor: {
+                type: 'color',
+                label: 'Winning Team Border',
+                description: 'Border color when team is winning bid'
+            },
+            borderRadius: {
+                type: 'number',
+                label: 'Border Radius (px)',
+                min: 0,
+                max: 32,
+                description: 'Corner roundness (0=square, 32=very rounded)'
+            },
+
+            // Text Colors
+            teamNameColor: {
+                type: 'color',
+                label: 'Team Name Color',
+                description: 'Color of team name text'
+            },
+            balanceColor: {
+                type: 'color',
+                label: 'Balance Color',
+                description: 'Color of current balance amount'
+            },
+            statsColor: {
+                type: 'color',
+                label: 'Stats Color',
+                description: 'Color of player count text'
+            },
+            maxBidColor: {
+                type: 'color',
+                label: 'Max Bid Color',
+                description: 'Color of maximum bid amount'
+            }
         },
         imageURL: 'https://placehold.co/400x200/1e293b/22c55e?text=Team+Cards',
         dimensions: { width: 1200, height: 200 }
