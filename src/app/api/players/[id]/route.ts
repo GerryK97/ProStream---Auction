@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { playerDB } from '@/lib/db-mongodb';
+import { playerDB, tournamentDB } from '@/lib/db-mongodb';
+import { getUserFromRequest } from '@/lib/request-helpers';
+import { canPerformAction, canAccessPlayer, canModifyResource } from '@/lib/permissions';
 
 // GET /api/players/[id] - Get player by ID
 export async function GET(
@@ -7,6 +9,17 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Authenticate user
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user has permission to read players
+    if (!canPerformAction(user.role, 'read', 'player')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const { id } = await params;
     const player = await playerDB.getById(id);
     if (!player) {
@@ -15,6 +28,30 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    // Check if user has access to this player
+    let canAccessPlayerFlag = false;
+    if (player.tournamentId) {
+      const tournament = await tournamentDB.getById(player.tournamentId);
+      if (tournament) {
+        const canAccessTournamentFlag = user.role === 'Admin' ||
+          player.createdBy === user.userId ||
+          user.assignedTournaments.includes(player.tournamentId);
+        canAccessPlayerFlag = canAccessPlayer(
+          user.userId,
+          user.role,
+          { _id: player._id, tournamentId: player.tournamentId, createdBy: player.createdBy },
+          canAccessTournamentFlag
+        );
+      }
+    } else {
+      canAccessPlayerFlag = user.role === 'Admin' || player.createdBy === user.userId;
+    }
+
+    if (!canAccessPlayerFlag) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     return NextResponse.json(player);
   } catch (error) {
     return NextResponse.json(
@@ -30,7 +67,31 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Authenticate user
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user has permission to update players
+    if (!canPerformAction(user.role, 'update', 'player')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const { id } = await params;
+    const player = await playerDB.getById(id);
+    if (!player) {
+      return NextResponse.json(
+        { error: 'Player not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if user can modify this player
+    if (!canModifyResource(user.userId, user.role, player)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const body = await request.json();
     const updatedPlayer = await playerDB.update(id, body);
     if (!updatedPlayer) {
@@ -54,7 +115,31 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Authenticate user
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user has permission to delete players
+    if (!canPerformAction(user.role, 'delete', 'player')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const { id } = await params;
+    const player = await playerDB.getById(id);
+    if (!player) {
+      return NextResponse.json(
+        { error: 'Player not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if user can modify this player
+    if (!canModifyResource(user.userId, user.role, player)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const success = await playerDB.delete(id);
     if (!success) {
       return NextResponse.json(

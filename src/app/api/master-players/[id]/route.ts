@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { masterPlayerDB } from '@/lib/db-mongodb';
+import { getUserFromRequest } from '@/lib/request-helpers';
+import { canPerformAction, canAccessMasterPlayer, canModifyResource } from '@/lib/permissions';
 
 // GET /api/master-players/[id] - Get master player by ID
 export async function GET(
@@ -7,6 +9,17 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Authenticate user
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user has permission to read master players
+    if (!canPerformAction(user.role, 'read', 'masterPlayer')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const { id } = await params;
     const player = await masterPlayerDB.getById(id);
     if (!player) {
@@ -15,6 +28,12 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    // Check if user has access to this master player
+    if (!canAccessMasterPlayer(user.userId, user.role, player)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     return NextResponse.json(player);
   } catch (error) {
     console.error('Error fetching master player:', error);
@@ -31,7 +50,31 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Authenticate user
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user has permission to update master players
+    if (!canPerformAction(user.role, 'update', 'masterPlayer')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const { id } = await params;
+    const player = await masterPlayerDB.getById(id);
+    if (!player) {
+      return NextResponse.json(
+        { error: 'Master player not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if user can modify this master player
+    if (!canModifyResource(user.userId, user.role, player)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const body = await request.json();
     const updatedPlayer = await masterPlayerDB.update(id, body);
     if (!updatedPlayer) {
@@ -56,7 +99,30 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Authenticate user
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user has permission to delete master players
+    if (!canPerformAction(user.role, 'delete', 'masterPlayer')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const { id } = await params;
+    const player = await masterPlayerDB.getById(id);
+    if (!player) {
+      return NextResponse.json(
+        { error: 'Master player not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if user can modify this master player
+    if (!canModifyResource(user.userId, user.role, player)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     // Check usage in tournaments
     const tournamentIds = await masterPlayerDB.getUsageInTournaments(id);
