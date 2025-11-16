@@ -152,7 +152,7 @@ const PremiumBreakingNewsTickerOverlay: React.FC<PremiumBreakingNewsTickerProps>
 
                                     {/* Player Number */}
                                     <span className={`${currentColor.accent} font-mono`}>
-                                        #{player.playerNo || player._id}
+                                        {player.playerNo || player._id}
                                     </span>
 
                                     {/* Player Name */}

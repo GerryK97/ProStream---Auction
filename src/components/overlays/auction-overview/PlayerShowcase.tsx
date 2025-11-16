@@ -75,7 +75,7 @@ const PlayerShowcase: React.FC<PlayerShowcaseProps> = ({ player, tournament, siz
                     />
                     {/* Jersey Number Badge */}
                     <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-gradient-to-b from-orange-500 to-yellow-500 border-2 border-white flex items-center justify-center font-bold text-white text-sm shadow-lg">
-                        #{playerNumber}
+                        {playerNumber}
                     </div>
                 </div>
 

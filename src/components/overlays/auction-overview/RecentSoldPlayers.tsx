@@ -81,7 +81,7 @@ const RecentSoldPlayers: React.FC<RecentSoldPlayersProps> = ({
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
                                     <ClassBadge tournament={tournament || null} player={player} variant="dot" />
-                                    <span className="text-xs font-mono text-cyan-400">#{playerNumber}</span>
+                                    <span className="text-xs font-mono text-cyan-400">{playerNumber}</span>
                                     <span className="text-sm font-semibold text-white truncate">
                                         {player.name}
                                     </span>

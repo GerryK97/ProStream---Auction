@@ -211,7 +211,7 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
                                         background: `linear-gradient(to bottom, ${jerseyBadgeGradientStart}, ${jerseyBadgeGradientEnd})`
                                     }}
                                 >
-                                    #{playerNumber}
+                                    {playerNumber}
                                 </div>
                             )}
 
