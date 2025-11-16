@@ -4,7 +4,6 @@ import Navigation from '@/components/Navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
 interface User {
   _id: string;
@@ -13,6 +12,10 @@ interface User {
   role: string;
   status: string;
   createdAt: string;
+}
+
+interface EditingUser extends User {
+  // Same as User, used for edit modal
 }
 
 export default function UsersPage() {
@@ -24,6 +27,13 @@ export default function UsersPage() {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'active' | 'pending' | 'all'>('active');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<EditingUser | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    email: '',
+    role: 'Audience',
+    status: 'Active',
+  });
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -179,6 +189,87 @@ export default function UsersPage() {
     }
   };
 
+  const handleEditClick = (user: User) => {
+    setEditingUser(user);
+    setEditFormData({
+      email: user.email,
+      role: user.role,
+      status: user.status,
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !editingUser) return;
+
+    try {
+      const response = await fetch(`/api/users/${editingUser._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(editFormData),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to update user');
+      }
+
+      // Reset and close modal
+      setShowEditModal(false);
+      setEditingUser(null);
+      setEditFormData({
+        email: '',
+        role: 'Audience',
+        status: 'Active',
+      });
+
+      // Refresh users list
+      const updatedResponse = await fetch('/api/users', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const updatedData = await updatedResponse.json();
+      setUsers(updatedData.data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update user');
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!token) return;
+    if (!confirm('Are you sure you want to delete this user?')) return;
+
+    try {
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete user');
+      }
+
+      // Refresh users list
+      const updatedResponse = await fetch('/api/users', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const updatedData = await updatedResponse.json();
+      setUsers(updatedData.data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete user');
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-neutral-900 to-neutral-800 text-white">
@@ -314,12 +405,18 @@ export default function UsersPage() {
                             </button>
                           </>
                         )}
-                        <Link
-                          href={`/users/${u._id}`}
+                        <button
+                          onClick={() => handleEditClick(u)}
                           className="px-3 py-1 bg-neutral-700 hover:bg-neutral-600 text-white rounded text-xs font-medium transition-colors"
                         >
                           Edit
-                        </Link>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(u._id)}
+                          className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition-colors"
+                        >
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -398,6 +495,76 @@ export default function UsersPage() {
                     className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors font-medium"
                   >
                     Create
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Edit User Modal */}
+        {showEditModal && editingUser && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-neutral-800 rounded-lg border border-neutral-700 p-8 max-w-md w-full">
+              <h2 className="text-2xl font-bold mb-6">Edit User: {editingUser.username}</h2>
+
+              <form onSubmit={handleUpdateUser} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Email</label>
+                  <input
+                    type="email"
+                    value={editFormData.email}
+                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                    className="w-full px-4 py-2 bg-neutral-700 border border-neutral-600 rounded text-white focus:outline-none focus:border-blue-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Role</label>
+                  <select
+                    value={editFormData.role}
+                    onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value })}
+                    className="w-full px-4 py-2 bg-neutral-700 border border-neutral-600 rounded text-white focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="Admin">Admin</option>
+                    <option value="Tournament">Tournament Manager</option>
+                    <option value="MasterManager">Master Data Manager</option>
+                    <option value="Team">Team Manager</option>
+                    <option value="Player">Player</option>
+                    <option value="Audience">Audience</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Status</label>
+                  <select
+                    value={editFormData.status}
+                    onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                    className="w-full px-4 py-2 bg-neutral-700 border border-neutral-600 rounded text-white focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Suspended">Suspended</option>
+                    <option value="PendingApproval">Pending Approval</option>
+                  </select>
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditModal(false);
+                      setEditingUser(null);
+                    }}
+                    className="flex-1 px-4 py-2 bg-neutral-700 hover:bg-neutral-600 text-white rounded transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors font-medium"
+                  >
+                    Update
                   </button>
                 </div>
               </form>
