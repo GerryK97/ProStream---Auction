@@ -2,17 +2,11 @@ import { NextResponse } from 'next/server';
 
 /**
  * Debug endpoint to check environment variables
- * Only works in development (disabled in production)
- * DELETE THIS FILE BEFORE DEPLOYING TO PRODUCTION
+ * Works in both development and production for troubleshooting
+ * DELETE THIS FILE BEFORE FINAL PRODUCTION DEPLOYMENT
  */
 export async function GET() {
-  // Disable in production
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json(
-      { error: 'This endpoint is only available in development' },
-      { status: 403 }
-    );
-  }
+  // Allow debugging on production to verify environment variables
 
   const envVars = {
     // Authentication
