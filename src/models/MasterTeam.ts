@@ -8,6 +8,7 @@ const masterTeamSchema = new Schema<MasterTeam>(
     shortCode: { type: String, required: true, unique: true },
     ownerName: { type: String, required: true },
     logoURL: { type: String, required: false },
+    createdBy: { type: String, required: false }, // User ID who created the master team
   },
   {
     timestamps: true,
@@ -18,6 +19,7 @@ const masterTeamSchema = new Schema<MasterTeam>(
 
 // Indexes for efficient queries
 masterTeamSchema.index({ name: 1 });
+masterTeamSchema.index({ createdBy: 1 });
 // Note: shortCode index is automatically created by unique: true constraint on line 8
 
 export const MasterTeamModel = models.MasterTeam || model<MasterTeam>('MasterTeam', masterTeamSchema);

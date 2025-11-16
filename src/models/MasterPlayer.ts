@@ -19,6 +19,7 @@ const masterPlayerSchema = new Schema<MasterPlayer>(
     photoURL: { type: String, required: false },
     careerStats: { type: playerStatsSchema, required: false },
     suggestedClass: { type: String, required: false },
+    createdBy: { type: String, required: false }, // User ID who created the master player
   },
   {
     timestamps: true,
@@ -31,5 +32,6 @@ const masterPlayerSchema = new Schema<MasterPlayer>(
 masterPlayerSchema.index({ name: 1 });
 masterPlayerSchema.index({ position: 1 });
 masterPlayerSchema.index({ currentClub: 1 });
+masterPlayerSchema.index({ createdBy: 1 });
 
 export const MasterPlayerModel = models.MasterPlayer || model<MasterPlayer>('MasterPlayer', masterPlayerSchema);

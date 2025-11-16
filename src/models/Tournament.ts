@@ -10,6 +10,7 @@ const tournamentSchema = new Schema<Tournament>(
     squadSize: { type: Number, required: true },
     basePricePerPlayer: { type: Number, required: true },
     logoURL: { type: String },
+    createdBy: { type: String, required: false }, // User ID who created the tournament
     status: {
       type: String,
       enum: ['Draft', 'Completed', 'Setup', 'Pending', 'Live', 'Paused', 'Stopped', 'Archived'],
@@ -47,6 +48,9 @@ const tournamentSchema = new Schema<Tournament>(
     _id: false, // Use custom _id
   }
 );
+
+// Create indexes for performance
+tournamentSchema.index({ createdBy: 1 });
 
 export const TournamentModel =
   models.Tournament || model<Tournament>('Tournament', tournamentSchema);

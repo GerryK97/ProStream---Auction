@@ -16,6 +16,7 @@ const playerSchema = new Schema<Player>(
     playerNo: { type: String, required: false },              // Sequential per tournament (001, 002, 003)
     masterPlayerId: { type: String, required: false },        // Reference to MasterPlayer (optional for backward compatibility)
     tournamentId: { type: String, required: false, default: null },
+    createdBy: { type: String, required: false },             // User ID who created the player
     // Copied from master (read-only)
     name: { type: String, required: true },
     position: { type: String, required: false },
@@ -39,5 +40,6 @@ playerSchema.index({ masterPlayerId: 1 });
 playerSchema.index({ tournamentId: 1 });
 playerSchema.index({ tournamentId: 1, masterPlayerId: 1 });  // Prevent duplicate player in same tournament
 playerSchema.index({ tournamentId: 1, playerNo: 1 }, { unique: true, sparse: true }); // Ensure unique playerNo per tournament
+playerSchema.index({ createdBy: 1 });
 
 export const PlayerModel = models.Player || model<Player>('Player', playerSchema);
