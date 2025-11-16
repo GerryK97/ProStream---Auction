@@ -71,7 +71,7 @@ export async function GET() {
       recommendations: generateRecommendations(envVars),
       debugInfo: {
         isDevelopment: process.env.NODE_ENV === 'development',
-        isProduction: process.env.NODE_ENV === 'production',
+        isProduction: (process.env.NODE_ENV as string) === 'production',
         isVercel: !!process.env.VERCEL_URL,
       },
     },
@@ -86,7 +86,7 @@ function generateRecommendations(envVars: any): string[] {
     recommendations.push('❌ NEXTAUTH_URL not set - this will cause login to fail');
   }
 
-  if (envVars.NEXTAUTH_URL === 'http://localhost:3000' && process.env.NODE_ENV === 'production') {
+  if (envVars.NEXTAUTH_URL === 'http://localhost:3000' && (process.env.NODE_ENV as string) === 'production') {
     recommendations.push('⚠️  NEXTAUTH_URL is set to localhost on PRODUCTION - change to your Vercel domain');
   }
 
