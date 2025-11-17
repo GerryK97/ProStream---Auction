@@ -22,6 +22,9 @@ function getAuthHeaders(): HeadersInit {
   return headers;
 }
 
+// Export helper for components that need direct fetch calls
+export { getAuthHeaders };
+
 // Generic fetch wrapper with authentication
 async function fetchAPI<T>(
   endpoint: string,
