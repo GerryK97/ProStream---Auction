@@ -3,7 +3,15 @@ import { verifyToken, getTokenFromRequest } from '@/lib/auth';
 import { canAccessRoute } from '@/lib/permissions';
 
 // Define public routes that don't require authentication
-const PUBLIC_ROUTES = ['/', '/auth/login', '/auth/signup', '/auth/unauthorized'];
+const PUBLIC_ROUTES = [
+  '/',
+  '/auth/login',
+  '/auth/signup',
+  '/auth/unauthorized',
+  '/api/auth/login',
+  '/api/auth/signup',
+  '/api/auth/session',
+];
 
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -54,9 +62,8 @@ export function middleware(request: NextRequest) {
 // Configure which routes to apply middleware to
 export const config = {
   matcher: [
-    // Apply middleware to all routes except:
-    // - Static files (_next/static, _next/image, favicon.ico)
-    // - All API routes (/api)
-    '/((?!_next/static|_next/image|favicon.ico|api).*)',
+    // Apply middleware to all routes except static files
+    // API routes are now protected - only public auth endpoints are exempt
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };

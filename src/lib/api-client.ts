@@ -2,18 +2,47 @@
 
 const API_BASE_URL = '/api';
 
-// Generic fetch wrapper
+// Get auth token from localStorage
+function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('token');
+}
+
+// Get headers with authentication
+function getAuthHeaders(): HeadersInit {
+  const token = getAuthToken();
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  return headers;
+}
+
+// Generic fetch wrapper with authentication
 async function fetchAPI<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     headers: {
-      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
       ...options?.headers,
     },
     ...options,
   });
+
+  // Handle 401 Unauthorized - token expired or invalid
+  if (response.status === 401) {
+    localStorage.removeItem('token');
+    if (typeof window !== 'undefined') {
+      window.location.href = '/auth/login';
+    }
+    throw new Error('Unauthorized');
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Request failed' }));
