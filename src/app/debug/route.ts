@@ -2,10 +2,14 @@ import { NextResponse } from 'next/server';
 
 /**
  * Simple debug endpoint to check environment variables
- * This is a public endpoint (no auth required)
- * DELETE THIS FILE BEFORE DEPLOYING TO PRODUCTION
+ * Disabled in production to prevent exposing secrets
  */
 export async function GET() {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({
+      status: 'Not Found',
+    }, { status: 404 });
+  }
   const envVars = {
     // Authentication
     NEXTAUTH_URL: process.env.NEXTAUTH_URL || '❌ NOT SET',

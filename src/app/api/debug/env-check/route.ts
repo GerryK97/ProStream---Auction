@@ -2,11 +2,14 @@ import { NextResponse } from 'next/server';
 
 /**
  * Debug endpoint to check environment variables
- * Works in both development and production for troubleshooting
- * DELETE THIS FILE BEFORE FINAL PRODUCTION DEPLOYMENT
+ * Limited to non-production environments to avoid leaking secrets
  */
 export async function GET() {
-  // Allow debugging on production to verify environment variables
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({
+      status: 'Not Found',
+    }, { status: 404 });
+  }
 
   const envVars = {
     // Authentication
