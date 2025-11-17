@@ -6,24 +6,43 @@ Welcome to the ProStream documentation hub. This folder contains comprehensive g
 
 ## 📚 Documentation Structure
 
-All documentation files are organized in a single clean folder:
+All documentation files are organized in a single clean `docs/` folder:
 
+### Core Documentation (Production Ready)
 ```
 docs/
-├── README.md                              ← You are here (Navigation Hub)
-├── IMPLEMENTATION_OVERVIEW.md             ← System overview & quick start
-├── 01-DEPLOYMENT_GUIDE.md                 ← Vercel & MongoDB setup
-├── 02-SECURITY_ARCHITECTURE.md            ← Access control details
-├── 03-PHASE_1_DATABASE_SCHEMA.md          ← createdBy field additions
-├── 04-PHASE_2_ACCESS_CONTROL.md           ← Permission functions
-├── 05-PHASE_3_DATABASE_FILTERING.md       ← User-scoped queries
-├── 06-PHASE_4_API_SECURITY.md             ← Endpoint security
-├── 07-PHASE_5_USER_MANAGEMENT_UI.md       ← Tournament assignments
-├── 08-PHASE_6_FRONTEND_FILTERING.md       ← Why no UI changes needed
-└── 09-PHASE_7_MIGRATION.md                ← Data backfill script
+├── README.md                              ← Navigation Hub (You are here)
+├── IMPLEMENTATION_OVERVIEW.md             ← System Overview & Quick Start
+│
+├── DEPLOYMENT & SECURITY (Priority Reading)
+├── 01-DEPLOYMENT_GUIDE.md                 ← Vercel & MongoDB Setup
+├── 02-SECURITY_ARCHITECTURE.md            ← Access Control Details
+│
+└── IMPLEMENTATION PHASES (Deep Dive)
+├── 03-PHASE_1_DATABASE_SCHEMA.md          ← createdBy field & Database
+├── 04-PHASE_2_ACCESS_CONTROL.md           ← Permission Functions
+├── 05-PHASE_3_DATABASE_FILTERING.md       ← User-Scoped Queries
+├── 06-PHASE_4_API_SECURITY.md             ← Three-Level Endpoint Security
+├── 07-PHASE_5_USER_MANAGEMENT_UI.md       ← Tournament Assignments
+├── 08-PHASE_6_FRONTEND_FILTERING.md       ← Frontend Verification
+└── 09-PHASE_7_MIGRATION.md                ← Data Backfill Script
 ```
 
-**Note:** Files are numbered (01-09) to maintain reading order in file explorers.
+### Archived Documentation (Reference)
+```
+ARCHIVE-*.md                               ← Previous guides & implementation notes
+├── API Configuration & Optimization
+├── Auth Setup & API Documentation
+├── Bulk Upload Guide
+├── Environment Verification
+├── Vercel Deployment Fixes
+└── ... (19 historical documents)
+```
+
+**Organization:**
+- Files are numbered (01-09) to maintain reading order
+- Archived files use ARCHIVE- prefix for easy filtering
+- All documents in single location for easy access
 
 ---
 
