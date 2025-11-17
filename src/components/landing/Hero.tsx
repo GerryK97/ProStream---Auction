@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
 
 /**
  * Hero section for landing page
@@ -9,6 +11,7 @@ import { useRouter } from 'next/navigation';
  */
 const Hero: React.FC = () => {
   const router = useRouter();
+  const { user, isLoading } = useAuth();
 
   return (
     <div className="relative min-h-screen flex items-center justify-center px-4">
@@ -35,20 +38,41 @@ const Hero: React.FC = () => {
 
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <button
-            onClick={() => router.push('/auction')}
-            className="group relative px-8 py-4 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold rounded-lg text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-brand-primary/50"
-          >
-            <span className="relative z-10">Start Auction</span>
-            <div className="absolute inset-0 bg-gradient-to-r from-brand-primary to-brand-secondary opacity-0 group-hover:opacity-100 rounded-lg transition-opacity duration-300" />
-          </button>
+          {!isLoading && !user ? (
+            <>
+              <Link
+                href="/auth/login"
+                className="group relative px-8 py-4 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold rounded-lg text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-brand-primary/50"
+              >
+                <span className="relative z-10">Login</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-brand-primary to-brand-secondary opacity-0 group-hover:opacity-100 rounded-lg transition-opacity duration-300" />
+              </Link>
 
-          <button
-            onClick={() => router.push('/manage')}
-            className="px-8 py-4 bg-neutral-800 hover:bg-neutral-700 border-2 border-neutral-600 hover:border-brand-secondary text-white font-bold rounded-lg text-lg transition-all duration-300 transform hover:scale-105"
-          >
-            Manage Tournament
-          </button>
+              <Link
+                href="/auth/signup"
+                className="px-8 py-4 bg-neutral-800 hover:bg-neutral-700 border-2 border-neutral-600 hover:border-brand-secondary text-white font-bold rounded-lg text-lg transition-all duration-300 transform hover:scale-105"
+              >
+                Create Account
+              </Link>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => router.push('/auction')}
+                className="group relative px-8 py-4 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold rounded-lg text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-brand-primary/50"
+              >
+                <span className="relative z-10">Start Auction</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-brand-primary to-brand-secondary opacity-0 group-hover:opacity-100 rounded-lg transition-opacity duration-300" />
+              </button>
+
+              <button
+                onClick={() => router.push('/manage')}
+                className="px-8 py-4 bg-neutral-800 hover:bg-neutral-700 border-2 border-neutral-600 hover:border-brand-secondary text-white font-bold rounded-lg text-lg transition-all duration-300 transform hover:scale-105"
+              >
+                Manage Tournament
+              </button>
+            </>
+          )}
         </div>
 
         {/* Quick Stats */}

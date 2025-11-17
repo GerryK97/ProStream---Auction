@@ -1,0 +1,132 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { User } from '@/models/User';
+import {
+  hashPassword,
+  validatePassword,
+  validateEmail,
+  validateUsername,
+  generateUserId,
+  generateToken,
+} from '@/lib/auth';
+import { shouldAutoApproveRole } from '@/lib/permissions';
+import { connectToDatabase } from '@/lib/mongodb';
+
+export async function POST(request: NextRequest) {
+  try {
+    await connectToDatabase();
+
+    const { username, email, password, role = 'Audience' } = await request.json();
+
+    // Validation
+    if (!username || !email || !password) {
+      return NextResponse.json(
+        { error: 'Username, email, and password are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate username format
+    if (!validateUsername(username)) {
+      return NextResponse.json(
+        {
+          error: 'Username must be 3-50 characters and contain only letters, numbers, underscores, and hyphens',
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate email format
+    if (!validateEmail(email)) {
+      return NextResponse.json(
+        { error: 'Invalid email format' },
+        { status: 400 }
+      );
+    }
+
+    // Validate password strength
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      return NextResponse.json(
+        { error: 'Password does not meet requirements', errors: passwordValidation.errors },
+        { status: 400 }
+      );
+    }
+
+    // Check if username already exists
+    const existingUsername = await User.findOne({ username: username.toLowerCase() });
+    if (existingUsername) {
+      return NextResponse.json(
+        { error: 'Username already taken' },
+        { status: 409 }
+      );
+    }
+
+    // Check if email already exists
+    const existingEmail = await User.findOne({ email: email.toLowerCase() });
+    if (existingEmail) {
+      return NextResponse.json(
+        { error: 'Email already registered' },
+        { status: 409 }
+      );
+    }
+
+    // Validate role
+    const validRoles = ['Admin', 'Tournament', 'MasterManager', 'Team', 'Player', 'Audience'];
+    if (!validRoles.includes(role)) {
+      return NextResponse.json(
+        { error: 'Invalid role' },
+        { status: 400 }
+      );
+    }
+
+    // Hash password
+    const passwordHash = await hashPassword(password);
+
+    // Determine if user should be auto-approved
+    const isAutoApproved = shouldAutoApproveRole(role);
+    const status = isAutoApproved ? 'Active' : 'PendingApproval';
+
+    // Create user
+    const userId = generateUserId();
+    const user = new User({
+      _id: userId,
+      username: username.toLowerCase(),
+      email: email.toLowerCase(),
+      passwordHash,
+      role,
+      status,
+    });
+
+    await user.save();
+
+    // Generate token if auto-approved
+    let token = null;
+    if (isAutoApproved) {
+      token = generateToken(user);
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: isAutoApproved
+          ? 'Account created successfully'
+          : 'Account created. Please wait for admin approval.',
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          status: user.status,
+        },
+        token: isAutoApproved ? token : null,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error('Signup error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

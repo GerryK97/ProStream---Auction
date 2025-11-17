@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { tournamentDB } from '@/lib/db-mongodb';
 import { PlayerClassConfig } from '@/types';
+import { getUserFromRequest } from '@/lib/request-helpers';
+import { canPerformAction } from '@/lib/permissions';
 
 /**
  * Validate player class codes
@@ -33,10 +35,26 @@ function validatePlayerClassCodes(playerClasses?: PlayerClassConfig[]): { valid:
   return { valid: true };
 }
 
-// GET /api/tournaments - Get all tournaments
-export async function GET() {
+// GET /api/tournaments - Get tournaments accessible to the authenticated user
+export async function GET(request: NextRequest) {
   try {
-    const tournaments = await tournamentDB.getAll();
+    // Authenticate user
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user has permission to read tournaments
+    if (!canPerformAction(user.role, 'read', 'tournament')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Get tournaments accessible to this user
+    const tournaments = await tournamentDB.getAllForUser(
+      user.userId,
+      user.role,
+      user.assignedTournaments
+    );
     return NextResponse.json(tournaments);
   } catch (error) {
     return NextResponse.json(
@@ -49,6 +67,17 @@ export async function GET() {
 // POST /api/tournaments - Create new tournament
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate user
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user has permission to create tournaments
+    if (!canPerformAction(user.role, 'create', 'tournament')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const body = await request.json();
 
     // Validate player class codes if player classes are enabled
@@ -62,7 +91,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const newTournament = await tournamentDB.create(body);
+    // Create tournament with createdBy tracking
+    const newTournament = await tournamentDB.create(body, user.userId);
     return NextResponse.json(newTournament, { status: 201 });
   } catch (error) {
     return NextResponse.json(

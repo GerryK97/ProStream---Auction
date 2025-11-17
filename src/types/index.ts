@@ -17,6 +17,7 @@ export interface Tournament {
   squadSize: number;
   basePricePerPlayer: number;
   logoURL?: string;
+  createdBy?: string;                   // User ID who created the tournament
   status: 'Draft' | 'Completed' | 'Setup' | 'Pending' | 'Live' | 'Paused' | 'Stopped' | 'Archived';
   usePlayerClasses?: boolean;           // Toggle to enable/disable player classes
   playerClasses?: PlayerClassConfig[];  // Custom player classes for this tournament
@@ -30,6 +31,7 @@ export interface MasterTeam {
   shortCode: string;
   ownerName: string;
   logoURL?: string;
+  createdBy?: string; // User ID who created the master team
 }
 
 // Master Player (Global Registry - never changes across tournaments)
@@ -41,6 +43,7 @@ export interface MasterPlayer {
   photoURL?: string;
   careerStats?: PlayerStats; // Career-wide stats
   suggestedClass?: string; // Suggested player class (used as default when adding to tournament)
+  createdBy?: string;      // User ID who created the master player
 }
 
 export interface PlayerStats {
@@ -54,6 +57,7 @@ export interface Team {
   _id: string;
   masterTeamId?: string;    // Reference to MasterTeam (optional for backward compatibility)
   tournamentId?: string | null;
+  createdBy?: string;       // User ID who created the team
   // Copied from master (read-only - edit master to update)
   name: string;
   shortCode: string;
@@ -71,6 +75,7 @@ export interface Player {
   playerNo?: string;            // Sequential number within tournament (e.g., "001", "002", "003")
   masterPlayerId?: string;      // Reference to MasterPlayer (optional for backward compatibility)
   tournamentId?: string | null;
+  createdBy?: string;           // User ID who created the player
   // Copied from master (read-only - edit master to update)
   name: string;
   position?: string;

@@ -9,6 +9,7 @@ import { imageOptimizers } from '@/lib/imageOptimization';
 import ImageUpload from './ImageUpload';
 import { getDefaultClasses } from '@/lib/playerClassUtils';
 import BulkPlayerUpload from './BulkPlayerUpload';
+import { getAuthHeaders } from '@/lib/api-client';
 
 type ManagementView = 'tournaments' | 'teams' | 'players';
 
@@ -37,18 +38,19 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
     useEffect(() => {
         const fetchData = async () => {
             try {
+                const headers = getAuthHeaders();
                 const requests: Promise<Response>[] = [];
 
                 // Always fetch tournaments as it's used for context
-                requests.push(fetch('/api/tournaments'));
+                requests.push(fetch('/api/tournaments', { headers }));
 
                 // Fetch view-specific data only
                 switch (view) {
                     case 'teams':
-                        requests.push(fetch('/api/master-teams'));
+                        requests.push(fetch('/api/master-teams', { headers }));
                         break;
                     case 'players':
-                        requests.push(fetch('/api/master-players'));
+                        requests.push(fetch('/api/master-players', { headers }));
                         break;
                     case 'tournaments':
                         // Tournaments already fetched above
@@ -109,7 +111,7 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
         try {
             const response = await fetch('/api/master-players/bulk-delete', {
                 method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({ confirm: clearConfirmText }),
             });
 
@@ -136,7 +138,7 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
         try {
             const response = await fetch('/api/master-teams/bulk-delete', {
                 method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({ confirm: clearConfirmText }),
             });
 
