@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { IUser } from '@/models/User';
+import { NextRequest } from 'next/server';
 
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'your-secret-key-change-this';
 const JWT_EXPIRY = '7d'; // 7 days
@@ -90,7 +91,7 @@ export function verifyToken(token: string): JWTPayload | null {
 }
 
 /**
- * Extract token from request
+ * Extract token from request Authorization header
  */
 export function getTokenFromRequest(
   request: Request
@@ -106,6 +107,13 @@ export function getTokenFromRequest(
   }
 
   return parts[1];
+}
+
+/**
+ * Extract token from cookies (for middleware)
+ */
+export function getTokenFromCookies(request: NextRequest): string | null {
+  return request.cookies.get('auth_token')?.value || null;
 }
 
 /**
