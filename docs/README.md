@@ -6,22 +6,24 @@ Welcome to the ProStream documentation hub. This folder contains comprehensive g
 
 ## 📚 Documentation Structure
 
+All documentation files are organized in a single clean folder:
+
 ```
 docs/
-├── README.md                              ← You are here
-├── IMPLEMENTATION_OVERVIEW.md             ← Start here for system overview
-├── GUIDES/
-│   ├── DEPLOYMENT_GUIDE.md               ← Vercel & MongoDB setup
-│   └── SECURITY_ARCHITECTURE.md          ← Access control deep dive
-└── PHASES/
-    ├── PHASE_1_DATABASE_SCHEMA.md        ← Database changes (createdBy)
-    ├── PHASE_2_ACCESS_CONTROL.md         ← Permission functions
-    ├── PHASE_3_DATABASE_FILTERING.md     ← User-scoped queries
-    ├── PHASE_4_API_SECURITY.md           ← Endpoint security
-    ├── PHASE_5_USER_MANAGEMENT_UI.md     ← Tournament assignment UI
-    ├── PHASE_6_FRONTEND_FILTERING.md     ← Why no frontend changes needed
-    └── PHASE_7_MIGRATION.md              ← Data backfill script
+├── README.md                              ← You are here (Navigation Hub)
+├── IMPLEMENTATION_OVERVIEW.md             ← System overview & quick start
+├── 01-DEPLOYMENT_GUIDE.md                 ← Vercel & MongoDB setup
+├── 02-SECURITY_ARCHITECTURE.md            ← Access control details
+├── 03-PHASE_1_DATABASE_SCHEMA.md          ← createdBy field additions
+├── 04-PHASE_2_ACCESS_CONTROL.md           ← Permission functions
+├── 05-PHASE_3_DATABASE_FILTERING.md       ← User-scoped queries
+├── 06-PHASE_4_API_SECURITY.md             ← Endpoint security
+├── 07-PHASE_5_USER_MANAGEMENT_UI.md       ← Tournament assignments
+├── 08-PHASE_6_FRONTEND_FILTERING.md       ← Why no UI changes needed
+└── 09-PHASE_7_MIGRATION.md                ← Data backfill script
 ```
+
+**Note:** Files are numbered (01-09) to maintain reading order in file explorers.
 
 ---
 
@@ -34,12 +36,12 @@ docs/
    - See the 7-phase implementation
    - Learn about the architecture
 
-2. **Then read:** [GUIDES/SECURITY_ARCHITECTURE.md](./GUIDES/SECURITY_ARCHITECTURE.md)
+2. **Then read:** [02-SECURITY_ARCHITECTURE.md](./02-SECURITY_ARCHITECTURE.md)
    - Understand how access control works
    - Learn the three-level security model
    - See permission matrices
 
-3. **Ready to deploy?** [GUIDES/DEPLOYMENT_GUIDE.md](./GUIDES/DEPLOYMENT_GUIDE.md)
+3. **Ready to deploy?** [01-DEPLOYMENT_GUIDE.md](./01-DEPLOYMENT_GUIDE.md)
    - Step-by-step Vercel setup
    - MongoDB Atlas configuration
    - Cost analysis for free tier
@@ -48,15 +50,15 @@ docs/
 
 Want to understand specific parts? Read the phase documentation:
 
-| Phase | Topic | Use Case |
-|-------|-------|----------|
-| [Phase 1](./PHASES/PHASE_1_DATABASE_SCHEMA.md) | Database Schema | Understanding data model |
-| [Phase 2](./PHASES/PHASE_2_ACCESS_CONTROL.md) | Access Control | How permissions work |
-| [Phase 3](./PHASES/PHASE_3_DATABASE_FILTERING.md) | Database Filtering | User-scoped queries |
-| [Phase 4](./PHASES/PHASE_4_API_SECURITY.md) | API Security | Endpoint authentication |
-| [Phase 5](./PHASES/PHASE_5_USER_MANAGEMENT_UI.md) | User Management UI | Admin interface |
-| [Phase 6](./PHASES/PHASE_6_FRONTEND_FILTERING.md) | Frontend Verification | Why UI needs no changes |
-| [Phase 7](./PHASES/PHASE_7_MIGRATION.md) | Data Migration | Backfilling existing data |
+| Phase | Topic | File | Use Case |
+|-------|-------|------|----------|
+| Phase 1 | Database Schema | [03-PHASE_1_DATABASE_SCHEMA.md](./03-PHASE_1_DATABASE_SCHEMA.md) | Understanding data model |
+| Phase 2 | Access Control | [04-PHASE_2_ACCESS_CONTROL.md](./04-PHASE_2_ACCESS_CONTROL.md) | How permissions work |
+| Phase 3 | Database Filtering | [05-PHASE_3_DATABASE_FILTERING.md](./05-PHASE_3_DATABASE_FILTERING.md) | User-scoped queries |
+| Phase 4 | API Security | [06-PHASE_4_API_SECURITY.md](./06-PHASE_4_API_SECURITY.md) | Endpoint authentication |
+| Phase 5 | User Management UI | [07-PHASE_5_USER_MANAGEMENT_UI.md](./07-PHASE_5_USER_MANAGEMENT_UI.md) | Admin interface |
+| Phase 6 | Frontend Verification | [08-PHASE_6_FRONTEND_FILTERING.md](./08-PHASE_6_FRONTEND_FILTERING.md) | Why UI needs no changes |
+| Phase 7 | Data Migration | [09-PHASE_7_MIGRATION.md](./09-PHASE_7_MIGRATION.md) | Backfilling existing data |
 
 ---
 
@@ -64,29 +66,16 @@ Want to understand specific parts? Read the phase documentation:
 
 ### I want to...
 
-**Deploy the application**
-→ [GUIDES/DEPLOYMENT_GUIDE.md](./GUIDES/DEPLOYMENT_GUIDE.md)
-
-**Understand the security model**
-→ [GUIDES/SECURITY_ARCHITECTURE.md](./GUIDES/SECURITY_ARCHITECTURE.md)
-
-**Add a new feature**
-→ Start with relevant PHASE documentation
-
-**Fix a bug**
-→ [GUIDES/SECURITY_ARCHITECTURE.md](./GUIDES/SECURITY_ARCHITECTURE.md) for context, then PHASES
-
-**Understand access control**
-→ [Phase 2: Access Control](./PHASES/PHASE_2_ACCESS_CONTROL.md)
-
-**Learn the database structure**
-→ [Phase 1: Database Schema](./PHASES/PHASE_1_DATABASE_SCHEMA.md)
-
-**Set up user assignments**
-→ [Phase 5: User Management UI](./PHASES/PHASE_5_USER_MANAGEMENT_UI.md)
-
-**Run the migration**
-→ [Phase 7: Migration](./PHASES/PHASE_7_MIGRATION.md)
+| Task | File |
+|------|------|
+| **Deploy the application** | [01-DEPLOYMENT_GUIDE.md](./01-DEPLOYMENT_GUIDE.md) |
+| **Understand the security model** | [02-SECURITY_ARCHITECTURE.md](./02-SECURITY_ARCHITECTURE.md) |
+| **Understand access control** | [04-PHASE_2_ACCESS_CONTROL.md](./04-PHASE_2_ACCESS_CONTROL.md) |
+| **Learn the database structure** | [03-PHASE_1_DATABASE_SCHEMA.md](./03-PHASE_1_DATABASE_SCHEMA.md) |
+| **Set up user assignments** | [07-PHASE_5_USER_MANAGEMENT_UI.md](./07-PHASE_5_USER_MANAGEMENT_UI.md) |
+| **Run the migration** | [09-PHASE_7_MIGRATION.md](./09-PHASE_7_MIGRATION.md) |
+| **Add a new feature** | Start with relevant phase file (03-09) |
+| **Fix a bug** | [02-SECURITY_ARCHITECTURE.md](./02-SECURITY_ARCHITECTURE.md) for context, then phases |
 
 ---
 
@@ -141,6 +130,8 @@ Every resource (Tournament, Team, Player, MasterTeam, MasterPlayer) has a `creat
 - Control who can access/modify
 - Enable multi-user isolation
 
+See: [03-PHASE_1_DATABASE_SCHEMA.md](./03-PHASE_1_DATABASE_SCHEMA.md)
+
 ### assignedTournaments
 Users can be assigned to specific tournaments by admins via the User Management UI.
 
@@ -149,11 +140,15 @@ Users can be assigned to specific tournaments by admins via the User Management 
 - Reduce noise (user only sees relevant tournaments)
 - Enable collaboration
 
+See: [07-PHASE_5_USER_MANAGEMENT_UI.md](./07-PHASE_5_USER_MANAGEMENT_UI.md)
+
 ### Three-Level Verification
 All API endpoints verify:
 1. User is authenticated (has valid JWT)
 2. User's role allows the action
 3. User has access to the specific resource
+
+See: [06-PHASE_4_API_SECURITY.md](./06-PHASE_4_API_SECURITY.md)
 
 ---
 
@@ -171,6 +166,8 @@ The migration script safely backfills `createdBy` field:
 - ✅ Safe to run multiple times
 - ✅ No data loss
 - ✅ Skips already-migrated records
+
+See: [09-PHASE_7_MIGRATION.md](./09-PHASE_7_MIGRATION.md)
 
 ### Stateless Authentication
 JWT tokens are verified server-side without sessions:
@@ -192,6 +189,8 @@ JWT tokens are verified server-side without sessions:
 - Typical usage: 0.36% of Vercel free tier bandwidth
 - Can run 8,000+ auctions per month on free tier
 - Total cost: $0/month with recommended setup
+
+See: [01-DEPLOYMENT_GUIDE.md](./01-DEPLOYMENT_GUIDE.md)
 
 ### Database Storage
 - Can store ~6,700 tournaments on MongoDB Atlas free tier
@@ -238,7 +237,7 @@ JWT tokens are verified server-side without sessions:
 5. **Run migration** - Execute `npx tsx scripts/migrate-add-created-by.ts`
 6. **Verify** - Test all features in production
 
-**Full details:** [GUIDES/DEPLOYMENT_GUIDE.md](./GUIDES/DEPLOYMENT_GUIDE.md)
+**Full details:** [01-DEPLOYMENT_GUIDE.md](./01-DEPLOYMENT_GUIDE.md)
 
 ---
 
@@ -268,17 +267,6 @@ scripts/
 └── migrate-add-created-by.ts   # Backfill createdBy field
 ```
 
-### Documentation
-```
-docs/
-├── README.md                   # This file
-├── IMPLEMENTATION_OVERVIEW.md  # High-level overview
-├── GUIDES/
-│   ├── DEPLOYMENT_GUIDE.md    # Vercel setup
-│   └── SECURITY_ARCHITECTURE.md # Access control details
-└── PHASES/                      # Phase-by-phase implementation
-```
-
 ---
 
 ## 🔄 Implementation Phases
@@ -288,35 +276,49 @@ docs/
 - Created indexes for performance
 - Updated type definitions
 
+See: [03-PHASE_1_DATABASE_SCHEMA.md](./03-PHASE_1_DATABASE_SCHEMA.md)
+
 ### Phase 2: Access Control ✅
 - Created permission checking functions
 - Implemented role-based authorization
 - Added resource ownership verification
+
+See: [04-PHASE_2_ACCESS_CONTROL.md](./04-PHASE_2_ACCESS_CONTROL.md)
 
 ### Phase 3: Database Filtering ✅
 - Implemented user-scoped query methods
 - Added pagination support
 - Enabled efficient large dataset handling
 
+See: [05-PHASE_3_DATABASE_FILTERING.md](./05-PHASE_3_DATABASE_FILTERING.md)
+
 ### Phase 4: API Security ✅
 - Added three-level verification to 25 endpoints
 - Proper HTTP status codes
 - Comprehensive error handling
+
+See: [06-PHASE_4_API_SECURITY.md](./06-PHASE_4_API_SECURITY.md)
 
 ### Phase 5: User Management UI ✅
 - Tournament assignment interface
 - Multi-select checkbox UI
 - Admin-only access
 
+See: [07-PHASE_5_USER_MANAGEMENT_UI.md](./07-PHASE_5_USER_MANAGEMENT_UI.md)
+
 ### Phase 6: Frontend Verification ✅
 - Confirmed no frontend changes needed
 - API-level filtering works automatically
 - Security by design, not UI
 
+See: [08-PHASE_6_FRONTEND_FILTERING.md](./08-PHASE_6_FRONTEND_FILTERING.md)
+
 ### Phase 7: Data Migration ✅
 - Created idempotent migration script
 - Backfills existing resources
 - Safe to run multiple times
+
+See: [09-PHASE_7_MIGRATION.md](./09-PHASE_7_MIGRATION.md)
 
 ---
 
@@ -328,18 +330,18 @@ docs/
 2. Add permission matrix to `src/lib/permissions.ts`
 3. Update role validation in auth endpoints
 4. Add tests for new role
-5. Document in [GUIDES/SECURITY_ARCHITECTURE.md](./GUIDES/SECURITY_ARCHITECTURE.md)
+5. Document in [02-SECURITY_ARCHITECTURE.md](./02-SECURITY_ARCHITECTURE.md)
 
 ### Adding Tournament-Level Filtering
 
-1. Check existing pattern in [Phase 3](./PHASES/PHASE_3_DATABASE_FILTERING.md)
+1. Check existing pattern in [05-PHASE_3_DATABASE_FILTERING.md](./05-PHASE_3_DATABASE_FILTERING.md)
 2. Add filter to `tournamentDB.getAllForUser()`
 3. Update API endpoint to use filtered results
 4. Test multi-user isolation
 
 ### Modifying Access Control Rules
 
-1. Read [Phase 2: Access Control](./PHASES/PHASE_2_ACCESS_CONTROL.md)
+1. Read [04-PHASE_2_ACCESS_CONTROL.md](./04-PHASE_2_ACCESS_CONTROL.md)
 2. Update `canAccessX()` function in `src/lib/permissions.ts`
 3. Verify all dependent API endpoints
 4. Test permission boundaries
@@ -357,6 +359,8 @@ docs/
 2. Verify records have `createdBy` set
 3. Check that user's ID matches `createdBy` value
 
+See: [09-PHASE_7_MIGRATION.md](./09-PHASE_7_MIGRATION.md)
+
 ### API Returns 403 Forbidden Unexpectedly
 **Check:**
 1. Is user authenticated? (Valid JWT token?)
@@ -364,7 +368,7 @@ docs/
 3. Does user own/have access to this resource?
 4. Check error logs for specific reason
 
-See [Phase 4: API Security](./PHASES/PHASE_4_API_SECURITY.md) for details.
+See: [06-PHASE_4_API_SECURITY.md](./06-PHASE_4_API_SECURITY.md) for details.
 
 ### Database Connection Fails on Deployment
 **Check:**
@@ -373,20 +377,17 @@ See [Phase 4: API Security](./PHASES/PHASE_4_API_SECURITY.md) for details.
 3. Password has no special characters (or URL encoded)
 4. Network connectivity to MongoDB Atlas
 
-See [GUIDES/DEPLOYMENT_GUIDE.md](./GUIDES/DEPLOYMENT_GUIDE.md#issue-2-mongodb-connection-fails).
+See: [01-DEPLOYMENT_GUIDE.md](./01-DEPLOYMENT_GUIDE.md#issue-2-mongodb-connection-fails).
 
 ---
 
 ## 📞 Support & Resources
 
-### Documentation
-- Full implementation overview: [IMPLEMENTATION_OVERVIEW.md](./IMPLEMENTATION_OVERVIEW.md)
-- Deployment guide: [GUIDES/DEPLOYMENT_GUIDE.md](./GUIDES/DEPLOYMENT_GUIDE.md)
-- Security details: [GUIDES/SECURITY_ARCHITECTURE.md](./GUIDES/SECURITY_ARCHITECTURE.md)
-
-### Phase Documentation
-- Each phase has detailed documentation in [PHASES/](./PHASES/)
-- Start with the phase that matches your question
+### Documentation Files
+- System Overview: [IMPLEMENTATION_OVERVIEW.md](./IMPLEMENTATION_OVERVIEW.md)
+- Deployment: [01-DEPLOYMENT_GUIDE.md](./01-DEPLOYMENT_GUIDE.md)
+- Security: [02-SECURITY_ARCHITECTURE.md](./02-SECURITY_ARCHITECTURE.md)
+- All Phases: [03-09 Phase files](.)
 
 ### External Resources
 - **Next.js Docs:** https://nextjs.org/docs
@@ -400,12 +401,12 @@ See [GUIDES/DEPLOYMENT_GUIDE.md](./GUIDES/DEPLOYMENT_GUIDE.md#issue-2-mongodb-co
 
 ### For New Developers
 1. Read [IMPLEMENTATION_OVERVIEW.md](./IMPLEMENTATION_OVERVIEW.md)
-2. Review [GUIDES/SECURITY_ARCHITECTURE.md](./GUIDES/SECURITY_ARCHITECTURE.md)
-3. Read relevant PHASE documentation
+2. Review [02-SECURITY_ARCHITECTURE.md](./02-SECURITY_ARCHITECTURE.md)
+3. Read relevant phase files (03-09)
 4. Explore code in `src/lib/permissions.ts` and `src/lib/db-mongodb.ts`
 
 ### For Deployment
-1. Follow [GUIDES/DEPLOYMENT_GUIDE.md](./GUIDES/DEPLOYMENT_GUIDE.md)
+1. Follow [01-DEPLOYMENT_GUIDE.md](./01-DEPLOYMENT_GUIDE.md)
 2. Test in staging environment first
 3. Run migration before going live
 4. Monitor bandwidth usage
@@ -431,13 +432,14 @@ See [GUIDES/DEPLOYMENT_GUIDE.md](./GUIDES/DEPLOYMENT_GUIDE.md#issue-2-mongodb-co
 - ✅ Migration guide provided
 - ✅ Common issues addressed
 - ✅ Performance analysis included
+- ✅ Clean flat file structure
 
 ---
 
 ## 📝 Last Updated
 
 **Date:** November 2024
-**Version:** 2.0
+**Version:** 3.0 (Reorganized)
 **Status:** Production Ready ✅
 
 ---
@@ -447,15 +449,16 @@ See [GUIDES/DEPLOYMENT_GUIDE.md](./GUIDES/DEPLOYMENT_GUIDE.md#issue-2-mongodb-co
 You now have:
 - ✅ Fully implemented multi-user access control
 - ✅ Three-level security on all endpoints
-- ✅ Comprehensive documentation
+- ✅ Comprehensive documentation (10 files)
 - ✅ Deployment guides
 - ✅ Migration tools
+- ✅ Clean, organized file structure
 
-**Ready to deploy?** Start with [GUIDES/DEPLOYMENT_GUIDE.md](./GUIDES/DEPLOYMENT_GUIDE.md)
+**Ready to deploy?** Start with [01-DEPLOYMENT_GUIDE.md](./01-DEPLOYMENT_GUIDE.md)
 
 **Want to understand the system?** Read [IMPLEMENTATION_OVERVIEW.md](./IMPLEMENTATION_OVERVIEW.md)
 
-**Questions about security?** Check [GUIDES/SECURITY_ARCHITECTURE.md](./GUIDES/SECURITY_ARCHITECTURE.md)
+**Questions about security?** Check [02-SECURITY_ARCHITECTURE.md](./02-SECURITY_ARCHITECTURE.md)
 
 ---
 
