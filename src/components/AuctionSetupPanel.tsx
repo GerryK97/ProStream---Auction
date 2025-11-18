@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useAuction } from '@/hooks/useAuction';
 import { Player, Team, Tournament, PlayerStats, MasterTeam, MasterPlayer } from '@/types';
+import { getAuthHeaders } from '@/lib/api-client';
 import Modal from './Modal';
 import { PlusIcon, DeleteIcon, EditIcon } from './icons';
 import { imageOptimizers } from '@/lib/imageOptimization';
@@ -617,10 +618,11 @@ const AuctionSetupPanel: React.FC = () => {
                 const startTime = Date.now();
                 console.log('[AuctionSetup] Starting master data fetch...');
 
+                const headers = getAuthHeaders();
                 const responses = await Promise.all([
-                    fetch('/api/tournaments'),
-                    fetch('/api/master-players'),
-                    fetch('/api/master-teams'),
+                    fetch('/api/tournaments', { headers }),
+                    fetch('/api/master-players', { headers }),
+                    fetch('/api/master-teams', { headers }),
                 ]);
 
                 const [tournamentsData, masterPlayersData, masterTeamsData] = await Promise.all(
@@ -689,9 +691,10 @@ const AuctionSetupPanel: React.FC = () => {
                 console.log(`[AuctionSetup] Starting tournament-specific data fetch for ${selectedTournamentId}...`);
 
                 // Only fetch tournament-specific data
+                const headers = getAuthHeaders();
                 const responses = await Promise.all([
-                    fetch(`/api/players?tournamentId=${selectedTournamentId}`),
-                    fetch(`/api/teams?tournamentId=${selectedTournamentId}`)
+                    fetch(`/api/players?tournamentId=${selectedTournamentId}`, { headers }),
+                    fetch(`/api/teams?tournamentId=${selectedTournamentId}`, { headers })
                 ]);
 
                 const [tournamentPlayersData, tournamentTeamsData] = await Promise.all(
