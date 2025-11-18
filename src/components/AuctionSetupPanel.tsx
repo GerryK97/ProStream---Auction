@@ -3,13 +3,13 @@
 import React, { useState, useMemo } from 'react';
 import { useAuction } from '@/hooks/useAuction';
 import { Player, Team, Tournament, PlayerStats, MasterTeam, MasterPlayer } from '@/types';
+import { getAuthHeaders } from '@/lib/api-client';
 import Modal from './Modal';
 import { PlusIcon, DeleteIcon, EditIcon } from './icons';
 import { imageOptimizers } from '@/lib/imageOptimization';
 import ImageUpload from './ImageUpload';
 import { getSortedClasses, getClassConfig } from '@/lib/playerClassUtils';
 import BulkAddTournamentPlayers from './BulkAddTournamentPlayers';
-import { getAuthHeaders } from '@/lib/api-client';
 
 
 interface AddPlayerFromDatabaseProps {
@@ -28,6 +28,9 @@ interface AddTeamFromDatabaseProps {
     onAdd: (masterTeamId: string) => Promise<void>;
     onCreateNew: () => void;
 }
+
+const MASTER_DATA_CACHE_KEY = 'prostream:auction-setup-master';
+const MASTER_DATA_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
     selectedTournament,
@@ -586,8 +589,30 @@ const AuctionSetupPanel: React.FC = () => {
         }
     };
 
+    const hydrateMasterDataFromCache = React.useCallback(() => {
+        if (typeof window === 'undefined') return false;
+        try {
+            const cachedRaw = sessionStorage.getItem(MASTER_DATA_CACHE_KEY);
+            if (!cachedRaw) return false;
+            const cached = JSON.parse(cachedRaw);
+            if (!cached?.timestamp || Date.now() - cached.timestamp > MASTER_DATA_CACHE_TTL) {
+                return false;
+            }
+
+            setTournaments(cached.tournaments || []);
+            setMasterPlayers(cached.masterPlayers || []);
+            setMasterTeams(cached.masterTeams || []);
+            return true;
+        } catch (error) {
+            console.warn('Failed to hydrate master data cache:', error);
+            return false;
+        }
+    }, []);
+
     // Fetch master data only on mount (not when tournament selection changes)
     React.useEffect(() => {
+        let cancelled = false;
+
         const fetchMasterData = async () => {
             try {
                 const startTime = Date.now();
@@ -602,21 +627,39 @@ const AuctionSetupPanel: React.FC = () => {
                 ]);
 
                 const [tournamentsData, masterPlayersData, masterTeamsData] = await Promise.all(
-                    responses.map(res => res.ok ? res.json() : null)
+                    responses.map(res => (res.ok ? res.json() : null))
                 );
 
-                if (tournamentsData) {
-                    console.log('[AuctionSetup] Loaded tournaments:', tournamentsData.length);
-                    setTournaments(tournamentsData);
-                }
-                // Handle paginated responses from master-players and master-teams APIs
-                if (masterPlayersData) {
-                    const players = Array.isArray(masterPlayersData) ? masterPlayersData : masterPlayersData.data || [];
-                    setMasterPlayers(players);
-                }
-                if (masterTeamsData) {
-                    const teams = Array.isArray(masterTeamsData) ? masterTeamsData : masterTeamsData.data || [];
-                    setMasterTeams(teams);
+                if (cancelled) return;
+
+                const tournaments = tournamentsData || [];
+                const players = masterPlayersData
+                    ? Array.isArray(masterPlayersData)
+                        ? masterPlayersData
+                        : masterPlayersData.data || []
+                    : [];
+                const teams = masterTeamsData
+                    ? Array.isArray(masterTeamsData)
+                        ? masterTeamsData
+                        : masterTeamsData.data || []
+                    : [];
+
+                console.log('[AuctionSetup] Loaded tournaments:', tournaments.length);
+
+                setTournaments(tournaments);
+                setMasterPlayers(players);
+                setMasterTeams(teams);
+
+                if (typeof window !== 'undefined') {
+                    sessionStorage.setItem(
+                        MASTER_DATA_CACHE_KEY,
+                        JSON.stringify({
+                            timestamp: Date.now(),
+                            tournaments,
+                            masterPlayers: players,
+                            masterTeams: teams,
+                        })
+                    );
                 }
 
                 console.log(`[AuctionSetup] Master data fetch completed in ${Date.now() - startTime}ms`);
@@ -625,10 +668,15 @@ const AuctionSetupPanel: React.FC = () => {
             }
         };
 
-        // Fetch master data only on component mount and when refresh is triggered
-        // Selective invalidation: only refetch when explicitly requested via refreshTrigger
-        fetchMasterData();
-    }, [refreshTrigger]);
+        const shouldUseCache = refreshTrigger === 0 && hydrateMasterDataFromCache();
+        if (!shouldUseCache) {
+            fetchMasterData();
+        }
+
+        return () => {
+            cancelled = true;
+        };
+    }, [refreshTrigger, hydrateMasterDataFromCache]);
 
     // Fetch tournament-specific data only when tournament selection changes
     React.useEffect(() => {

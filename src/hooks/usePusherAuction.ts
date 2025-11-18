@@ -51,15 +51,7 @@ type AuctionAction =
   | { type: 'AUCTION_UNDO'; data: AuctionUndoEvent }
   | { type: 'STATE_UPDATE'; data: AuctionStateUpdateEvent }
   | { type: 'CLEAR_ERROR' };
-
-const defaultAuctionState: AuctionState = {
-  tournamentId: '',
-  currentPlayerId: null,
-  currentBid: 0,
-  winningTeamId: null,
-  currentAuctionStatus: 'Pending',
-  history: [],
-};
+import { EMPTY_AUCTION_STATE } from '@/lib/auctionDefaults';
 
 const auctionReducer = (state: AuctionStateType, action: AuctionAction): AuctionStateType => {
   switch (action.type) {
@@ -133,7 +125,7 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         ...state,
         players: updatedPlayers,
         teams: updatedTeams,
-        auctionState: action.data.auctionState || defaultAuctionState,
+        auctionState: action.data.auctionState || EMPTY_AUCTION_STATE,
         error: null,
       };
     }
@@ -141,7 +133,7 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
     case 'AUCTION_RESET':
       return {
         ...state,
-        auctionState: action.data.auctionState || defaultAuctionState,
+        auctionState: action.data.auctionState || EMPTY_AUCTION_STATE,
         error: null,
       };
 
@@ -158,7 +150,7 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         ...state,
         players: updatedPlayers,
         teams: updatedTeams,
-        auctionState: action.data.auctionState || defaultAuctionState,
+        auctionState: action.data.auctionState || EMPTY_AUCTION_STATE,
         error: null,
       };
     }
@@ -204,7 +196,7 @@ export function usePusherAuction(
 
   const [state, dispatch] = useReducer(auctionReducer, {
     tournament: initialData?.tournament || null,
-    auctionState: initialData?.auctionState || defaultAuctionState,
+    auctionState: initialData?.auctionState || EMPTY_AUCTION_STATE,
     players: initialData?.players || [],
     teams: initialData?.teams || [],
     error: null,
@@ -242,7 +234,7 @@ export function usePusherAuction(
         type: 'SET_INITIAL_DATA',
         data: {
           tournament: tournamentData || null,
-          auctionState: stateData?.auctionState || defaultAuctionState,
+          auctionState: stateData?.auctionState || EMPTY_AUCTION_STATE,
           players: playersData || [],
           teams: teamsData || [],
         },

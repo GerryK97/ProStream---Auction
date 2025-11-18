@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,6 +11,7 @@ const Navigation: React.FC = () => {
   const { user, logout, isLoading } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const hasPrefetchedRoutes = useRef(false);
 
   const isActive = (path: string) => pathname.startsWith(path);
 
@@ -25,6 +26,19 @@ const Navigation: React.FC = () => {
     setIsMenuOpen(false);
     setShowDropdown(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!user || hasPrefetchedRoutes.current) {
+      return;
+    }
+
+    if (user.role === 'Admin' || user.role === 'Tournament') {
+      hasPrefetchedRoutes.current = true;
+      router.prefetch('/auction');
+      router.prefetch('/auction/setup');
+      fetch('/api/auction/bootstrap').catch(() => undefined);
+    }
+  }, [router, user]);
 
   // Don't show navigation on auth pages
   if (pathname.startsWith('/auth')) {
@@ -42,6 +56,7 @@ const Navigation: React.FC = () => {
     }
 
     links.push({ href: '/overlays', label: 'Overlays' });
+    links.push({ href: '/contact', label: 'Contact' });
 
     if (user?.role === 'Admin') {
       links.push({ href: '/users', label: 'Users' });
@@ -102,7 +117,6 @@ const Navigation: React.FC = () => {
               className="h-10 w-10 object-contain"
             />
             <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-neutral-400">ProStream</p>
               <p className="text-xl font-bold leading-tight">
                 <span style={{ color: '#0F84D0' }}>Pro</span>
                 <span style={{ color: '#78CA2A' }}>Stream</span> Auction
