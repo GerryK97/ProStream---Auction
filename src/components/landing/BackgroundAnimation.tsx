@@ -20,13 +20,22 @@ const BackgroundAnimation: React.FC = () => {
     []
   );
 
+  const backgroundImageUrl =
+    'https://res.cloudinary.com/diitsd6nz/image/upload/v1763443715/2151954720_hbmhqc.jpg';
+
   return (
     <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
-      {/* Gradient Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-800" />
+      {/* Photo Background */}
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: `url(${backgroundImageUrl})` }}
+      />
+
+      {/* Gradient Overlay for contrast */}
+      <div className="absolute inset-0 bg-gradient-to-b from-neutral-950/80 via-neutral-950/50 to-neutral-950/90" />
 
       {/* Animated Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/5 via-transparent to-brand-secondary/5 motion-reduce:opacity-60 motion-safe:animate-gradient-shift" />
+      <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/20 via-transparent to-brand-secondary/20 motion-reduce:opacity-60 motion-safe:animate-gradient-shift" />
 
       {/* Floating Particles */}
       {particles.map((particle) => (

@@ -13,8 +13,8 @@ const Hero: React.FC = () => {
   const { user, isLoading } = useAuth();
 
   return (
-    <div className="relative flex flex-col items-center justify-center px-4 py-16 sm:px-6 lg:flex-row lg:items-center lg:gap-16 lg:py-24">
-      <div className="w-full max-w-3xl text-center lg:max-w-2xl lg:text-left">
+    <div className="relative flex flex-col items-center justify-center px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
+      <div className="w-full max-w-3xl text-center lg:text-left">
         {/* Logo/Branding */}
         <div className="mb-10 space-y-4">
           <p className="text-sm font-semibold uppercase tracking-[0.6em] text-brand-secondary/90">
@@ -93,35 +93,6 @@ const Hero: React.FC = () => {
             <p className="mt-2 text-3xl font-bold text-status-purple">Control</p>
             <p className="text-sm text-neutral-400">Teams &amp; budgets synced</p>
           </div>
-        </div>
-      </div>
-
-      <div className="mt-12 w-full max-w-xl rounded-3xl border border-white/10 bg-neutral-900/60 p-6 text-left shadow-2xl backdrop-blur-lg lg:mt-0">
-        <p className="text-sm font-semibold uppercase tracking-[0.4em] text-neutral-400">
-          Live Snapshot
-        </p>
-        <p className="mt-2 text-2xl font-bold text-white">Tonight's marquee auction</p>
-        <dl className="mt-8 grid grid-cols-2 gap-6 text-left">
-          <div>
-            <dt className="text-xs uppercase tracking-[0.3em] text-neutral-500">Teams bidding</dt>
-            <dd className="text-3xl font-black text-brand-primary">12</dd>
-          </div>
-          <div>
-            <dt className="text-xs uppercase tracking-[0.3em] text-neutral-500">Players sold</dt>
-            <dd className="text-3xl font-black text-brand-secondary">48</dd>
-          </div>
-          <div>
-            <dt className="text-xs uppercase tracking-[0.3em] text-neutral-500">Avg. bid</dt>
-            <dd className="text-3xl font-black text-status-purple">₹1.3Cr</dd>
-          </div>
-          <div>
-            <dt className="text-xs uppercase tracking-[0.3em] text-neutral-500">Stream viewers</dt>
-            <dd className="text-3xl font-black text-status-yellow">82K</dd>
-          </div>
-        </dl>
-        <div className="mt-6 flex items-center gap-3 text-sm text-neutral-400">
-          <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-brand-secondary" aria-hidden="true" />
-          Live sync with commentator overlays and budget tracker
         </div>
       </div>
 
