@@ -9,9 +9,9 @@ function getAuthToken(): string | null {
 }
 
 // Get headers with authentication
-function getAuthHeaders(): HeadersInit {
+function getAuthHeaders(): Record<string, string> {
   const token = getAuthToken();
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
 
