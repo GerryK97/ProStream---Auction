@@ -27,6 +27,19 @@ const Navigation: React.FC = () => {
     setShowDropdown(false);
   }, [pathname]);
 
+  useEffect(() => {
+    if (!user || hasPrefetchedRoutes.current) {
+      return;
+    }
+
+    if (user.role === 'Admin' || user.role === 'Tournament') {
+      hasPrefetchedRoutes.current = true;
+      router.prefetch('/auction');
+      router.prefetch('/auction/setup');
+      fetch('/api/auction/bootstrap').catch(() => undefined);
+    }
+  }, [router, user]);
+
   // Don't show navigation on auth pages
   if (pathname.startsWith('/auth')) {
     return null;
@@ -91,19 +104,6 @@ const Navigation: React.FC = () => {
       </header>
     );
   }
-
-  useEffect(() => {
-    if (!user || hasPrefetchedRoutes.current) {
-      return;
-    }
-
-    if (user.role === 'Admin' || user.role === 'Tournament') {
-      hasPrefetchedRoutes.current = true;
-      router.prefetch('/auction');
-      router.prefetch('/auction/setup');
-      fetch('/api/auction/bootstrap').catch(() => undefined);
-    }
-  }, [router, user]);
 
   return (
     <header className="sticky top-0 z-40 border-b border-neutral-800 bg-neutral-900/70 backdrop-blur-xl">
