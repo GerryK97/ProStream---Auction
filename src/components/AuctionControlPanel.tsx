@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Player, Team, Tournament } from '@/types';
+import { Player, Team, Tournament, AuctionState } from '@/types';
 import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { imageOptimizers } from '@/lib/imageOptimization';
 import ClassBadge from '@/components/shared/ClassBadge';
@@ -308,21 +308,35 @@ const TeamsAndSoldPlayersPanel: React.FC<{
 };
 
 
-const AuctionControlPanel: React.FC = () => {
+interface AuctionControlPanelProps {
+    initialData?: {
+        tournament?: Tournament | null;
+        auctionState?: AuctionState;
+        players?: Player[];
+        teams?: Team[];
+    } | null;
+}
+
+const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData }) => {
     const [biddingTeamId, setBiddingTeamId] = useState('');
     const [error, setError] = useState<string | null>(null);
-    const [liveTournamentId, setLiveTournamentId] = useState<string | null>(null);
+    const initialTournamentId = initialData?.tournament?._id ?? null;
+    const [liveTournamentId, setLiveTournamentId] = useState<string | null>(initialTournamentId);
 
     // Fetch active tournament ID on component mount only
     // Real-time updates are handled by Pusher, no need to refresh after every action
     useEffect(() => {
+        if (initialTournamentId) {
+            setLiveTournamentId(initialTournamentId);
+            return;
+        }
+
         const loadActiveTournament = async () => {
             try {
                 const response = await fetch('/api/tournaments/active');
 
                 if (response.ok) {
                     const tournament = await response.json();
-                    // Handle null response (no active tournament)
                     setLiveTournamentId(tournament?._id || null);
                 }
             } catch (error) {
@@ -332,7 +346,7 @@ const AuctionControlPanel: React.FC = () => {
         };
 
         loadActiveTournament();
-    }, []);
+    }, [initialTournamentId]);
 
     // Use Pusher hook to get real-time auction updates
     const {
@@ -342,7 +356,7 @@ const AuctionControlPanel: React.FC = () => {
         teams,
         isConnected,
         error: pusherError,
-    } = usePusherAuction(liveTournamentId);
+    } = usePusherAuction(liveTournamentId, initialData || undefined);
 
     // Display Pusher errors
     useEffect(() => {

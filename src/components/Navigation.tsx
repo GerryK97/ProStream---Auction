@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,6 +11,7 @@ const Navigation: React.FC = () => {
   const { user, logout, isLoading } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const hasPrefetchedRoutes = useRef(false);
 
   const isActive = (path: string) => pathname.startsWith(path);
 
@@ -90,6 +91,19 @@ const Navigation: React.FC = () => {
       </header>
     );
   }
+
+  useEffect(() => {
+    if (!user || hasPrefetchedRoutes.current) {
+      return;
+    }
+
+    if (user.role === 'Admin' || user.role === 'Tournament') {
+      hasPrefetchedRoutes.current = true;
+      router.prefetch('/auction');
+      router.prefetch('/auction/setup');
+      fetch('/api/auction/bootstrap').catch(() => undefined);
+    }
+  }, [router, user]);
 
   return (
     <header className="sticky top-0 z-40 border-b border-neutral-800 bg-neutral-900/70 backdrop-blur-xl">

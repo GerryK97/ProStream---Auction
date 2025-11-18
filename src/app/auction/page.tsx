@@ -1,12 +1,8 @@
-'use client';
+import { getAuctionBootstrapData } from '@/lib/auctionBootstrap';
+import AuctionPageClient from './AuctionPageClient';
 
-import AuctionControlPanel from '@/components/AuctionControlPanel';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
+export default async function AuctionPage() {
+  const initialData = await getAuctionBootstrapData();
 
-export default function AuctionPage() {
-  return (
-    <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
-      <AuctionControlPanel />
-    </ProtectedRoute>
-  );
+  return <AuctionPageClient initialData={initialData} />;
 }
