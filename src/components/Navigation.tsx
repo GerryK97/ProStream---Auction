@@ -116,7 +116,6 @@ const Navigation: React.FC = () => {
               className="h-10 w-10 object-contain"
             />
             <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-neutral-400">ProStream</p>
               <p className="text-xl font-bold leading-tight">
                 <span style={{ color: '#0F84D0' }}>Pro</span>
                 <span style={{ color: '#78CA2A' }}>Stream</span> Auction
