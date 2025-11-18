@@ -94,6 +94,50 @@ const Hero: React.FC = () => {
             <p className="text-sm text-neutral-400">Teams &amp; budgets synced</p>
           </div>
         </div>
+
+        <div className="mt-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-3xl border border-white/20 bg-white/5 p-5 shadow-[0_10px_40px_rgba(0,0,0,0.35)] backdrop-blur-lg lg:p-6">
+            <p className="text-xs uppercase tracking-[0.4em] text-neutral-400">Broadcast Control</p>
+            <p className="mt-2 text-2xl font-bold text-white">Overlay cues synced in real time</p>
+            <div className="mt-4 grid gap-4 text-sm text-neutral-300 sm:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                <p className="text-xs uppercase tracking-[0.3em] text-neutral-400">Current lot</p>
+                <p className="text-xl font-semibold text-white">All-rounder #54</p>
+                <p className="text-xs text-brand-secondary">ON AIR</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                <p className="text-xs uppercase tracking-[0.3em] text-neutral-400">Next in queue</p>
+                <p className="text-xl font-semibold text-white">Fast Bowler #12</p>
+                <p className="text-xs text-neutral-400">1 min prep</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-brand-secondary/30 bg-brand-secondary/10 p-6 shadow-[0_10px_30px_rgba(16,185,129,0.25)] backdrop-blur-lg">
+            <p className="text-xs uppercase tracking-[0.4em] text-brand-secondary">Live signals</p>
+            <ul className="mt-4 space-y-3 text-sm text-white">
+              <li className="flex items-center gap-3">
+                <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-brand-secondary" />
+                Budget synced across auction desk + OBS
+              </li>
+              <li className="flex items-center gap-3">
+                <span className="inline-flex h-2.5 w-2.5 rounded-full bg-status-purple" />
+                Talent cards queued for commentators
+              </li>
+              <li className="flex items-center gap-3">
+                <span className="inline-flex h-2.5 w-2.5 rounded-full bg-status-yellow" />
+                Sponsor bumper scheduled in 00:45
+              </li>
+            </ul>
+            <div className="mt-6 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-neutral-900">
+              {['OBS Ready', 'PWA', 'Low Latency'].map((badge) => (
+                <span key={badge} className="rounded-full bg-white/90 px-3 py-1">
+                  {badge}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Scroll Indicator */}

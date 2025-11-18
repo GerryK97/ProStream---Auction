@@ -31,11 +31,18 @@ const BackgroundAnimation: React.FC = () => {
         style={{ backgroundImage: `url(${backgroundImageUrl})` }}
       />
 
+      {/* Desktop accent wash */}
+      <div className="absolute inset-0 hidden bg-gradient-to-r from-brand-primary/20 via-transparent to-brand-secondary/30 mix-blend-screen lg:block" />
+
       {/* Gradient Overlay for contrast */}
-      <div className="absolute inset-0 bg-gradient-to-b from-neutral-950/80 via-neutral-950/50 to-neutral-950/90" />
+      <div className="absolute inset-0 bg-gradient-to-b from-neutral-950/85 via-neutral-950/55 to-neutral-950/95" />
+
+      {/* Radial highlight for hero focus */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(79,70,229,0.35),transparent_55%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(16,185,129,0.2),transparent_50%)]" />
 
       {/* Animated Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/20 via-transparent to-brand-secondary/20 motion-reduce:opacity-60 motion-safe:animate-gradient-shift" />
+      <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/30 via-transparent to-brand-secondary/30 motion-reduce:opacity-60 motion-safe:animate-gradient-shift" />
 
       {/* Floating Particles */}
       {particles.map((particle) => (
