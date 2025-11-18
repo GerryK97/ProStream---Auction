@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Tournament } from '@/types';
+import { getAuthHeaders } from '@/lib/api-client';
 
 interface ImportResult {
   success: boolean;
@@ -88,7 +89,7 @@ export default function BulkAddTournamentPlayers({
   const handleDownloadTemplate = async () => {
     setDownloadingTemplate(true);
     try {
-      const response = await fetch(`/api/players/tournament-bulk-template?tournamentId=${tournament._id}`);
+      const response = await fetch(`/api/players/tournament-bulk-template?tournamentId=${tournament._id}`, { headers: getAuthHeaders() });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -124,6 +125,7 @@ export default function BulkAddTournamentPlayers({
 
       const response = await fetch('/api/players/bulk-add-to-tournament', {
         method: 'POST',
+        headers: { Authorization: getAuthHeaders().Authorization },
         body: formData,
       });
 

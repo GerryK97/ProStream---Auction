@@ -507,7 +507,7 @@ const AuctionSetupPanel: React.FC = () => {
 
         setExportingPlayers(true);
         try {
-            const response = await fetch(`/api/players/tournament-export?tournamentId=${selectedTournament._id}`);
+            const response = await fetch(`/api/players/tournament-export?tournamentId=${selectedTournament._id}`, { headers: getAuthHeaders() });
 
             if (!response.ok) {
                 const errorData = await response.json();
@@ -644,9 +644,10 @@ const AuctionSetupPanel: React.FC = () => {
                 console.log(`[AuctionSetup] Starting tournament-specific data fetch for ${selectedTournamentId}...`);
 
                 // Only fetch tournament-specific data
+                const headers = getAuthHeaders();
                 const responses = await Promise.all([
-                    fetch(`/api/players?tournamentId=${selectedTournamentId}`),
-                    fetch(`/api/teams?tournamentId=${selectedTournamentId}`)
+                    fetch(`/api/players?tournamentId=${selectedTournamentId}`, { headers }),
+                    fetch(`/api/teams?tournamentId=${selectedTournamentId}`, { headers })
                 ]);
 
                 const [tournamentPlayersData, tournamentTeamsData] = await Promise.all(
