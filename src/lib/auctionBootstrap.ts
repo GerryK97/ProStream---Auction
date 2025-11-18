@@ -37,7 +37,7 @@ export async function getAuctionBootstrapData(tournamentId?: string | null): Pro
 
   const [auctionStateDoc, players, teams] = await Promise.all([
     AuctionStateModel.findOne({ tournamentId: tournamentDoc._id })
-      .lean()
+      .lean<AuctionState>()
       .exec(),
     PlayerModel.find({ tournamentId: tournamentDoc._id })
       .select('_id playerNo masterPlayerId tournamentId name position currentClub photoURL stats playerClass isSold finalPrice winningTeamId')
@@ -50,7 +50,7 @@ export async function getAuctionBootstrapData(tournamentId?: string | null): Pro
   ]);
 
   const auctionState: AuctionState = auctionStateDoc
-    ? (auctionStateDoc as AuctionState)
+    ? { ...EMPTY_AUCTION_STATE, ...auctionStateDoc }
     : { ...EMPTY_AUCTION_STATE, tournamentId: tournamentDoc._id?.toString?.() ?? '' };
 
   return {
