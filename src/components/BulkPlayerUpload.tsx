@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import { getAuthHeaders } from '@/lib/api-client';
 
 interface ImportResult {
   success: boolean;
@@ -87,6 +88,7 @@ export default function BulkPlayerUpload({ onSuccess }: BulkPlayerUploadProps) {
 
       const response = await fetch('/api/master-players/bulk-import', {
         method: 'POST',
+        headers: { Authorization: getAuthHeaders().Authorization },
         body: formData,
       });
 
@@ -110,7 +112,7 @@ export default function BulkPlayerUpload({ onSuccess }: BulkPlayerUploadProps) {
 
   const handleDownloadTemplate = async () => {
     try {
-      const response = await fetch('/api/master-players/template');
+      const response = await fetch('/api/master-players/template', { headers: getAuthHeaders() });
       if (!response.ok) {
         throw new Error('Failed to download template');
       }

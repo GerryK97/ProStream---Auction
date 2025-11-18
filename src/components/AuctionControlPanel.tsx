@@ -6,6 +6,7 @@ import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { imageOptimizers } from '@/lib/imageOptimization';
 import ClassBadge from '@/components/shared/ClassBadge';
 import { getFormattedBasePrice, getClassBasePrice } from '@/lib/playerClassUtils';
+import { getAuthHeaders } from '@/lib/api-client';
 
 const formatCurrency = (amount: number) => amount.toLocaleString();
 
@@ -318,7 +319,7 @@ const AuctionControlPanel: React.FC = () => {
     useEffect(() => {
         const loadActiveTournament = async () => {
             try {
-                const response = await fetch('/api/tournaments/active');
+                const response = await fetch('/api/tournaments/active', { headers: getAuthHeaders() });
 
                 if (response.ok) {
                     const tournament = await response.json();
@@ -410,7 +411,7 @@ const AuctionControlPanel: React.FC = () => {
         try {
             const response = await fetch('/api/auction/select-player', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tournamentId: liveTournament._id, playerId }),
             });
             if (!response.ok) {
@@ -447,7 +448,7 @@ const AuctionControlPanel: React.FC = () => {
             console.log('Sending bid request:', { tournamentId: liveTournament._id, amount });
             const response = await fetch('/api/auction/bid', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     tournamentId: liveTournament._id,
                     amount,
@@ -480,7 +481,7 @@ const AuctionControlPanel: React.FC = () => {
             console.log('Sending sell request for tournament:', liveTournament._id, 'team:', biddingTeamId);
             const response = await fetch('/api/auction/sell', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     tournamentId: liveTournament._id,
                     teamId: biddingTeamId,
@@ -504,7 +505,7 @@ const AuctionControlPanel: React.FC = () => {
         try {
             const response = await fetch('/api/auction/reset', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tournamentId: liveTournament._id }),
             });
             if (!response.ok) {
@@ -523,7 +524,7 @@ const AuctionControlPanel: React.FC = () => {
         try {
             const response = await fetch('/api/auction/undo', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tournamentId: liveTournament._id }),
             });
             if (!response.ok) {
@@ -545,7 +546,7 @@ const AuctionControlPanel: React.FC = () => {
         try {
             const response = await fetch('/api/auction/reset-all', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tournamentId: liveTournament._id }),
             });
             if (!response.ok) {
@@ -564,7 +565,7 @@ const AuctionControlPanel: React.FC = () => {
         try {
             const response = await fetch('/api/auction/restart', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tournamentId: liveTournament._id }),
             });
             const data = await response.json();

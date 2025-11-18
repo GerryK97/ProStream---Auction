@@ -20,7 +20,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<void>;
   signup: (username: string, email: string, password: string, role?: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
   error: string | null;
   clearError: () => void;
@@ -148,11 +148,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('authToken');
-    setToken(null);
-    setUser(null);
-    setError(null);
+  const logout = async () => {
+    try {
+      // Call logout endpoint to clear HttpOnly cookie
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    } catch (err) {
+      console.error('Logout API error:', err);
+      // Continue with local logout even if API fails
+    } finally {
+      // Clear local storage and state
+      localStorage.removeItem('authToken');
+      setToken(null);
+      setUser(null);
+      setError(null);
+    }
   };
 
   const refreshSession = async () => {

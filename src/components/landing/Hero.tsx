@@ -6,51 +6,53 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 
 /**
- * Hero section for landing page
- * Features ProStream branding and call-to-action
+ * Hero section for landing page with mobile-friendly layout
  */
 const Hero: React.FC = () => {
   const router = useRouter();
   const { user, isLoading } = useAuth();
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center px-4">
-      <div className="text-center max-w-4xl mx-auto animate-fade-in">
+    <div className="relative flex flex-col items-center justify-center px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
+      <div className="w-full max-w-6xl rounded-[32px] border border-white/10 bg-neutral-950/70 p-6 text-center shadow-[0_20px_70px_rgba(0,0,0,0.45)] backdrop-blur-2xl sm:p-10 lg:text-left">
         {/* Logo/Branding */}
-        <div className="mb-8">
-          <h1 className="text-6xl md:text-8xl font-black mb-4">
+        <div className="mb-10 space-y-4">
+          <p className="text-sm font-semibold uppercase tracking-[0.6em] text-brand-secondary/90">
+            Auction Platform
+          </p>
+          <h1 className="text-[clamp(2.75rem,8vw,5rem)] font-black leading-tight">
             <span style={{ color: '#0F84D0' }}>Pro</span>
             <span style={{ color: '#78CA2A' }}>Stream</span>
           </h1>
-          <div className="h-1 w-32 mx-auto bg-gradient-to-r from-brand-primary to-brand-secondary rounded-full" />
+          <div className="h-1 w-32 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary lg:mx-0 lg:w-40" />
         </div>
 
         {/* Tagline */}
-        <h2 className="text-2xl md:text-4xl font-bold text-neutral-100 mb-6 animate-slide-in-up">
+        <h2 className="text-2xl font-bold text-neutral-100 sm:text-3xl lg:text-4xl">
           Professional Auction Management System
         </h2>
 
         {/* Description */}
-        <p className="text-lg md:text-xl text-neutral-300 mb-12 max-w-2xl mx-auto leading-relaxed">
-          Streamline your cricket auction experience with real-time bidding,
-          comprehensive team management, and professional streaming overlays.
+        <p className="mt-4 text-base text-neutral-300 sm:text-lg lg:max-w-xl">
+          Streamline cricket auctions with real-time bidding, deep team insights, and overlays that
+          keep spectators engaged across every screen.
         </p>
 
         {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+        <div className="mt-10 flex w-full flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
           {!isLoading && !user ? (
             <>
               <Link
                 href="/auth/login"
-                className="group relative px-8 py-4 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold rounded-lg text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-brand-primary/50"
+                className="group relative w-full rounded-2xl bg-brand-primary px-8 py-3 text-center text-lg font-semibold text-white shadow-lg transition hover:scale-[1.01] hover:bg-brand-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary sm:w-auto"
               >
                 <span className="relative z-10">Login</span>
-                <div className="absolute inset-0 bg-gradient-to-r from-brand-primary to-brand-secondary opacity-0 group-hover:opacity-100 rounded-lg transition-opacity duration-300" />
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-brand-primary to-brand-secondary opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               </Link>
 
               <Link
                 href="/auth/signup"
-                className="px-8 py-4 bg-neutral-800 hover:bg-neutral-700 border-2 border-neutral-600 hover:border-brand-secondary text-white font-bold rounded-lg text-lg transition-all duration-300 transform hover:scale-105"
+                className="w-full rounded-2xl border border-neutral-700 px-8 py-3 text-center text-lg font-semibold text-white transition hover:border-brand-secondary hover:text-brand-secondary sm:w-auto"
               >
                 Create Account
               </Link>
@@ -59,15 +61,14 @@ const Hero: React.FC = () => {
             <>
               <button
                 onClick={() => router.push('/auction')}
-                className="group relative px-8 py-4 bg-brand-primary hover:bg-brand-primary/80 text-white font-bold rounded-lg text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-brand-primary/50"
+                className="w-full rounded-2xl bg-brand-primary px-8 py-3 text-lg font-semibold text-white shadow-lg transition hover:scale-[1.01] hover:bg-brand-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary sm:w-auto"
               >
-                <span className="relative z-10">Start Auction</span>
-                <div className="absolute inset-0 bg-gradient-to-r from-brand-primary to-brand-secondary opacity-0 group-hover:opacity-100 rounded-lg transition-opacity duration-300" />
+                Start Auction
               </button>
 
               <button
                 onClick={() => router.push('/manage')}
-                className="px-8 py-4 bg-neutral-800 hover:bg-neutral-700 border-2 border-neutral-600 hover:border-brand-secondary text-white font-bold rounded-lg text-lg transition-all duration-300 transform hover:scale-105"
+                className="w-full rounded-2xl border border-neutral-700 px-8 py-3 text-lg font-semibold text-white transition hover:border-brand-secondary hover:text-brand-secondary sm:w-auto"
               >
                 Manage Tournament
               </button>
@@ -76,35 +77,83 @@ const Hero: React.FC = () => {
         </div>
 
         {/* Quick Stats */}
-        <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-3xl mx-auto">
-          <div className="text-center">
-            <div className="text-4xl font-bold text-brand-primary mb-2">Real-Time</div>
-            <div className="text-neutral-400">Bidding System</div>
+        <div className="mt-12 grid grid-cols-1 gap-4 text-left sm:grid-cols-3">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-xs uppercase tracking-[0.4em] text-neutral-400">Real-Time</p>
+            <p className="mt-2 text-3xl font-bold text-brand-primary">Bidding</p>
+            <p className="text-sm text-neutral-400">Latency under 500ms</p>
           </div>
-          <div className="text-center">
-            <div className="text-4xl font-bold text-brand-secondary mb-2">Live</div>
-            <div className="text-neutral-400">Stream Overlays</div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-xs uppercase tracking-[0.4em] text-neutral-400">Live</p>
+            <p className="mt-2 text-3xl font-bold text-brand-secondary">Overlays</p>
+            <p className="text-sm text-neutral-400">OBS-ready layouts</p>
           </div>
-          <div className="text-center">
-            <div className="text-4xl font-bold text-status-purple mb-2">Complete</div>
-            <div className="text-neutral-400">Management Suite</div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-xs uppercase tracking-[0.4em] text-neutral-400">Complete</p>
+            <p className="mt-2 text-3xl font-bold text-status-purple">Control</p>
+            <p className="text-sm text-neutral-400">Teams &amp; budgets synced</p>
           </div>
         </div>
 
-        {/* Scroll Indicator */}
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-          <svg
-            className="w-6 h-6 text-neutral-500"
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
-          </svg>
+        <div className="mt-10 grid gap-6 text-left lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-3xl border border-white/15 bg-white/5 p-5 shadow-[0_10px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl lg:p-6">
+            <p className="text-xs uppercase tracking-[0.4em] text-neutral-400">Broadcast Control</p>
+            <p className="mt-2 text-2xl font-bold text-white">Overlay cues synced in real time</p>
+            <div className="mt-4 grid gap-4 text-sm text-neutral-300 sm:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                <p className="text-xs uppercase tracking-[0.3em] text-neutral-400">Current lot</p>
+                <p className="text-xl font-semibold text-white">All-rounder #54</p>
+                <p className="text-xs text-brand-secondary">ON AIR</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                <p className="text-xs uppercase tracking-[0.3em] text-neutral-400">Next in queue</p>
+                <p className="text-xl font-semibold text-white">Fast Bowler #12</p>
+                <p className="text-xs text-neutral-400">1 min prep</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-brand-secondary/40 bg-brand-secondary/15 p-6 shadow-[0_15px_40px_rgba(16,185,129,0.4)] backdrop-blur-xl">
+            <p className="text-xs uppercase tracking-[0.4em] text-brand-secondary">Live signals</p>
+            <ul className="mt-4 space-y-3 text-sm text-white">
+              <li className="flex items-center gap-3">
+                <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-brand-secondary" />
+                Budget synced across auction desk + OBS
+              </li>
+              <li className="flex items-center gap-3">
+                <span className="inline-flex h-2.5 w-2.5 rounded-full bg-status-purple" />
+                Talent cards queued for commentators
+              </li>
+              <li className="flex items-center gap-3">
+                <span className="inline-flex h-2.5 w-2.5 rounded-full bg-status-yellow" />
+                Sponsor bumper scheduled in 00:45
+              </li>
+            </ul>
+            <div className="mt-6 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-neutral-900">
+              {['OBS Ready', 'PWA', 'Low Latency'].map((badge) => (
+                <span key={badge} className="rounded-full bg-white/90 px-3 py-1">
+                  {badge}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
+      </div>
+
+      {/* Scroll Indicator */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-6 hidden -translate-y-2 transform items-center justify-center sm:flex">
+        <svg
+          className="h-6 w-6 text-neutral-500"
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+        </svg>
       </div>
     </div>
   );

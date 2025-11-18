@@ -1,6 +1,7 @@
 'use client';
 
 import Navigation from '@/components/Navigation';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -314,8 +315,9 @@ export default function UsersPage() {
   const displayUsers = activeTab === 'pending' ? pendingUsers : activeTab === 'all' ? [...users, ...pendingUsers] : users.filter((u) => u.status === 'Active');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-900 to-neutral-800 text-white">
-      <Navigation />
+    <ProtectedRoute allowedRoles={['Admin']}>
+      <div className="min-h-screen bg-gradient-to-br from-neutral-900 to-neutral-800 text-white">
+        <Navigation />
 
       <div className="container mx-auto px-6 py-8">
         {/* Header */}
@@ -634,5 +636,6 @@ export default function UsersPage() {
         )}
       </div>
     </div>
+    </ProtectedRoute>
   );
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken, getTokenFromRequest } from '@/lib/auth';
+import { verifyToken, getTokenFromRequest, getTokenFromCookies } from '@/lib/auth';
 import { canAccessRoute } from '@/lib/permissions';
 
 // Define public routes that don't require authentication
@@ -23,8 +23,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Get token from request
-  const token = getTokenFromRequest(request);
+  // Get token from request - check Authorization header first, then cookies
+  const token = getTokenFromRequest(request) || getTokenFromCookies(request);
 
   if (!token) {
     // Redirect to login if no token

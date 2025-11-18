@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState, useCallback, useReducer } from 'react';
 import type { Channel } from 'pusher-js';
 import { getPusherClient } from '@/lib/pusher-client';
+import { getAuthHeaders } from '@/lib/api-client';
 import type { Player, Team, Tournament, AuctionState } from '@/types';
 import type {
   AuctionStartedEvent,
@@ -219,11 +220,12 @@ export function usePusherAuction(
     try {
       // Fetch all data in parallel for 75% faster load time
       const startTime = Date.now();
+      const headers = getAuthHeaders();
       const [tournamentRes, stateRes, playersRes, teamsRes] = await Promise.all([
-        fetch(`/api/tournaments/${tournamentId}`),
-        fetch(`/api/auction/state/${tournamentId}`),
-        fetch(`/api/players?tournamentId=${tournamentId}`),
-        fetch(`/api/teams?tournamentId=${tournamentId}`),
+        fetch(`/api/tournaments/${tournamentId}`, { headers }),
+        fetch(`/api/auction/state/${tournamentId}`, { headers }),
+        fetch(`/api/players?tournamentId=${tournamentId}`, { headers }),
+        fetch(`/api/teams?tournamentId=${tournamentId}`, { headers }),
       ]);
 
       const [tournamentData, stateData, playersData, teamsData] = await Promise.all([

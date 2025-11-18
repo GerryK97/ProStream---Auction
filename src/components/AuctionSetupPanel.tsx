@@ -9,6 +9,7 @@ import { imageOptimizers } from '@/lib/imageOptimization';
 import ImageUpload from './ImageUpload';
 import { getSortedClasses, getClassConfig } from '@/lib/playerClassUtils';
 import BulkAddTournamentPlayers from './BulkAddTournamentPlayers';
+import { getAuthHeaders } from '@/lib/api-client';
 
 
 interface AddPlayerFromDatabaseProps {
@@ -506,7 +507,7 @@ const AuctionSetupPanel: React.FC = () => {
 
         setExportingPlayers(true);
         try {
-            const response = await fetch(`/api/players/tournament-export?tournamentId=${selectedTournament._id}`);
+            const response = await fetch(`/api/players/tournament-export?tournamentId=${selectedTournament._id}`, { headers: getAuthHeaders() });
 
             if (!response.ok) {
                 const errorData = await response.json();
@@ -537,7 +538,7 @@ const AuctionSetupPanel: React.FC = () => {
         try {
             const response = await fetch('/api/players/bulk-delete', {
                 method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tournamentId: selectedTournament._id }),
             });
 
@@ -565,7 +566,7 @@ const AuctionSetupPanel: React.FC = () => {
         try {
             const response = await fetch('/api/teams/bulk-delete', {
                 method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tournamentId: selectedTournament._id }),
             });
 
@@ -593,10 +594,11 @@ const AuctionSetupPanel: React.FC = () => {
                 console.log('[AuctionSetup] Starting master data fetch...');
 
                 // Only fetch master data that doesn't depend on tournament selection
+                const headers = getAuthHeaders();
                 const responses = await Promise.all([
-                    fetch('/api/tournaments'),
-                    fetch('/api/master-players'),
-                    fetch('/api/master-teams'),
+                    fetch('/api/tournaments', { headers }),
+                    fetch('/api/master-players', { headers }),
+                    fetch('/api/master-teams', { headers }),
                 ]);
 
                 const [tournamentsData, masterPlayersData, masterTeamsData] = await Promise.all(
@@ -642,9 +644,10 @@ const AuctionSetupPanel: React.FC = () => {
                 console.log(`[AuctionSetup] Starting tournament-specific data fetch for ${selectedTournamentId}...`);
 
                 // Only fetch tournament-specific data
+                const headers = getAuthHeaders();
                 const responses = await Promise.all([
-                    fetch(`/api/players?tournamentId=${selectedTournamentId}`),
-                    fetch(`/api/teams?tournamentId=${selectedTournamentId}`)
+                    fetch(`/api/players?tournamentId=${selectedTournamentId}`, { headers }),
+                    fetch(`/api/teams?tournamentId=${selectedTournamentId}`, { headers })
                 ]);
 
                 const [tournamentPlayersData, tournamentTeamsData] = await Promise.all(
@@ -834,7 +837,7 @@ const AuctionSetupPanel: React.FC = () => {
                                     try {
                                         const response = await fetch('/api/auction/start', {
                                             method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
+                                            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                                             body: JSON.stringify({ tournamentId: selectedTournament._id }),
                                         });
                                         const data = await response.json();
@@ -863,7 +866,7 @@ const AuctionSetupPanel: React.FC = () => {
                                     try {
                                         const response = await fetch('/api/auction/stop', {
                                             method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
+                                            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                                             body: JSON.stringify({ tournamentId: selectedTournament._id }),
                                         });
                                         const data = await response.json();
@@ -892,7 +895,7 @@ const AuctionSetupPanel: React.FC = () => {
                                     try {
                                         const response = await fetch('/api/auction/restart', {
                                             method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
+                                            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                                             body: JSON.stringify({ tournamentId: selectedTournament._id }),
                                         });
                                         const data = await response.json();
@@ -1083,7 +1086,7 @@ const AuctionSetupPanel: React.FC = () => {
                         // Create tournament player instance from master player
                         const response = await fetch('/api/players/create-from-master', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 masterPlayerId,
                                 tournamentId: selectedTournament._id,
@@ -1116,7 +1119,7 @@ const AuctionSetupPanel: React.FC = () => {
                         try {
                             const response = await fetch('/api/teams/create-from-master', {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
+                                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                     masterTeamId,
                                     tournamentId: selectedTournament._id
