@@ -56,6 +56,7 @@ const Navigation: React.FC = () => {
     }
 
     links.push({ href: '/overlays', label: 'Overlays' });
+    links.push({ href: '/contact', label: 'Contact' });
 
     if (user?.role === 'Admin') {
       links.push({ href: '/users', label: 'Users' });
