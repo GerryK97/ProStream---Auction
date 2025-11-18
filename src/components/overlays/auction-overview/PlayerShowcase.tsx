@@ -40,15 +40,15 @@ const PlayerShowcase: React.FC<PlayerShowcaseProps> = ({ player, tournament, siz
 
     const sizeConfig = {
         default: {
-            photoSize: 'w-28 h-28',
-            nameSize: 'text-xl',
+            photoSize: 'w-32 h-32',
+            nameSize: 'text-2xl',
             statsSize: 'text-base',
-            padding: 'p-4'
+            padding: 'p-5'
         },
         large: {
-            photoSize: 'w-40 h-40',
-            nameSize: 'text-3xl',
-            statsSize: 'text-xl',
+            photoSize: 'w-56 h-56',
+            nameSize: 'text-4xl',
+            statsSize: 'text-2xl',
             padding: 'p-8'
         }
     };
@@ -66,19 +66,19 @@ const PlayerShowcase: React.FC<PlayerShowcaseProps> = ({ player, tournament, siz
 
             <div className="flex flex-col gap-6 lg:flex-row">
                 {/* Player Info + photo */}
-                <div className="flex flex-1 items-center gap-6">
+                <div className="flex flex-1 items-center gap-8">
                     <div className="relative">
                         <img
                             src={imageOptimizers.playerCard(player.photoURL)}
                             alt={player.name}
                             className={`${config.photoSize} rounded-full object-cover border-4 border-cyan-400 animate-player-glow-pulse will-change-transform`}
                         />
-                        <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-gradient-to-b from-orange-500 to-yellow-500 border-2 border-white flex items-center justify-center font-bold text-white text-sm shadow-lg">
+                        <div className="absolute -bottom-3 -right-3 w-12 h-12 rounded-full bg-gradient-to-b from-orange-500 to-yellow-500 border-2 border-white flex items-center justify-center font-bold text-white text-base shadow-lg">
                             {playerNumber}
                         </div>
                     </div>
                     <div>
-                        <h3 className={`${config.nameSize} font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] mb-1`}>
+                        <h3 className={`${config.nameSize} font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] mb-2`}>
                             {player.name}
                         </h3>
                         {player.position && (
