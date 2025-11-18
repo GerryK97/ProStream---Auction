@@ -520,7 +520,11 @@ const overlayTypes: OverlayType[] = [
         tags: ['LED', 'Player', 'Spotlight'],
         defaultParams: {
             showBackground: 'true',
-            spotlightSeconds: '5'
+            spotlightSeconds: '5',
+            showTeams: 'true',
+            showSold: 'true',
+            soldItems: '5',
+            soldFlipSeconds: '8'
         },
         parameterSchema: {
             showBackground: {
@@ -534,6 +538,26 @@ const overlayTypes: OverlayType[] = [
                 description: 'Duration for the fullscreen player takeover',
                 min: 2,
                 max: 12
+            },
+            showTeams: {
+                type: 'toggle',
+                label: 'Show Team Grid'
+            },
+            showSold: {
+                type: 'toggle',
+                label: 'Show Sold Players Flip'
+            },
+            soldItems: {
+                type: 'number',
+                label: 'Sold Items Per Page',
+                min: 3,
+                max: 8
+            },
+            soldFlipSeconds: {
+                type: 'number',
+                label: 'Sold Flip Seconds',
+                min: 4,
+                max: 15
             }
         },
         imageURL: 'https://placehold.co/1920x1080/111827/34d399?text=Player+Highlight+LED',

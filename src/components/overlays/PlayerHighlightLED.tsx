@@ -1,26 +1,40 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
-import type { AuctionState, Player, Tournament } from '@/types';
+import React, { useEffect, useState } from 'react';
+import type { AuctionState, Player, Team, Tournament } from '@/types';
 import PlayerShowcase from '@/components/overlays/auction-overview/PlayerShowcase';
 import { imageOptimizers } from '@/lib/imageOptimization';
 import { getFormattedBasePrice } from '@/lib/playerClassUtils';
 import BackgroundEffects from '@/components/overlays/auction-overview/BackgroundEffects';
+import TeamsOverviewFlip from '@/components/overlays/auction-overview/TeamsOverviewFlip';
+import SoldPlayersFlip from '@/components/overlays/auction-overview/SoldPlayersFlip';
 
 interface PlayerHighlightLEDProps {
   tournament: Tournament | null;
   auctionState: AuctionState;
   currentPlayer: Player | undefined;
+  teams: Team[];
+  soldPlayers: Player[];
   showBackground?: boolean;
   spotlightDuration?: number; // milliseconds
+  showTeams?: boolean;
+  showSoldFlip?: boolean;
+  soldItemsPerPage?: number;
+  soldFlipDuration?: number;
 }
 
 const PlayerHighlightLED: React.FC<PlayerHighlightLEDProps> = ({
   tournament,
   auctionState,
   currentPlayer,
+  teams,
+  soldPlayers,
   showBackground = true,
   spotlightDuration = 4500,
+  showTeams = true,
+  showSoldFlip = true,
+  soldItemsPerPage = 5,
+  soldFlipDuration = 8000,
 }) => {
   const [lastPlayerId, setLastPlayerId] = useState<string | null>(null);
   const [showSpotlight, setShowSpotlight] = useState(false);
@@ -38,7 +52,6 @@ const PlayerHighlightLED: React.FC<PlayerHighlightLEDProps> = ({
     return () => clearTimeout(timer);
   }, [showSpotlight, spotlightDuration]);
 
-  const formattedBid = useMemo(() => auctionState.currentBid.toLocaleString(), [auctionState.currentBid]);
   const status = auctionState.currentAuctionStatus;
 
   return (
@@ -63,9 +76,34 @@ const PlayerHighlightLED: React.FC<PlayerHighlightLEDProps> = ({
           </div>
         </header>
 
-        <div className="grid flex-1 grid-cols-2 gap-6">
+        <div className="grid grid-cols-2 gap-6">
           <PlayerShowcase player={currentPlayer} tournament={tournament} size="large" />
           <LargeBidPanel auctionState={auctionState} tournament={tournament} player={currentPlayer} />
+        </div>
+
+        <div className="grid flex-1 grid-cols-2 gap-6">
+          {showTeams ? (
+            <TeamsOverviewFlip
+              teams={teams}
+              tournament={tournament}
+              auctionState={auctionState}
+              teamsPerPage={10}
+              flipDuration={10000}
+            />
+          ) : (
+            <div className="rounded-3xl border border-neutral-700 bg-neutral-900/60" />
+          )}
+
+          {showSoldFlip ? (
+            <SoldPlayersFlip
+              soldPlayers={soldPlayers}
+              teams={teams}
+              itemsPerPage={soldItemsPerPage}
+              flipInterval={soldFlipDuration}
+            />
+          ) : (
+            <div className="rounded-3xl border border-neutral-700 bg-neutral-900/60" />
+          )}
         </div>
       </div>
 
@@ -89,7 +127,7 @@ const LargeBidPanel: React.FC<LargeBidPanelProps> = ({ auctionState, tournament,
     <div className="flex flex-col justify-between rounded-3xl border border-green-500/40 bg-gradient-to-br from-green-500/20 via-neutral-900/60 to-neutral-900/80 p-6 text-center shadow-[0_30px_120px_rgba(34,197,94,0.35)]">
       <div>
         <p className="text-sm uppercase tracking-[0.6em] text-green-200">Current Bid</p>
-        <p className="mt-4 text-[8vw] font-black leading-none text-green-400 drop-shadow-[0_10px_40px_rgba(34,197,94,0.5)]">
+        <p className="mt-4 text-[clamp(4rem,9vw,12rem)] font-black leading-none text-green-400 drop-shadow-[0_10px_40px_rgba(34,197,94,0.5)]">
           {auctionState.currentBid > 0 ? auctionState.currentBid.toLocaleString() : '--'}
         </p>
       </div>
