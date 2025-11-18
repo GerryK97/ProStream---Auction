@@ -5,8 +5,8 @@ const contactChannels = [
   {
     title: 'Email Support',
     description: 'Reach out for product questions, account access, or technical help. We reply within one business day.',
-    action: 'support@prostream.com',
-    href: 'mailto:support@prostream.com',
+    action: 'prostream.contact@gmail.com',
+    href: 'mailto:prostream.contact@gmail.com',
     badge: 'Primary',
     color: 'from-brand-primary/20 to-brand-primary/5 border-brand-primary/40',
     icon: (
@@ -19,8 +19,8 @@ const contactChannels = [
   {
     title: 'WhatsApp Hotline',
     description: 'Live coordination support during auctions. Save our number for quick voice or text help.',
-    action: '+94 71 555 8899',
-    href: 'https://wa.me/94715558899',
+    action: '+94 77 280 1110',
+    href: 'https://wa.me/94772801110',
     badge: 'Live',
     color: 'from-brand-secondary/20 to-brand-secondary/5 border-brand-secondary/40',
     icon: (
@@ -37,8 +37,8 @@ const contactChannels = [
   {
     title: 'Facebook Community',
     description: 'Follow announcements, feature drops, and production tips from other broadcasters running ProStream.',
-    action: 'facebook.com/ProStreamAuction',
-    href: 'https://facebook.com/ProStreamAuction',
+    action: 'ProStream Auction',
+    href: 'https://www.facebook.com/profile.php?id=61582866560051',
     badge: 'Community',
     color: 'from-status-purple/20 to-status-purple/5 border-status-purple/40',
     icon: (
