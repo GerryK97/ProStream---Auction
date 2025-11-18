@@ -512,6 +512,33 @@ const overlayTypes: OverlayType[] = [
         imageURL: 'https://placehold.co/1920x1080/0F84D0/FFFFFF?text=Auction+Overview+LED',
         dimensions: { width: 1920, height: 1080 }
     },
+    {
+        id: 'player-highlight-led',
+        name: 'Player Highlight LED',
+        description: 'Fullscreen player spotlight that auto-expands for new selections with oversized bidding visuals.',
+        route: '/overlays/player-highlight-led',
+        tags: ['LED', 'Player', 'Spotlight'],
+        defaultParams: {
+            showBackground: 'true',
+            spotlightSeconds: '5'
+        },
+        parameterSchema: {
+            showBackground: {
+                type: 'toggle',
+                label: 'Background Effects',
+                description: 'Enable animated gradient background'
+            },
+            spotlightSeconds: {
+                type: 'number',
+                label: 'Spotlight Seconds',
+                description: 'Duration for the fullscreen player takeover',
+                min: 2,
+                max: 12
+            }
+        },
+        imageURL: 'https://placehold.co/1920x1080/111827/34d399?text=Player+Highlight+LED',
+        dimensions: { width: 1920, height: 1080 }
+    },
 ];
 
 const OverlayDashboard: React.FC = () => {
