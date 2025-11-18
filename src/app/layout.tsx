@@ -6,6 +6,9 @@ import { AuthProvider } from '@/contexts/AuthContext';
 export const metadata: Metadata = {
   title: 'ProStream Auction',
   description: 'Real-time auction management system for sports/e-sports tournaments',
+  verification: {
+    google: 'google5a0e1376d5ae7ba5',
+  },
   icons: {
     icon: 'https://res.cloudinary.com/diitsd6nz/image/upload/v1760794476/ProSteam_logo_h9pb8b.png',
     apple: 'https://res.cloudinary.com/diitsd6nz/image/upload/v1760794476/ProSteam_logo_h9pb8b.png',
