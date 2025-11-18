@@ -1,7 +1,12 @@
 'use client';
 
 import ManagementDashboard from '@/components/ManagementDashboard';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 export default function PlayersPage() {
-  return <ManagementDashboard view="players" />;
+  return (
+    <ProtectedRoute allowedRoles={['Admin', 'MasterManager']}>
+      <ManagementDashboard view="players" />
+    </ProtectedRoute>
+  );
 }

@@ -105,7 +105,8 @@ export async function POST(request: NextRequest) {
       token = generateToken(user);
     }
 
-    return NextResponse.json(
+    // Create response
+    const response = NextResponse.json(
       {
         success: true,
         message: isAutoApproved
@@ -122,6 +123,19 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
+
+    // Set HttpOnly cookie if auto-approved
+    if (isAutoApproved && token) {
+      response.cookies.set('auth_token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        path: '/',
+      });
+    }
+
+    return response;
   } catch (error) {
     console.error('Signup error:', error);
     return NextResponse.json(

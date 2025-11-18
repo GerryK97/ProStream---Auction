@@ -2,16 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    // The logout is handled on the client side by removing the token
-    // This endpoint is here for consistency and can be extended for server-side token blacklisting in the future
-
-    return NextResponse.json(
+    // Create response
+    const response = NextResponse.json(
       {
         success: true,
         message: 'Logged out successfully',
       },
       { status: 200 }
     );
+
+    // Clear the HttpOnly cookie
+    response.cookies.set('auth_token', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 0, // Expire immediately
+      path: '/',
+    });
+
+    return response;
   } catch (error) {
     console.error('Logout error:', error);
     return NextResponse.json(

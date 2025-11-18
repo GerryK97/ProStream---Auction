@@ -62,7 +62,8 @@ export async function POST(request: NextRequest) {
     // Generate token
     const token = generateToken(user);
 
-    return NextResponse.json(
+    // Create response with token in body
+    const response = NextResponse.json(
       {
         success: true,
         message: 'Login successful',
@@ -77,6 +78,17 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     );
+
+    // Set HttpOnly cookie for server-side authentication (middleware)
+    response.cookies.set('auth_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    });
+
+    return response;
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(
