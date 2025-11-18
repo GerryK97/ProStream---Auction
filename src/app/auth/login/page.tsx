@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import TextField from '@/components/forms/TextField';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
@@ -22,86 +24,137 @@ export default function LoginPage() {
       await login(username, password);
       router.push('/');
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Login failed. Please try again.'
-      );
+      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  const passwordToggleLabel = showPassword ? 'Hide password' : 'Show password';
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo/Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">ProStream</h1>
-          <p className="text-slate-400">Auction Management System</p>
+    <div className="relative min-h-[100dvh] bg-gradient-to-b from-slate-950 via-slate-900 to-slate-900 text-white">
+      <div
+        className="absolute inset-0 opacity-40"
+        style={{
+          backgroundImage: 'radial-gradient(circle at top, rgba(79,70,229,0.4), transparent 55%)',
+        }}
+        aria-hidden="true"
+      />
+      <div
+        className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-10 sm:px-6 lg:flex-row lg:items-stretch lg:gap-16 lg:py-16"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <div className="flex w-full flex-col justify-between gap-10 text-center lg:max-w-xl lg:text-left">
+          <div className="space-y-6">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-brand-secondary transition hover:text-brand-secondary/80"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 18l-6-6 6-6" />
+              </svg>
+              Back to home
+            </Link>
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.5em] text-brand-secondary/80">ProStream</p>
+              <h1 className="mt-4 text-3xl font-bold sm:text-4xl">Welcome back</h1>
+              <p className="mt-3 text-base text-slate-300 sm:text-lg">
+                Sign in to run auctions, manage squads, and control your live overlays from any device.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 text-left text-xs text-slate-400 sm:text-sm">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <p className="text-2xl font-bold text-white">12</p>
+              <p className="mt-1">Teams bidding live</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <p className="text-2xl font-bold text-white">250K+</p>
+              <p className="mt-1">Viewers synced</p>
+            </div>
+          </div>
         </div>
 
-        {/* Login Form */}
-        <div className="bg-slate-800 rounded-lg shadow-2xl border border-slate-700 p-8">
-          <h2 className="text-2xl font-bold text-white mb-6">Login</h2>
-
-          {error && (
-            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded text-red-400 text-sm">
-              {error}
+        <div className="w-full max-w-md self-center lg:self-stretch">
+          <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6 shadow-2xl backdrop-blur">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold">Login to ProStream</h2>
+              <p className="mt-2 text-sm text-slate-400">Enter your credentials to continue.</p>
             </div>
-          )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Username Input */}
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-slate-300 mb-2">
-                Username
-              </label>
-              <input
-                type="text"
+            <div className="min-h-[48px]">
+              {error && (
+                <div
+                  role="alert"
+                  className="rounded-2xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300"
+                >
+                  {error}
+                </div>
+              )}
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <TextField
                 id="username"
+                label="Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                placeholder="e.g. auction-admin"
                 disabled={isLoading}
-                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
-                placeholder="Enter your username"
+                autoCapitalize="none"
+                autoComplete="username"
+                inputMode="text"
+                helperText="Use the username assigned by your tournament admin"
                 required
               />
-            </div>
 
-            {/* Password Input */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
-                Password
-              </label>
-              <input
-                type="password"
+              <TextField
                 id="password"
+                label="Password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
-                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
                 placeholder="Enter your password"
+                disabled={isLoading}
+                autoCapitalize="none"
+                autoComplete="current-password"
+                helperText="Minimum 8 characters"
                 required
+                trailing={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="text-xs font-semibold uppercase tracking-widest text-slate-300"
+                  >
+                    {passwordToggleLabel}
+                  </button>
+                }
               />
-            </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isLoading || !username || !password}
-              className="w-full mt-6 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-medium rounded transition-colors disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Logging in...' : 'Login'}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={isLoading || !username || !password}
+                className="w-full rounded-2xl bg-brand-primary px-4 py-3 text-base font-semibold text-white transition hover:bg-brand-primary/90 disabled:cursor-not-allowed disabled:bg-brand-primary/50"
+              >
+                {isLoading ? 'Signing in…' : 'Login'}
+              </button>
+            </form>
 
-          {/* Sign Up Link */}
-          <div className="mt-6 text-center">
-            <p className="text-slate-400">
+            <div className="mt-6 text-center text-sm text-slate-400">
               Don't have an account?{' '}
-              <Link href="/auth/signup" className="text-blue-400 hover:text-blue-300">
-                Sign up here
+              <Link href="/auth/signup" className="font-semibold text-brand-secondary hover:text-brand-secondary/80">
+                Request access
               </Link>
-            </p>
+            </div>
+          </div>
+
+          <div className="mt-6 text-center text-xs text-slate-500">
+            Need help?{' '}
+            <a href="mailto:support@prostream.com" className="text-brand-secondary hover:text-brand-secondary/80">
+              Contact support
+            </a>
           </div>
         </div>
       </div>

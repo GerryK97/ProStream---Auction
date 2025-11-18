@@ -1,35 +1,38 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 
 /**
  * Minimal background animation with floating particles
- * Uses pure CSS for performance
+ * Disables intensive effects when prefers-reduced-motion is enabled
  */
 const BackgroundAnimation: React.FC = () => {
-  // Generate 15 particles with random positions and delays
-  const particles = Array.from({ length: 15 }, (_, i) => ({
-    id: i,
-    size: Math.random() * 4 + 2, // 2-6px
-    left: Math.random() * 100, // 0-100%
-    top: Math.random() * 100, // 0-100%
-    delay: Math.random() * 20, // 0-20s
-    duration: Math.random() * 20 + 20, // 20-40s
-  }));
+  const particles = useMemo(
+    () =>
+      Array.from({ length: 15 }, (_, i) => ({
+        id: i,
+        size: Math.random() * 4 + 2,
+        left: Math.random() * 100,
+        top: Math.random() * 100,
+        delay: Math.random() * 20,
+        duration: Math.random() * 20 + 20,
+      })),
+    []
+  );
 
   return (
-    <div className="fixed inset-0 overflow-hidden pointer-events-none">
+    <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
       {/* Gradient Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-neutral-900 to-neutral-800" />
+      <div className="absolute inset-0 bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-800" />
 
       {/* Animated Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/5 via-transparent to-brand-secondary/5 animate-gradient-shift" />
+      <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/5 via-transparent to-brand-secondary/5 motion-reduce:opacity-60 motion-safe:animate-gradient-shift" />
 
       {/* Floating Particles */}
       {particles.map((particle) => (
         <div
           key={particle.id}
-          className="absolute rounded-full bg-brand-primary/20 animate-float-particle"
+          className="absolute rounded-full bg-brand-primary/20 motion-safe:animate-float-particle motion-reduce:hidden"
           style={{
             width: `${particle.size}px`,
             height: `${particle.size}px`,
@@ -37,6 +40,7 @@ const BackgroundAnimation: React.FC = () => {
             top: `${particle.top}%`,
             animationDelay: `${particle.delay}s`,
             animationDuration: `${particle.duration}s`,
+            willChange: 'transform',
           }}
         />
       ))}
