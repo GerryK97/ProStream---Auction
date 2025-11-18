@@ -14,7 +14,7 @@ const Hero: React.FC = () => {
 
   return (
     <div className="relative flex flex-col items-center justify-center px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
-      <div className="w-full max-w-3xl text-center lg:text-left">
+      <div className="w-full max-w-6xl rounded-[32px] border border-white/10 bg-neutral-950/70 p-6 text-center shadow-[0_20px_70px_rgba(0,0,0,0.45)] backdrop-blur-2xl sm:p-10 lg:text-left">
         {/* Logo/Branding */}
         <div className="mb-10 space-y-4">
           <p className="text-sm font-semibold uppercase tracking-[0.6em] text-brand-secondary/90">
@@ -95,8 +95,8 @@ const Hero: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-3xl border border-white/20 bg-white/5 p-5 shadow-[0_10px_40px_rgba(0,0,0,0.35)] backdrop-blur-lg lg:p-6">
+        <div className="mt-10 grid gap-6 text-left lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-3xl border border-white/15 bg-white/5 p-5 shadow-[0_10px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl lg:p-6">
             <p className="text-xs uppercase tracking-[0.4em] text-neutral-400">Broadcast Control</p>
             <p className="mt-2 text-2xl font-bold text-white">Overlay cues synced in real time</p>
             <div className="mt-4 grid gap-4 text-sm text-neutral-300 sm:grid-cols-2">
@@ -113,7 +113,7 @@ const Hero: React.FC = () => {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-brand-secondary/30 bg-brand-secondary/10 p-6 shadow-[0_10px_30px_rgba(16,185,129,0.25)] backdrop-blur-lg">
+          <div className="rounded-3xl border border-brand-secondary/40 bg-brand-secondary/15 p-6 shadow-[0_15px_40px_rgba(16,185,129,0.4)] backdrop-blur-xl">
             <p className="text-xs uppercase tracking-[0.4em] text-brand-secondary">Live signals</p>
             <ul className="mt-4 space-y-3 text-sm text-white">
               <li className="flex items-center gap-3">
