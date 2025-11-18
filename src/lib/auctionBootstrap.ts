@@ -35,17 +35,17 @@ export async function getAuctionBootstrapData(tournamentId?: string | null): Pro
     };
   }
 
-  const [auctionStateDoc, players, teams] = await Promise.all([
+  const [auctionStateDoc, playersData, teamsData] = await Promise.all([
     AuctionStateModel.findOne({ tournamentId: tournamentDoc._id })
       .lean<AuctionState>()
       .exec(),
     PlayerModel.find({ tournamentId: tournamentDoc._id })
       .select('_id playerNo masterPlayerId tournamentId name position currentClub photoURL stats playerClass isSold finalPrice winningTeamId')
-      .lean()
+      .lean<any[]>()
       .exec(),
     TeamModel.find({ tournamentId: tournamentDoc._id })
       .select('_id tournamentId name shortCode ownerName logoURL initialBudget currentBalance playersPurchased')
-      .lean()
+      .lean<any[]>()
       .exec(),
   ]);
 
@@ -56,7 +56,7 @@ export async function getAuctionBootstrapData(tournamentId?: string | null): Pro
   return {
     tournament: tournamentDoc,
     auctionState,
-    players: (players as Player[]) || [],
-    teams: (teams as Team[]) || [],
+    players: (playersData as unknown as Player[]) || [],
+    teams: (teamsData as unknown as Team[]) || [],
   };
 }
