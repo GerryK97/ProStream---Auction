@@ -19,7 +19,7 @@ const contactChannels = [
   {
     title: 'WhatsApp Hotline',
     description: 'Live coordination support during auctions. Save our number for quick voice or text help.',
-    action: '+94 77 280 1110',
+    action: 'Message Us',
     href: 'https://wa.me/94772801110',
     badge: 'Live',
     color: 'from-brand-secondary/20 to-brand-secondary/5 border-brand-secondary/40',
