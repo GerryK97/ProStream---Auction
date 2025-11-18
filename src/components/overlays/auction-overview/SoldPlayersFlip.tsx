@@ -32,7 +32,7 @@ const SoldPlayersFlip: React.FC<SoldPlayersFlipProps> = ({
 
   const pages = useMemo(() => {
     if (enriched.length === 0) return [];
-    const chunks: typeof enriched[][] = [];
+    const chunks: Array<typeof enriched> = [];
     for (let i = 0; i < enriched.length; i += itemsPerPage) {
       chunks.push(enriched.slice(i, i + itemsPerPage));
     }
