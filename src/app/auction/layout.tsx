@@ -12,10 +12,7 @@ const sections = [
     match: '/auction',
     title: 'Auction Control Centre',
     description: 'Monitor bids, trigger overlays, and keep every stakeholder aligned in real-time.',
-    actions: [
-      { label: 'Open LED Overview', href: '/overlays/auction-overview', variant: 'secondary' as const },
-      { label: 'Player Highlight', href: '/overlays/player-highlight-led', variant: 'ghost' as const },
-    ],
+    actions: [],
   },
   {
     label: 'Auction Setup',

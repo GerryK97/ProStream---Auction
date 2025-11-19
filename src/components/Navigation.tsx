@@ -124,7 +124,7 @@ const Navigation: React.FC = () => {
     >
       <span
         className={`absolute top-1 h-6 w-6 rounded-full shadow transition-transform ${
-          theme === 'light' ? 'translate-x-8' : 'translate-x-1'
+          theme === 'light' ? 'translate-x-7' : 'translate-x-1'
         }`}
         style={{ backgroundColor: 'var(--text-primary)' }}
       />

@@ -33,10 +33,24 @@ interface PageHeroProps {
   metrics?: PageHeroMetric[];
 }
 
-const variantClasses: Record<ActionVariant, string> = {
-  primary: 'bg-brand-primary text-white hover:bg-brand-primary/90',
-  secondary: 'border border-white/20 text-white hover:bg-white/10',
-  ghost: 'text-neutral-300 hover:text-white',
+const getVariantStyles = (variant: ActionVariant) => {
+  switch (variant) {
+    case 'primary':
+      return {
+        backgroundColor: 'var(--brand-primary)',
+        color: 'white',
+      };
+    case 'secondary':
+      return {
+        borderColor: 'var(--border-primary)',
+        border: `1px solid var(--border-primary)`,
+        color: 'var(--text-primary)',
+      };
+    case 'ghost':
+      return {
+        color: 'var(--text-tertiary)',
+      };
+  }
 };
 
 const toneClasses = {
@@ -79,10 +93,12 @@ const PageHero: React.FC<PageHeroProps> = ({
         {actions.length > 0 && (
           <div className="flex flex-wrap gap-3">
             {actions.map((action) => {
-              const className = `inline-flex items-center justify-center rounded-2xl px-4 py-2 text-sm font-semibold transition-colors ${variantClasses[action.variant || 'secondary']}`;
+              const variant = action.variant || 'secondary';
+              const className = 'inline-flex items-center justify-center rounded-2xl px-4 py-2 text-sm font-semibold transition-colors';
+              const styles = getVariantStyles(variant);
               if (action.href) {
                 return (
-                  <Link key={action.label} href={action.href} className={className}>
+                  <Link key={action.label} href={action.href} className={className} style={styles}>
                     {action.icon && <span className="mr-2">{action.icon}</span>}
                     {action.label}
                   </Link>
@@ -90,7 +106,7 @@ const PageHero: React.FC<PageHeroProps> = ({
               }
 
               return (
-                <button key={action.label} type="button" onClick={action.onClick} className={className}>
+                <button key={action.label} type="button" onClick={action.onClick} className={className} style={styles}>
                   {action.icon && <span className="mr-2">{action.icon}</span>}
                   {action.label}
                 </button>
