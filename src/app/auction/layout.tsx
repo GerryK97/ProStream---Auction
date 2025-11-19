@@ -1,8 +1,34 @@
 'use client';
 
 import Navigation from '@/components/Navigation';
-import Link from 'next/link';
+import PageHero from '@/components/layout/PageHero';
+import PageTabs from '@/components/layout/PageTabs';
 import { usePathname } from 'next/navigation';
+
+const sections = [
+  {
+    label: 'Auction Control',
+    href: '/auction',
+    match: '/auction',
+    title: 'Auction Control Centre',
+    description: 'Monitor bids, trigger overlays, and keep every stakeholder aligned in real-time.',
+    actions: [
+      { label: 'Open LED Overview', href: '/overlays/auction-overview', variant: 'secondary' as const },
+      { label: 'Player Highlight', href: '/overlays/player-highlight-led', variant: 'ghost' as const },
+    ],
+  },
+  {
+    label: 'Auction Setup',
+    href: '/auction/setup',
+    match: '/auction/setup',
+    title: 'Auction Setup Workspace',
+    description: 'Upload squads, configure budgets, and rehearse flows before going live.',
+    actions: [
+      { label: 'Manage Rosters', href: '/manage/players', variant: 'secondary' as const },
+      { label: 'View Docs', href: '/docs', variant: 'ghost' as const },
+    ],
+  },
+];
 
 export default function AuctionLayout({
   children,
@@ -10,41 +36,40 @@ export default function AuctionLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const activeSection = sections.reduce((current, section) => {
+    if (pathname.startsWith(section.match)) {
+      if (!current || section.match.length > current.match.length) {
+        return section;
+      }
+    }
+    return current;
+  }, sections[0]);
+  const tabs = sections.map((section) => ({
+    label: section.label,
+    href: section.href,
+    active: pathname.startsWith(section.match),
+  }));
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-900 to-neutral-800 text-white">
+    <div className="min-h-screen bg-neutral-950 text-white">
       <Navigation />
-
-      {/* Sub Navigation */}
-      <nav className="bg-neutral-800/50 backdrop-blur-sm border-b border-neutral-700 sticky top-[88px] z-30">
-        <div className="container mx-auto px-6">
-          <div className="flex items-center gap-2">
-            <Link
-              href="/auction"
-              className={`px-6 py-3 font-semibold transition-all ${
-                pathname === '/auction'
-                  ? 'text-brand-primary border-b-2 border-brand-primary'
-                  : 'text-neutral-400 hover:text-white'
-              }`}
-            >
-              Auction Control
-            </Link>
-            <Link
-              href="/auction/setup"
-              className={`px-6 py-3 font-semibold transition-all ${
-                pathname === '/auction/setup'
-                  ? 'text-brand-primary border-b-2 border-brand-primary'
-                  : 'text-neutral-400 hover:text-white'
-              }`}
-            >
-              Auction Setup
-            </Link>
+      <div className="pt-24">
+        <div className="border-b border-white/10 bg-neutral-900/70 backdrop-blur">
+          <div className="mx-auto max-w-7xl px-6 py-8">
+            <PageHero
+              title={activeSection.title}
+              description={activeSection.description}
+              actions={activeSection.actions}
+            />
+          </div>
+          <div className="mx-auto max-w-7xl px-6 pb-4">
+            <PageTabs tabs={tabs} />
           </div>
         </div>
-      </nav>
 
-      <div className="container mx-auto px-6 py-6 min-h-screen bg-neutral-900">
-        {children}
+        <div className="mx-auto max-w-7xl px-6 py-8">
+          {children}
+        </div>
       </div>
     </div>
   );
