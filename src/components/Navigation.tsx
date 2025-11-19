@@ -85,7 +85,7 @@ const Navigation: React.FC = () => {
 
   if (isLoading) {
     return (
-      <header className="sticky top-0 z-40 border-b border-neutral-800 bg-neutral-900/70 backdrop-blur-xl">
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-neutral-800 bg-neutral-900/95 backdrop-blur-xl shadow-lg">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -107,7 +107,7 @@ const Navigation: React.FC = () => {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-neutral-800 bg-neutral-900/70 backdrop-blur-xl">
+    <header className="fixed top-0 left-0 right-0 z-50 border-b border-neutral-800 bg-neutral-900/95 backdrop-blur-xl shadow-lg">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-3">
