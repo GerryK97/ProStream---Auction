@@ -2,26 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  /* Custom Colors for Premium Card */
-  --color-custom-gray-100: #f9f9f9;
-  --color-custom-gray-150: #f2f2f2;
-  --color-custom-gray-200: #e1e1e1;
-  --color-custom-gray-400: #97a2c6;
-  --color-custom-gray: #7b8294;
-  --color-custom-gray-600: #3a4662;
-  --color-custom-gray-700: #252e44;
-  --color-custom-gray-800: #1f2638;
-  --color-custom-gray-900: #252831;
+:root[data-theme='dark'] {
+  --surface-primary: #05070d;
+  --surface-secondary: rgba(15, 23, 42, 0.8);
+  --surface-card: rgba(255, 255, 255, 0.05);
+  --surface-border: rgba(255, 255, 255, 0.12);
+  --text-primary: #ffffff;
+  --text-muted: #94a3b8;
+  --nav-background: rgba(15, 23, 42, 0.75);
+  --nav-border: rgba(148, 163, 184, 0.25);
+}
 
-  --color-custom-orange: #ff5411;
-  --color-custom-yellow: #ffcc00;
-
-  --color-team-golden-primary: #ffba00;
+:root[data-theme='light'] {
+  --surface-primary: #f5f7fb;
+  --surface-secondary: rgba(255, 255, 255, 0.85);
+  --surface-card: rgba(255, 255, 255, 0.8);
+  --surface-border: rgba(15, 23, 42, 0.1);
+  --text-primary: #0f172a;
+  --text-muted: #475569;
+  --nav-background: rgba(255, 255, 255, 0.9);
+  --nav-border: rgba(15, 23, 42, 0.1);
 }
 
 body {
-  background: transparent;
-  color: white;
+  background: var(--surface-primary);
+  color: var(--text-primary);
   min-height: 100vh;
 }
