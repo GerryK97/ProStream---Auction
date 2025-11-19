@@ -72,7 +72,7 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-neutral-950">
+    <div className="relative min-h-screen overflow-hidden" style={{ backgroundColor: 'var(--surface-primary)' }}>
       <BackgroundAnimation />
       <Navigation />
 
@@ -86,10 +86,10 @@ export default function HomePage() {
               <p className="text-sm font-semibold uppercase tracking-[0.5em] text-brand-secondary/80">
                 Product Suite
               </p>
-              <h2 className="mt-3 text-3xl font-bold text-neutral-100 sm:text-4xl">
+              <h2 className="mt-3 text-3xl font-bold sm:text-4xl" style={{ color: 'var(--text-secondary)' }}>
                 Everything coaches and producers need
               </h2>
-              <p className="mt-4 text-base text-neutral-300 sm:text-lg">
+              <p className="mt-4 text-base sm:text-lg" style={{ color: 'var(--text-tertiary)' }}>
                 From auction control rooms to live streams, ProStream keeps every stakeholder aligned
                 while staying performant on any device.
               </p>
@@ -111,18 +111,22 @@ export default function HomePage() {
         </section>
 
         {/* Additional Info Section */}
-        <section className="bg-neutral-900/60 px-4 py-16 sm:px-6 lg:px-8">
+        <section className="px-4 py-16 sm:px-6 lg:px-8" style={{ backgroundColor: 'var(--surface-secondary)' }}>
           <div className="mx-auto max-w-6xl">
             <div className="text-center">
-              <h3 className="text-3xl font-bold text-neutral-100 sm:text-4xl">Built for professionals</h3>
-              <p className="mt-4 text-base text-neutral-300 sm:text-lg">
+              <h3 className="text-3xl font-bold sm:text-4xl" style={{ color: 'var(--text-secondary)' }}>Built for professionals</h3>
+              <p className="mt-4 text-base sm:text-lg" style={{ color: 'var(--text-tertiary)' }}>
                 Whether you are staging a domestic showcase or a televised mega auction, ProStream
                 keeps your data, budget rules, and broadcast overlays in sync.
               </p>
             </div>
 
             <div className="mt-10 grid gap-6 text-left sm:grid-cols-3">
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6">
+              <div className="rounded-2xl p-6" style={{
+                borderColor: 'var(--border-primary)',
+                border: `1px solid var(--border-primary)`,
+                backgroundColor: 'var(--surface-elevated)'
+              }}>
                 <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary">
                   <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path
@@ -132,12 +136,16 @@ export default function HomePage() {
                     />
                   </svg>
                 </div>
-                <h4 className="text-xl font-semibold text-white">Live control room</h4>
-                <p className="mt-2 text-sm text-neutral-400">
+                <h4 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Live control room</h4>
+                <p className="mt-2 text-sm" style={{ color: 'var(--text-tertiary)' }}>
                   Trigger timers, lock bids, and cut to overlays with a single tap from mobile or desktop.
                 </p>
               </div>
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6">
+              <div className="rounded-2xl p-6" style={{
+                borderColor: 'var(--border-primary)',
+                border: `1px solid var(--border-primary)`,
+                backgroundColor: 'var(--surface-elevated)'
+              }}>
                 <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-brand-secondary/10 text-brand-secondary">
                   <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path
@@ -147,12 +155,16 @@ export default function HomePage() {
                     />
                   </svg>
                 </div>
-                <h4 className="text-xl font-semibold text-white">Production overlays</h4>
-                <p className="mt-2 text-sm text-neutral-400">
+                <h4 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Production overlays</h4>
+                <p className="mt-2 text-sm" style={{ color: 'var(--text-tertiary)' }}>
                   Automatically render player cards, ticker crawls, and upcoming lots without manual edits.
                 </p>
               </div>
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6">
+              <div className="rounded-2xl p-6" style={{
+                borderColor: 'var(--border-primary)',
+                border: `1px solid var(--border-primary)`,
+                backgroundColor: 'var(--surface-elevated)'
+              }}>
                 <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-status-purple/10 text-status-purple">
                   <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path
@@ -162,8 +174,8 @@ export default function HomePage() {
                     />
                   </svg>
                 </div>
-                <h4 className="text-xl font-semibold text-white">Mobile dashboards</h4>
-                <p className="mt-2 text-sm text-neutral-400">
+                <h4 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Mobile dashboards</h4>
+                <p className="mt-2 text-sm" style={{ color: 'var(--text-tertiary)' }}>
                   Auctioneers, analysts, and commentators stay aligned with adaptive views per role.
                 </p>
               </div>
@@ -173,28 +185,37 @@ export default function HomePage() {
 
         {/* Metrics/Testimonial Section */}
         <section className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-6xl rounded-3xl border border-white/10 bg-neutral-900/60 p-6 sm:p-10">
+          <div className="mx-auto max-w-6xl rounded-3xl p-6 sm:p-10" style={{
+            borderColor: 'var(--border-primary)',
+            border: `1px solid var(--border-primary)`,
+            backgroundColor: 'var(--surface-secondary)'
+          }}>
             <div className="grid gap-10 lg:grid-cols-2">
               <div className="space-y-6">
                 <p className="text-sm font-semibold uppercase tracking-[0.5em] text-brand-secondary/80">
                   Field tested
                 </p>
-                <blockquote className="text-lg text-neutral-200 sm:text-xl">
-                  “ProStream let our production crew run the auction from a tablet while our broadcast
+                <blockquote className="text-lg sm:text-xl" style={{ color: 'var(--text-secondary)' }}>
+                  "ProStream let our production crew run the auction from a tablet while our broadcast
                   team mirrored the same data in OBS. Zero missed lots, no frantic spreadsheets, and a
-                  flawless viewer experience.”
+                  flawless viewer experience."
                 </blockquote>
-                <p className="text-sm text-neutral-400">Riya Menon — Tournament Director, Grand League</p>
+                <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Riya Menon — Tournament Director, Grand League</p>
               </div>
 
               <div className="grid gap-6 sm:grid-cols-2">
                 {metrics.map((metric) => (
                   <div
                     key={metric.label}
-                    className="rounded-2xl border border-neutral-800 bg-neutral-900/70 p-6 text-center"
+                    className="rounded-2xl p-6 text-center"
+                    style={{
+                      borderColor: 'var(--border-primary)',
+                      border: `1px solid var(--border-primary)`,
+                      backgroundColor: 'var(--surface-elevated)'
+                    }}
                   >
-                    <p className="text-3xl font-black text-white">{metric.value}</p>
-                    <p className="mt-2 text-sm text-neutral-400">{metric.label}</p>
+                    <p className="text-3xl font-black" style={{ color: 'var(--text-primary)' }}>{metric.value}</p>
+                    <p className="mt-2 text-sm" style={{ color: 'var(--text-tertiary)' }}>{metric.label}</p>
                   </div>
                 ))}
               </div>
@@ -203,8 +224,11 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="relative z-10 border-t border-neutral-800 px-4 py-8 sm:px-6">
-        <div className="mx-auto max-w-7xl text-center text-sm text-neutral-500">
+      <footer className="relative z-10 px-4 py-8 sm:px-6" style={{
+        borderColor: 'var(--border-primary)',
+        borderTop: `1px solid var(--border-primary)`
+      }}>
+        <div className="mx-auto max-w-7xl text-center text-sm" style={{ color: 'var(--text-muted)' }}>
           <p>&copy; {new Date().getFullYear()} ProStream Auction Management System. All rights reserved.</p>
         </div>
       </footer>

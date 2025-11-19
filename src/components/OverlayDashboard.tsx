@@ -647,21 +647,33 @@ const OverlayDashboard: React.FC = () => {
     return (
         <div className="animate-fade-in space-y-8">
             <div>
-                <h2 className="text-3xl font-bold text-white">Overlay Library</h2>
-                <p className="text-md text-neutral-400">Modular overlay components - each can be positioned independently in OBS</p>
+                <h2 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>Overlay Library</h2>
+                <p className="text-md" style={{ color: 'var(--text-tertiary)' }}>Modular overlay components - each can be positioned independently in OBS</p>
                 {activeTournamentId && (
                     <p className="text-sm text-green-400 mt-2">✓ Active Tournament: {activeTournamentId}</p>
                 )}
             </div>
 
-            <div className="bg-neutral-800 p-6 rounded-lg border border-neutral-700 grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+            <div className="p-6 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-6 items-end" style={{
+              borderColor: 'var(--border-primary)',
+              border: `1px solid var(--border-primary)`,
+              backgroundColor: 'var(--surface-secondary)'
+            }}>
                  <div>
-                    <label htmlFor="search" className="block text-sm font-medium text-neutral-300 mb-1">Search Overlays</label>
-                    <input type="text" id="search" placeholder="Search by name or description..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary"/>
+                    <label htmlFor="search" className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Search Overlays</label>
+                    <input type="text" id="search" placeholder="Search by name or description..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{
+                      backgroundColor: 'var(--surface-elevated)',
+                      borderColor: 'var(--border-primary)',
+                      color: 'var(--text-primary)'
+                    }} className="w-full border rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary"/>
                 </div>
                 <div>
-                    <label htmlFor="filter-tag" className="block text-sm font-medium text-neutral-300 mb-1">Filter by Tag</label>
-                    <select id="filter-tag" value={selectedTag} onChange={e => setSelectedTag(e.target.value)} className="w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary">
+                    <label htmlFor="filter-tag" className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Filter by Tag</label>
+                    <select id="filter-tag" value={selectedTag} onChange={e => setSelectedTag(e.target.value)} style={{
+                      backgroundColor: 'var(--surface-elevated)',
+                      borderColor: 'var(--border-primary)',
+                      color: 'var(--text-primary)'
+                    }} className="w-full border rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary">
                         {allTags.map(tag => <option key={tag} value={tag}>{tag}</option>)}
                     </select>
                 </div>
@@ -671,23 +683,37 @@ const OverlayDashboard: React.FC = () => {
                 {filteredOverlays.map(overlay => {
                     const overlayUrl = generateOverlayUrl(overlay);
                     return (
-                        <div key={overlay.id} className="bg-neutral-800 rounded-lg border border-neutral-700 flex flex-col overflow-hidden group hover:border-cyan-500 transition-colors">
+                        <div key={overlay.id} className="rounded-lg flex flex-col overflow-hidden group hover:border-cyan-500 transition-colors" style={{
+                          borderColor: 'var(--border-primary)',
+                          border: `1px solid var(--border-primary)`,
+                          backgroundColor: 'var(--surface-secondary)'
+                        }}>
                             <div className="relative">
                                 <img src={overlay.imageURL} alt={overlay.name} className="w-full h-40 object-cover" />
-                                <div className="absolute top-2 right-2 bg-neutral-900/80 backdrop-blur-sm text-xs px-2 py-1 rounded text-neutral-300">
+                                <div className="absolute top-2 right-2 backdrop-blur-sm text-xs px-2 py-1 rounded" style={{
+                                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                  color: 'var(--text-tertiary)'
+                                }}>
                                     {overlay.dimensions.width}x{overlay.dimensions.height}
                                 </div>
                             </div>
                             <div className="p-4 flex flex-col flex-grow">
-                                <h3 className="text-lg font-bold text-white">{overlay.name}</h3>
-                                <p className="text-sm text-neutral-400 mt-1 flex-grow">{overlay.description}</p>
+                                <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{overlay.name}</h3>
+                                <p className="text-sm mt-1 flex-grow" style={{ color: 'var(--text-tertiary)' }}>{overlay.description}</p>
                                 <div className="mt-4 flex flex-wrap gap-2">
                                     {overlay.tags.map(tag => (
-                                        <span key={tag} className="inline-block bg-neutral-700 text-neutral-300 text-xs font-medium px-2.5 py-1 rounded-full">{tag}</span>
+                                        <span key={tag} className="inline-block text-xs font-medium px-2.5 py-1 rounded-full" style={{
+                                          backgroundColor: 'var(--surface-hover)',
+                                          color: 'var(--text-secondary)'
+                                        }}>{tag}</span>
                                     ))}
                                 </div>
                             </div>
-                            <div className="p-4 bg-neutral-900/50 border-t border-neutral-700 space-y-2">
+                            <div className="p-4 space-y-2" style={{
+                              borderColor: 'var(--border-primary)',
+                              borderTop: `1px solid var(--border-primary)`,
+                              backgroundColor: 'var(--surface-elevated)'
+                            }}>
                                 <div className="flex gap-2">
                                     {overlay.parameterSchema && (
                                         <button

@@ -44,6 +44,26 @@ const Navigation: React.FC = () => {
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
+  const ProStreamLogo = () => (
+    <Link href="/" className="flex items-center gap-3">
+      <img
+        src="https://res.cloudinary.com/diitsd6nz/image/upload/v1760794476/ProSteam_logo_h9pb8b.png"
+        alt="ProStream Logo"
+        className="h-10 w-10 object-contain"
+      />
+      <div>
+        <p className="text-xs uppercase tracking-[0.35em]" style={{ color: 'var(--text-muted)' }}>
+          ProStream
+        </p>
+        <p className="text-xl font-bold leading-tight">
+          <span style={{ color: '#0F84D0' }}>Pro</span>
+          <span style={{ color: '#78CA2A' }}>Stream</span>
+          <span style={{ color: 'var(--text-primary)' }}> Auction</span>
+        </p>
+      </div>
+    </Link>
+  );
+
   const LinkGroup = () => (
     <div className="flex items-center gap-6 text-sm font-semibold">
       {navLinks.map((link) => (
@@ -51,7 +71,7 @@ const Navigation: React.FC = () => {
           key={link.href}
           href={link.href}
           className={`transition-colors ${
-            isActive(link.href) ? 'text-brand-primary' : 'text-neutral-400 hover:text-white'
+            isActive(link.href) ? 'text-brand-primary' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
           }`}
         >
           {link.label}
@@ -64,14 +84,28 @@ const Navigation: React.FC = () => {
     user ? (
       <button
         onClick={handleLogout}
-        className="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/30"
+        className="rounded-full px-4 py-2 text-sm font-semibold transition"
+        style={{
+          backgroundColor: 'var(--surface-hover)',
+          color: 'var(--text-primary)',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'var(--surface-elevated)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
+        }}
       >
         Logout
       </button>
     ) : (
       <Link
         href="/auth/login"
-        className="rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-black/80"
+        className="rounded-full px-4 py-2 text-sm font-semibold transition"
+        style={{
+          backgroundColor: 'var(--surface-elevated)',
+          color: 'var(--text-primary)',
+        }}
       >
         Login
       </Link>
@@ -82,12 +116,17 @@ const Navigation: React.FC = () => {
       type="button"
       aria-label="Toggle theme"
       onClick={toggleTheme}
-      className="relative h-8 w-16 rounded-full bg-white/10 text-xs font-semibold text-white backdrop-blur hover:bg-white/20"
+      className="relative h-8 w-16 rounded-full text-xs font-semibold backdrop-blur transition"
+      style={{
+        backgroundColor: 'var(--surface-hover)',
+        color: 'var(--text-primary)',
+      }}
     >
       <span
-        className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-transform ${
+        className={`absolute top-1 h-6 w-6 rounded-full shadow transition-transform ${
           theme === 'light' ? 'translate-x-8' : 'translate-x-1'
         }`}
+        style={{ backgroundColor: 'var(--text-primary)' }}
       />
       <span className="absolute left-3 top-2">🌙</span>
       <span className="absolute right-3 top-2">☀️</span>
@@ -108,9 +147,7 @@ const Navigation: React.FC = () => {
   return (
     <nav className="fixed inset-x-0 top-4 z-50 flex justify-center px-4">
       <div className="flex h-16 w-full max-w-5xl items-center justify-between rounded-3xl border border-[var(--nav-border)] bg-[var(--nav-background)] px-6 shadow-2xl backdrop-blur-lg">
-        <Link href="/" className="text-xl font-black tracking-[0.6em] text-white">
-          PROSTREAM
-        </Link>
+        <ProStreamLogo />
 
         <div className="hidden items-center gap-6 md:flex">
           <LinkGroup />
@@ -120,7 +157,12 @@ const Navigation: React.FC = () => {
 
         <button
           type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 text-white md:hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-full md:hidden transition"
+          style={{
+            borderColor: 'var(--border-primary)',
+            color: 'var(--text-primary)',
+            border: `1px solid var(--border-primary)`,
+          }}
           onClick={() => setDrawerOpen(!drawerOpen)}
         >
           {drawerOpen ? '✕' : '☰'}
@@ -128,15 +170,21 @@ const Navigation: React.FC = () => {
       </div>
 
       {drawerOpen && (
-        <div className="absolute top-20 w-full max-w-5xl rounded-3xl border border-[var(--nav-border)] bg-[var(--nav-background)] p-6 text-white shadow-2xl backdrop-blur">
+        <div className="absolute top-20 w-full max-w-5xl rounded-3xl border border-[var(--nav-border)] bg-[var(--nav-background)] p-6 shadow-2xl backdrop-blur">
           <div className="grid gap-4">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`rounded-2xl border border-white/10 p-4 font-semibold ${
-                  isActive(link.href) ? 'bg-white/10 text-brand-primary' : 'text-white'
+                className={`rounded-2xl p-4 font-semibold transition ${
+                  isActive(link.href) ? 'text-brand-primary' : ''
                 }`}
+                style={{
+                  borderColor: 'var(--border-primary)',
+                  border: `1px solid var(--border-primary)`,
+                  backgroundColor: isActive(link.href) ? 'var(--surface-hover)' : 'transparent',
+                  color: isActive(link.href) ? '#0F84D0' : 'var(--text-primary)',
+                }}
               >
                 {link.label}
               </Link>

@@ -301,10 +301,10 @@ export default function UsersPage() {
   if (authLoading || (isLoading && users.length === 0 && pendingUsers.length === 0)) {
     return (
       <ProtectedRoute allowedRoles={['Admin']}>
-        <div className="min-h-screen bg-neutral-950 text-white">
+        <div className="min-h-screen text-white" style={{ backgroundColor: 'var(--surface-primary)' }}>
           <Navigation />
           <div className="pt-24">
-            <div className="mx-auto max-w-7xl px-6 py-16 text-center text-neutral-400">
+            <div className="mx-auto max-w-7xl px-6 py-16 text-center" style={{ color: 'var(--text-tertiary)' }}>
               Loading user directory...
             </div>
           </div>
@@ -326,7 +326,7 @@ export default function UsersPage() {
 
   return (
     <ProtectedRoute allowedRoles={['Admin']}>
-      <div className="min-h-screen bg-neutral-950 text-white">
+      <div className="min-h-screen text-white" style={{ backgroundColor: 'var(--surface-primary)' }}>
         <Navigation />
         <div className="pt-24">
           <div className="mx-auto max-w-7xl px-6 py-8 space-y-6">
@@ -348,7 +348,11 @@ export default function UsersPage() {
               </div>
             )}
 
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur">
+            <div className="rounded-3xl p-4 backdrop-blur" style={{
+              borderColor: 'var(--border-primary)',
+              border: `1px solid var(--border-primary)`,
+              backgroundColor: 'var(--surface-card)'
+            }}>
               <div className="mb-6 flex flex-wrap gap-3">
                 {[
                   { label: `Active Users (${activeUsers})`, value: 'active' },
@@ -358,28 +362,36 @@ export default function UsersPage() {
                   <button
                     key={tab.value}
                     onClick={() => setActiveTab(tab.value as typeof activeTab)}
-                    className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-                      activeTab === tab.value
-                        ? 'bg-white text-neutral-900'
-                        : 'border border-white/10 text-neutral-300 hover:text-white'
-                    }`}
+                    style={{
+                      backgroundColor: activeTab === tab.value ? 'var(--text-primary)' : 'transparent',
+                      color: activeTab === tab.value ? '#05070d' : 'var(--text-secondary)',
+                      borderColor: 'var(--border-primary)',
+                    }}
+                    className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors border`}
                   >
                     {tab.label}
                   </button>
                 ))}
               </div>
 
-              <div className="overflow-hidden rounded-2xl border border-white/10">
+              <div className="overflow-hidden rounded-2xl" style={{
+                borderColor: 'var(--border-primary)',
+                border: `1px solid var(--border-primary)`
+              }}>
                 {isLoading ? (
-                  <div className="p-8 text-center text-neutral-400">Loading users...</div>
+                  <div className="p-8 text-center" style={{ color: 'var(--text-tertiary)' }}>Loading users...</div>
                 ) : displayUsers.length === 0 ? (
-                  <div className="p-8 text-center text-neutral-400">
+                  <div className="p-8 text-center" style={{ color: 'var(--text-tertiary)' }}>
                     {activeTab === 'pending' ? 'No pending users' : 'No users found'}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                <thead className="bg-neutral-900 border-b border-neutral-700">
+                <thead style={{
+                  borderColor: 'var(--border-primary)',
+                  borderBottom: `1px solid var(--border-primary)`,
+                  backgroundColor: 'var(--surface-elevated)'
+                }}>
                   <tr>
                     <th className="px-6 py-4 text-left text-sm font-semibold">Username</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold">Email</th>
@@ -390,9 +402,12 @@ export default function UsersPage() {
                 </thead>
                 <tbody>
                   {displayUsers.map((u) => (
-                    <tr key={u._id} className="border-b border-neutral-700 hover:bg-neutral-700/50 transition-colors">
-                      <td className="px-6 py-4 text-sm font-medium">{u.username}</td>
-                      <td className="px-6 py-4 text-sm">{u.email}</td>
+                    <tr key={u._id} style={{
+                      borderColor: 'var(--border-primary)',
+                      borderBottom: `1px solid var(--border-primary)`
+                    }} className="hover:opacity-80 transition-opacity">
+                      <td className="px-6 py-4 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{u.username}</td>
+                      <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>{u.email}</td>
                       <td className="px-6 py-4 text-sm">
                         <span className="px-3 py-1 bg-blue-500/20 text-blue-300 rounded text-xs font-medium">
                           {u.role}
@@ -428,7 +443,11 @@ export default function UsersPage() {
                         )}
                         <button
                           onClick={() => handleEditClick(u)}
-                          className="px-3 py-1 bg-neutral-700 hover:bg-neutral-600 text-white rounded text-xs font-medium transition-colors"
+                          style={{
+                            backgroundColor: 'var(--surface-hover)',
+                            color: 'var(--text-primary)'
+                          }}
+                          className="px-3 py-1 rounded text-xs font-medium transition-colors hover:opacity-80"
                         >
                           Edit
                         </button>
@@ -451,49 +470,73 @@ export default function UsersPage() {
             {/* Create User Modal */}
             {showCreateModal && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                <div className="bg-neutral-800 rounded-lg border border-neutral-700 p-8 max-w-md w-full">
-                  <h2 className="text-2xl font-bold mb-6">Create New User</h2>
+                <div className="rounded-lg p-8 max-w-md w-full" style={{
+                  borderColor: 'var(--border-primary)',
+                  border: `1px solid var(--border-primary)`,
+                  backgroundColor: 'var(--surface-secondary)'
+                }}>
+                  <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>Create New User</h2>
 
                   <form onSubmit={handleCreateUser} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium mb-2">Username</label>
+                      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Username</label>
                       <input
                         type="text"
                         value={formData.username}
                         onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                        className="w-full px-4 py-2 bg-neutral-700 border border-neutral-600 rounded text-white focus:outline-none focus:border-blue-500"
+                        style={{
+                          backgroundColor: 'var(--surface-elevated)',
+                          borderColor: 'var(--border-primary)',
+                          color: 'var(--text-primary)'
+                        }}
+                        className="w-full px-4 py-2 border rounded focus:outline-none focus:border-blue-500"
                         required
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2">Email</label>
+                      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Email</label>
                       <input
                         type="email"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="w-full px-4 py-2 bg-neutral-700 border border-neutral-600 rounded text-white focus:outline-none focus:border-blue-500"
+                        style={{
+                          backgroundColor: 'var(--surface-elevated)',
+                          borderColor: 'var(--border-primary)',
+                          color: 'var(--text-primary)'
+                        }}
+                        className="w-full px-4 py-2 border rounded focus:outline-none focus:border-blue-500"
                         required
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2">Password</label>
+                      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Password</label>
                       <input
                         type="password"
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="w-full px-4 py-2 bg-neutral-700 border border-neutral-600 rounded text-white focus:outline-none focus:border-blue-500"
+                        style={{
+                          backgroundColor: 'var(--surface-elevated)',
+                          borderColor: 'var(--border-primary)',
+                          color: 'var(--text-primary)'
+                        }}
+                        className="w-full px-4 py-2 border rounded focus:outline-none focus:border-blue-500"
                         required
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2">Role</label>
+                      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Role</label>
                       <select
                         value={formData.role}
                         onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                        className="w-full px-4 py-2 bg-neutral-700 border border-neutral-600 rounded text-white focus:outline-none focus:border-blue-500"
+                        style={{
+                          backgroundColor: 'var(--surface-elevated)',
+                          borderColor: 'var(--border-primary)',
+                          color: 'var(--text-primary)'
+                        }}
+                        className="w-full px-4 py-2 border rounded focus:outline-none focus:border-blue-500"
                       >
                         <option value="Admin">Admin</option>
                         <option value="Tournament">Tournament Manager</option>
@@ -508,7 +551,11 @@ export default function UsersPage() {
                       <button
                         type="button"
                         onClick={() => setShowCreateModal(false)}
-                        className="flex-1 px-4 py-2 bg-neutral-700 hover:bg-neutral-600 text-white rounded transition-colors"
+                        style={{
+                          backgroundColor: 'var(--surface-hover)',
+                          color: 'var(--text-primary)'
+                        }}
+                        className="flex-1 px-4 py-2 rounded transition-colors"
                       >
                         Cancel
                       </button>

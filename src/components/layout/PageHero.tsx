@@ -55,17 +55,17 @@ const PageHero: React.FC<PageHeroProps> = ({
   return (
     <div className="space-y-6">
       {breadcrumbs.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 text-sm text-neutral-400">
+        <div className="flex flex-wrap items-center gap-2 text-sm" style={{ color: 'var(--text-tertiary)' }}>
           {breadcrumbs.map((crumb, idx) => (
             <span key={`${crumb.label}-${idx}`} className="flex items-center gap-2">
               {crumb.href ? (
-                <Link href={crumb.href} className="hover:text-white">
+                <Link href={crumb.href} style={{ color: 'var(--text-tertiary)' }} className="hover:text-white">
                   {crumb.label}
                 </Link>
               ) : (
                 <span>{crumb.label}</span>
               )}
-              {idx < breadcrumbs.length - 1 && <span className="text-neutral-600">/</span>}
+              {idx < breadcrumbs.length - 1 && <span style={{ color: 'var(--border-primary)' }}>/</span>}
             </span>
           ))}
         </div>
@@ -73,8 +73,8 @@ const PageHero: React.FC<PageHeroProps> = ({
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl">{title}</h1>
-          {description && <p className="mt-2 text-base text-neutral-300">{description}</p>}
+          <h1 className="text-3xl font-black tracking-tight sm:text-4xl" style={{ color: 'var(--text-primary)' }}>{title}</h1>
+          {description && <p className="mt-2 text-base" style={{ color: 'var(--text-secondary)' }}>{description}</p>}
         </div>
         {actions.length > 0 && (
           <div className="flex flex-wrap gap-3">
@@ -105,11 +105,16 @@ const PageHero: React.FC<PageHeroProps> = ({
           {metrics.map((metric) => (
             <div
               key={metric.label}
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur"
+              className="rounded-2xl px-4 py-3 backdrop-blur"
+              style={{
+                borderColor: 'var(--border-primary)',
+                border: `1px solid var(--border-primary)`,
+                backgroundColor: 'var(--surface-card)'
+              }}
             >
-              <p className="text-xs uppercase tracking-[0.4em] text-neutral-400">{metric.label}</p>
+              <p className="text-xs uppercase tracking-[0.4em]" style={{ color: 'var(--text-tertiary)' }}>{metric.label}</p>
               <p className={`mt-2 text-2xl font-bold ${toneClasses[metric.tone || 'default']}`}>{metric.value}</p>
-              {metric.helper && <p className="text-sm text-neutral-400">{metric.helper}</p>}
+              {metric.helper && <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>{metric.helper}</p>}
             </div>
           ))}
         </div>

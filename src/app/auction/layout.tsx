@@ -51,10 +51,14 @@ export default function AuctionLayout({
   }));
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
+    <div className="min-h-screen text-white" style={{ backgroundColor: 'var(--surface-primary)' }}>
       <Navigation />
       <div className="pt-24">
-        <div className="border-b border-white/10 bg-neutral-900/70 backdrop-blur">
+        <div className="backdrop-blur" style={{
+          borderColor: 'var(--border-primary)',
+          borderBottom: `1px solid var(--border-primary)`,
+          backgroundColor: 'var(--surface-secondary)'
+        }}>
           <div className="mx-auto max-w-7xl px-6 py-8">
             <PageHero
               title={activeSection.title}

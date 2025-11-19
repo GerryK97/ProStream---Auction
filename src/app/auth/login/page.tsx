@@ -33,7 +33,7 @@ export default function LoginPage() {
   const passwordToggleLabel = showPassword ? 'Hide password' : 'Show password';
 
   return (
-    <div className="relative min-h-[100dvh] bg-gradient-to-b from-slate-950 via-slate-900 to-slate-900 text-white">
+    <div className="relative min-h-[100dvh] text-white" style={{ backgroundColor: 'var(--surface-primary)' }}>
       <div
         className="absolute inset-0 opacity-40"
         style={{
@@ -65,23 +65,35 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 text-left text-xs text-slate-400 sm:text-sm">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <p className="text-2xl font-bold text-white">12</p>
+          <div className="grid grid-cols-2 gap-4 text-left text-xs sm:text-sm" style={{ color: 'var(--text-tertiary)' }}>
+            <div className="rounded-2xl p-4" style={{
+              borderColor: 'var(--border-primary)',
+              border: `1px solid var(--border-primary)`,
+              backgroundColor: 'var(--surface-card)'
+            }}>
+              <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>12</p>
               <p className="mt-1">Teams bidding live</p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <p className="text-2xl font-bold text-white">250K+</p>
+            <div className="rounded-2xl p-4" style={{
+              borderColor: 'var(--border-primary)',
+              border: `1px solid var(--border-primary)`,
+              backgroundColor: 'var(--surface-card)'
+            }}>
+              <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>250K+</p>
               <p className="mt-1">Viewers synced</p>
             </div>
           </div>
         </div>
 
         <div className="w-full max-w-md self-center lg:self-stretch">
-          <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6 shadow-2xl backdrop-blur">
+          <div className="rounded-3xl p-6 shadow-2xl backdrop-blur" style={{
+            borderColor: 'var(--border-primary)',
+            border: `1px solid var(--border-primary)`,
+            backgroundColor: 'var(--surface-secondary)'
+          }}>
             <div className="mb-6">
-              <h2 className="text-2xl font-bold">Login to ProStream</h2>
-              <p className="mt-2 text-sm text-slate-400">Enter your credentials to continue.</p>
+              <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Login to ProStream</h2>
+              <p className="mt-2 text-sm" style={{ color: 'var(--text-tertiary)' }}>Enter your credentials to continue.</p>
             </div>
 
             <div className="min-h-[48px]">
@@ -142,7 +154,7 @@ export default function LoginPage() {
               </button>
             </form>
 
-            <div className="mt-6 text-center text-sm text-slate-400">
+            <div className="mt-6 text-center text-sm" style={{ color: 'var(--text-tertiary)' }}>
               Don't have an account?{' '}
               <Link href="/auth/signup" className="font-semibold text-brand-secondary hover:text-brand-secondary/80">
                 Request access
@@ -150,7 +162,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="mt-6 text-center text-xs text-slate-500">
+          <div className="mt-6 text-center text-xs" style={{ color: 'var(--text-muted)' }}>
             Need help?{' '}
             <a href="mailto:support@prostream.com" className="text-brand-secondary hover:text-brand-secondary/80">
               Contact support

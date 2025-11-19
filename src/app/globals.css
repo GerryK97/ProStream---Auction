@@ -3,25 +3,63 @@
 @tailwind utilities;
 
 :root[data-theme='dark'] {
+  /* Surface Colors */
   --surface-primary: #05070d;
   --surface-secondary: rgba(15, 23, 42, 0.8);
+  --surface-elevated: #1F2937;
+  --surface-hover: #374151;
   --surface-card: rgba(255, 255, 255, 0.05);
-  --surface-border: rgba(255, 255, 255, 0.12);
+  --surface-subtle: rgba(255, 255, 255, 0.03);
+
+  /* Text Colors */
   --text-primary: #ffffff;
+  --text-secondary: #D1D5DB;
+  --text-tertiary: #9CA3AF;
   --text-muted: #94a3b8;
+
+  /* Border Colors */
+  --border-primary: rgba(255, 255, 255, 0.1);
+  --border-secondary: rgba(255, 255, 255, 0.05);
+  --surface-border: rgba(255, 255, 255, 0.12);
+
+  /* Navigation */
   --nav-background: rgba(15, 23, 42, 0.75);
   --nav-border: rgba(148, 163, 184, 0.25);
+
+  /* Effects */
+  --backdrop: rgba(0, 0, 0, 0.75);
+  --gradient-start: #111827;
+  --gradient-end: #030712;
 }
 
 :root[data-theme='light'] {
+  /* Surface Colors */
   --surface-primary: #f5f7fb;
   --surface-secondary: rgba(255, 255, 255, 0.85);
+  --surface-elevated: #ffffff;
+  --surface-hover: #f3f4f6;
   --surface-card: rgba(255, 255, 255, 0.8);
-  --surface-border: rgba(15, 23, 42, 0.1);
+  --surface-subtle: rgba(15, 23, 42, 0.02);
+
+  /* Text Colors */
   --text-primary: #0f172a;
+  --text-secondary: #374151;
+  --text-tertiary: #6B7280;
   --text-muted: #475569;
+
+  /* Border Colors */
+  --border-primary: rgba(15, 23, 42, 0.15);
+  --border-secondary: rgba(15, 23, 42, 0.08);
+  --surface-border: rgba(15, 23, 42, 0.1);
+
+  /* Navigation */
   --nav-background: rgba(255, 255, 255, 0.9);
   --nav-border: rgba(15, 23, 42, 0.1);
+
+  /* Effects */
+  --backdrop: rgba(15, 23, 42, 0.4);
+  --gradient-start: #ffffff;
+  --gradient-end: #f9fafb;
 }
 
 body {
