@@ -9,8 +9,9 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        'brand-primary': '#4F46E5',
-        'brand-secondary': '#10B981',
+        'brand-primary': 'var(--brand-primary)',
+        'brand-secondary': 'var(--brand-secondary)',
+        'brand-accent': 'var(--accent-color)',
         'neutral-900': '#111827',
         'neutral-800': '#1F2937',
         'neutral-700': '#374151',

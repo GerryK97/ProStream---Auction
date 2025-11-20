@@ -108,21 +108,21 @@ export default function SignupPage() {
           <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>Create Account</h2>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded text-red-400 text-sm">
+            <div className="mb-6 p-4 rounded text-sm" style={{ color: 'var(--status-danger)', border: '1px solid color-mix(in oklab, var(--status-danger) 40%, transparent)', background: 'color-mix(in oklab, var(--status-danger) 12%, transparent)' }}>
               {error}
             </div>
           )}
 
           {successMessage && (
-            <div className="mb-6 p-4 bg-green-500/10 border border-green-500/50 rounded text-green-400 text-sm">
+            <div className="mb-6 p-4 rounded text-sm" style={{ color: 'var(--status-success)', border: '1px solid color-mix(in oklab, var(--status-success) 40%, transparent)', background: 'color-mix(in oklab, var(--status-success) 12%, transparent)' }}>
               {successMessage}
             </div>
           )}
 
-          {errors.length > 0 && (
-            <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/50 rounded">
-              <p className="text-yellow-400 text-sm font-medium mb-2">Password requirements:</p>
-              <ul className="text-yellow-400 text-xs space-y-1">
+            {errors.length > 0 && (
+            <div className="mb-6 p-4 rounded" style={{ color: 'var(--status-warning)', border: '1px solid color-mix(in oklab, var(--status-warning) 40%, transparent)', background: 'color-mix(in oklab, var(--status-warning) 12%, transparent)' }}>
+                <p className="text-sm font-medium mb-2">Password requirements:</p>
+                <ul className="text-xs space-y-1">
                 {errors.map((error, idx) => (
                   <li key={idx}>• {error}</li>
                 ))}

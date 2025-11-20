@@ -28,7 +28,7 @@ const PageTabs: React.FC<PageTabsProps> = ({ tabs }) => {
             color: 'white',
           } : {
             borderColor: 'var(--border-primary)',
-            color: 'var(--text-tertiary)'
+            color: 'var(--text-primary)'
           }}
           className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
             tab.active

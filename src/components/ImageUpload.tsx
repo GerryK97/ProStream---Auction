@@ -60,36 +60,38 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
   const previewShapeClass = previewShape === 'circle' ? 'rounded-full' : 'rounded-md';
   const placeholderUrl = previewShape === 'circle'
-    ? 'https://placehold.co/100x100/374151/F3F4F6/png?text=No+Image'
-    : 'https://placehold.co/100x100/374151/F3F4F6/png?text=No+Logo';
+    ? 'https://placehold.co/100x100/97a2c6/F3F4F6/png?text=No+Image'
+    : 'https://placehold.co/100x100/97a2c6/F3F4F6/png?text=No+Logo';
 
   return (
     <div>
-      <label className="block text-sm font-medium text-neutral-300 mb-1">{label}</label>
+      <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>{label}</label>
       <div className="flex items-center gap-4">
         {/* Image Preview */}
         <div className="relative">
           <img
             src={value || placeholderUrl}
             alt="Preview"
-            className={`${previewClassName} ${previewShapeClass} object-cover bg-neutral-700`}
+            className={`${previewClassName} ${previewShapeClass} object-cover`}
+            style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}
           />
           {/* Upload Progress Overlay */}
           {isUploading && (
-            <div className={`absolute inset-0 ${previewShapeClass} bg-black/70 flex items-center justify-center`}>
-              <div className="animate-spin rounded-full h-8 w-8 border-4 border-neutral-600 border-t-brand-primary"></div>
+            <div className={`absolute inset-0 ${previewShapeClass} bg-black/60 flex items-center justify-center`}>
+              <div className="animate-spin rounded-full h-8 w-8 border-4" style={{ borderColor: 'var(--border-primary)', borderTopColor: 'var(--brand-primary)' }}></div>
             </div>
           )}
         </div>
 
         {/* Upload Controls */}
-        <div className="flex-grow space-y-2">
-          <div className="flex items-center justify-between bg-neutral-700 border border-neutral-600 rounded-md p-2">
+          <div className="flex-grow space-y-2">
+          <div className="flex items-center justify-between rounded-md p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}>
             <label
               htmlFor={id}
-              className={`cursor-pointer bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-3 rounded-md text-sm transition-colors ${
+              className={`cursor-pointer text-white font-bold py-1.5 px-3 rounded-md text-sm transition-colors hover:opacity-80 ${
                 isUploading ? 'opacity-50 cursor-not-allowed' : ''
               }`}
+              style={{ backgroundColor: 'var(--brand-primary)' }}
             >
               {isUploading ? (
                 <span className="flex items-center gap-2">
@@ -111,14 +113,14 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               accept="image/*"
               disabled={isUploading}
             />
-            <span className="text-sm text-neutral-400 truncate ml-2">
+            <span className="text-sm truncate ml-2" style={{ color: 'var(--text-secondary)' }}>
               {isUploading ? 'Uploading to cloud...' : (fileName || 'No file chosen')}
             </span>
           </div>
 
           {/* URL Input */}
           <div>
-            <p className="text-center text-xs text-neutral-500 mb-1">or enter a URL below</p>
+            <p className="text-center text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>or enter a URL below</p>
             <input
               type="text"
               value={value}
@@ -127,7 +129,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                 setFileName('');
               }}
               placeholder={placeholder}
-              className="w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2 text-sm"
+              className="w-full rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2 text-sm"
+              style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
               disabled={isUploading}
             />
           </div>

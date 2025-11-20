@@ -5,11 +5,12 @@ import { useAuction } from '@/hooks/useAuction';
 import { Player, Team, Tournament, PlayerStats, MasterTeam, MasterPlayer } from '@/types';
 import { getAuthHeaders } from '@/lib/api-client';
 import Modal from './Modal';
-import { PlusIcon, DeleteIcon, EditIcon } from './icons';
+import { PlusIcon, EditIcon } from './icons';
 import { imageOptimizers } from '@/lib/imageOptimization';
 import ImageUpload from './ImageUpload';
 import { getSortedClasses, getClassConfig } from '@/lib/playerClassUtils';
 import BulkAddTournamentPlayers from './BulkAddTournamentPlayers';
+import DeleteButton from './shared/DeleteButton';
 
 
 interface AddPlayerFromDatabaseProps {
@@ -102,21 +103,26 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
     return (
         <div className="space-y-4">
             {error && (
-                <div className="bg-red-900/50 border border-red-700 text-red-200 rounded-md p-3 flex items-start justify-between">
+                <div className="rounded-md p-3 flex items-start justify-between" style={{
+                    color: 'var(--status-danger)',
+                    border: '1px solid color-mix(in oklab, var(--status-danger) 40%, transparent)',
+                    background: 'color-mix(in oklab, var(--status-danger) 12%, transparent)'
+                }}>
                     <div>
                         <p className="font-semibold">Error Adding Player</p>
                         <p className="text-sm">{error}</p>
                     </div>
                     <button
                         onClick={() => setError(null)}
-                        className="text-red-200 hover:text-white"
+                        className="hover:opacity-80"
+                        style={{ color: 'var(--text-primary)' }}
                     >
                         ✕
                     </button>
                 </div>
             )}
             <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-neutral-400">
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                     {availablePlayers.length} player(s) available to add
                 </p>
             </div>
@@ -126,11 +132,13 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
                     placeholder="Search players..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="flex-1 bg-neutral-700 border-neutral-600 rounded-md px-3 py-2 focus:ring-brand-primary focus:border-brand-primary"
+                    className="flex-1 rounded-md px-3 py-2 focus:ring-brand-primary focus:border-brand-primary"
+                    style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
                 />
                 <button
                     onClick={onCreateNew}
-                    className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-md transition-colors whitespace-nowrap"
+                    className="text-white font-bold py-2 px-4 rounded-md transition-colors whitespace-nowrap hover:opacity-80"
+                    style={{ backgroundColor: 'var(--brand-primary)' }}
                 >
                     + Create New
                 </button>
@@ -138,7 +146,7 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
 
             <div className="max-h-96 overflow-y-auto space-y-2">
                 {filteredPlayers.length === 0 ? (
-                    <p className="text-center text-neutral-400 py-8">
+                <p className="text-center py-8" style={{ color: 'var(--text-secondary)' }}>
                         {searchTerm ? 'No players found matching your search' : 'No available players in database'}
                     </p>
                 ) : (
@@ -149,7 +157,8 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
                         return (
                             <div
                                 key={player._id}
-                                className="bg-neutral-700/50 p-3 rounded-md hover:bg-neutral-700 transition-colors"
+                                className="p-3 rounded-md transition-colors"
+                                style={{ backgroundColor: 'var(--surface-card)' }}
                             >
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-3 flex-1">
@@ -161,7 +170,7 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
                                         />
                                         <div className="flex-1">
                                             <p className="font-semibold">{player.name}</p>
-                                            <p className="text-xs text-neutral-400">
+                                            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                                                 {player.position} | {player.currentClub}
                                             </p>
                                             <p className="text-xs text-neutral-500">
@@ -174,8 +183,8 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
                                         disabled={addingPlayerId === player._id}
                                         className={`font-bold py-2 px-4 rounded-md text-sm transition-colors whitespace-nowrap ${
                                             addingPlayerId === player._id
-                                                ? 'bg-neutral-600 text-neutral-400 cursor-not-allowed'
-                                                : 'bg-blue-600 hover:bg-blue-500 text-white'
+                                                ? 'opacity-60 cursor-not-allowed'
+                                                : ''
                                         }`}
                                     >
                                         {addingPlayerId === player._id ? 'Adding...' : 'Add Player'}
@@ -185,7 +194,7 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
                                 {/* Player Class Dropdown - Only show if tournament uses player classes */}
                                 {selectedTournament.usePlayerClasses && selectedTournament.playerClasses && selectedTournament.playerClasses.length > 0 && (
                                     <div className="ml-15 flex items-center gap-2">
-                                        <label htmlFor={`class-${player._id}`} className="text-xs text-neutral-400 whitespace-nowrap">
+                                        <label htmlFor={`class-${player._id}`} className="text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
                                             Player Class:
                                         </label>
                                         <select
@@ -195,7 +204,8 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
                                                 ...prev,
                                                 [player._id]: e.target.value
                                             }))}
-                                            className="flex-1 bg-neutral-600 border-neutral-500 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                                            className="flex-1 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                                            style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
                                             style={{
                                                 color: classConfig?.color || 'inherit'
                                             }}
@@ -212,7 +222,7 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
                                             ))}
                                         </select>
                                         {player.suggestedClass && (
-                                            <span className="text-xs text-neutral-500 italic">
+                                            <span className="text-xs italic" style={{ color: 'var(--text-tertiary)' }}>
                                                 (Suggested: {player.suggestedClass})
                                             </span>
                                         )}
@@ -267,7 +277,7 @@ const AddTeamFromDatabase: React.FC<AddTeamFromDatabaseProps> = ({
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-neutral-400">
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                     {availableTeams.length} team(s) available to add
                 </p>
             </div>
@@ -277,11 +287,13 @@ const AddTeamFromDatabase: React.FC<AddTeamFromDatabaseProps> = ({
                     placeholder="Search teams..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="flex-1 bg-neutral-700 border-neutral-600 rounded-md px-3 py-2 focus:ring-brand-primary focus:border-brand-primary"
+                    className="flex-1 rounded-md px-3 py-2 focus:ring-brand-primary focus:border-brand-primary"
+                    style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
                 />
                 <button
                     onClick={onCreateNew}
-                    className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-md transition-colors whitespace-nowrap"
+                    className="text-white font-bold py-2 px-4 rounded-md transition-colors whitespace-nowrap hover:opacity-80"
+                    style={{ backgroundColor: 'var(--brand-primary)' }}
                 >
                     + Create New
                 </button>
@@ -289,14 +301,15 @@ const AddTeamFromDatabase: React.FC<AddTeamFromDatabaseProps> = ({
 
             <div className="max-h-96 overflow-y-auto space-y-2">
                 {filteredTeams.length === 0 ? (
-                    <p className="text-center text-neutral-400 py-8">
+                    <p className="text-center py-8" style={{ color: 'var(--text-secondary)' }}>
                         {searchTerm ? 'No teams found matching your search' : 'No available teams in database'}
                     </p>
                 ) : (
                     filteredTeams.map((team) => (
                         <div
                             key={team._id}
-                            className="bg-neutral-700/50 p-3 rounded-md flex items-center justify-between hover:bg-neutral-700 transition-colors"
+                            className="p-3 rounded-md flex items-center justify-between transition-colors"
+                            style={{ backgroundColor: 'var(--surface-card)' }}
                         >
                             <div className="flex items-center gap-3">
                                 <img
@@ -307,7 +320,7 @@ const AddTeamFromDatabase: React.FC<AddTeamFromDatabaseProps> = ({
                                 />
                                 <div>
                                     <p className="font-semibold">{team.name}</p>
-                                    <p className="text-xs text-neutral-400">
+                                    <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                                         Owner: {team.ownerName} | {team.shortCode}
                                     </p>
                                 </div>
@@ -317,8 +330,8 @@ const AddTeamFromDatabase: React.FC<AddTeamFromDatabaseProps> = ({
                                 disabled={addingTeamId === team._id}
                                 className={`font-bold py-2 px-4 rounded-md text-sm transition-colors whitespace-nowrap ${
                                     addingTeamId === team._id
-                                        ? 'bg-neutral-600 text-neutral-400 cursor-not-allowed'
-                                        : 'bg-blue-600 hover:bg-blue-500 text-white'
+                                        ? 'opacity-60 cursor-not-allowed'
+                                        : ''
                                 }`}
                             >
                                 {addingTeamId === team._id ? 'Adding...' : 'Add Team'}
@@ -361,24 +374,24 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, tournament, playerToEdi
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-                <label htmlFor="name" className="block text-sm font-medium text-neutral-300">Player Name</label>
-                <input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary" />
+                <label htmlFor="name" className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Player Name</label>
+                <input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} required className="mt-1 block w-full rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
             </div>
 
-            <div className="bg-neutral-700/50 p-3 rounded-md space-y-3 animate-fade-in">
-                 <h4 className="font-semibold text-neutral-200 mb-2 border-b border-neutral-600 pb-2">Player Stats</h4>
+            <div className="p-3 rounded-md space-y-3 animate-fade-in" style={{ backgroundColor: 'var(--surface-card)' }}>
+                 <h4 className="font-semibold mb-2 border-b pb-2" style={{ color: 'var(--text-primary)', borderColor: 'var(--border-primary)' }}>Player Stats</h4>
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                      <div>
-                        <label htmlFor="matchesPlayed" className="block text-sm font-medium text-neutral-300">Matches Played</label>
-                        <input type="number" id="matchesPlayed" value={stats.matchesPlayed} onChange={(e) => handleStatChange('matchesPlayed', e.target.value)} required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary" />
+                        <label htmlFor="matchesPlayed" className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Matches Played</label>
+                        <input type="number" id="matchesPlayed" value={stats.matchesPlayed} onChange={(e) => handleStatChange('matchesPlayed', e.target.value)} required className="mt-1 block w-full rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
                      </div>
                      <div>
-                        <label htmlFor="totalScore" className="block text-sm font-medium text-neutral-300">Total Score</label>
-                        <input type="number" id="totalScore" value={stats.totalScore} onChange={(e) => handleStatChange('totalScore', e.target.value)} required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary" />
+                        <label htmlFor="totalScore" className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Total Score</label>
+                        <input type="number" id="totalScore" value={stats.totalScore} onChange={(e) => handleStatChange('totalScore', e.target.value)} required className="mt-1 block w-full rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
                      </div>
                      <div>
-                        <label htmlFor="totalWickets" className="block text-sm font-medium text-neutral-300">Total Wickets</label>
-                        <input type="number" id="totalWickets" value={stats.totalWickets} onChange={(e) => handleStatChange('totalWickets', e.target.value)} required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary" />
+                        <label htmlFor="totalWickets" className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Total Wickets</label>
+                        <input type="number" id="totalWickets" value={stats.totalWickets} onChange={(e) => handleStatChange('totalWickets', e.target.value)} required className="mt-1 block w-full rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
                      </div>
                  </div>
             </div>
@@ -426,12 +439,12 @@ const TeamForm: React.FC<TeamFormProps> = ({ onSave }) => {
     return (
          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-                <label htmlFor="teamName" className="block text-sm font-medium text-neutral-300">Team Name</label>
-                <input type="text" id="teamName" value={name} onChange={(e) => setName(e.target.value)} required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary" />
+                <label htmlFor="teamName" className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Team Name</label>
+                <input type="text" id="teamName" value={name} onChange={(e) => setName(e.target.value)} required className="mt-1 block w-full rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
             </div>
              <div>
-                <label htmlFor="ownerName" className="block text-sm font-medium text-neutral-300">Owner Name</label>
-                <input type="text" id="ownerName" value={ownerName} onChange={(e) => setOwnerName(e.target.value)} required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary" />
+                <label htmlFor="ownerName" className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Owner Name</label>
+                <input type="text" id="ownerName" value={ownerName} onChange={(e) => setOwnerName(e.target.value)} required className="mt-1 block w-full rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
             </div>
             <ImageUpload
                 value={logoURL}
@@ -747,9 +760,9 @@ const AuctionSetupPanel: React.FC = () => {
     if (tournaments.length === 0) {
         return (
             <div className="text-center p-12">
-                <div className="bg-neutral-800 border border-neutral-700 rounded-lg p-8 max-w-2xl mx-auto">
+                <div className="rounded-lg p-8 max-w-2xl mx-auto setup-panel">
                     <h2 className="text-2xl font-bold mb-2">No Tournaments Found</h2>
-                    <p className="text-neutral-400 mb-6">
+                    <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>
                         Create a tournament in the Management Dashboard to get started with auction setup.
                     </p>
                     <a
@@ -764,7 +777,7 @@ const AuctionSetupPanel: React.FC = () => {
     }
 
     if (!selectedTournament) {
-        return <div className="text-center p-8 text-neutral-400">Loading tournament data...</div>;
+        return <div className="text-center p-8" style={{ color: 'var(--text-secondary)' }}>Loading tournament data...</div>;
     }
 
     const totalPlayers = tournamentPlayers.length;
@@ -783,32 +796,33 @@ const AuctionSetupPanel: React.FC = () => {
         <div className="space-y-8 animate-fade-in">
             <div>
                 <h1 className="text-3xl font-bold">Auction Setup</h1>
-                <p className="text-neutral-400 mt-1">Manage tournament rosters - add or remove players and teams</p>
+                <p className="mt-1" style={{ color: 'var(--text-secondary)' }}>Manage tournament rosters - add or remove players and teams</p>
             </div>
 
-            <div className="bg-neutral-800 border border-neutral-700 rounded-lg p-6 space-y-4">
+            <div className="rounded-lg p-6 space-y-4 setup-panel">
                 <div className="flex justify-between items-start">
                     <div className="relative w-full max-w-xl">
-                        <label className="text-sm text-neutral-400 mb-1 block">Select Tournament</label>
+                        <label className="text-sm mb-1 block" style={{ color: 'var(--text-secondary)' }}>Select Tournament</label>
                         <button
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                            className="flex items-center justify-between gap-4 w-full p-3 border border-neutral-600 rounded-md bg-neutral-900/50 hover:bg-neutral-900 transition-colors"
+                            className="flex items-center justify-between gap-4 w-full p-3 rounded-md transition-colors border"
+                            style={{ borderColor: 'var(--border-primary)', backgroundColor: 'var(--surface-subtle)' }}
                         >
                              <p className="text-lg font-semibold">{selectedTournament.name} - Budget: {selectedTournament.budgetPerTeam.toLocaleString()} | Squad: {selectedTournament.squadSize}</p>
-                             <svg className={`w-5 h-5 text-neutral-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
+                             <svg className={`w-5 h-5 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} style={{ color: 'var(--text-secondary)' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
                         </button>
-                        {isDropdownOpen && (
-                            <div className="absolute z-10 mt-1 w-full bg-neutral-800 border border-neutral-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                                {tournaments.map((t) => {
-                                    const getStatusColor = (status: string) => {
-                                        switch(status) {
-                                            case 'Live': return 'text-green-400 font-bold';
-                                            case 'Stopped': return 'text-yellow-400 font-bold';
-                                            case 'Completed': return 'text-purple-400 font-bold';
-                                            case 'Archived': return 'text-neutral-500';
-                                            default: return 'text-neutral-400';
-                                        }
-                                    };
+                          {isDropdownOpen && (
+                              <div className="absolute z-10 mt-1 w-full rounded-md shadow-lg max-h-60 overflow-y-auto" style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)' }}>
+                                  {tournaments.map((t) => {
+                                      const getStatusStyle = (status: string) => {
+                                          switch(status) {
+                                              case 'Live': return { color: 'var(--status-success)', fontWeight: 700 } as const;
+                                              case 'Stopped': return { color: 'var(--status-warning)', fontWeight: 700 } as const;
+                                              case 'Completed': return { color: 'var(--status-info)', fontWeight: 700 } as const;
+                                              case 'Archived': return { color: 'var(--text-tertiary)' } as const;
+                                              default: return { color: 'var(--text-secondary)' } as const;
+                                          }
+                                      };
 
                                     return (
                                         <button
@@ -817,20 +831,20 @@ const AuctionSetupPanel: React.FC = () => {
                                                 setSelectedTournamentId(t._id);
                                                 setIsDropdownOpen(false);
                                             }}
-                                            className={`w-full text-left p-3 hover:bg-neutral-700 transition-colors ${
-                                                t._id === selectedTournamentId ? 'bg-neutral-700 text-brand-primary' : ''
-                                            }`}
-                                        >
+                                              className={`w-full text-left p-3 transition-colors`}
+                                              style={{ backgroundColor: t._id === selectedTournamentId ? 'var(--surface-hover)' : 'transparent', color: t._id === selectedTournamentId ? 'var(--brand-primary)' : 'var(--text-primary)' }}
+                                              style={{ backgroundColor: t._id === selectedTournamentId ? 'var(--surface-hover)' : undefined, color: t._id === selectedTournamentId ? 'var(--brand-primary)' : undefined }}
+                                              >
                                             <div className="flex items-center justify-between">
                                                 <p className="font-semibold">{t.name}</p>
-                                                <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(t.status)}`}>
+                                                  <span className={`text-xs px-2 py-0.5 rounded-full`} style={getStatusStyle(t.status)}>
                                                     {t.status === 'Live' && '🔴 '}
                                                     {t.status}
                                                 </span>
                                             </div>
-                                            <p className="text-xs text-neutral-400">
-                                                Budget: {t.budgetPerTeam.toLocaleString()} | Squad: {t.squadSize}
-                                            </p>
+                                              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                                                  Budget: {t.budgetPerTeam.toLocaleString()} | Squad: {t.squadSize}
+                                              </p>
                                         </button>
                                     );
                                 })}
@@ -838,13 +852,13 @@ const AuctionSetupPanel: React.FC = () => {
                         )}
                     </div>
                     {isAuctionLive && (
-                        <div className="bg-green-600/50 text-green-200 border border-green-500 text-sm font-semibold px-3 py-1 rounded-full flex items-center gap-2 animate-pulse">
+                        <div className="text-sm font-semibold px-3 py-1 rounded-full flex items-center gap-2 animate-pulse" style={{ color: 'var(--status-success)', border: '1px solid color-mix(in oklab, var(--status-success) 40%, transparent)', background: 'color-mix(in oklab, var(--status-success) 12%, transparent)' }}>
                              <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><circle cx="10" cy="10" r="6" /></svg>
                             LIVE
                         </div>
                     )}
                     {isAuctionStopped && (
-                        <div className="bg-yellow-600/50 text-yellow-200 border border-yellow-500 text-sm font-semibold px-3 py-1 rounded-full flex items-center gap-2">
+                        <div className="text-sm font-semibold px-3 py-1 rounded-full flex items-center gap-2" style={{ color: 'var(--status-warning)', border: '1px solid color-mix(in oklab, var(--status-warning) 40%, transparent)', background: 'color-mix(in oklab, var(--status-warning) 12%, transparent)' }}>
                              <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd" /></svg>
                             Stopped
                         </div>
@@ -856,20 +870,20 @@ const AuctionSetupPanel: React.FC = () => {
                         </div>
                     )}
                     {isAuctionArchived && (
-                        <div className="bg-neutral-600/50 text-neutral-200 border border-neutral-500 text-sm font-semibold px-3 py-1 rounded-full flex items-center gap-2">
+                        <div className="text-sm font-semibold px-3 py-1 rounded-full flex items-center gap-2" style={{ color: 'var(--text-secondary)', border: '1px solid var(--border-primary)', background: 'var(--surface-subtle)' }}>
                              <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z" /><path fillRule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clipRule="evenodd" /></svg>
                             Archived
                         </div>
                     )}
                 </div>
 
-                <div className="bg-neutral-900/40 p-3 rounded-md text-xs text-neutral-400 font-mono space-y-1">
-                    <p>Status: <span className="text-yellow-300">{selectedTournament.status.toUpperCase()}</span></p>
-                    <p>isAuctionActive: <span className={isAuctionLive ? 'text-green-400' : 'text-red-400'}>{isAuctionLive.toString()}</span></p>
+                <div className="p-3 rounded-md text-xs font-mono space-y-1" style={{ backgroundColor: 'var(--surface-subtle)', color: 'var(--text-secondary)' }}>
+                    <p>Status: <span style={{ color: 'var(--status-warning)' }}>{selectedTournament.status.toUpperCase()}</span></p>
+                    <p>isAuctionActive: <span style={{ color: isAuctionLive ? 'var(--status-success)' : 'var(--status-danger)' }}>{isAuctionLive.toString()}</span></p>
                     <p>Tournament ID: <span className="text-cyan-400">{selectedTournament._id}</span></p>
                 </div>
 
-                <div className="flex items-center justify-between border-t border-neutral-700 pt-4">
+                <div className="flex items-center justify-between border-t pt-4" style={{ borderColor: 'var(--border-primary)' }}>
                     <div className="flex items-center gap-4">
                         {/* Start Auction Button - Show for Draft/Setup */}
                         {canStartAuction && (
@@ -897,7 +911,8 @@ const AuctionSetupPanel: React.FC = () => {
                                         console.error('Failed to start auction:', error);
                                     }
                                 }}
-                                className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
+                                className="text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2 hover:opacity-80"
+                                style={{ backgroundColor: 'var(--brand-primary)' }}
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
@@ -926,7 +941,8 @@ const AuctionSetupPanel: React.FC = () => {
                                         console.error('Failed to stop auction:', error);
                                     }
                                 }}
-                                className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
+                                className="text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2 hover:opacity-80"
+                                style={{ backgroundColor: 'var(--status-danger)' }}
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -955,7 +971,8 @@ const AuctionSetupPanel: React.FC = () => {
                                         console.error('Failed to restart auction:', error);
                                     }
                                 }}
-                                className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
+                                className="text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2 hover:opacity-80"
+                                style={{ backgroundColor: 'var(--brand-primary)' }}
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -981,7 +998,8 @@ const AuctionSetupPanel: React.FC = () => {
                                         console.error('Failed to archive tournament:', error);
                                     }
                                 }}
-                                className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
+                                className="text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2 hover:opacity-80"
+                                style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
@@ -991,57 +1009,59 @@ const AuctionSetupPanel: React.FC = () => {
                         )}
 
                         {isAuctionArchived && (
-                            <div className="text-neutral-400 italic">This tournament is archived (read-only)</div>
+                            <div className="italic" style={{ color: 'var(--text-secondary)' }}>This tournament is archived (read-only)</div>
                         )}
                     </div>
                     <div className="flex gap-8 text-center">
                         <div>
-                            <p className="text-2xl font-bold">{totalPlayers}<span className="text-sm text-neutral-400">/{totalPlayers}</span></p>
-                            <p className="text-xs text-neutral-500">Players</p>
+                            <p className="text-2xl font-bold">{totalPlayers}<span className="text-sm" style={{ color: 'var(--text-secondary)' }}>/{totalPlayers}</span></p>
+                            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Players</p>
                         </div>
                          <div>
                             <p className="text-2xl font-bold">{totalTeams}</p>
-                            <p className="text-xs text-neutral-500">Teams</p>
+                            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Teams</p>
                         </div>
                          <div>
-                            <p className="text-2xl font-bold text-green-400">{availablePlayersCount}</p>
-                            <p className="text-xs text-neutral-500">Available</p>
+                            <p className="text-2xl font-bold" style={{ color: 'var(--status-success)' }}>{availablePlayersCount}</p>
+                            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Available</p>
                         </div>
                          <div>
-                            <p className="text-2xl font-bold text-red-400">{soldPlayersCount}</p>
-                            <p className="text-xs text-neutral-500">Sold</p>
+                            <p className="text-2xl font-bold" style={{ color: 'var(--status-danger)' }}>{soldPlayersCount}</p>
+                            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Sold</p>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="bg-neutral-800 border border-neutral-700 rounded-lg p-6">
+                <div className="rounded-lg p-6 setup-panel">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-xl font-bold">Registered Players</h3>
                         <div className="flex gap-2">
-                             <button className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors">Sync All</button>
+                             <button className="text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors hover:opacity-80" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}>Sync All</button>
                              <button
                                 onClick={handleExportPlayers}
                                 disabled={exportingPlayers || tournamentPlayers.length === 0}
-                                className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors flex items-center gap-1"
+                                className="disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors flex items-center gap-1 hover:opacity-80"
+                                style={{ backgroundColor: 'var(--brand-secondary)' }}
                              >
                                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
                                 {exportingPlayers ? 'Exporting...' : 'Export to Excel'}
                              </button>
-                             <button onClick={() => setBulkAddPlayerModalOpen(true)} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors flex items-center gap-1">
+                             <button onClick={() => setBulkAddPlayerModalOpen(true)} className="text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors flex items-center gap-1 hover:opacity-80" style={{ backgroundColor: 'var(--brand-primary)' }}>
                                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                                 </svg>
                                 Bulk Add
                              </button>
-                             <button onClick={() => setAddPlayerModalOpen(true)} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors flex items-center gap-1"><PlusIcon className="h-4 w-4" /> Add Players</button>
+                             <button onClick={() => setAddPlayerModalOpen(true)} className="text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors flex items-center gap-1 hover:opacity-80" style={{ backgroundColor: 'var(--brand-primary)' }}><PlusIcon className="h-4 w-4" /> Add Players</button>
                              <button
                                 onClick={() => setShowClearPlayersConfirm(true)}
                                 disabled={tournamentPlayers.length === 0}
-                                className="bg-red-600 hover:bg-red-700 disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"
+                                className="disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors hover:opacity-80"
+                                style={{ backgroundColor: 'var(--status-danger)' }}
                              >
                                 Clear All
                              </button>
@@ -1049,10 +1069,10 @@ const AuctionSetupPanel: React.FC = () => {
                     </div>
                     <ul className="space-y-3 h-96 overflow-y-auto pr-2">
                         {tournamentPlayers.length === 0 ? (
-                            <p className="text-center text-neutral-400 py-8">No players registered for this tournament</p>
+                            <p className="text-center py-8" style={{ color: 'var(--text-secondary)' }}>No players registered for this tournament</p>
                         ) : (
                             tournamentPlayers.map(player => (
-                                <li key={player._id} className="bg-neutral-900/50 p-3 rounded-md flex items-center justify-between">
+                                <li key={player._id} className="p-3 rounded-md flex items-center justify-between" style={{ backgroundColor: 'var(--surface-card)' }}>
                                     <div className="flex items-center gap-3">
                                         <img
                                             src={imageOptimizers.playerThumbnail(player.photoURL)}
@@ -1062,27 +1082,32 @@ const AuctionSetupPanel: React.FC = () => {
                                         />
                                         <div>
                                             <p className="font-semibold">#{player.playerNo || player._id} {player.name}</p>
-                                            <p className="text-sm text-neutral-400">Matches: {player.stats.matchesPlayed}</p>
-                                            <p className={`text-xs font-semibold ${player.isSold ? 'text-red-400' : 'text-green-400'} tracking-wider`}>
+                                            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Matches: {player.stats.matchesPlayed}</p>
+                                            <p className={`text-xs font-semibold tracking-wider`} style={{ color: player.isSold ? 'var(--status-danger)' : 'var(--status-success)' }}>
                                                 {player.isSold ? 'SOLD' : 'AVAILABLE'}
                                             </p>
                                         </div>
                                     </div>
-                                    <button onClick={() => handleRemovePlayer(player._id)} className="bg-red-600 hover:bg-red-500 text-white font-bold py-1 px-3 rounded-lg text-sm transition-colors">Remove</button>
+                                    <DeleteButton
+                                        ariaLabel={`Remove ${player.name}`}
+                                        onClick={() => handleRemovePlayer(player._id)}
+                                        className="shrink-0"
+                                    />
                                 </li>
                             ))
                         )}
                     </ul>
                 </div>
-                 <div className="bg-neutral-800 border border-neutral-700 rounded-lg p-6">
+                 <div className="rounded-lg p-6 setup-panel">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-xl font-bold">Registered Teams</h3>
                         <div className="flex gap-2">
-                            <button onClick={() => setAddTeamModalOpen(true)} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors flex items-center gap-1"><PlusIcon className="h-4 w-4" /> Add Teams</button>
+                            <button onClick={() => setAddTeamModalOpen(true)} className="text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors flex items-center gap-1 hover:opacity-80" style={{ backgroundColor: 'var(--brand-primary)' }}><PlusIcon className="h-4 w-4" /> Add Teams</button>
                             <button
                                 onClick={() => setShowClearTeamsConfirm(true)}
                                 disabled={totalTeams === 0}
-                                className="bg-red-600 hover:bg-red-700 disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"
+                                className="disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors hover:opacity-80"
+                                style={{ backgroundColor: 'var(--status-danger)' }}
                             >
                                 Clear All
                             </button>
@@ -1090,10 +1115,10 @@ const AuctionSetupPanel: React.FC = () => {
                     </div>
                      <ul className="space-y-3 h-96 overflow-y-auto pr-2">
                         {totalTeams === 0 ? (
-                            <p className="text-center text-neutral-400 py-8">No teams registered for this tournament</p>
+                            <p className="text-center py-8" style={{ color: 'var(--text-secondary)' }}>No teams registered for this tournament</p>
                         ) : (
                             tournamentTeams.map(team => (
-                                <li key={team._id} className="bg-neutral-900/50 p-3 rounded-md flex items-center justify-between">
+                                <li key={team._id} className="p-3 rounded-md flex items-center justify-between" style={{ backgroundColor: 'var(--surface-card)' }}>
                                     <div className="flex items-center gap-3">
                                         <img
                                             src={imageOptimizers.teamThumbnail(team.logoURL)}
@@ -1103,11 +1128,15 @@ const AuctionSetupPanel: React.FC = () => {
                                         />
                                         <div>
                                             <p className="font-semibold">{team.name}</p>
-                                            <p className="text-sm text-neutral-400">Budget: {team.initialBudget?.toLocaleString() || 'Not set'}</p>
-                                            <p className="text-xs text-neutral-400">Remaining: {team.currentBalance?.toLocaleString() || 'N/A'} | Players: {team.playersPurchased?.length || 0}</p>
+                                            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Budget: {team.initialBudget?.toLocaleString() || 'Not set'}</p>
+                                            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Remaining: {team.currentBalance?.toLocaleString() || 'N/A'} | Players: {team.playersPurchased?.length || 0}</p>
                                         </div>
                                     </div>
-                                    <button onClick={() => handleRemoveTeam(team._id)} className="bg-red-600 hover:bg-red-500 text-white font-bold py-1 px-3 rounded-lg text-sm transition-colors">Remove</button>
+                                    <DeleteButton
+                                        ariaLabel={`Remove ${team.name}`}
+                                        onClick={() => handleRemoveTeam(team._id)}
+                                        className="shrink-0"
+                                    />
                                 </li>
                             ))
                         )}
@@ -1190,22 +1219,24 @@ const AuctionSetupPanel: React.FC = () => {
 
             <Modal isOpen={showClearPlayersConfirm} onClose={() => setShowClearPlayersConfirm(false)} title="Clear All Tournament Players" size="sm">
                 <div className="space-y-4">
-                    <div className="bg-red-900/30 border border-red-700 rounded-lg p-4">
-                        <p className="text-red-200 font-semibold mb-2">Warning: This action cannot be undone</p>
-                        <p className="text-red-100 text-sm">You are about to delete all {tournamentPlayers.length} registered players from this tournament.</p>
+                    <div className="rounded-lg p-4" style={{ color: 'var(--status-danger)', border: '1px solid color-mix(in oklab, var(--status-danger) 40%, transparent)', background: 'color-mix(in oklab, var(--status-danger) 12%, transparent)' }}>
+                        <p className="font-semibold mb-2">Warning: This action cannot be undone</p>
+                        <p className="text-sm">You are about to delete all {tournamentPlayers.length} registered players from this tournament.</p>
                     </div>
-                    <p className="text-neutral-300 text-sm">Are you sure you want to clear all players?</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Are you sure you want to clear all players?</p>
                     <div className="flex gap-3 justify-end pt-4">
                         <button
                             onClick={() => setShowClearPlayersConfirm(false)}
-                            className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                            className="text-white font-bold py-2 px-4 rounded-lg transition-colors hover:opacity-80"
+                            style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}
                         >
                             Cancel
                         </button>
                         <button
                             onClick={handleClearAllPlayers}
                             disabled={clearingPlayers}
-                            className="bg-red-600 hover:bg-red-700 disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                            className="disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:opacity-80"
+                            style={{ backgroundColor: 'var(--status-danger)' }}
                         >
                             {clearingPlayers ? 'Clearing...' : 'Clear All Players'}
                         </button>
@@ -1215,22 +1246,24 @@ const AuctionSetupPanel: React.FC = () => {
 
             <Modal isOpen={showClearTeamsConfirm} onClose={() => setShowClearTeamsConfirm(false)} title="Clear All Tournament Teams" size="sm">
                 <div className="space-y-4">
-                    <div className="bg-red-900/30 border border-red-700 rounded-lg p-4">
-                        <p className="text-red-200 font-semibold mb-2">Warning: This action cannot be undone</p>
-                        <p className="text-red-100 text-sm">You are about to delete all {tournamentTeams.length} registered teams from this tournament.</p>
+                    <div className="rounded-lg p-4" style={{ color: 'var(--status-danger)', border: '1px solid color-mix(in oklab, var(--status-danger) 40%, transparent)', background: 'color-mix(in oklab, var(--status-danger) 12%, transparent)' }}>
+                        <p className="font-semibold mb-2">Warning: This action cannot be undone</p>
+                        <p className="text-sm">You are about to delete all {tournamentTeams.length} registered teams from this tournament.</p>
                     </div>
-                    <p className="text-neutral-300 text-sm">Are you sure you want to clear all teams?</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Are you sure you want to clear all teams?</p>
                     <div className="flex gap-3 justify-end pt-4">
                         <button
                             onClick={() => setShowClearTeamsConfirm(false)}
-                            className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                            className="text-white font-bold py-2 px-4 rounded-lg transition-colors hover:opacity-80"
+                            style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}
                         >
                             Cancel
                         </button>
                         <button
                             onClick={handleClearAllTeams}
                             disabled={clearingTeams}
-                            className="bg-red-600 hover:bg-red-700 disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                            className="disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:opacity-80"
+                            style={{ backgroundColor: 'var(--status-danger)' }}
                         >
                             {clearingTeams ? 'Clearing...' : 'Clear All Teams'}
                         </button>

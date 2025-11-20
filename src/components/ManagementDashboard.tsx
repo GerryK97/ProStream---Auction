@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useAuction } from '@/hooks/useAuction';
@@ -10,6 +10,9 @@ import ImageUpload from './ImageUpload';
 import { getDefaultClasses } from '@/lib/playerClassUtils';
 import BulkPlayerUpload from './BulkPlayerUpload';
 import { getAuthHeaders } from '@/lib/api-client';
+import DeleteButton from './shared/DeleteButton';
+import ClearAllButton from './shared/ClearAllButton';
+import EditButton from './shared/EditButton';
 
 type ManagementView = 'tournaments' | 'teams' | 'players';
 
@@ -187,7 +190,7 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
                             onClearAll={() => setShowClearPlayersConfirm(true)}
                         />;
             default:
-                return <div className="text-center p-8 text-neutral-500">This section is under construction.</div>;
+                return <div className="text-center p-8" style={{ color: 'var(--text-tertiary)' }}>This section is under construction.</div>;
         }
     }
 
@@ -243,9 +246,9 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
             <Modal isOpen={!!playerToDelete} onClose={() => setPlayerToDelete(null)} title="Confirm Deletion">
                 {playerToDelete && (
                      <div>
-                        <p className="text-neutral-300">Are you sure you want to permanently delete <strong className="text-white">{playerToDelete.name}</strong>? This action cannot be undone.</p>
+                        <p style={{ color: 'var(--text-secondary)' }}>Are you sure you want to permanently delete <strong style={{ color: 'var(--text-primary)' }}>{playerToDelete.name}</strong>? This action cannot be undone.</p>
                         <div className="flex justify-end gap-4 mt-6">
-                            <button onClick={() => setPlayerToDelete(null)} className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">Cancel</button>
+                            <button onClick={() => setPlayerToDelete(null)} className="text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 hover:opacity-80" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}>Cancel</button>
                             <button onClick={async () => {
                                 try {
                                     const response = await fetch(`/api/master-players/${playerToDelete._id}`, {
@@ -258,7 +261,7 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
                                 } catch (error) {
                                     console.error('Failed to delete player:', error);
                                 }
-                            }} className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">Delete</button>
+                            }} className="text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 hover:opacity-80" style={{ backgroundColor: 'var(--status-danger)' }}>Delete</button>
                         </div>
                     </div>
                 )}
@@ -266,29 +269,32 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
 
             <Modal isOpen={showClearPlayersConfirm} onClose={() => { setShowClearPlayersConfirm(false); setClearConfirmText(''); }} title="Clear All Master Players" size="sm">
                 <div className="space-y-4">
-                    <div className="bg-red-900/30 border border-red-700 rounded-lg p-4">
-                        <p className="text-red-200 font-semibold mb-2">Warning: This action affects multiple tournaments</p>
-                        <p className="text-red-100 text-sm">This will delete all {masterPlayers.length} master players and remove them from all tournaments. This action cannot be undone.</p>
+                    <div className="rounded-lg p-4" style={{ color: 'var(--status-danger)', border: '1px solid color-mix(in oklab, var(--status-danger) 40%, transparent)', background: 'color-mix(in oklab, var(--status-danger) 12%, transparent)' }}>
+                        <p className="font-semibold mb-2">Warning: This action affects multiple tournaments</p>
+                        <p className="text-sm">This will delete all {masterPlayers.length} master players and remove them from all tournaments. This action cannot be undone.</p>
                     </div>
-                    <p className="text-neutral-300 text-sm">To proceed, type <strong>DELETE ALL MASTER PLAYERS</strong> in the field below:</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>To proceed, type <strong>DELETE ALL MASTER PLAYERS</strong> in the field below:</p>
                     <input
                         type="text"
                         value={clearConfirmText}
                         onChange={(e) => setClearConfirmText(e.target.value)}
                         placeholder="Type confirmation text"
-                        className="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-4 py-2 text-white placeholder-neutral-400 focus:outline-none focus:border-red-500"
+                        className="w-full rounded-lg px-4 py-2 text-white focus:outline-none"
+                        style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}
                     />
                     <div className="flex gap-3 justify-end pt-4">
                         <button
                             onClick={() => { setShowClearPlayersConfirm(false); setClearConfirmText(''); }}
-                            className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                            className="text-white font-bold py-2 px-4 rounded-lg transition-colors hover:opacity-80"
+                            style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}
                         >
                             Cancel
                         </button>
                         <button
                             onClick={handleClearAllMasterPlayers}
                             disabled={clearingMasterData || clearConfirmText !== 'DELETE ALL MASTER PLAYERS'}
-                            className="bg-red-600 hover:bg-red-700 disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                            className="text-white font-bold py-2 px-4 rounded-lg transition-colors hover:opacity-80 disabled:opacity-60 disabled:cursor-not-allowed"
+                            style={{ backgroundColor: 'var(--status-danger)' }}
                         >
                             {clearingMasterData ? 'Clearing...' : 'Clear All Players'}
                         </button>
@@ -298,29 +304,32 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
 
             <Modal isOpen={showClearTeamsConfirm} onClose={() => { setShowClearTeamsConfirm(false); setClearConfirmText(''); }} title="Clear All Master Teams" size="sm">
                 <div className="space-y-4">
-                    <div className="bg-red-900/30 border border-red-700 rounded-lg p-4">
-                        <p className="text-red-200 font-semibold mb-2">Warning: This action affects multiple tournaments</p>
-                        <p className="text-red-100 text-sm">This will delete all {masterTeams.length} master teams and remove them from all tournaments. This action cannot be undone.</p>
+                    <div className="rounded-lg p-4" style={{ color: 'var(--status-danger)', border: '1px solid color-mix(in oklab, var(--status-danger) 40%, transparent)', background: 'color-mix(in oklab, var(--status-danger) 12%, transparent)' }}>
+                        <p className="font-semibold mb-2">Warning: This action affects multiple tournaments</p>
+                        <p className="text-sm">This will delete all {masterTeams.length} master teams and remove them from all tournaments. This action cannot be undone.</p>
                     </div>
-                    <p className="text-neutral-300 text-sm">To proceed, type <strong>DELETE ALL MASTER TEAMS</strong> in the field below:</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>To proceed, type <strong>DELETE ALL MASTER TEAMS</strong> in the field below:</p>
                     <input
                         type="text"
                         value={clearConfirmText}
                         onChange={(e) => setClearConfirmText(e.target.value)}
                         placeholder="Type confirmation text"
-                        className="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-4 py-2 text-white placeholder-neutral-400 focus:outline-none focus:border-red-500"
+                        className="w-full rounded-lg px-4 py-2 text-white focus:outline-none"
+                        style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}
                     />
                     <div className="flex gap-3 justify-end pt-4">
                         <button
                             onClick={() => { setShowClearTeamsConfirm(false); setClearConfirmText(''); }}
-                            className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                            className="text-white font-bold py-2 px-4 rounded-lg transition-colors hover:opacity-80"
+                            style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}
                         >
                             Cancel
                         </button>
                         <button
                             onClick={handleClearAllMasterTeams}
                             disabled={clearingMasterData || clearConfirmText !== 'DELETE ALL MASTER TEAMS'}
-                            className="bg-red-600 hover:bg-red-700 disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                            className="text-white font-bold py-2 px-4 rounded-lg transition-colors hover:opacity-80 disabled:opacity-60 disabled:cursor-not-allowed"
+                            style={{ backgroundColor: 'var(--status-danger)' }}
                         >
                             {clearingMasterData ? 'Clearing...' : 'Clear All Teams'}
                         </button>
@@ -332,10 +341,10 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
 };
 
 const SectionHeader: React.FC<{ title: string; subtitle: string; children?: React.ReactNode; }> = ({ title, subtitle, children }) => (
-    <div className="flex justify-between items-center mb-4 pb-2 border-b border-neutral-700">
+    <div className="flex justify-between items-center mb-4 pb-2 border-b" style={{ borderColor: 'var(--border-primary)' }}>
         <div>
-            <h2 className="text-2xl font-bold text-white">{title}</h2>
-            <p className="text-sm text-neutral-400">{subtitle}</p>
+            <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{title}</h2>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{subtitle}</p>
         </div>
         {children}
     </div>
@@ -393,34 +402,39 @@ const TournamentManagementPanel: React.FC<{
                 />
             </div>
             <div className="lg:col-span-3">
-                <div className="bg-neutral-800 rounded-lg p-6 border border-neutral-700">
-                    <h3 className="text-xl font-bold mb-1">Existing Tournaments</h3>
-                    <div className="bg-blue-900/50 text-blue-200 border border-blue-700 rounded-md p-3 text-sm mb-4">
-                        <strong>Note:</strong> To add players/teams to tournaments, go to <strong className="text-white">Auction → Auction Setup</strong>
+                <div className="rounded-lg p-6 setup-panel">
+                    <h3 className="text-xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Existing Tournaments</h3>
+                    <div className="rounded-md p-3 text-sm mb-4" style={{ color: 'var(--status-info)', border: '1px solid color-mix(in oklab, var(--status-info) 40%, transparent)', background: 'color-mix(in oklab, var(--status-info) 10%, transparent)' }}>
+                        <strong>Note:</strong> To add players/teams to tournaments, go to <strong style={{ color: 'var(--text-primary)' }}>Auction → Auction Setup</strong>
                     </div>
                     <ul className="space-y-3">
                         {tournaments.map(t => (
-                            <li key={t._id} className="bg-neutral-900/50 p-3 rounded-lg flex items-center justify-between gap-4">
+                            <li key={t._id} className="p-3 rounded-lg flex items-center justify-between gap-4" style={{ backgroundColor: 'var(--surface-card)' }}>
                                 <div className="flex items-center gap-4">
                                     <img
                                         src={t.logoURL ? imageOptimizers.teamThumbnail(t.logoURL) : `https://placehold.co/64x64/4B5563/FFFFFF/png?text=${t.name.charAt(0)}`}
                                         alt={`${t.name} logo`}
-                                        className="w-12 h-12 rounded-md object-cover bg-neutral-700"
+                                        className="w-12 h-12 rounded-md object-cover"
+                                        style={{ backgroundColor: 'var(--surface-elevated)' }}
                                         loading="lazy"
                                     />
                                     <div>
                                         <div className="flex items-center gap-3">
-                                            <h4 className="font-bold text-lg">{t.name}</h4>
+                                            <h4 className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>{t.name}</h4>
                                             {getStatusBadge(t.status)}
                                         </div>
-                                        <p className="text-sm text-neutral-400">
+                                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                                             Budget: {t.budgetPerTeam.toLocaleString()} | Squad Size: {t.squadSize} | Base Price: {t.basePricePerPlayer.toLocaleString()}
                                         </p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 flex-shrink-0">
-                                    <button onClick={() => handleEdit(t)} className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors">Edit</button>
-                                    <button onClick={() => handleDelete(t)} className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors">Delete</button>
+                                    <EditButton onClick={() => handleEdit(t)} ariaLabel={`Edit ${t.name}`} className="shrink-0" />
+                                    <DeleteButton
+                                        ariaLabel={`Delete tournament ${t.name}`}
+                                        onClick={() => handleDelete(t)}
+                                        className="shrink-0"
+                                    />
                                 </div>
                             </li>
                         ))}
@@ -431,9 +445,9 @@ const TournamentManagementPanel: React.FC<{
             <Modal isOpen={!!tournamentToDelete} onClose={() => setTournamentToDelete(null)} title="Confirm Deletion">
                 {tournamentToDelete && (
                      <div>
-                        <p className="text-neutral-300">Are you sure you want to permanently delete <strong className="text-white">{tournamentToDelete.name}</strong>? This action cannot be undone.</p>
+                        <p style={{ color: 'var(--text-secondary)' }}>Are you sure you want to permanently delete <strong style={{ color: 'var(--text-primary)' }}>{tournamentToDelete.name}</strong>? This action cannot be undone.</p>
                         <div className="flex justify-end gap-4 mt-6">
-                            <button onClick={() => setTournamentToDelete(null)} className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">Cancel</button>
+                            <button onClick={() => setTournamentToDelete(null)} className="text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 hover:opacity-80" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}>Cancel</button>
                             <button onClick={async () => {
                                 try {
                                     const response = await fetch(`/api/tournaments/${tournamentToDelete._id}`, {
@@ -446,7 +460,7 @@ const TournamentManagementPanel: React.FC<{
                                 } catch (error) {
                                     console.error('Failed to delete tournament:', error);
                                 }
-                            }} className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">Delete</button>
+                            }} className="text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 hover:opacity-80" style={{ backgroundColor: 'var(--status-danger)' }}>Delete</button>
                         </div>
                     </div>
                 )}
@@ -459,18 +473,18 @@ const getStatusBadge = (status: Tournament['status']) => {
     switch (status) {
         case 'Completed':
             return (
-                <span className="flex items-center gap-1.5 text-xs font-medium bg-purple-600/30 text-purple-300 border border-purple-500 px-2 py-0.5 rounded-full">
-                    <CheckCircleIcon className="h-3.5 w-3.5" /> Completed
-                </span>
+                  <span className="flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full" style={{ color: 'var(--status-info)', background: 'color-mix(in oklab, var(--status-info) 12%, transparent)', border: '1px solid color-mix(in oklab, var(--status-info) 40%, transparent)' }}>
+                      <CheckCircleIcon className="h-3.5 w-3.5" /> Completed
+                  </span>
             );
         case 'Draft':
             return (
-                <span className="flex items-center gap-1.5 text-xs font-medium bg-neutral-600/50 text-neutral-300 border border-neutral-500 px-2 py-0.5 rounded-full">
+                <span className="flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full" style={{ color: 'var(--text-secondary)', border: '1px solid var(--border-primary)', background: 'var(--surface-subtle)' }}>
                     <DocumentTextIcon className="h-3.5 w-3.5" /> Draft
                 </span>
             );
         default:
-            return <span className="text-xs font-medium bg-yellow-600/50 text-yellow-300 px-2 py-0.5 rounded-full">{status}</span>;
+            return <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ color: 'var(--status-warning)', background: 'color-mix(in oklab, var(--status-warning) 12%, transparent)' }}>{status}</span>;
     }
 };
 
@@ -532,8 +546,8 @@ const CreateTournamentForm: React.FC<{
     }
 
     return (
-        <div className="bg-neutral-800 rounded-lg p-6 border border-neutral-700">
-            <h3 className="text-xl font-bold mb-4">{isEditing ? 'Edit Tournament' : 'Create New Tournament'}</h3>
+        <div className="rounded-lg p-6 setup-panel">
+            <h3 className="text-xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>{isEditing ? 'Edit Tournament' : 'Create New Tournament'}</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <FormInput id="name" label="Tournament Name" value={name} onChange={setName} required />
                 <FormInput id="budget" label="Budget Per Team" value={budget} onChange={setBudget} placeholder="e.g., 1,000,000" type="number" required />
@@ -551,22 +565,24 @@ const CreateTournamentForm: React.FC<{
                 />
 
                 {/* Player Classes Section */}
-                <div className="border-t border-neutral-700 pt-4">
+                <div className="border-t pt-4" style={{ borderColor: 'var(--border-primary)' }}>
                     <div className="flex items-center justify-between mb-3">
                         <label className="flex items-center gap-2 cursor-pointer">
                             <input
                                 type="checkbox"
                                 checked={usePlayerClasses}
                                 onChange={(e) => setUsePlayerClasses(e.target.checked)}
-                                className="w-4 h-4 rounded border-neutral-600 bg-neutral-700 text-brand-primary focus:ring-brand-primary"
+                                className="w-4 h-4 rounded text-brand-primary focus:ring-brand-primary"
+                                style={{ borderColor: 'var(--border-primary)', backgroundColor: 'var(--surface-elevated)' }}
                             />
-                            <span className="text-sm font-medium text-neutral-300">Enable Player Classes</span>
+                            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Enable Player Classes</span>
                         </label>
                         {usePlayerClasses && playerClasses.length === 0 && (
                             <button
                                 type="button"
                                 onClick={() => setPlayerClasses(getDefaultClasses())}
-                                className="text-xs bg-neutral-700 hover:bg-neutral-600 text-white px-3 py-1 rounded transition-colors"
+                                className="text-xs text-white px-3 py-1 rounded transition-colors hover:opacity-80"
+                                style={{ backgroundColor: 'var(--surface-hover)' }}
                             >
                                 Load Defaults
                             </button>
@@ -574,8 +590,8 @@ const CreateTournamentForm: React.FC<{
                     </div>
 
                     {usePlayerClasses && (
-                        <div className="space-y-3 bg-neutral-700/50 p-4 rounded-lg">
-                            <p className="text-xs text-neutral-400 mb-2">Configure player classes for this tournament:</p>
+                        <div className="space-y-3 p-4 rounded-lg" style={{ backgroundColor: 'var(--surface-subtle)' }}>
+                            <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>Configure player classes for this tournament:</p>
                             {playerClasses.map((cls, index) => {
                                 // Check for duplicate codes
                                 const isDuplicateCode = playerClasses.some((c, i) =>
@@ -584,7 +600,7 @@ const CreateTournamentForm: React.FC<{
                                 const isCodeEmpty = !cls.code || cls.code.trim() === '';
 
                                 return (
-                                    <div key={index} className="flex items-start gap-2 bg-neutral-800 p-3 rounded border border-neutral-600">
+                                    <div key={index} className="flex items-start gap-2 p-3 rounded border" style={{ backgroundColor: 'var(--surface-card)', borderColor: 'var(--border-primary)' }}>
                                         <div className="flex-1 space-y-2">
                                             {/* First Row: Code and Name */}
                                             <div className="grid grid-cols-[120px_1fr] gap-2">
@@ -598,16 +614,17 @@ const CreateTournamentForm: React.FC<{
                                                             updated[index].code = e.target.value.toUpperCase();
                                                             setPlayerClasses(updated);
                                                         }}
-                                                        className={`w-full bg-neutral-700 border rounded p-2 text-sm font-mono ${
-                                                            isCodeEmpty || isDuplicateCode
-                                                                ? 'border-red-500 focus:border-red-400'
-                                                                : 'border-neutral-600 focus:border-blue-500'
-                                                        }`}
+                                                        className={`w-full border rounded p-2 text-sm font-mono ${
+                                                             isCodeEmpty || isDuplicateCode
+                                                                 ? 'border-[var(--status-danger)] focus:border-[var(--status-danger)]'
+                                                                 : 'border-[var(--border-primary)] focus:border-[var(--brand-primary)]'
+                                                         }`}
+                                                        style={{ backgroundColor: 'var(--surface-elevated)', color: 'var(--text-primary)' }}
                                                         maxLength={10}
                                                         required
                                                     />
                                                     {(isCodeEmpty || isDuplicateCode) && (
-                                                        <p className="text-xs text-red-400 mt-1">
+                                <p className="text-xs mt-1" style={{ color: 'var(--status-danger)' }}>
                                                             {isCodeEmpty ? 'Required' : 'Duplicate code'}
                                                         </p>
                                                     )}
@@ -621,7 +638,8 @@ const CreateTournamentForm: React.FC<{
                                                         updated[index].name = e.target.value;
                                                         setPlayerClasses(updated);
                                                     }}
-                                                    className="bg-neutral-700 border-neutral-600 rounded p-2 text-sm"
+                                                    className="rounded p-2 text-sm"
+                                                    style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}
                                                     required
                                                 />
                                             </div>
@@ -636,7 +654,8 @@ const CreateTournamentForm: React.FC<{
                                                         updated[index].basePrice = e.target.value ? parseInt(e.target.value) : undefined;
                                                         setPlayerClasses(updated);
                                                     }}
-                                                    className="bg-neutral-700 border-neutral-600 rounded p-2 text-sm"
+                                                    className="rounded p-2 text-sm"
+                                                    style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}
                                                 />
                                                 <div className="flex items-center gap-2">
                                                     <input
@@ -650,7 +669,7 @@ const CreateTournamentForm: React.FC<{
                                                         className="w-10 h-8 rounded cursor-pointer"
                                                         title="Color"
                                                     />
-                                                    <span className="text-xs text-neutral-400">Color</span>
+                                                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Color</span>
                                                 </div>
                                                 <input
                                                     type="text"
@@ -661,7 +680,8 @@ const CreateTournamentForm: React.FC<{
                                                         updated[index].icon = e.target.value;
                                                         setPlayerClasses(updated);
                                                     }}
-                                                    className="bg-neutral-700 border-neutral-600 rounded p-2 text-sm"
+                                                    className="rounded p-2 text-sm"
+                                                    style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}
                                                     maxLength={2}
                                                 />
                                             </div>
@@ -669,10 +689,11 @@ const CreateTournamentForm: React.FC<{
                                         <button
                                             type="button"
                                             onClick={() => setPlayerClasses(playerClasses.filter((_, i) => i !== index))}
-                                            className="text-red-400 hover:text-red-300 p-2"
+                                            className="p-2 hover:opacity-80"
+                                            style={{ color: 'var(--status-danger)' }}
                                             title="Remove class"
                                         >
-                                            ×
+                                            Ã—
                                         </button>
                                     </div>
                                 );
@@ -685,7 +706,8 @@ const CreateTournamentForm: React.FC<{
                                         { code: '', name: '', color: '#3B82F6', order: playerClasses.length + 1 }
                                     ]);
                                 }}
-                                className="w-full text-sm bg-neutral-700 hover:bg-neutral-600 text-white py-2 rounded transition-colors"
+                                className="w-full text-sm text-white py-2 rounded transition-colors hover:opacity-80"
+                                style={{ backgroundColor: 'var(--surface-hover)' }}
                             >
                                 + Add Class
                             </button>
@@ -695,12 +717,12 @@ const CreateTournamentForm: React.FC<{
 
                 {/* Base Price Strategy Selection - Only show when Player Classes enabled */}
                 {usePlayerClasses && playerClasses.length > 0 && (
-                    <div className="border-t border-neutral-700 pt-4">
-                        <label className="block text-sm font-medium text-neutral-300 mb-3">
+                    <div className="border-t pt-4" style={{ borderColor: 'var(--border-primary)' }}>
+                        <label className="block text-sm font-medium mb-3" style={{ color: 'var(--text-secondary)' }}>
                             Base Price Strategy
                         </label>
-                        <div className="space-y-2 bg-neutral-700/50 p-4 rounded-lg">
-                            <label className="flex items-start gap-3 cursor-pointer p-3 rounded border border-neutral-600 hover:bg-neutral-700/50 transition-colors">
+                        <div className="space-y-2 p-4 rounded-lg" style={{ backgroundColor: 'var(--surface-subtle)' }}>
+                            <label className="flex items-start gap-3 cursor-pointer p-3 rounded border transition-colors" style={{ borderColor: 'var(--border-primary)' }}>
                                 <input
                                     type="radio"
                                     name="basePriceStrategy"
@@ -710,15 +732,15 @@ const CreateTournamentForm: React.FC<{
                                     className="mt-1 w-4 h-4 text-brand-primary focus:ring-brand-primary"
                                 />
                                 <div className="flex-1">
-                                    <span className="text-sm font-medium text-white">Tournament Level Base Price</span>
-                                    <p className="text-xs text-neutral-400 mt-1">
+                                    <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Tournament Level Base Price</span>
+                                    <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
                                         All players use the same base price ({parseInt(basePrice || '0').toLocaleString()}) regardless of their class.
                                         Player classes are only used for visual categorization.
                                     </p>
                                 </div>
                             </label>
 
-                            <label className="flex items-start gap-3 cursor-pointer p-3 rounded border border-neutral-600 hover:bg-neutral-700/50 transition-colors">
+                            <label className="flex items-start gap-3 cursor-pointer p-3 rounded border transition-colors" style={{ borderColor: 'var(--border-primary)' }}>
                                 <input
                                     type="radio"
                                     name="basePriceStrategy"
@@ -728,13 +750,13 @@ const CreateTournamentForm: React.FC<{
                                     className="mt-1 w-4 h-4 text-brand-primary focus:ring-brand-primary"
                                 />
                                 <div className="flex-1">
-                                    <span className="text-sm font-medium text-white">Player Class Based Pricing</span>
-                                    <p className="text-xs text-neutral-400 mt-1">
+                                    <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Player Class Based Pricing</span>
+                                    <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
                                         Each player class has its own base price. Tournament base price ({parseInt(basePrice || '0').toLocaleString()})
                                         is used as fallback for classes without a specific price.
                                     </p>
                                     {basePriceStrategy === 'player-class-based' && (
-                                        <div className="mt-2 p-2 bg-yellow-900/30 border border-yellow-700 rounded text-xs text-yellow-200">
+                                        <div className="mt-2 p-2 rounded text-xs" style={{ color: 'var(--status-warning)', background: 'color-mix(in oklab, var(--status-warning) 12%, transparent)', border: '1px solid color-mix(in oklab, var(--status-warning) 40%, transparent)' }}>
                                             <strong>Important:</strong> Ensure all player classes above have base prices defined for this strategy to work effectively.
                                         </div>
                                     )}
@@ -744,9 +766,9 @@ const CreateTournamentForm: React.FC<{
                     </div>
                 )}
 
-                <div className="border-t border-neutral-700 pt-4 flex justify-end gap-3">
-                    {isEditing && <button type="button" onClick={onCancelEdit} className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">Cancel</button>}
-                    <button type="submit" className="bg-brand-primary hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                <div className="border-t pt-4 flex justify-end gap-3" style={{ borderColor: 'var(--border-primary)' }}>
+                    {isEditing && <button type="button" onClick={onCancelEdit} className="text-white font-bold py-2 px-4 rounded-lg transition-colors hover:opacity-80" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}>Cancel</button>}
+                    <button type="submit" className="text-white font-bold py-2 px-6 rounded-lg transition-colors hover:opacity-80" style={{ backgroundColor: 'var(--brand-primary)' }}>
                         {isEditing ? 'Save Changes' : 'Create Tournament'}
                     </button>
                 </div>
@@ -758,7 +780,7 @@ const CreateTournamentForm: React.FC<{
 const FormInput: React.FC<{id: string, label: string, value: string, onChange: (val: string) => void, placeholder?: string, type?: string, required?: boolean}> = 
 ({id, label, value, onChange, placeholder, type="text", required=false}) => (
     <div>
-        <label htmlFor={id} className="block text-sm font-medium text-neutral-300 mb-1">{label}</label>
+        <label htmlFor={id} className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>{label}</label>
         <input 
             type={type} 
             id={id} 
@@ -766,7 +788,8 @@ const FormInput: React.FC<{id: string, label: string, value: string, onChange: (
             onChange={e => onChange(e.target.value)} 
             placeholder={placeholder} 
             required={required} 
-            className="w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2"
+            className="w-full rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2"
+            style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
         />
     </div>
 );
@@ -833,35 +856,34 @@ const TeamManagementPanel: React.FC<{
                 />
             </div>
             <div className="lg:col-span-3">
-                <div className="bg-neutral-800 rounded-lg p-6 border border-neutral-700">
+                <div className="rounded-lg p-6 setup-panel">
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-xl font-bold">Master Team List</h3>
-                        <button
-                            onClick={onClearAll}
-                            disabled={teams.length === 0}
-                            className="bg-red-600 hover:bg-red-700 disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"
-                        >
-                            Clear All
-                        </button>
+                        <h3 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Master Team List</h3>
+                          <ClearAllButton onClick={onClearAll} disabled={teams.length === 0} size="sm" ariaLabel="Clear all master teams" />
                     </div>
                     <ul className="space-y-2 max-h-[calc(100vh-20rem)] overflow-y-auto pr-2">
                         {teams.map(team => (
-                             <li key={team._id} className="bg-neutral-900/50 p-3 rounded-lg flex items-center justify-between gap-4 hover:bg-neutral-700/50 transition-colors">
+                             <li key={team._id} className="p-3 rounded-lg flex items-center justify-between gap-4 transition-colors" style={{ backgroundColor: 'var(--surface-subtle)' }}>
                                 <div className="flex items-center gap-4">
                                     <img
                                         src={imageOptimizers.teamThumbnail(team.logoURL)}
                                         alt={`${team.name} logo`}
-                                        className="w-12 h-12 rounded-md object-cover bg-neutral-700"
+                                          className="w-12 h-12 rounded-md object-cover"
+                                          style={{ backgroundColor: 'var(--surface-elevated)' }}
                                         loading="lazy"
                                     />
                                     <div>
-                                        <h4 className="font-bold text-lg">{team.name}</h4>
-                                        <p className="text-sm text-neutral-400">Owner: {team.ownerName}</p>
+                                          <h4 className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>{team.name}</h4>
+                                         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Owner: {team.ownerName}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 flex-shrink-0">
-                                    <button onClick={() => setEditingTeam(team)} className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors">Edit</button>
-                                    <button onClick={() => setTeamToDelete(team)} className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors">Delete</button>
+                                      <EditButton onClick={() => setEditingTeam(team)} ariaLabel={`Edit ${team.name}`} className="shrink-0" />
+                                    <DeleteButton
+                                        ariaLabel={`Delete team ${team.name}`}
+                                        onClick={() => setTeamToDelete(team)}
+                                        className="shrink-0"
+                                    />
                                 </div>
                             </li>
                         ))}
@@ -872,10 +894,10 @@ const TeamManagementPanel: React.FC<{
             <Modal isOpen={!!teamToDelete} onClose={() => setTeamToDelete(null)} title="Confirm Deletion">
                  {teamToDelete && (
                      <div>
-                        <p className="text-neutral-300">Are you sure you want to permanently delete <strong className="text-white">{teamToDelete.name}</strong>? This action cannot be undone.</p>
+                        <p style={{ color: 'var(--text-secondary)' }}>Are you sure you want to permanently delete <strong style={{ color: 'var(--text-primary)' }}>{teamToDelete.name}</strong>? This action cannot be undone.</p>
                         <div className="flex justify-end gap-4 mt-6">
-                            <button onClick={() => setTeamToDelete(null)} className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">Cancel</button>
-                            <button onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">Delete</button>
+                            <button onClick={() => setTeamToDelete(null)} className="text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 hover:opacity-80" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}>Cancel</button>
+                            <button onClick={handleConfirmDelete} className="text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 hover:opacity-80" style={{ backgroundColor: 'var(--status-danger)' }}>Delete</button>
                         </div>
                     </div>
                 )}
@@ -916,8 +938,8 @@ const TeamCreationForm: React.FC<{
     };
     
     return (
-        <div className="bg-neutral-800 rounded-lg p-6 border border-neutral-700">
-             <h3 className="text-xl font-bold mb-4">{isEditing ? `Edit ${editingTeam.name}` : 'Add New Team (Global)'}</h3>
+        <div className="rounded-lg p-6 setup-panel">
+             <h3 className="text-xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>{isEditing ? `Edit ${editingTeam.name}` : 'Add New Team (Global)'}</h3>
              <form onSubmit={handleSubmit} className="space-y-4">
                  <FormInput id="teamName" label="Team Name" value={name} onChange={setName} required />
                  <FormInput id="shortCode" label="Short Code (e.g., MI)" value={shortCode} onChange={setShortCode} required />
@@ -934,9 +956,9 @@ const TeamCreationForm: React.FC<{
                     id="logo-file"
                  />
                                   
-                 <div className="border-t border-neutral-700 pt-4 flex justify-end gap-3">
-                    {isEditing && <button type="button" onClick={onCancel} className="bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">Cancel</button>}
-                    <button type="submit" className="bg-brand-primary hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                 <div className="border-t pt-4 flex justify-end gap-3" style={{ borderColor: 'var(--border-primary)' }}>
+                    {isEditing && <button type="button" onClick={onCancel} className="text-white font-bold py-2 px-4 rounded-lg transition-colors hover:opacity-80" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}>Cancel</button>}
+                    <button type="submit" className="text-white font-bold py-2 px-6 rounded-lg transition-colors hover:opacity-80" style={{ backgroundColor: 'var(--brand-primary)' }}>
                         {isEditing ? 'Save Changes' : 'Create Team'}
                     </button>
                 </div>
@@ -981,7 +1003,8 @@ const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => voi
                 <div className="flex gap-2">
                     <button
                         onClick={() => setShowBulkUpload(!showBulkUpload)}
-                        className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200"
+                        className="flex items-center gap-2 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 hover:opacity-80"
+                        style={{ backgroundColor: 'var(--brand-secondary)' }}
                     >
                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -995,20 +1018,20 @@ const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => voi
                     <button
                         onClick={handleDownloadMasterPlayers}
                         disabled={players.length === 0 || downloading}
-                        className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200"
+                        className="flex items-center gap-2 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 hover:opacity-80"
+                        style={{ backgroundColor: 'var(--brand-primary)' }}
                     >
                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                         {downloading ? 'Downloading...' : 'Download List'}
                     </button>
-                    <button
+                    <ClearAllButton
                         onClick={onClearAll}
                         disabled={players.length === 0}
-                        className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:bg-neutral-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200"
-                    >
-                        Clear All
-                    </button>
+                        size="sm"
+                        ariaLabel="Clear all master players"
+                    />
                 </div>
             </SectionHeader>
 
@@ -1023,27 +1046,27 @@ const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => voi
                 </div>
             )}
 
-            <div className="bg-neutral-800 rounded-lg overflow-hidden">
+            <div className="rounded-lg overflow-hidden" style={{ backgroundColor: 'var(--surface-card)' }}>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
-                        <thead className="bg-neutral-700/50">
+                        <thead style={{ backgroundColor: 'var(--surface-elevated)' }}>
                             <tr>
-                                <th className="p-4 text-sm font-semibold text-neutral-300">#</th>
-                                <th className="p-4 text-sm font-semibold text-neutral-300">Player ID</th>
-                                <th className="p-4 text-sm font-semibold text-neutral-300">Player</th>
-                                <th className="p-4 text-sm font-semibold text-neutral-300">Position</th>
-                                <th className="p-4 text-sm font-semibold text-neutral-300">Current Club</th>
-                                <th className="p-4 text-sm font-semibold text-neutral-300">Matches</th>
-                                <th className="p-4 text-sm font-semibold text-neutral-300">Score</th>
-                                <th className="p-4 text-sm font-semibold text-neutral-300">Wickets</th>
-                                <th className="p-4 text-sm font-semibold text-neutral-300 text-right">Actions</th>
+                                  <th className="p-4 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>#</th>
+                                  <th className="p-4 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>Player ID</th>
+                                  <th className="p-4 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>Player</th>
+                                  <th className="p-4 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>Position</th>
+                                  <th className="p-4 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>Current Club</th>
+                                  <th className="p-4 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>Matches</th>
+                                  <th className="p-4 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>Score</th>
+                                  <th className="p-4 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>Wickets</th>
+                                  <th className="p-4 text-sm font-semibold text-right" style={{ color: 'var(--text-secondary)' }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {players.map((player, idx) => (
-                                <tr key={player._id} className={`border-t border-neutral-700 ${idx % 2 === 0 ? 'bg-neutral-800' : 'bg-neutral-800/50'}`}>
-                                    <td className="p-4 text-neutral-400 text-sm font-medium w-12">{idx + 1}</td>
-                                    <td className="p-4 text-neutral-400 text-xs font-mono">{player._id}</td>
+                                  <tr key={player._id} className={`border-t`} style={{ borderColor: 'var(--border-primary)', backgroundColor: 'var(--surface-card)' }}>
+                                      <td className="p-4 text-sm font-medium w-12" style={{ color: 'var(--text-secondary)' }}>{idx + 1}</td>
+                                      <td className="p-4 text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>{player._id}</td>
                                     <td className="p-4 flex items-center gap-4">
                                         <img
                                             src={imageOptimizers.playerThumbnail(player.photoURL)}
@@ -1053,14 +1076,14 @@ const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => voi
                                         />
                                         <span className="font-medium">{player.name}</span>
                                     </td>
-                                    <td className="p-4 text-neutral-300">{player.position}</td>
-                                    <td className="p-4 text-neutral-300">{player.currentClub}</td>
-                                    <td className="p-4 text-neutral-300">{player.careerStats?.matchesPlayed || 0}</td>
-                                    <td className="p-4 text-neutral-300">{player.careerStats?.totalScore.toLocaleString() || 0}</td>
-                                    <td className="p-4 text-neutral-300">{player.careerStats?.totalWickets || 0}</td>
+                                    <td className="p-4" style={{ color: 'var(--text-secondary)' }}>{player.position}</td>
+                                    <td className="p-4" style={{ color: 'var(--text-secondary)' }}>{player.currentClub}</td>
+                                    <td className="p-4" style={{ color: 'var(--text-secondary)' }}>{player.careerStats?.matchesPlayed || 0}</td>
+                                    <td className="p-4" style={{ color: 'var(--text-secondary)' }}>{player.careerStats?.totalScore.toLocaleString() || 0}</td>
+                                    <td className="p-4" style={{ color: 'var(--text-secondary)' }}>{player.careerStats?.totalWickets || 0}</td>
                                     <td className="p-4 text-right">
-                                        <button onClick={() => onEditPlayer(player)} className="p-2 text-neutral-400 hover:text-brand-primary"><EditIcon className="h-5 w-5"/></button>
-                                        <button onClick={() => onDeletePlayer(player)} className="p-2 text-neutral-400 hover:text-red-500"><DeleteIcon className="h-5 w-5"/></button>
+                                        <button onClick={() => onEditPlayer(player)} className="p-2 hover:text-brand-primary" style={{ color: 'var(--text-secondary)' }}><EditIcon className="h-5 w-5"/></button>
+                                        <button onClick={() => onDeletePlayer(player)} className="p-2 hover:text-red-500" style={{ color: 'var(--text-secondary)' }}><DeleteIcon className="h-5 w-5"/></button>
                                     </td>
                                 </tr>
                             ))}
@@ -1119,18 +1142,19 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, playerToEdit }) => {
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-                <label htmlFor="name" className="block text-sm font-medium text-neutral-300">Player Name</label>
-                <input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2" />
+                <label htmlFor="name" className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Player Name</label>
+                <input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} required className="mt-1 block w-full rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
             </div>
 
             <div>
-                <label htmlFor="position" className="block text-sm font-medium text-neutral-300">Position</label>
+                <label htmlFor="position" className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Position</label>
                 <select
                     id="position"
                     value={position}
                     onChange={(e) => setPosition(e.target.value)}
                     required
-                    className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2"
+                    className="mt-1 block w-full rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2"
+                    style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
                 >
                     <option value="">Select Position</option>
                     {PLAYER_POSITIONS.map(pos => (
@@ -1140,17 +1164,18 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, playerToEdit }) => {
             </div>
 
             <div>
-                <label htmlFor="currentClub" className="block text-sm font-medium text-neutral-300">Current Club</label>
-                <input type="text" id="currentClub" value={currentClub} onChange={(e) => setCurrentClub(e.target.value)} placeholder="e.g., Mumbai Indians, CSK" required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2" />
+                <label htmlFor="currentClub" className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Current Club</label>
+                <input type="text" id="currentClub" value={currentClub} onChange={(e) => setCurrentClub(e.target.value)} placeholder="e.g., Mumbai Indians, CSK" required className="mt-1 block w-full rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
             </div>
 
             <div>
-                <label htmlFor="suggestedClass" className="block text-sm font-medium text-neutral-300">Suggested Class (Optional)</label>
+                <label htmlFor="suggestedClass" className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Suggested Class (Optional)</label>
                 <select
                     id="suggestedClass"
                     value={suggestedClass}
                     onChange={(e) => setSuggestedClass(e.target.value)}
-                    className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2"
+                    className="mt-1 block w-full rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2"
+                    style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
                 >
                     <option value="">None</option>
                     {getDefaultClasses().map(cls => (
@@ -1159,23 +1184,23 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, playerToEdit }) => {
                         </option>
                     ))}
                 </select>
-                <p className="mt-1 text-xs text-neutral-400">Default class when adding player to tournaments</p>
+                <p className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>Default class when adding player to tournaments</p>
             </div>
 
-            <div className="bg-neutral-700/50 p-3 rounded-md space-y-3 animate-fade-in">
-                 <h4 className="font-semibold text-neutral-200 mb-2 border-b border-neutral-600 pb-2">Career Stats</h4>
+            <div className="p-3 rounded-md space-y-3 animate-fade-in" style={{ backgroundColor: 'var(--surface-subtle)' }}>
+                 <h4 className="font-semibold mb-2 border-b pb-2" style={{ color: 'var(--text-primary)', borderColor: 'var(--border-primary)' }}>Career Stats</h4>
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                      <div>
-                        <label htmlFor="matchesPlayed" className="block text-sm font-medium text-neutral-300">Matches Played</label>
-                        <input type="number" id="matchesPlayed" value={careerStats.matchesPlayed} onChange={(e) => handleStatChange('matchesPlayed', e.target.value)} required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2" />
+                        <label htmlFor="matchesPlayed" className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Matches Played</label>
+                        <input type="number" id="matchesPlayed" value={careerStats.matchesPlayed} onChange={(e) => handleStatChange('matchesPlayed', e.target.value)} required className="mt-1 block w-full rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
                      </div>
                      <div>
-                        <label htmlFor="totalScore" className="block text-sm font-medium text-neutral-300">Total Score</label>
-                        <input type="number" id="totalScore" value={careerStats.totalScore} onChange={(e) => handleStatChange('totalScore', e.target.value)} required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2" />
+                        <label htmlFor="totalScore" className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Total Score</label>
+                        <input type="number" id="totalScore" value={careerStats.totalScore} onChange={(e) => handleStatChange('totalScore', e.target.value)} required className="mt-1 block w-full rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
                      </div>
                      <div>
-                        <label htmlFor="totalWickets" className="block text-sm font-medium text-neutral-300">Total Wickets</label>
-                        <input type="number" id="totalWickets" value={careerStats.totalWickets} onChange={(e) => handleStatChange('totalWickets', e.target.value)} required className="mt-1 block w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2" />
+                        <label htmlFor="totalWickets" className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Total Wickets</label>
+                        <input type="number" id="totalWickets" value={careerStats.totalWickets} onChange={(e) => handleStatChange('totalWickets', e.target.value)} required className="mt-1 block w-full rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
                      </div>
                  </div>
             </div>
@@ -1200,3 +1225,4 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ onSave, playerToEdit }) => {
 };
 
 export default ManagementDashboard;
+

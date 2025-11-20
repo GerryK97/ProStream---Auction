@@ -38,18 +38,19 @@ const ClassBadge: React.FC<ClassBadgeProps> = ({
     if (variant === 'corner') {
         return (
             <div
-                className={`absolute top-2 right-2 px-2 py-1 rounded-bl-lg rounded-tr-lg text-[10px] font-bold backdrop-blur-sm border ${className}`}
+                className={`absolute top-2 right-2 px-2.5 py-1.5 rounded-bl-lg rounded-tr-lg text-[11px] font-bold backdrop-blur-sm border-2 shadow-lg ${className}`}
                 style={{
-                    backgroundColor: `${classConfig.color}20`,
-                    borderColor: `${classConfig.color}80`,
+                    backgroundColor: `${classConfig.color}35`,
+                    borderColor: `${classConfig.color}`,
                     color: classConfig.color,
+                    textShadow: '0 1px 3px rgba(0, 0, 0, 0.5)',
                 }}
                 title={`${classConfig.name} Class`}
             >
                 {showIcon && classConfig.icon && (
                     <span className="mr-1">{classConfig.icon}</span>
                 )}
-                <span>{classConfig.name.toUpperCase()}</span>
+                <span className="tracking-wider">{classConfig.name.toUpperCase()}</span>
             </div>
         );
     }
@@ -58,8 +59,11 @@ const ClassBadge: React.FC<ClassBadgeProps> = ({
     if (variant === 'dot') {
         return (
             <div
-                className={`w-2 h-2 rounded-full ${className}`}
-                style={{ backgroundColor: classConfig.color }}
+                className={`w-2.5 h-2.5 rounded-full shadow-sm ${className}`}
+                style={{
+                    backgroundColor: classConfig.color,
+                    boxShadow: `0 0 0 1.5px ${classConfig.color}40`
+                }}
                 title={`${classConfig.name} Class`}
             />
         );
@@ -69,19 +73,19 @@ const ClassBadge: React.FC<ClassBadgeProps> = ({
     if (variant === 'inline') {
         return (
             <span
-                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${className}`}
+                className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold shadow-sm ${className}`}
                 style={{
-                    backgroundColor: `${classConfig.color}20`,
+                    backgroundColor: `${classConfig.color}40`,
                     color: classConfig.color,
-                    borderWidth: '1px',
-                    borderColor: `${classConfig.color}40`,
+                    borderWidth: '1.5px',
+                    borderColor: `${classConfig.color}80`,
                 }}
                 title={`${classConfig.name} Class`}
             >
                 {showIcon && classConfig.icon && (
-                    <span className="mr-1">{classConfig.icon}</span>
+                    <span className="mr-1 text-sm">{classConfig.icon}</span>
                 )}
-                <span>{classConfig.name}</span>
+                <span className="tracking-wide">{classConfig.name}</span>
             </span>
         );
     }

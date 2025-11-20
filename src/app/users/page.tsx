@@ -6,6 +6,8 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import DeleteButton from '@/components/shared/DeleteButton';
+import EditButton from '@/components/shared/EditButton';
 
 interface User {
   _id: string;
@@ -441,22 +443,17 @@ export default function UsersPage() {
                             </button>
                           </>
                         )}
-                        <button
+                        <EditButton
+                          size="sm"
+                          ariaLabel={`Edit user ${u.username}`}
                           onClick={() => handleEditClick(u)}
-                          style={{
-                            backgroundColor: 'var(--surface-hover)',
-                            color: 'var(--text-primary)'
-                          }}
-                          className="px-3 py-1 rounded text-xs font-medium transition-colors hover:opacity-80"
-                        >
-                          Edit
-                        </button>
-                        <button
+                          className="align-middle"
+                        />
+                        <DeleteButton
+                          ariaLabel={`Delete user ${u.username}`}
                           onClick={() => handleDeleteUser(u._id)}
-                          className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition-colors"
-                        >
-                          Delete
-                        </button>
+                          className="ml-2 align-middle"
+                        />
                       </td>
                     </tr>
                   ))}
@@ -469,11 +466,11 @@ export default function UsersPage() {
 
             {/* Create User Modal */}
             {showCreateModal && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+              <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ backgroundColor: 'var(--backdrop)' }}>
                 <div className="rounded-lg p-8 max-w-md w-full" style={{
                   borderColor: 'var(--border-primary)',
                   border: `1px solid var(--border-primary)`,
-                  backgroundColor: 'var(--surface-secondary)'
+                  backgroundColor: 'var(--surface-elevated)'
                 }}>
                   <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>Create New User</h2>
 
@@ -584,7 +581,8 @@ export default function UsersPage() {
                         type="email"
                         value={editFormData.email}
                         onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                        className="w-full px-4 py-2 bg-neutral-700 border border-neutral-600 rounded text-white focus:outline-none focus:border-blue-500"
+                        className="w-full px-4 py-2 rounded text-white focus:outline-none"
+                        style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}
                         required
                       />
                     </div>
@@ -594,7 +592,8 @@ export default function UsersPage() {
                       <select
                         value={editFormData.role}
                         onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value })}
-                        className="w-full px-4 py-2 bg-neutral-700 border border-neutral-600 rounded text-white focus:outline-none focus:border-blue-500"
+                        className="w-full px-4 py-2 rounded text-white focus:outline-none"
+                        style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}
                       >
                         <option value="Admin">Admin</option>
                         <option value="Tournament">Tournament Manager</option>
@@ -610,7 +609,8 @@ export default function UsersPage() {
                       <select
                         value={editFormData.status}
                         onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
-                        className="w-full px-4 py-2 bg-neutral-700 border border-neutral-600 rounded text-white focus:outline-none focus:border-blue-500"
+                        className="w-full px-4 py-2 rounded text-white focus:outline-none"
+                        style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}
                       >
                         <option value="Active">Active</option>
                         <option value="Suspended">Suspended</option>
@@ -620,7 +620,7 @@ export default function UsersPage() {
 
                     <div>
                       <label className="block text-sm font-medium mb-3">Assign Tournaments</label>
-                      <div className="space-y-2 max-h-48 overflow-y-auto bg-neutral-700 border border-neutral-600 rounded p-3">
+                      <div className="space-y-2 max-h-48 overflow-y-auto rounded p-3" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}>
                         {availableTournaments.length > 0 ? (
                           availableTournaments.map((tournament) => (
                             <label key={tournament._id} className="flex items-center gap-2 cursor-pointer">
@@ -660,7 +660,8 @@ export default function UsersPage() {
                           setShowEditModal(false);
                           setEditingUser(null);
                         }}
-                        className="flex-1 px-4 py-2 bg-neutral-700 hover:bg-neutral-600 text-white rounded transition-colors"
+                        className="flex-1 px-4 py-2 text-white rounded transition-colors"
+                        style={{ backgroundColor: 'var(--surface-hover)' }}
                       >
                         Cancel
                       </button>

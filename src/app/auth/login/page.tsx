@@ -59,7 +59,7 @@ export default function LoginPage() {
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.5em] text-brand-secondary/80">ProStream</p>
               <h1 className="mt-4 text-3xl font-bold sm:text-4xl">Welcome back</h1>
-              <p className="mt-3 text-base text-slate-300 sm:text-lg">
+              <p className="mt-3 text-base sm:text-lg" style={{ color: 'var(--text-secondary)' }}>
                 Sign in to run auctions, manage squads, and control your live overlays from any device.
               </p>
             </div>
@@ -100,7 +100,12 @@ export default function LoginPage() {
               {error && (
                 <div
                   role="alert"
-                  className="rounded-2xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300"
+                  className="rounded-2xl p-3 text-sm"
+                  style={{
+                    color: 'var(--status-danger)',
+                    border: '1px solid color-mix(in oklab, var(--status-danger) 40%, transparent)',
+                    background: 'color-mix(in oklab, var(--status-danger) 12%, transparent)'
+                  }}
                 >
                   {error}
                 </div>
@@ -138,7 +143,8 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
-                    className="text-xs font-semibold uppercase tracking-widest text-slate-300"
+                    className="text-xs font-semibold uppercase tracking-widest"
+                    style={{ color: 'var(--text-secondary)' }}
                   >
                     {passwordToggleLabel}
                   </button>

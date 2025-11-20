@@ -20,10 +20,7 @@ const sections = [
     match: '/auction/setup',
     title: 'Auction Setup Workspace',
     description: 'Upload squads, configure budgets, and rehearse flows before going live.',
-    actions: [
-      { label: 'Manage Rosters', href: '/manage/players', variant: 'secondary' as const },
-      { label: 'View Docs', href: '/docs', variant: 'ghost' as const },
-    ],
+    actions: [],
   },
 ];
 
@@ -44,11 +41,11 @@ export default function AuctionLayout({
   const tabs = sections.map((section) => ({
     label: section.label,
     href: section.href,
-    active: pathname.startsWith(section.match),
+    active: section.match === '/auction' ? pathname === '/auction' : pathname.startsWith(section.match),
   }));
 
   return (
-    <div className="min-h-screen text-white" style={{ backgroundColor: 'var(--surface-primary)' }}>
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--surface-primary)', color: 'var(--text-primary)' }}>
       <Navigation />
       <div className="pt-24">
         <div className="backdrop-blur" style={{
@@ -75,3 +72,4 @@ export default function AuctionLayout({
     </div>
   );
 }
+
