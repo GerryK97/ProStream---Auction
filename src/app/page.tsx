@@ -83,7 +83,7 @@ export default function HomePage() {
         <section className="px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="mx-auto max-w-3xl text-center">
-              <p className="text-sm font-semibold uppercase tracking-[0.5em] text-brand-secondary/80">
+              <p className="text-sm font-semibold uppercase tracking-[0.5em]" style={{ color: 'color-mix(in oklab, var(--brand-secondary) 80%, transparent)' }}>
                 Product Suite
               </p>
               <h2 className="mt-3 text-3xl font-bold sm:text-4xl" style={{ color: 'var(--text-secondary)' }}>
@@ -127,7 +127,10 @@ export default function HomePage() {
                 border: `1px solid var(--border-primary)`,
                 backgroundColor: 'var(--surface-elevated)'
               }}>
-                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary">
+                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-full" style={{
+                  backgroundColor: 'color-mix(in oklab, var(--brand-primary) 10%, var(--surface-elevated))',
+                  color: 'var(--brand-primary)'
+                }}>
                   <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path
                       fillRule="evenodd"
@@ -146,7 +149,10 @@ export default function HomePage() {
                 border: `1px solid var(--border-primary)`,
                 backgroundColor: 'var(--surface-elevated)'
               }}>
-                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-brand-secondary/10 text-brand-secondary">
+                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-full" style={{
+                  backgroundColor: 'color-mix(in oklab, var(--brand-secondary) 10%, var(--surface-elevated))',
+                  color: 'var(--brand-secondary)'
+                }}>
                   <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path
                       fillRule="evenodd"
@@ -165,7 +171,10 @@ export default function HomePage() {
                 border: `1px solid var(--border-primary)`,
                 backgroundColor: 'var(--surface-elevated)'
               }}>
-                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-status-purple/10 text-status-purple">
+                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-full" style={{
+                  backgroundColor: 'color-mix(in oklab, var(--accent-color) 10%, var(--surface-elevated))',
+                  color: 'var(--accent-color)'
+                }}>
                   <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path
                       fillRule="evenodd"
@@ -192,7 +201,7 @@ export default function HomePage() {
           }}>
             <div className="grid gap-10 lg:grid-cols-2">
               <div className="space-y-6">
-                <p className="text-sm font-semibold uppercase tracking-[0.5em] text-brand-secondary/80">
+                <p className="text-sm font-semibold uppercase tracking-[0.5em]" style={{ color: 'color-mix(in oklab, var(--brand-secondary) 80%, transparent)' }}>
                   Field tested
                 </p>
                 <blockquote className="text-lg sm:text-xl" style={{ color: 'var(--text-secondary)' }}>

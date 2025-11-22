@@ -13,16 +13,35 @@ const navLinks = [
   { href: '/contact', label: 'Contact' },
 ];
 
+const subnav = {
+  auction: [
+    { href: '/auction', label: 'Auction Control' },
+    { href: '/auction/setup', label: 'Auction Setup' },
+  ],
+  manage: [
+    { href: '/manage?view=tournaments', label: 'Tournament' },
+    { href: '/manage?view=teams', label: 'Team' },
+    { href: '/manage?view=players', label: 'Player' },
+  ],
+} as const;
+
 const Navigation: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, isLoading } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState<null | 'auction' | 'manage'>(null);
+  const auctionBtnRef = useRef<HTMLButtonElement | null>(null);
+  const manageBtnRef = useRef<HTMLButtonElement | null>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const [mobileAuctionOpen, setMobileAuctionOpen] = useState(false);
+  const [mobileManageOpen, setMobileManageOpen] = useState(false);
   const hasPrefetchedRoutes = useRef(false);
 
   useEffect(() => {
     setDrawerOpen(false);
+    setOpenMenu(null);
   }, [pathname]);
 
   useEffect(() => {
@@ -34,6 +53,26 @@ const Navigation: React.FC = () => {
       fetch('/api/auction/bootstrap').catch(() => undefined);
     }
   }, [router, user]);
+
+  // Close dropdown on outside click / ESC
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (!openMenu) return;
+      const target = e.target as Node;
+      const inButtons = auctionBtnRef.current?.contains(target) || manageBtnRef.current?.contains(target);
+      const inPanel = dropdownRef.current?.contains(target);
+      if (!inButtons && !inPanel) setOpenMenu(null);
+    };
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpenMenu(null);
+    };
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleEsc);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleEsc);
+    };
+  }, [openMenu]);
 
   if (pathname.startsWith('/auth')) return null;
 
@@ -62,18 +101,172 @@ const Navigation: React.FC = () => {
   );
 
   const LinkGroup = () => (
-    <div className="flex items-center gap-6 text-sm font-semibold">
-      {navLinks.map((link) => (
-        <Link
-          key={link.href}
-          href={link.href}
-          className={`transition-colors ${
-            isActive(link.href) ? 'text-brand-primary' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+    <div className="flex items-center gap-6 text-sm font-semibold relative">
+      {/* Auction trigger */}
+      <div className="relative">
+        <button
+          ref={auctionBtnRef}
+          aria-haspopup="menu"
+          aria-expanded={openMenu === 'auction'}
+          onClick={() => setOpenMenu(openMenu === 'auction' ? null : 'auction')}
+          className={`transition-colors flex items-center gap-1 rounded-full px-3 py-1 ${
+            isActive('/auction') ? 'text-brand-primary' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
           }`}
+          style={{ backgroundColor: openMenu === 'auction' ? 'var(--surface-hover)' : 'transparent' }}
+          onMouseEnter={(e) => {
+            if (openMenu !== 'auction') e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
+          }}
+          onMouseLeave={(e) => {
+            if (openMenu !== 'auction') e.currentTarget.style.backgroundColor = 'transparent';
+          }}
         >
-          {link.label}
-        </Link>
-      ))}
+          <span>Auction</span>
+          <svg
+            viewBox="0 0 24 24"
+            className="h-3 w-3"
+            style={{
+              transition: 'transform .2s ease',
+              transform: openMenu === 'auction' ? 'rotate(180deg)' : 'rotate(0deg)'
+            }}
+            aria-hidden="true"
+          >
+            <path
+              d="M7 10l5 5 5-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+        {openMenu === 'auction' && (
+          <div
+            ref={dropdownRef}
+            role="menu"
+            className="absolute left-0 mt-3 min-w-[220px] rounded-2xl border p-2 shadow-2xl backdrop-blur"
+            style={{
+              borderColor: 'var(--nav-border)',
+              backgroundColor: 'var(--nav-background)'
+            }}
+          >
+            {subnav.auction.map((item) => {
+              const active = pathname.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  role="menuitem"
+                  href={item.href}
+                  className={`block rounded-xl px-3 py-2 transition-colors ${active ? 'font-semibold' : ''}`}
+                  style={{
+                    color: active ? 'var(--brand-primary)' : 'var(--text-secondary)'
+                  }}
+                  onClick={() => setOpenMenu(null)}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Manage trigger */}
+      <div className="relative">
+        <button
+          ref={manageBtnRef}
+          aria-haspopup="menu"
+          aria-expanded={openMenu === 'manage'}
+          onClick={() => setOpenMenu(openMenu === 'manage' ? null : 'manage')}
+          className={`transition-colors flex items-center gap-1 rounded-full px-3 py-1 ${
+            isActive('/manage') ? 'text-brand-primary' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+          }`}
+          style={{ backgroundColor: openMenu === 'manage' ? 'var(--surface-hover)' : 'transparent' }}
+          onMouseEnter={(e) => {
+            if (openMenu !== 'manage') e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
+          }}
+          onMouseLeave={(e) => {
+            if (openMenu !== 'manage') e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+        >
+          <span>Manage</span>
+          <svg
+            viewBox="0 0 24 24"
+            className="h-3 w-3"
+            style={{
+              transition: 'transform .2s ease',
+              transform: openMenu === 'manage' ? 'rotate(180deg)' : 'rotate(0deg)'
+            }}
+            aria-hidden="true"
+          >
+            <path
+              d="M7 10l5 5 5-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+        {openMenu === 'manage' && (
+          <div
+            ref={dropdownRef}
+            role="menu"
+            className="absolute left-0 mt-3 min-w-[220px] rounded-2xl border p-2 shadow-2xl backdrop-blur"
+            style={{
+              borderColor: 'var(--nav-border)',
+              backgroundColor: 'var(--nav-background)'
+            }}
+          >
+            {subnav.manage.map((item) => {
+              const active = pathname.startsWith('/manage') && pathname.includes(item.href.split('=')[1]?.split('&')[0] || '');
+              return (
+                <Link
+                  key={item.href}
+                  role="menuitem"
+                  href={item.href}
+                  className={`block rounded-xl px-3 py-2 transition-colors ${active ? 'font-semibold' : ''}`}
+                  style={{
+                    color: active ? 'var(--brand-primary)' : 'var(--text-secondary)'
+                  }}
+                  onClick={() => setOpenMenu(null)}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Other links with tiny hover background */}
+      {(() => {
+        const list = ['/overlays', '/contact'] as const;
+        const items = [...list];
+        if (user?.role === 'Admin') items.splice(1, 0, '/users' as any);
+        return items.map((href) => {
+          const label = href === '/overlays' ? 'Overlays' : href === '/contact' ? 'Contact' : 'Users';
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={`transition-colors rounded-full px-3 py-1 ${
+                isActive(href) ? 'text-brand-primary' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+              }`}
+              style={{ backgroundColor: isActive(href) ? 'var(--surface-hover)' : 'transparent' }}
+              onMouseEnter={(e) => {
+                if (!isActive(href)) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface-hover)';
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive(href)) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+              }}
+            >
+              {label}
+            </Link>
+          );
+        });
+      })()}
     </div>
   );
 
@@ -181,24 +374,76 @@ const Navigation: React.FC = () => {
 
       {drawerOpen && (
         <div className="absolute top-20 w-full max-w-5xl rounded-3xl border border-[var(--nav-border)] bg-[var(--nav-background)] p-6 shadow-2xl backdrop-blur">
-          <div className="grid gap-4">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`rounded-2xl p-4 font-semibold transition ${
-                  isActive(link.href) ? 'text-brand-primary' : ''
-                }`}
-                style={{
-                  borderColor: 'var(--border-primary)',
-                  border: `1px solid var(--border-primary)`,
-                  backgroundColor: isActive(link.href) ? 'var(--surface-hover)' : 'transparent',
-                  color: isActive(link.href) ? 'var(--brand-primary)' : 'var(--text-primary)',
-                }}
-              >
-                {link.label}
-              </Link>
-            ))}
+          <div className="grid gap-3">
+            {/* Auction collapsible */}
+            <div className="rounded-2xl p-4 font-semibold transition" style={{ border: `1px solid var(--border-primary)` }}>
+              <button className="w-full text-left flex items-center justify-between" onClick={() => setMobileAuctionOpen((v) => !v)} style={{ color: 'var(--text-primary)' }}>
+                <span>Auction</span>
+                <span>{mobileAuctionOpen ? '▾' : '▸'}</span>
+              </button>
+              {mobileAuctionOpen && (
+                <div className="mt-3 grid gap-2">
+                  {subnav.auction.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="rounded-xl px-3 py-2"
+                      style={{
+                        border: `1px solid var(--border-primary)`,
+                        color: pathname.startsWith(item.href) ? 'var(--brand-primary)' : 'var(--text-secondary)'
+                      }}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Manage collapsible */}
+            <div className="rounded-2xl p-4 font-semibold transition" style={{ border: `1px solid var(--border-primary)` }}>
+              <button className="w-full text-left flex items-center justify-between" onClick={() => setMobileManageOpen((v) => !v)} style={{ color: 'var(--text-primary)' }}>
+                <span>Manage</span>
+                <span>{mobileManageOpen ? '▾' : '▸'}</span>
+              </button>
+              {mobileManageOpen && (
+                <div className="mt-3 grid gap-2">
+                  {subnav.manage.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="rounded-xl px-3 py-2"
+                      style={{
+                        border: `1px solid var(--border-primary)`,
+                        color: pathname.startsWith('/manage') && pathname.includes(item.href.split('=')[1]?.split('&')[0] || '') ? 'var(--brand-primary)' : 'var(--text-secondary)'
+                      }}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Other single links */}
+            {(() => {
+              const base = [{href:'/overlays', label:'Overlays'}, {href:'/contact', label:'Contact'}];
+              const list = user?.role === 'Admin' ? [...base.slice(0,1), {href:'/users', label:'Users'}, ...base.slice(1)] : base;
+              return list.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="rounded-2xl p-4 font-semibold transition"
+                  style={{
+                    border: `1px solid var(--border-primary)`,
+                    backgroundColor: isActive(link.href) ? 'var(--surface-hover)' : 'transparent',
+                    color: isActive(link.href) ? 'var(--brand-primary)' : 'var(--text-primary)'
+                  }}
+                >
+                  {link.label}
+                </Link>
+              ));
+            })()}
           </div>
           <div className="mt-6 flex items-center justify-between">
             <ThemeToggle />

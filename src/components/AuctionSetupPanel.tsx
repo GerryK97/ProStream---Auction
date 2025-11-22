@@ -794,10 +794,6 @@ const AuctionSetupPanel: React.FC = () => {
 
     return (
         <div className="space-y-8 animate-fade-in">
-            <div>
-                <h1 className="text-3xl font-bold">Auction Setup</h1>
-                <p className="mt-1" style={{ color: 'var(--text-secondary)' }}>Manage tournament rosters - add or remove players and teams</p>
-            </div>
 
             <div className="rounded-lg p-6 space-y-4 setup-panel">
                 <div className="flex justify-between items-start">

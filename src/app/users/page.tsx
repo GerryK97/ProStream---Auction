@@ -1,7 +1,6 @@
 'use client';
 
 import Navigation from '@/components/Navigation';
-import PageHero from '@/components/layout/PageHero';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
@@ -303,7 +302,7 @@ export default function UsersPage() {
   if (authLoading || (isLoading && users.length === 0 && pendingUsers.length === 0)) {
     return (
       <ProtectedRoute allowedRoles={['Admin']}>
-        <div className="min-h-screen text-white" style={{ backgroundColor: 'var(--surface-primary)' }}>
+        <div className="min-h-screen" style={{ backgroundColor: 'var(--surface-primary)', color: 'var(--text-primary)' }}>
           <Navigation />
           <div className="pt-24">
             <div className="mx-auto max-w-7xl px-6 py-16 text-center" style={{ color: 'var(--text-tertiary)' }}>
@@ -328,21 +327,20 @@ export default function UsersPage() {
 
   return (
     <ProtectedRoute allowedRoles={['Admin']}>
-      <div className="min-h-screen text-white" style={{ backgroundColor: 'var(--surface-primary)' }}>
+      <div className="min-h-screen" style={{ backgroundColor: 'var(--surface-primary)', color: 'var(--text-primary)' }}>
         <Navigation />
         <div className="pt-24">
           <div className="mx-auto max-w-7xl px-6 py-8 space-y-6">
-            <PageHero
-              title="User Management"
-              description="Invite teammates, assign roles, and manage tournament access."
-              actions={[{ label: '+ Invite User', onClick: () => setShowCreateModal(true), variant: 'primary' }]}
-              metrics={[
-                { label: 'Total Accounts', value: totalUsers.toString(), helper: 'Across all roles' },
-                { label: 'Active', value: activeUsers.toString(), helper: 'Enabled accounts', tone: 'success' },
-                { label: 'Pending', value: pendingCount.toString(), helper: 'Awaiting approval', tone: 'warning' },
-                { label: 'Admins', value: adminCount.toString(), helper: 'Full access' },
-              ]}
-            />
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>User Management</h2>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="font-bold py-2 px-4 rounded-lg text-sm transition-colors hover:opacity-80"
+                style={{ backgroundColor: 'var(--brand-primary)', color: '#fff' }}
+              >
+                + Invite User
+              </button>
+            </div>
 
             {error && (
               <div className="rounded-2xl border border-red-500/50 bg-red-500/10 px-4 py-3 text-red-200">
@@ -365,8 +363,8 @@ export default function UsersPage() {
                     key={tab.value}
                     onClick={() => setActiveTab(tab.value as typeof activeTab)}
                     style={{
-                      backgroundColor: activeTab === tab.value ? 'var(--text-primary)' : 'transparent',
-                      color: activeTab === tab.value ? '#05070d' : 'var(--text-secondary)',
+                      backgroundColor: activeTab === tab.value ? 'var(--brand-primary)' : 'transparent',
+                      color: activeTab === tab.value ? '#fff' : 'var(--text-secondary)',
                       borderColor: 'var(--border-primary)',
                     }}
                     className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors border`}
@@ -411,17 +409,25 @@ export default function UsersPage() {
                       <td className="px-6 py-4 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{u.username}</td>
                       <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>{u.email}</td>
                       <td className="px-6 py-4 text-sm">
-                        <span className="px-3 py-1 bg-blue-500/20 text-blue-300 rounded text-xs font-medium">
+                        <span
+                          className="px-3 py-1 rounded text-xs font-medium"
+                          style={{
+                            backgroundColor: 'color-mix(in oklab, var(--brand-primary) 22%, var(--surface-elevated))',
+                            color: 'var(--brand-primary)'
+                          }}
+                        >
                           {u.role}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm">
                         <span
-                          className={`px-3 py-1 rounded text-xs font-medium ${
-                            u.status === 'Active'
-                              ? 'bg-green-500/20 text-green-300'
-                              : 'bg-yellow-500/20 text-yellow-300'
-                          }`}
+                          className="px-3 py-1 rounded text-xs font-medium"
+                          style={{
+                            backgroundColor: u.status === 'Active'
+                              ? 'color-mix(in oklab, var(--status-success) 22%, var(--surface-elevated))'
+                              : 'color-mix(in oklab, var(--status-warning) 22%, var(--surface-elevated))',
+                            color: u.status === 'Active' ? 'var(--status-success)' : 'var(--status-warning)'
+                          }}
                         >
                           {u.status}
                         </span>
@@ -431,13 +437,15 @@ export default function UsersPage() {
                           <>
                             <button
                               onClick={() => handleApproveUser(u._id)}
-                              className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium transition-colors"
+                              className="px-3 py-1 rounded text-xs font-medium transition-colors hover:opacity-80"
+                              style={{ backgroundColor: 'var(--status-success)', color: '#fff' }}
                             >
                               Approve
                             </button>
                             <button
                               onClick={() => handleRejectUser(u._id)}
-                              className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition-colors"
+                              className="px-3 py-1 rounded text-xs font-medium transition-colors hover:opacity-80"
+                              style={{ backgroundColor: 'var(--status-danger)', color: '#fff' }}
                             >
                               Reject
                             </button>
@@ -558,7 +566,8 @@ export default function UsersPage() {
                       </button>
                       <button
                         type="submit"
-                        className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors font-medium"
+                        className="flex-1 px-4 py-2 rounded transition-colors font-medium hover:opacity-80"
+                        style={{ backgroundColor: 'var(--brand-primary)', color: '#fff' }}
                       >
                         Create
                       </button>
@@ -570,30 +579,34 @@ export default function UsersPage() {
 
             {/* Edit User Modal */}
             {showEditModal && editingUser && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                <div className="bg-neutral-800 rounded-lg border border-neutral-700 p-8 max-w-md w-full">
-                  <h2 className="text-2xl font-bold mb-6">Edit User: {editingUser.username}</h2>
+              <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ backgroundColor: 'var(--backdrop)' }}>
+                <div className="rounded-lg p-8 max-w-md w-full" style={{
+                  backgroundColor: 'var(--surface-elevated)',
+                  borderColor: 'var(--border-primary)',
+                  border: `1px solid var(--border-primary)`
+                }}>
+                  <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>Edit User: {editingUser.username}</h2>
 
                   <form onSubmit={handleUpdateUser} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium mb-2">Email</label>
+                      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Email</label>
                       <input
                         type="email"
                         value={editFormData.email}
                         onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                        className="w-full px-4 py-2 rounded text-white focus:outline-none"
-                        style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}
+                        className="w-full px-4 py-2 rounded focus:outline-none"
+                        style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
                         required
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2">Role</label>
+                      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Role</label>
                       <select
                         value={editFormData.role}
                         onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value })}
-                        className="w-full px-4 py-2 rounded text-white focus:outline-none"
-                        style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}
+                        className="w-full px-4 py-2 rounded focus:outline-none"
+                        style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
                       >
                         <option value="Admin">Admin</option>
                         <option value="Tournament">Tournament Manager</option>
@@ -605,12 +618,12 @@ export default function UsersPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2">Status</label>
+                      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Status</label>
                       <select
                         value={editFormData.status}
                         onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
-                        className="w-full px-4 py-2 rounded text-white focus:outline-none"
-                        style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}
+                        className="w-full px-4 py-2 rounded focus:outline-none"
+                        style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
                       >
                         <option value="Active">Active</option>
                         <option value="Suspended">Suspended</option>
@@ -619,7 +632,7 @@ export default function UsersPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-3">Assign Tournaments</label>
+                      <label className="block text-sm font-medium mb-3" style={{ color: 'var(--text-secondary)' }}>Assign Tournaments</label>
                       <div className="space-y-2 max-h-48 overflow-y-auto rounded p-3" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}>
                         {availableTournaments.length > 0 ? (
                           availableTournaments.map((tournament) => (
@@ -642,13 +655,14 @@ export default function UsersPage() {
                                     });
                                   }
                                 }}
-                                className="w-4 h-4 rounded border-neutral-500 text-blue-600 focus:ring-blue-500"
+                                className="w-4 h-4 rounded"
+                                style={{ borderColor: 'var(--border-primary)' }}
                               />
-                              <span className="text-sm text-gray-100">{tournament.name}</span>
+                              <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{tournament.name}</span>
                             </label>
                           ))
                         ) : (
-                          <p className="text-sm text-gray-400">No tournaments available</p>
+                          <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>No tournaments available</p>
                         )}
                       </div>
                     </div>
@@ -660,14 +674,15 @@ export default function UsersPage() {
                           setShowEditModal(false);
                           setEditingUser(null);
                         }}
-                        className="flex-1 px-4 py-2 text-white rounded transition-colors"
-                        style={{ backgroundColor: 'var(--surface-hover)' }}
+                        className="flex-1 px-4 py-2 rounded transition-colors"
+                        style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
-                        className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors font-medium"
+                        className="flex-1 px-4 py-2 rounded transition-colors font-medium hover:opacity-80"
+                        style={{ backgroundColor: 'var(--brand-primary)', color: '#fff' }}
                       >
                         Update
                       </button>

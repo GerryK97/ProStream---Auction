@@ -285,3 +285,42 @@ body {
 .clear-button:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus-ring); }
 .clear-button--disabled,
 .clear-button:disabled { opacity: .6; cursor: not-allowed; }
+
+/* Steps Progress */
+.steps { border: 1px solid var(--border-primary); border-radius: 16px; background: var(--surface-card); padding: 12px; }
+.steps__list { display: flex; gap: 12px; list-style: none; margin: 0; padding: 0; overflow-x: auto; }
+.step { position: relative; display: flex; align-items: center; min-width: max-content; }
+.step__link { display: inline-flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 12px; transition: background-color .2s ease, color .2s ease; text-decoration: none; color: var(--text-secondary); }
+.step__link:hover { background-color: var(--surface-hover); color: var(--text-primary); }
+.step--active .step__link { color: var(--brand-primary); font-weight: 600; }
+.step__badge { width: 26px; height: 26px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; border: 1px solid var(--border-primary); background: var(--surface-elevated); color: var(--text-primary); }
+.step--completed .step__badge { background: color-mix(in oklab, var(--status-success) 14%, var(--surface-elevated)); color: var(--status-success); border-color: color-mix(in oklab, var(--status-success) 40%, var(--border-primary)); }
+.step__check { width: 16px; height: 16px; }
+.step__label { white-space: nowrap; font-size: 13px; }
+.step__connector { width: 42px; height: 2px; background: var(--border-primary); display: inline-block; margin-left: 8px; margin-right: 8px; border-radius: 1px; }
+.step--completed + .step .step__connector { background: color-mix(in oklab, var(--status-success) 35%, var(--border-primary)); }
+
+@media (max-width: 640px) {
+  .steps { padding: 8px; }
+  .step__label { font-size: 12px; }
+  .step__badge { width: 24px; height: 24px; font-size: 11px; }
+  .step__connector { width: 32px; }
+}
+
+/* Tube style Steps (fits without horizontal scroll) */
+.steps-tube { --tube-gap: clamp(4px, 1.5vw, 12px); --tube-height: clamp(8px, 1.2vw, 14px); --circle-size: clamp(28px, 2.4vw, 36px); border: 1px solid var(--border-primary); border-radius: 16px; background: var(--surface-card); padding: clamp(8px, 1.5vw, 14px); }
+.steps-tube__grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--tube-gap); align-items: start; }
+.tube-wrap { display: grid; grid-template-rows: auto auto; gap: 8px; align-items: start; justify-items: center; position: relative; min-width: 0; }
+.tube { width: 100%; height: var(--tube-height); border-radius: 9999px; border: 1px solid var(--border-primary); background: linear-gradient(to bottom, rgba(255,255,255,.06), rgba(0,0,0,.06)); position: relative; overflow: hidden; }
+.tube::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient( to right, color-mix(in oklab, var(--brand-primary) 45%, transparent) 0 12px, transparent 12px 24px ); background-size: 24px 100%; transform: translateX(-12px); opacity: .6; }
+.step--completed .tube::before { background: none; background-color: color-mix(in oklab, var(--status-success) 30%, transparent); transform: none; opacity: .4; }
+.step--active .tube::before { animation: flow 4s linear infinite; }
+.circle { position: absolute; top: calc(var(--tube-height) / 2); transform: translateY(-50%); width: var(--circle-size); height: var(--circle-size); border-radius: 9999px; display: grid; place-items: center; border: 1px solid var(--border-primary); background: var(--surface-elevated); color: var(--text-primary); text-decoration: none; }
+.step--completed .circle { background: color-mix(in oklab, var(--status-success) 22%, var(--surface-elevated)); color: var(--status-success); border-color: color-mix(in oklab, var(--status-success) 45%, var(--border-primary)); }
+.step--active .circle { background: var(--brand-primary); color: #fff; border-color: color-mix(in oklab, var(--brand-primary) 70%, var(--border-primary)); }
+.step__label { text-align: center; color: var(--text-secondary); font-size: 12px; line-height: 1.2; text-decoration: none; }
+.step--active .step__label { color: var(--brand-primary); font-weight: 600; }
+@keyframes flow { to { background-position-x: 120px; } }
+@media (max-width: 1024px) { .steps-tube__grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 640px) { .steps-tube__grid { grid-template-columns: repeat(2, 1fr); } .steps-tube { --circle-size: 30px; --tube-height: 10px; } }
+@media (prefers-reduced-motion: reduce) { .step--active .tube::before { animation: none; } }
