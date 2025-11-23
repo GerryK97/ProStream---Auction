@@ -230,6 +230,13 @@ body {
 .edit-button:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus-ring); }
 .edit-button.edit-button--disabled, .edit-button:disabled { opacity: .6; cursor: not-allowed; }
 
+/* TextField placeholder styling */
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-tertiary);
+  opacity: 0.7;
+}
+
 /* Themed Clear All Button (danger) */
 .clear-button {
   position: relative;

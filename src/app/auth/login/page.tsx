@@ -33,7 +33,7 @@ export default function LoginPage() {
   const passwordToggleLabel = showPassword ? 'Hide password' : 'Show password';
 
   return (
-    <div className="relative min-h-[100dvh] text-white" style={{ backgroundColor: 'var(--surface-primary)' }}>
+    <div className="relative min-h-[100dvh]" style={{ backgroundColor: 'var(--surface-primary)', color: 'var(--text-primary)' }}>
       <div
         className="absolute inset-0 opacity-40"
         style={{
@@ -49,7 +49,8 @@ export default function LoginPage() {
           <div className="space-y-6">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-brand-secondary transition hover:text-brand-secondary/80"
+              className="inline-flex items-center gap-2 text-sm font-semibold transition"
+              style={{ color: 'var(--brand-secondary)' }}
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 18l-6-6 6-6" />
@@ -57,8 +58,8 @@ export default function LoginPage() {
               Back to home
             </Link>
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.5em] text-brand-secondary/80">ProStream</p>
-              <h1 className="mt-4 text-3xl font-bold sm:text-4xl">Welcome back</h1>
+              <p className="text-sm font-semibold uppercase tracking-[0.5em]" style={{ color: 'color-mix(in oklab, var(--brand-secondary) 80%, transparent)' }}>ProStream</p>
+              <h1 className="mt-4 text-3xl font-bold sm:text-4xl" style={{ color: 'var(--text-primary)' }}>Welcome back</h1>
               <p className="mt-3 text-base sm:text-lg" style={{ color: 'var(--text-secondary)' }}>
                 Sign in to run auctions, manage squads, and control your live overlays from any device.
               </p>
@@ -154,7 +155,12 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading || !username || !password}
-                className="w-full rounded-2xl bg-brand-primary px-4 py-3 text-base font-semibold text-white transition hover:bg-brand-primary/90 disabled:cursor-not-allowed disabled:bg-brand-primary/50"
+                className="w-full rounded-2xl px-4 py-3 text-base font-semibold transition disabled:cursor-not-allowed"
+                style={{
+                  backgroundColor: 'var(--brand-primary)',
+                  color: '#fff',
+                  opacity: isLoading || !username || !password ? 0.5 : 1
+                }}
               >
                 {isLoading ? 'Signing in…' : 'Login'}
               </button>
@@ -162,7 +168,7 @@ export default function LoginPage() {
 
             <div className="mt-6 text-center text-sm" style={{ color: 'var(--text-tertiary)' }}>
               Don't have an account?{' '}
-              <Link href="/auth/signup" className="font-semibold text-brand-secondary hover:text-brand-secondary/80">
+              <Link href="/auth/signup" className="font-semibold transition" style={{ color: 'var(--brand-secondary)' }}>
                 Request access
               </Link>
             </div>
@@ -170,7 +176,7 @@ export default function LoginPage() {
 
           <div className="mt-6 text-center text-xs" style={{ color: 'var(--text-muted)' }}>
             Need help?{' '}
-            <a href="mailto:support@prostream.com" className="text-brand-secondary hover:text-brand-secondary/80">
+            <a href="mailto:support@prostream.com" className="transition" style={{ color: 'var(--brand-secondary)' }}>
               Contact support
             </a>
           </div>

@@ -18,7 +18,7 @@ const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
 
     return (
       <div className="space-y-2">
-        <label htmlFor={id} className="block text-sm font-medium text-slate-200">
+        <label htmlFor={id} className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
           {label}
         </label>
         <div className="relative">
@@ -28,21 +28,24 @@ const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
             type={type}
             aria-invalid={Boolean(errorText)}
             aria-describedby={describedBy}
-            className={`w-full rounded-xl border bg-slate-800/70 px-4 py-3 text-white placeholder-slate-400 transition focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary disabled:opacity-60 ${
-              errorText ? 'border-red-500/60' : 'border-slate-600'
-            } ${trailing ? 'pr-12' : ''} ${className}`}
+            className={`w-full rounded-xl border px-4 py-3 transition focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary disabled:opacity-60 ${trailing ? 'pr-12' : ''} ${className}`}
+            style={{
+              backgroundColor: 'var(--surface-elevated)',
+              color: 'var(--text-primary)',
+              borderColor: errorText ? 'color-mix(in oklab, var(--status-danger) 60%, transparent)' : 'var(--border-primary)'
+            }}
             {...rest}
           />
           {trailing && (
-            <span className="absolute inset-y-0 right-3 flex items-center text-neutral-400">{trailing}</span>
+            <span className="absolute inset-y-0 right-3 flex items-center" style={{ color: 'var(--text-tertiary)' }}>{trailing}</span>
           )}
         </div>
         {errorText ? (
-          <p id={errorId} role="alert" className="text-sm text-red-400">
+          <p id={errorId} role="alert" className="text-sm" style={{ color: 'var(--status-danger)' }}>
             {errorText}
           </p>
         ) : helperText ? (
-          <p id={helperId} className="text-sm text-slate-400">
+          <p id={helperId} className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
             {helperText}
           </p>
         ) : null}
