@@ -432,6 +432,44 @@ const overlayTypes: OverlayType[] = [
         dimensions: { width: 1920, height: 40 }
     },
     {
+        id: 'neon-ticker',
+        name: 'Neon Cyberpunk Ticker',
+        description: 'Futuristic gaming/esports ticker with glowing neon effects, hexagonal design, and scanline overlay',
+        route: '/overlays/neon-ticker',
+        tags: ['Players', 'Premium', 'Sold', 'Neon', 'Gaming'],
+        category: 'Ticker',
+        defaultParams: { size: 'default', color: 'cyan', autoplay: 'true', timer: '5000', border: 'true', position: 'bottom' },
+        parameterSchema: {
+            size: { type: 'select', label: 'Size', options: ['small', 'default', 'large'] },
+            color: { type: 'select', label: 'Neon Color', options: ['cyan', 'magenta', 'lime', 'pink', 'gold'], description: 'Neon glow color theme' },
+            autoplay: { type: 'toggle', label: 'Auto-play' },
+            timer: { type: 'number', label: 'Timer (ms)', min: 1000, max: 30000, step: 1000, description: 'Scroll speed control' },
+            border: { type: 'toggle', label: 'Show Border' },
+            position: { type: 'select', label: 'Position', options: ['top', 'bottom'] }
+        },
+        imageURL: 'https://placehold.co/400x200/0a0e1a/00d9ff?text=Neon+Ticker',
+        dimensions: { width: 1920, height: 45 }
+    },
+    {
+        id: 'elegant-ticker',
+        name: 'Elegant Minimalist Ticker',
+        description: 'Sophisticated luxury ticker with frosted glass effect, refined typography, and subtle animations',
+        route: '/overlays/elegant-ticker',
+        tags: ['Players', 'Premium', 'Sold', 'Elegant', 'Minimal'],
+        category: 'Ticker',
+        defaultParams: { size: 'default', color: 'champagne', autoplay: 'true', timer: '5000', border: 'true', position: 'bottom' },
+        parameterSchema: {
+            size: { type: 'select', label: 'Size', options: ['small', 'default', 'large'] },
+            color: { type: 'select', label: 'Color Theme', options: ['champagne', 'platinum', 'rose', 'navy', 'charcoal'], description: 'Elegant color palette' },
+            autoplay: { type: 'toggle', label: 'Auto-play' },
+            timer: { type: 'number', label: 'Timer (ms)', min: 1000, max: 30000, step: 1000, description: 'Scroll speed control' },
+            border: { type: 'toggle', label: 'Show Border' },
+            position: { type: 'select', label: 'Position', options: ['top', 'bottom'] }
+        },
+        imageURL: 'https://placehold.co/400x200/f5f5f0/d4af37?text=Elegant+Ticker',
+        dimensions: { width: 1920, height: 65 }
+    },
+    {
         id: 'current-bid',
         name: 'Current Bid',
         description: 'Large display showing only the current bid amount',

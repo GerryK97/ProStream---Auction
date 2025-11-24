@@ -370,3 +370,29 @@
 .animate-gradient-shift {
   animation: gradientShift 10s ease-in-out infinite;
 }
+
+/* Neon Cyberpunk Ticker Animations */
+@keyframes neon-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
+    opacity: 1;
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.9));
+    opacity: 0.9;
+  }
+}
+
+.animate-neon-pulse {
+  animation: neon-pulse 2s ease-in-out infinite;
+}
+
+/* Elegant Minimalist Ticker Animations */
+@keyframes elegant-ticker {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
