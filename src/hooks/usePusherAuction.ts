@@ -234,7 +234,7 @@ export function usePusherAuction(
         type: 'SET_INITIAL_DATA',
         data: {
           tournament: tournamentData || null,
-          auctionState: stateData?.auctionState || EMPTY_AUCTION_STATE,
+          auctionState: stateData || EMPTY_AUCTION_STATE,
           players: playersData || [],
           teams: teamsData || [],
         },

@@ -123,6 +123,36 @@
   }
 }
 
+@keyframes neonPulseGlow {
+  0% {
+    box-shadow: 0 0 12px rgba(14, 165, 233, 0.35);
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(192, 132, 252, 0.45);
+    transform: translateY(-2px) scale(1.01);
+  }
+  100% {
+    box-shadow: 0 0 18px rgba(45, 212, 191, 0.4);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes emberHeatWave {
+  0% {
+    box-shadow: 0 0 12px rgba(251, 146, 60, 0.4);
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    box-shadow: 0 0 32px rgba(248, 113, 113, 0.55);
+    transform: translateY(-2px) scale(1.015);
+  }
+  100% {
+    box-shadow: 0 0 16px rgba(251, 191, 36, 0.35);
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* Glow effect for active elements */
 @keyframes glow {
   0%, 100% {
