@@ -37,7 +37,7 @@ const MOCK_AUCTION_STATE: AuctionState = {
   history: [],
 };
 
-const MOCK_OVERLAY_TEMPLATES: OverlayTemplate[] = [
+const MOCK_OVERLAY_TEMPLATES: any[] = [
     {
         _id: 'template1',
         name: 'Classic',

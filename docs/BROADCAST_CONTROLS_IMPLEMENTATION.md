@@ -735,6 +735,28 @@ return (
 );
 ```
 
+#### Team Cards Theme Variants
+
+`TeamCardsOverlay` now exposes three art direction presets while keeping the same auction data points (logo, team name, balance, computed max bid and winning highlight). Switch them via the new `variant` query parameter on `/overlays/teams`:
+
+| Variant | Description | Query |
+|---------|-------------|-------|
+| `neon` | Cyan/purple glassmorphism with grid particles and teal balance glow. | `?variant=neon` *(default)* |
+| `ember` | Ember gradient with molten borders and badge heatwave animation. | `?variant=ember` |
+| `midnight` | Executive slate gradient, muted typography, and subtle accent strip for professional broadcasts. | `?variant=midnight` |
+
+> **Note:** these overlays are preset-only now; the previous per-color customization knobs have been removed in favor of fixed art-directed themes.
+
+Both presets still accept the legacy color overrides (`useGradient`, `maxBidColor`, etc.)—those values now simply override the preset palette when provided.
+
+![Team Cards Neon Pulse overlay](./images/overlays/team-cards-neon.png)
+
+![Team Cards Ember Pulse overlay](./images/overlays/team-cards-ember.png)
+
+![Team Cards Midnight Slate overlay](./images/overlays/team-cards-midnight.png)
+
+To refresh or tweak these screenshots locally, run `pwsh ./scripts/generate-team-card-previews.ps1`. The script renders static mock data with the live overlay gradients/typography so docs stay in sync with the broadcast look without requiring an OBS capture.
+
 ---
 
 ## 🎨 Animation System Details

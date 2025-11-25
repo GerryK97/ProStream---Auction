@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import ClearAllButton from './shared/ClearAllButton';
 import { Player, Team, Tournament, AuctionState } from '@/types';
 import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { imageOptimizers } from '@/lib/imageOptimization';
@@ -23,7 +24,7 @@ const AvailablePlayersPanel: React.FC<{
         .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
     return (
-        <div className="bg-neutral-800 rounded-lg p-4 flex flex-col min-h-[calc(100vh-15rem)] border border-neutral-700">
+        <div className="rounded-lg p-4 flex flex-col min-h-[calc(100vh-15rem)] border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-secondary)' }}>
             <h3 className="font-bold text-lg mb-2">Available Players</h3>
             {isAuctioning && (
                 <div className="bg-yellow-900/50 border border-yellow-700 text-yellow-200 text-xs rounded-md p-2 mb-3">
@@ -35,23 +36,25 @@ const AvailablePlayersPanel: React.FC<{
                 placeholder="Search players..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full bg-neutral-900 border border-neutral-600 rounded-md px-3 py-2 mb-3 focus:ring-brand-primary focus:border-brand-primary"
+                className="w-full border border-[var(--border-primary)] rounded-md px-3 py-2 mb-3 focus:ring-brand-primary focus:border-brand-primary"
+                style={{ backgroundColor: 'var(--surface-elevated)' }}
             />
             <div className="flex-grow overflow-y-auto pr-2">
                 <ul className="space-y-2">
-                    {availablePlayers.map((player, index) => (
-                        <li key={player._id} className="flex items-center justify-between bg-neutral-700/50 p-2 rounded-md">
+                      {availablePlayers.map((player, index) => (
+                          <li key={player._id} className="flex items-center justify-between p-2 rounded-md transition-colors hover:opacity-90 border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-card)' }}>
                             <div className="flex-1">
                                 <div className="flex items-center gap-2">
-                                    <p className="font-semibold text-cyan-400">#{player.playerNo || player._id} {player.name}</p>
+                                    <p className="font-semibold text-[var(--brand-primary)]">#{player.playerNo || player._id} {player.name}</p>
                                     <ClassBadge tournament={tournament} player={player} variant="inline" />
                                 </div>
-                                <p className="text-xs text-neutral-400">{player.position || 'Player'}</p>
+                                <p className="text-xs text-[var(--text-tertiary)]">{player.position || 'Player'}</p>
                             </div>
                             <button
                                 onClick={() => onSelectPlayer(player._id)}
                                 disabled={isAuctioning}
-                                className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-1 px-3 rounded-md text-sm transition-colors disabled:bg-neutral-600 disabled:cursor-not-allowed">
+                                className="bg-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/80 text-white font-bold py-1 px-3 rounded-md text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                style={{ backgroundColor: isAuctioning ? undefined : 'var(--brand-primary)' }}>
                                 Auction
                             </button>
                         </li>
@@ -98,8 +101,8 @@ const CurrentAuctionPanel: React.FC<{
 
     if (!currentPlayer || !tournament) {
         return (
-            <div className="bg-neutral-800 rounded-lg p-4 flex items-center justify-center min-h-[calc(100vh-15rem)] border border-neutral-700">
-                <p className="text-neutral-400 text-lg">{!tournament ? "No tournament data" : "Select a player to start the auction"}</p>
+            <div className="rounded-lg p-4 flex items-center justify-center min-h-[calc(100vh-15rem)] border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-secondary)' }}>
+                <p className="text-[var(--text-tertiary)] text-lg">{!tournament ? "No tournament data" : "Select a player to start the auction"}</p>
             </div>
         );
     }
@@ -109,32 +112,33 @@ const CurrentAuctionPanel: React.FC<{
     const bidIncrements = [1000, 5000, 10000, 25000, 50000];
 
     return (
-        <div className="bg-neutral-800 rounded-lg p-6 border border-neutral-700 min-h-[calc(100vh-15rem)] flex flex-col justify-between">
+        <div className="rounded-lg p-6 border border-[var(--border-primary)] min-h-[calc(100vh-15rem)] flex flex-col justify-between" style={{ backgroundColor: 'var(--surface-secondary)' }}>
             <div>
                 <div className="text-center mb-4">
                     <div className="flex items-center justify-center gap-2">
-                        <p className="text-3xl font-bold text-cyan-400">#{currentPlayer.playerNo || currentPlayer._id} {currentPlayer.name}</p>
+                        <p className="text-4xl font-bold text-[var(--brand-primary)]">#{currentPlayer.playerNo || currentPlayer._id} {currentPlayer.name}</p>
                         <ClassBadge tournament={tournament} player={currentPlayer} variant="inline" />
                     </div>
-                    <p className="text-neutral-400">{currentPlayer.position || 'Player'}</p>
+                    <p className="text-[var(--text-tertiary)]">{currentPlayer.position || 'Player'}</p>
                 </div>
                 <div className="flex justify-center items-center gap-6 mb-4">
                     <img
                         src={imageOptimizers.playerCard(currentPlayer.photoURL)}
                         alt={currentPlayer.name}
-                        className="w-40 h-40 rounded-lg object-cover border-4 border-neutral-700 shadow-lg"
+                        className="w-40 h-40 rounded-lg object-cover border-4 shadow-lg"
+                        style={{ borderColor: 'var(--border-primary)' }}
                         loading="lazy"
                     />
                     <div>
-                        <p className="text-neutral-400 text-sm">Current Bid</p>
-                        <p className="text-6xl font-bold text-green-400">{formatCurrency(currentBid)}</p>
+                        <p className="text-[var(--text-tertiary)] text-sm">Current Bid</p>
+                        <p className="text-6xl font-bold text-[var(--brand-secondary)]">{formatCurrency(currentBid)}</p>
                     </div>
                 </div>
                  <div className="text-center mb-6">
                     <p>Base Price: <span className="font-semibold">{getFormattedBasePrice(tournament, currentPlayer)}</span></p>
                 </div>
-                <div className="bg-neutral-900/50 p-4 rounded-lg max-w-lg mx-auto">
-                    <p className="text-center mb-3 font-semibold text-neutral-300">Quick Bid (Auto Submit)</p>
+                <div className="p-4 rounded-lg max-w-lg mx-auto bg-[var(--brand-primary)]/5">
+                    <p className="text-center mb-3 font-semibold text-[var(--text-secondary)]">Quick Bid (Auto Submit)</p>
                      <div className="flex justify-center gap-1 sm:gap-2 mb-3">
                         {bidIncrements.map(inc => (
                             <button
@@ -146,8 +150,8 @@ const CurrentAuctionPanel: React.FC<{
                             </button>
                         ))}
                     </div>
-                    <div className="border-t border-neutral-700 pt-3 mt-3">
-                        <p className="text-center mb-3 text-sm text-neutral-400">Or Set Custom Amount</p>
+                    <div className="border-t border-[var(--border-primary)] pt-3 mt-3">
+                        <p className="text-center mb-3 text-sm text-[var(--text-tertiary)]">Or Set Custom Amount</p>
                         <input
                             type="number"
                             value={bidAmount}
@@ -165,17 +169,18 @@ const CurrentAuctionPanel: React.FC<{
                     </div>
                 </div>
             </div>
-            <div className="mt-6 border-t border-neutral-700 pt-4 text-center">
-                 <p className="mb-3 text-sm text-neutral-500">Finalize Sale</p>
+            <div className="mt-6 border-t border-[var(--border-primary)] pt-4 text-center">
+                 <p className="mb-3 text-sm text-[var(--text-muted)]">Finalize Sale</p>
                  <div className="mb-3 max-w-md mx-auto">
-                     <label className="block text-sm font-semibold text-neutral-300 mb-2">Select Winning Team</label>
+                     <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">Select Winning Team</label>
                      <select
                          value={biddingTeamId}
                          onChange={e => setBiddingTeamId(e.target.value)}
                          disabled={isSold || currentBid === 0}
-                         className="w-full bg-neutral-700 text-white border-2 border-neutral-600 rounded-md px-4 py-3 text-lg font-semibold focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                         className="w-full border-2 border-[var(--border-primary)] rounded-md px-4 py-3 text-lg font-semibold focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                         style={{ backgroundColor: 'var(--surface-card)', color: 'var(--text-primary)' }}>
                          {teams.map(t => (
-                             <option key={t._id} value={t._id} className="bg-neutral-800 text-white py-2">
+                             <option key={t._id} value={t._id} style={{ backgroundColor: 'var(--surface-secondary)', color: 'var(--text-primary)' }}>
                                  {t.name}
                              </option>
                          ))}
@@ -227,10 +232,10 @@ const TeamsAndSoldPlayersPanel: React.FC<{
 
     return (
         <div className="space-y-6 flex flex-col">
-            <div className="bg-neutral-800 rounded-lg p-4 border border-neutral-700 flex flex-col">
+            <div className="rounded-lg p-4 border border-[var(--border-primary)] flex flex-col" style={{ backgroundColor: 'var(--surface-secondary)' }}>
                  <h3 className="font-bold text-lg mb-3">Teams</h3>
                  <ul className="space-y-2 overflow-y-auto pr-2 max-h-[400px]">
-                     {teams.map(team => {
+                     {teams.map((team, index) => {
                          const maxBid = calculateMaxBid(team);
                          const playersPurchased = team.playersPurchased?.length || 0;
                          const squadSize = tournament?.squadSize || 0;
@@ -238,8 +243,8 @@ const TeamsAndSoldPlayersPanel: React.FC<{
                          const hasInsufficientFunds = maxBid <= 0 && remainingPlayers > 0;
 
                          return (
-                             <li key={team._id} className={`p-2 rounded-md flex items-center gap-3 relative overflow-hidden transition-all duration-300 ${winningTeamId === team._id ? 'bg-neutral-700' : 'bg-neutral-700/40'}`}>
-                                {winningTeamId === team._id && <div className="absolute left-0 top-0 h-full w-1.5 bg-red-500 animate-pulse"></div>}
+                             <li key={team._id} className="p-2 rounded-md flex items-center gap-3 relative overflow-hidden transition-all duration-300 hover:opacity-90 border border-[var(--border-primary)]" style={{ backgroundColor: winningTeamId === team._id ? 'var(--surface-hover)' : 'var(--surface-card)' }}>
+                                {winningTeamId === team._id && <div className="absolute left-0 top-0 h-full w-1.5 bg-[var(--accent-color)] animate-pulse"></div>}
                                 <img
                                     src={imageOptimizers.teamThumbnail(team.logoURL)}
                                     alt={team.name}
@@ -253,32 +258,32 @@ const TeamsAndSoldPlayersPanel: React.FC<{
                                             <span className="text-red-500 text-xs" title="Insufficient funds for remaining players">⚠️</span>
                                         )}
                                     </div>
-                                    <p className="text-xs text-neutral-300">Budget: <span className="text-green-400">{formatCurrency(team.currentBalance || 0)}</span></p>
-                                    <p className="text-xs text-neutral-300">
-                                        Max Bid: <span className={hasInsufficientFunds ? "text-red-500 font-semibold" : "text-cyan-400"}>{formatCurrency(maxBid)}</span>
+                                    <p className="text-xs text-[var(--text-secondary)]">Budget: <span className="text-[var(--brand-secondary)]">{formatCurrency(team.currentBalance || 0)}</span></p>
+                                    <p className="text-xs text-[var(--text-secondary)]">
+                                        Max Bid: <span className={hasInsufficientFunds ? "text-red-500 font-semibold" : "text-[var(--brand-primary)]"}>{formatCurrency(maxBid)}</span>
                                     </p>
-                                    <p className="text-xs text-neutral-500">{playersPurchased}/{squadSize} players</p>
+                                    <p className="text-xs text-[var(--text-muted)]">{playersPurchased}/{squadSize} players</p>
                                 </div>
                              </li>
                          );
                      })}
                  </ul>
             </div>
-             <div className="bg-neutral-800 rounded-lg p-4 border border-neutral-700 flex flex-col">
+             <div className="rounded-lg p-4 border border-[var(--border-primary)] flex flex-col" style={{ backgroundColor: 'var(--surface-secondary)' }}>
                 <h3 className="font-bold text-lg mb-3">Sold Players ({soldPlayers.length})</h3>
                 <div className="flex gap-2 mb-3">
                     <button onClick={onUndo} className="btn-secondary w-full text-sm py-1.5">Undo Last Sale</button>
-                    <button onClick={onCleanup} className="btn-danger w-full text-sm py-1.5">Cleanup All</button>
+                    <ClearAllButton onClick={onCleanup} label="Clear All" size="sm" className="w-full" />
                 </div>
                 <div className="overflow-y-auto pr-2 max-h-[400px]">
                     {soldPlayers.length === 0 ? (
-                        <p className="text-center text-neutral-400 py-8 text-sm">No players sold yet</p>
+                        <p className="text-center text-[var(--text-tertiary)] py-8 text-sm">No players sold yet</p>
                     ) : (
                         <ul className="space-y-2">
-                            {soldPlayers.map(player => {
+                            {soldPlayers.map((player, index) => {
                                 const playerTeam = teams.find(t => t._id === player.winningTeamId);
                                 return (
-                                    <li key={player._id} className="bg-neutral-700/50 p-2 rounded-md">
+                                      <li key={player._id} className="p-2 rounded-md transition-colors hover:opacity-90 border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-card)' }}>
                                         <div className="flex items-center gap-2">
                                             <img
                                                 src={imageOptimizers.playerThumbnail(player.photoURL)}
@@ -291,8 +296,8 @@ const TeamsAndSoldPlayersPanel: React.FC<{
                                                     <ClassBadge tournament={tournament} player={player} variant="dot" />
                                                     <p className="font-semibold text-sm truncate">{player.name}</p>
                                                 </div>
-                                                <p className="text-xs text-green-400">{formatCurrency(player.finalPrice || 0)}</p>
-                                                <p className="text-xs text-neutral-400 truncate">
+                                                <p className="text-xs text-[var(--brand-secondary)]">{formatCurrency(player.finalPrice || 0)}</p>
+                                                <p className="text-xs text-[var(--text-secondary)] truncate">
                                                     {playerTeam ? playerTeam.name : 'Unknown Team'}
                                                 </p>
                                             </div>
@@ -316,9 +321,14 @@ interface AuctionControlPanelProps {
         players?: Player[];
         teams?: Team[];
     } | null;
+    stats?: {
+        totalTeams: number;
+        totalPlayers: number;
+        soldPlayers: number;
+    };
 }
 
-const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData }) => {
+const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, stats }) => {
     const [biddingTeamId, setBiddingTeamId] = useState('');
     const [error, setError] = useState<string | null>(null);
     const initialTournamentId = initialData?.tournament?._id ?? null;
@@ -399,14 +409,14 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData }
     if (!liveTournament) {
         return (
             <div className="flex items-center justify-center h-[calc(100vh-12rem)] animate-fade-in">
-                <div className="bg-neutral-800 border border-neutral-700 rounded-lg p-12 max-w-2xl text-center">
+                <div className="border border-[var(--border-primary)] rounded-lg p-12 max-w-2xl text-center" style={{ backgroundColor: 'var(--surface-secondary)' }}>
                     <div className="mb-6">
                         <svg className="w-24 h-24 mx-auto text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
                     </div>
-                    <h2 className="text-3xl font-bold mb-4 text-neutral-200">Auction Not Started</h2>
-                    <p className="text-neutral-400 mb-6 text-lg">
+                    <h2 className="text-3xl font-bold mb-4 text-[var(--text-primary)]">Auction Not Started</h2>
+                    <p className="text-[var(--text-tertiary)] mb-6 text-lg">
                         No live auction found. Please go to Auction Setup and click &apos;Start Auction&apos; to begin.
                     </p>
                     <a
@@ -601,7 +611,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData }
     return (
         <div className="animate-fade-in space-y-4">
             {/* Auction Header */}
-            <div className="bg-neutral-800 border border-neutral-700 rounded-lg p-4">
+            <div className="border border-[var(--border-primary)] rounded-lg p-4" style={{ backgroundColor: 'var(--surface-secondary)' }}>
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
@@ -617,17 +627,17 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData }
                                 </>
                             )}
                         </div>
-                        <div className="h-6 w-px bg-neutral-600"></div>
+                        <div className="h-6 w-px" style={{ backgroundColor: 'var(--border-primary)' }}></div>
                         <div className="flex items-center gap-2">
                             <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
                             <span className={`text-xs ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
                                 {isConnected ? 'Connected' : 'Disconnected'}
                             </span>
                         </div>
-                        <div className="h-6 w-px bg-neutral-600"></div>
+                        <div className="h-6 w-px" style={{ backgroundColor: 'var(--border-primary)' }}></div>
                         <div>
-                            <p className="text-xl font-bold text-cyan-400">{liveTournament.name}</p>
-                            <p className="text-xs text-neutral-400">
+                            <p className="text-xl font-bold text-[var(--brand-primary)]">{liveTournament.name}</p>
+                            <p className="text-xs text-[var(--text-tertiary)]">
                                 Budget: {liveTournament.budgetPerTeam.toLocaleString()} | Squad: {liveTournament.squadSize} | Base Price: {liveTournament.basePricePerPlayer.toLocaleString()}
                             </p>
                         </div>
@@ -635,7 +645,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData }
                     {isAuctionStopped && (
                         <button
                             onClick={handleRestartAuction}
-                            className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
+                            className="bg-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/80 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -690,10 +700,12 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData }
                 {error && <div className="absolute bottom-4 right-4 text-center text-red-400 bg-red-900/80 backdrop-blur-sm p-3 rounded-lg shadow-lg border border-red-700 animate-fade-in">{error}</div>}
             </div>
              <style jsx>{`
-                .btn-primary { @apply bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 disabled:bg-neutral-600 disabled:cursor-not-allowed; }
-                .btn-secondary { @apply bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 disabled:bg-neutral-600 disabled:cursor-not-allowed; }
-                .btn-danger { @apply bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 disabled:bg-neutral-600 disabled:cursor-not-allowed; }
-                .input-field { @apply bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2; }
+                .btn-primary { @apply text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed; background-color: var(--brand-primary); }
+                .btn-primary:hover:not(:disabled) { background-color: var(--brand-primary); opacity: 0.8; }
+                .btn-secondary { @apply font-bold py-2 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed; background-color: var(--surface-hover); color: var(--text-primary); }
+                .btn-secondary:hover:not(:disabled) { background-color: var(--surface-elevated); }
+                .btn-danger { @apply bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed; }
+                .input-field { @apply rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary p-2; background-color: var(--surface-card); border: 1px solid var(--border-primary); }
             `}</style>
         </div>
     );

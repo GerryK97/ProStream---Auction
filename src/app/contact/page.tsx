@@ -8,7 +8,7 @@ const contactChannels = [
     action: 'prostream.contact@gmail.com',
     href: 'mailto:prostream.contact@gmail.com',
     badge: 'Primary',
-    color: 'from-brand-primary/20 to-brand-primary/5 border-brand-primary/40',
+    gradientColor: 'var(--brand-primary)',
     icon: (
       <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l9 6 9-6" />
@@ -22,7 +22,7 @@ const contactChannels = [
     action: 'Message Us',
     href: 'https://wa.me/94772801110',
     badge: 'Live',
-    color: 'from-brand-secondary/20 to-brand-secondary/5 border-brand-secondary/40',
+    gradientColor: 'var(--brand-secondary)',
     icon: (
       <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
         <path
@@ -40,7 +40,7 @@ const contactChannels = [
     action: 'ProStream Auction',
     href: 'https://www.facebook.com/profile.php?id=61582866560051',
     badge: 'Community',
-    color: 'from-status-purple/20 to-status-purple/5 border-status-purple/40',
+    gradientColor: 'var(--accent-color)',
     icon: (
       <svg className="h-8 w-8" viewBox="0 0 24 24" fill="currentColor">
         <path d="M13.5 9H15V6h-1.5C11.015 6 10 7.657 10 9.75V11H8v3h2v6h3v-6h2.143L15.5 11H13v-1.25c0-.414.336-.75.75-.75z" />
@@ -51,15 +51,15 @@ const contactChannels = [
 
 export default function ContactPage() {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
+    <div className="relative min-h-screen overflow-hidden" style={{ backgroundColor: 'var(--surface-primary)', color: 'var(--text-primary)' }}>
       <BackgroundAnimation />
       <Navigation />
 
       <main className="relative z-10 px-4 py-20 sm:px-6 lg:px-8">
         <section className="mx-auto max-w-4xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.6em] text-brand-secondary">Contact</p>
-          <h1 className="mt-4 text-4xl font-black sm:text-5xl">We’re here whenever you go live</h1>
-          <p className="mt-4 text-lg text-neutral-300">
+          <p className="text-xs font-semibold uppercase tracking-[0.6em]" style={{ color: 'var(--brand-secondary)' }}>Contact</p>
+          <h1 className="mt-4 text-4xl font-black sm:text-5xl" style={{ color: 'var(--text-primary)' }}>We're here whenever you go live</h1>
+          <p className="mt-4 text-lg" style={{ color: 'var(--text-secondary)' }}>
             Whether you need onboarding help, auction-night support, or want to join the broadcast community, choose the
             channel that suits you best.
           </p>
@@ -69,22 +69,33 @@ export default function ContactPage() {
           {contactChannels.map((channel) => (
             <div
               key={channel.title}
-              className={`rounded-3xl border bg-gradient-to-br p-6 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur ${channel.color}`}
+              className="rounded-3xl border p-6 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur"
+              style={{
+                borderColor: 'var(--border-primary)',
+                background: `linear-gradient(to bottom right, color-mix(in oklab, ${channel.gradientColor} 20%, var(--surface-card)), color-mix(in oklab, ${channel.gradientColor} 5%, var(--surface-card)))`,
+              }}
             >
               <div className="flex items-center justify-between">
-                <div className="rounded-2xl bg-white/10 p-3 text-white">{channel.icon}</div>
-                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white/70">
+                <div className="rounded-2xl p-3" style={{ backgroundColor: 'var(--surface-card)', color: 'var(--text-primary)' }}>{channel.icon}</div>
+                <span className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em]" style={{
+                  backgroundColor: 'var(--surface-card)',
+                  color: 'var(--text-tertiary)'
+                }}>
                   {channel.badge}
                 </span>
               </div>
-              <h2 className="mt-6 text-2xl font-bold">{channel.title}</h2>
-              <p className="mt-3 text-sm text-neutral-200">{channel.description}</p>
+              <h2 className="mt-6 text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{channel.title}</h2>
+              <p className="mt-3 text-sm" style={{ color: 'var(--text-secondary)' }}>{channel.description}</p>
               <div className="mt-6">
                 <a
                   href={channel.href}
                   target={channel.href.startsWith('http') ? '_blank' : undefined}
                   rel={channel.href.startsWith('http') ? 'noreferrer' : undefined}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
+                  className="inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition hover:opacity-80"
+                  style={{
+                    backgroundColor: 'var(--surface-card)',
+                    color: 'var(--text-primary)',
+                  }}
                 >
                   {channel.action}
                   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -96,9 +107,14 @@ export default function ContactPage() {
           ))}
         </section>
 
-        <section className="mx-auto mt-16 max-w-3xl rounded-3xl border border-white/10 bg-white/5 p-8 text-center text-neutral-200">
+        <section className="mx-auto mt-16 max-w-3xl rounded-3xl p-8 text-center" style={{
+          borderColor: 'var(--border-primary)',
+          border: `1px solid var(--border-primary)`,
+          backgroundColor: 'var(--surface-secondary)',
+          color: 'var(--text-secondary)'
+        }}>
           <p>
-            Need a tailored onboarding session or enterprise support plan? Email us with your tournament dates and we’ll
+            Need a tailored onboarding session or enterprise support plan? Email us with your tournament dates and we'll
             schedule a walkthrough within 48 hours.
           </p>
         </section>

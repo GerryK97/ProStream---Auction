@@ -91,34 +91,38 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--surface-primary)' }}>
       <div className="w-full max-w-md">
         {/* Logo/Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">ProStream</h1>
-          <p className="text-slate-400">Auction Management System</p>
+          <h1 className="text-4xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>ProStream</h1>
+          <p style={{ color: 'var(--text-tertiary)' }}>Auction Management System</p>
         </div>
 
         {/* Signup Form */}
-        <div className="bg-slate-800 rounded-lg shadow-2xl border border-slate-700 p-8">
-          <h2 className="text-2xl font-bold text-white mb-6">Create Account</h2>
+        <div className="rounded-lg shadow-2xl p-8" style={{
+          borderColor: 'var(--border-primary)',
+          border: `1px solid var(--border-primary)`,
+          backgroundColor: 'var(--surface-secondary)'
+        }}>
+          <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>Create Account</h2>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded text-red-400 text-sm">
+            <div className="mb-6 p-4 rounded text-sm" style={{ color: 'var(--status-danger)', border: '1px solid color-mix(in oklab, var(--status-danger) 40%, transparent)', background: 'color-mix(in oklab, var(--status-danger) 12%, transparent)' }}>
               {error}
             </div>
           )}
 
           {successMessage && (
-            <div className="mb-6 p-4 bg-green-500/10 border border-green-500/50 rounded text-green-400 text-sm">
+            <div className="mb-6 p-4 rounded text-sm" style={{ color: 'var(--status-success)', border: '1px solid color-mix(in oklab, var(--status-success) 40%, transparent)', background: 'color-mix(in oklab, var(--status-success) 12%, transparent)' }}>
               {successMessage}
             </div>
           )}
 
-          {errors.length > 0 && (
-            <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/50 rounded">
-              <p className="text-yellow-400 text-sm font-medium mb-2">Password requirements:</p>
-              <ul className="text-yellow-400 text-xs space-y-1">
+            {errors.length > 0 && (
+            <div className="mb-6 p-4 rounded" style={{ color: 'var(--status-warning)', border: '1px solid color-mix(in oklab, var(--status-warning) 40%, transparent)', background: 'color-mix(in oklab, var(--status-warning) 12%, transparent)' }}>
+                <p className="text-sm font-medium mb-2">Password requirements:</p>
+                <ul className="text-xs space-y-1">
                 {errors.map((error, idx) => (
                   <li key={idx}>• {error}</li>
                 ))}
@@ -129,7 +133,7 @@ export default function SignupPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Username Input */}
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-slate-300 mb-2">
+              <label htmlFor="username" className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                 Username
               </label>
               <input
@@ -138,16 +142,21 @@ export default function SignupPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 disabled={isLoading}
-                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+                style={{
+                  backgroundColor: 'var(--surface-elevated)',
+                  borderColor: 'var(--border-primary)',
+                  color: 'var(--text-primary)',
+                }}
+                className="w-full px-4 py-2 border rounded text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
                 placeholder="Enter username"
                 required
               />
-              <p className="text-xs text-slate-400 mt-1">3-50 characters, letters, numbers, -, _</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>3-50 characters, letters, numbers, -, _</p>
             </div>
 
             {/* Email Input */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                 Email
               </label>
               <input
@@ -156,7 +165,12 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isLoading}
-                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+                style={{
+                  backgroundColor: 'var(--surface-elevated)',
+                  borderColor: 'var(--border-primary)',
+                  color: 'var(--text-primary)',
+                }}
+                className="w-full px-4 py-2 border rounded text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
                 placeholder="Enter your email"
                 required
               />
@@ -164,7 +178,7 @@ export default function SignupPage() {
 
             {/* Password Input */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                 Password
               </label>
               <input
@@ -173,7 +187,12 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
-                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+                style={{
+                  backgroundColor: 'var(--surface-elevated)',
+                  borderColor: 'var(--border-primary)',
+                  color: 'var(--text-primary)',
+                }}
+                className="w-full px-4 py-2 border rounded text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
                 placeholder="Enter password"
                 required
               />
@@ -181,7 +200,7 @@ export default function SignupPage() {
 
             {/* Confirm Password Input */}
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-300 mb-2">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                 Confirm Password
               </label>
               <input
@@ -190,7 +209,12 @@ export default function SignupPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={isLoading}
-                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+                style={{
+                  backgroundColor: 'var(--surface-elevated)',
+                  borderColor: 'var(--border-primary)',
+                  color: 'var(--text-primary)',
+                }}
+                className="w-full px-4 py-2 border rounded text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
                 placeholder="Confirm password"
                 required
               />
@@ -198,7 +222,7 @@ export default function SignupPage() {
 
             {/* Role Selection */}
             <div>
-              <label htmlFor="role" className="block text-sm font-medium text-slate-300 mb-2">
+              <label htmlFor="role" className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                 Account Type
               </label>
               <select
@@ -206,7 +230,12 @@ export default function SignupPage() {
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
                 disabled={isLoading}
-                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+                style={{
+                  backgroundColor: 'var(--surface-elevated)',
+                  borderColor: 'var(--border-primary)',
+                  color: 'var(--text-primary)',
+                }}
+                className="w-full px-4 py-2 border rounded text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
               >
                 <option value="Audience">Audience</option>
                 <option value="Tournament">Tournament Manager</option>
@@ -214,7 +243,7 @@ export default function SignupPage() {
                 <option value="Team">Team Manager</option>
                 <option value="Player">Player</option>
               </select>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
                 {role === 'Audience'
                   ? 'Pending admin approval'
                   : 'Automatically activated'}
@@ -233,7 +262,7 @@ export default function SignupPage() {
 
           {/* Login Link */}
           <div className="mt-6 text-center">
-            <p className="text-slate-400">
+            <p style={{ color: 'var(--text-tertiary)' }}>
               Already have an account?{' '}
               <Link href="/auth/login" className="text-blue-400 hover:text-blue-300">
                 Login here

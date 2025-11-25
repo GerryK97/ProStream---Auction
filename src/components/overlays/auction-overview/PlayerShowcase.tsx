@@ -40,15 +40,15 @@ const PlayerShowcase: React.FC<PlayerShowcaseProps> = ({ player, tournament, siz
 
     const sizeConfig = {
         default: {
-            photoSize: 'w-28 h-28',
-            nameSize: 'text-xl',
+            photoSize: 'w-32 h-32',
+            nameSize: 'text-2xl',
             statsSize: 'text-base',
-            padding: 'p-4'
+            padding: 'p-5'
         },
         large: {
-            photoSize: 'w-40 h-40',
-            nameSize: 'text-3xl',
-            statsSize: 'text-xl',
+            photoSize: 'w-56 h-56',
+            nameSize: 'text-4xl',
+            statsSize: 'text-2xl',
             padding: 'p-8'
         }
     };
@@ -64,58 +64,52 @@ const PlayerShowcase: React.FC<PlayerShowcaseProps> = ({ player, tournament, siz
             {/* Player Class Badge */}
             <ClassBadge tournament={tournament || null} player={player} variant="corner" />
 
-            {/* Player Header */}
-            <div className="flex items-center gap-6 mb-4">
-                {/* Player Photo with Glow */}
-                <div className="relative">
-                    <img
-                        src={imageOptimizers.playerCard(player.photoURL)}
-                        alt={player.name}
-                        className={`${config.photoSize} rounded-full object-cover border-4 border-cyan-400 animate-player-glow-pulse will-change-transform`}
-                    />
-                    {/* Jersey Number Badge */}
-                    <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-gradient-to-b from-orange-500 to-yellow-500 border-2 border-white flex items-center justify-center font-bold text-white text-sm shadow-lg">
-                        {playerNumber}
-                    </div>
-                </div>
-
-                {/* Player Info */}
-                <div className="flex-1">
-                    <h3 className={`${config.nameSize} font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] mb-1`}>
-                        {player.name}
-                    </h3>
-                    {player.position && (
-                        <div className="inline-block px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-500/50 text-cyan-300 text-sm font-semibold animate-slide-in-left">
-                            {player.position}
+            <div className="flex flex-col gap-6 lg:flex-row">
+                {/* Player Info + photo */}
+                <div className="flex flex-1 items-center gap-8">
+                    <div className="relative">
+                        <img
+                            src={imageOptimizers.playerCard(player.photoURL)}
+                            alt={player.name}
+                            className={`${config.photoSize} rounded-full object-cover border-4 border-cyan-400 animate-player-glow-pulse will-change-transform`}
+                        />
+                        <div className="absolute -bottom-3 -right-3 w-12 h-12 rounded-full bg-gradient-to-b from-orange-500 to-yellow-500 border-2 border-white flex items-center justify-center font-bold text-white text-base shadow-lg">
+                            {playerNumber}
                         </div>
-                    )}
-                    {player.currentClub && (
-                        <p className="text-sm text-neutral-400 mt-1">
-                            Current Club: {player.currentClub}
-                        </p>
-                    )}
+                    </div>
+                    <div>
+                        <h3 className={`${config.nameSize} font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] mb-2`}>
+                            {player.name}
+                        </h3>
+                        {player.position && (
+                            <div className="inline-block px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-500/50 text-cyan-300 text-sm font-semibold animate-slide-in-left">
+                                {player.position}
+                            </div>
+                        )}
+                        {player.currentClub && (
+                            <p className="text-sm text-neutral-400 mt-1">
+                                Current Club: {player.currentClub}
+                            </p>
+                        )}
+                    </div>
                 </div>
-            </div>
 
-            {/* Player Stats */}
-            <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-neutral-700">
-                <div className="text-center animate-stats-counter" style={{ animationDelay: '100ms' }}>
-                    <div className={`${config.statsSize} font-bold text-cyan-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>
-                        {player.stats.matchesPlayed}
+                {/* Stats + class */}
+                <div className="flex flex-1 flex-col gap-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                        <p className="text-xs uppercase tracking-[0.4em] text-neutral-400">Player Class</p>
+                        <ClassBadge tournament={tournament || null} player={player} variant="inline" />
                     </div>
-                    <div className="text-xs text-neutral-400 uppercase mt-1">Matches</div>
-                </div>
-                <div className="text-center animate-stats-counter" style={{ animationDelay: '200ms' }}>
-                    <div className={`${config.statsSize} font-bold text-green-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>
-                        {player.stats.totalScore}
+                    <div className="grid grid-cols-3 gap-4">
+                        {[{ label: 'Matches', value: player.stats.matchesPlayed }, { label: 'Runs', value: player.stats.totalScore }, { label: 'Wickets', value: player.stats.totalWickets }].map((stat, index) => (
+                            <div key={stat.label} className="text-center animate-stats-counter" style={{ animationDelay: `${(index + 1) * 100}ms` }}>
+                                <div className={`${config.statsSize} font-bold text-cyan-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>
+                                    {stat.value}
+                                </div>
+                                <div className="text-xs text-neutral-400 uppercase mt-1">{stat.label}</div>
+                            </div>
+                        ))}
                     </div>
-                    <div className="text-xs text-neutral-400 uppercase mt-1">Runs</div>
-                </div>
-                <div className="text-center animate-stats-counter" style={{ animationDelay: '300ms' }}>
-                    <div className={`${config.statsSize} font-bold text-purple-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>
-                        {player.stats.totalWickets}
-                    </div>
-                    <div className="text-xs text-neutral-400 uppercase mt-1">Wickets</div>
                 </div>
             </div>
         </div>

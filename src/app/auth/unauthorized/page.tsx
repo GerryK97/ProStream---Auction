@@ -7,11 +7,11 @@ export default function UnauthorizedPage() {
   const { logout } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--surface-primary)' }}>
       <div className="w-full max-w-md text-center">
         {/* Error Icon */}
         <div className="mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-red-500/10 border border-red-500/50 rounded-full">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full" style={{ color: 'var(--status-danger)', border: '1px solid color-mix(in oklab, var(--status-danger) 40%, transparent)', background: 'color-mix(in oklab, var(--status-danger) 12%, transparent)' }}>
             <svg
               className="w-10 h-10 text-red-400"
               fill="none"
@@ -28,10 +28,10 @@ export default function UnauthorizedPage() {
           </div>
         </div>
 
-        <h1 className="text-4xl font-bold text-white mb-2">403</h1>
-        <h2 className="text-2xl font-semibold text-slate-200 mb-4">Access Denied</h2>
+        <h1 className="text-4xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>403</h1>
+        <h2 className="text-2xl font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Access Denied</h2>
 
-        <p className="text-slate-400 mb-8">
+        <p className="mb-8" style={{ color: 'var(--text-secondary)' }}>
           You do not have permission to access this page. Please contact an administrator if you
           believe this is a mistake.
         </p>
@@ -39,7 +39,8 @@ export default function UnauthorizedPage() {
         <div className="space-y-3">
           <Link
             href="/"
-            className="inline-block px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded transition-colors"
+            className="inline-block px-6 py-2 text-white font-medium rounded transition-colors"
+            style={{ backgroundColor: 'var(--brand-primary)' }}
           >
             Go to Dashboard
           </Link>
@@ -47,7 +48,8 @@ export default function UnauthorizedPage() {
           <div className="mt-4">
             <button
               onClick={logout}
-              className="text-slate-400 hover:text-slate-200 text-sm"
+              className="text-sm"
+              style={{ color: 'var(--text-secondary)' }}
             >
               Logout
             </button>

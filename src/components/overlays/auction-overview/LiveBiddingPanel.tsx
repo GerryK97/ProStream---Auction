@@ -71,7 +71,10 @@ const LiveBiddingPanel: React.FC<LiveBiddingPanelProps> = ({
     const currentStatus = statusConfig[auctionState.currentAuctionStatus] || statusConfig.Pending;
 
     return (
-        <div className={`bg-neutral-800/80 backdrop-blur-sm rounded-2xl border-2 border-green-500 ${config.padding} min-h-[240px] flex flex-col justify-center`}>
+        <div
+            className={`backdrop-blur-sm rounded-2xl border-2 ${config.padding} min-h-[240px] flex flex-col justify-center`}
+            style={{ backgroundColor: 'var(--panel-accent)', borderColor: 'var(--border-primary)' }}
+        >
             {/* Header */}
             <div className="text-center mb-4">
                 <h3 className="text-xl font-bold text-green-400 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] mb-1">

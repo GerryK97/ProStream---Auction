@@ -3,6 +3,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { CopyIcon, ExternalLinkIcon } from './icons';
 import ParameterEditor, { ParameterConfig } from './overlays/parameters/ParameterEditor';
+import { useAuth } from '@/contexts/AuthContext';
+import OverlayEditModal from './OverlayEditModal';
 
 interface OverlayType {
     id: string;
@@ -10,11 +12,39 @@ interface OverlayType {
     description: string;
     route: string;
     tags: string[];
+    category: string; // Added category
     defaultParams: { [key: string]: string };
     parameterSchema?: { [key: string]: ParameterConfig };
     imageURL: string;
     dimensions: { width: number; height: number };
 }
+
+const teamCardsDefaultParams = {
+    layout: 'horizontal',
+    position: 'bottom',
+    variant: 'neon'
+};
+
+const teamCardsParameterSchema: { [key: string]: ParameterConfig } = {
+    variant: {
+        type: 'select',
+        label: 'Design Variant',
+        options: ['neon', 'ember', 'midnight'],
+        description: 'Pick the built-in design preset'
+    },
+    layout: {
+        type: 'select',
+        label: 'Layout',
+        options: ['horizontal', 'vertical', 'grid'],
+        description: 'Card arrangement style'
+    },
+    position: {
+        type: 'select',
+        label: 'Position',
+        options: ['top', 'bottom', 'left', 'right'],
+        description: 'Overlay position on screen'
+    }
+};
 
 const overlayTypes: OverlayType[] = [
     {
@@ -23,6 +53,7 @@ const overlayTypes: OverlayType[] = [
         description: 'Display current player being auctioned with stats and bid information',
         route: '/overlays/player-card',
         tags: ['Player', 'Auction', 'Main'],
+        category: 'Player Display',
         defaultParams: { size: 'medium', position: 'top' },
         parameterSchema: {
             size: { type: 'select', label: 'Size', options: ['small', 'medium', 'large'] },
@@ -32,11 +63,101 @@ const overlayTypes: OverlayType[] = [
         dimensions: { width: 800, height: 300 }
     },
     {
+        id: 'football-player-card',
+        name: 'Football Player Card',
+        description: 'Football-style horizontal card with diagonal separator, jersey number, and match stats - inspired by Barcelona design',
+        route: '/overlays/football-player-card',
+        tags: ['Player', 'Auction', 'Football', 'Sport'],
+        category: 'Player Display',
+        defaultParams: {
+            position: 'center',
+            primaryColor: '#FCD000',
+            accentColor: '#E7C403',
+            textColor: '#1e293b',
+            statLabelColor: '#64748b',
+            cardSize: 'medium',
+            borderRadius: 'medium',
+            showPlayerImage: 'true',
+            showJerseyNumber: 'true',
+            showStats: 'true',
+            showCurrentBid: 'true',
+            diagonalStyle: 'true'
+        },
+        parameterSchema: {
+            position: {
+                type: 'select',
+                label: 'Position',
+                options: ['center', 'left', 'right'],
+                description: 'Overlay position on screen'
+            },
+            primaryColor: {
+                type: 'color',
+                label: 'Primary Background Color',
+                description: 'Main card background color (default: Barcelona yellow)'
+            },
+            accentColor: {
+                type: 'color',
+                label: 'Accent Color',
+                description: 'Jersey number and bid highlight color'
+            },
+            textColor: {
+                type: 'color',
+                label: 'Text Color',
+                description: 'Player name and stat values color'
+            },
+            statLabelColor: {
+                type: 'color',
+                label: 'Stat Label Color',
+                description: 'Color for stat labels (Position, Club, etc.)'
+            },
+            cardSize: {
+                type: 'select',
+                label: 'Card Size',
+                options: ['small', 'medium', 'large'],
+                description: 'Overall card dimensions'
+            },
+            borderRadius: {
+                type: 'select',
+                label: 'Border Radius',
+                options: ['none', 'small', 'medium', 'large'],
+                description: 'Corner rounding style'
+            },
+            showPlayerImage: {
+                type: 'toggle',
+                label: 'Show Player Image',
+                description: 'Display player photo'
+            },
+            showJerseyNumber: {
+                type: 'toggle',
+                label: 'Show Jersey Number',
+                description: 'Display player number badge'
+            },
+            showStats: {
+                type: 'toggle',
+                label: 'Show Stats',
+                description: 'Display player statistics (Position, Club, Matches)'
+            },
+            showCurrentBid: {
+                type: 'toggle',
+                label: 'Show Current Bid',
+                description: 'Display current bid amount badge'
+            },
+            diagonalStyle: {
+                type: 'toggle',
+                label: 'Diagonal Separator',
+                description: 'Show white diagonal separator element'
+            }
+        },
+        imageURL: 'https://placehold.co/450x250/FCD000/1e293b?text=Football+Card',
+        dimensions: { width: 450, height: 250 }
+    },
+    {
         id: 'premium-player-card',
         name: 'Premium Player Card',
         description: 'Stylish premium player card with gradient background, jersey number, and stats - fully customizable',
         route: '/overlays/premium-player-card',
         tags: ['Player', 'Auction', 'Premium', 'Customizable'],
+        category: 'Player Display',
         defaultParams: {
             // Position
             position: 'center',
@@ -240,112 +361,62 @@ const overlayTypes: OverlayType[] = [
     {
         id: 'teams',
         name: 'Team Cards',
-        description: 'Show all teams with balances, max bids, and players purchased - fully customizable backgrounds and colors',
+        description: 'Show all teams with balances, max bids, and players purchased. Choose a preset (Neon, Ember, Midnight) plus layout/position—colors are fixed per preset.',
         route: '/overlays/teams',
         tags: ['Teams', 'Auction', 'Customizable'],
+        category: 'Team Display',
+        defaultParams: { ...teamCardsDefaultParams },
+        parameterSchema: teamCardsParameterSchema,
+        imageURL: 'https://placehold.co/400x200/1e293b/22c55e?text=Team+Cards',
+        dimensions: { width: 1200, height: 200 }
+    },
+    {
+        id: 'team-cards-neon',
+        name: 'Team Cards · Neon Pulse',
+        description: 'Glassmorphism preset with cyan/purple glow, particle grid, and neon balance highlights.',
+        route: '/overlays/teams',
+        tags: ['Teams', 'Auction', 'Preset', 'Neon'],
+        category: 'Team Display',
         defaultParams: {
             layout: 'horizontal',
             position: 'bottom',
-            useGradient: 'false',
-            cardBackground: '#000000',
-            gradientStart: '#0891b2',
-            gradientEnd: '#06b6d4',
-            borderColor: '#06b6d4',
-            borderRadius: '8',
-            backgroundOpacity: '80',
-            teamNameColor: '#ffffff',
-            balanceColor: '#4ade80',
-            statsColor: '#d4d4d8',
-            maxBidColor: '#22d3ee',
-            winningBorderColor: '#ef4444'
+            variant: 'neon'
         },
-        parameterSchema: {
-            // Layout & Position
-            layout: {
-                type: 'select',
-                label: 'Layout',
-                options: ['horizontal', 'vertical', 'grid'],
-                description: 'Card arrangement style'
-            },
-            position: {
-                type: 'select',
-                label: 'Position',
-                options: ['top', 'bottom', 'left', 'right'],
-                description: 'Overlay position on screen'
-            },
-
-            // Background Style
-            useGradient: {
-                type: 'toggle',
-                label: 'Use Gradient Background',
-                description: 'Enable gradient instead of solid color'
-            },
-            cardBackground: {
-                type: 'color',
-                label: 'Card Background',
-                description: 'Solid background color (when gradient is off)'
-            },
-            gradientStart: {
-                type: 'color',
-                label: 'Gradient Start Color',
-                description: 'Starting color for gradient background'
-            },
-            gradientEnd: {
-                type: 'color',
-                label: 'Gradient End Color',
-                description: 'Ending color for gradient background'
-            },
-            backgroundOpacity: {
-                type: 'number',
-                label: 'Background Opacity (%)',
-                min: 0,
-                max: 100,
-                description: 'Transparency level (0=transparent, 100=opaque)'
-            },
-
-            // Border & Shape
-            borderColor: {
-                type: 'color',
-                label: 'Border Color',
-                description: 'Color of card border (default state)'
-            },
-            winningBorderColor: {
-                type: 'color',
-                label: 'Winning Team Border',
-                description: 'Border color when team is winning bid'
-            },
-            borderRadius: {
-                type: 'number',
-                label: 'Border Radius (px)',
-                min: 0,
-                max: 32,
-                description: 'Corner roundness (0=square, 32=very rounded)'
-            },
-
-            // Text Colors
-            teamNameColor: {
-                type: 'color',
-                label: 'Team Name Color',
-                description: 'Color of team name text'
-            },
-            balanceColor: {
-                type: 'color',
-                label: 'Balance Color',
-                description: 'Color of current balance amount'
-            },
-            statsColor: {
-                type: 'color',
-                label: 'Stats Color',
-                description: 'Color of player count text'
-            },
-            maxBidColor: {
-                type: 'color',
-                label: 'Max Bid Color',
-                description: 'Color of maximum bid amount'
-            }
+        parameterSchema: teamCardsParameterSchema,
+        imageURL: '/overlay-previews/team-cards-neon.png',
+        dimensions: { width: 1280, height: 720 }
+    },
+    {
+        id: 'team-cards-ember',
+        name: 'Team Cards · Ember Pulse',
+        description: 'Molten ember preset with warm gradients, badge heatwave animation, and Last Sold badge.',
+        route: '/overlays/teams',
+        tags: ['Teams', 'Auction', 'Preset', 'Ember'],
+        category: 'Team Display',
+        defaultParams: {
+            layout: 'horizontal',
+            position: 'bottom',
+            variant: 'ember'
         },
-        imageURL: 'https://placehold.co/400x200/1e293b/22c55e?text=Team+Cards',
-        dimensions: { width: 1200, height: 200 }
+        parameterSchema: teamCardsParameterSchema,
+        imageURL: '/overlay-previews/team-cards-ember.png',
+        dimensions: { width: 1280, height: 720 }
+    },
+    {
+        id: 'team-cards-midnight',
+        name: 'Team Cards · Midnight Slate',
+        description: 'Executive-grade slate design with understated gradients, crisp typography, and unobtrusive motion.',
+        route: '/overlays/teams',
+        tags: ['Teams', 'Auction', 'Preset', 'Professional'],
+        category: 'Team Display',
+        defaultParams: {
+            layout: 'horizontal',
+            position: 'bottom',
+            variant: 'midnight'
+        },
+        parameterSchema: teamCardsParameterSchema,
+        imageURL: '/overlay-previews/team-cards-midnight.png',
+        dimensions: { width: 1280, height: 720 }
     },
     {
         id: 'ticker',
@@ -353,6 +424,7 @@ const overlayTypes: OverlayType[] = [
         description: 'Continuous scrolling ticker showing all sold players',
         route: '/overlays/ticker',
         tags: ['Players', 'Info'],
+        category: 'Ticker',
         defaultParams: { speed: 'medium', position: 'bottom' },
         parameterSchema: {
             speed: { type: 'select', label: 'Speed', options: ['slow', 'medium', 'fast'], description: 'Scroll speed (slow: 60s, medium: 30s, fast: 15s)' },
@@ -367,6 +439,7 @@ const overlayTypes: OverlayType[] = [
         description: 'Single player display with slide transitions - breaking news style ticker with auto-play',
         route: '/overlays/premium-ticker',
         tags: ['Players', 'Premium', 'Sold'],
+        category: 'Ticker',
         defaultParams: { size: 'default', effect: 'slide-h', color: 'blue', autoplay: 'true', timer: '5000', border: 'true', position: 'bottom' },
         parameterSchema: {
             size: { type: 'select', label: 'Size', options: ['small', 'default', 'large'] },
@@ -381,11 +454,50 @@ const overlayTypes: OverlayType[] = [
         dimensions: { width: 1920, height: 40 }
     },
     {
+        id: 'neon-ticker',
+        name: 'Neon Cyberpunk Ticker',
+        description: 'Futuristic gaming/esports ticker with glowing neon effects, hexagonal design, and scanline overlay',
+        route: '/overlays/neon-ticker',
+        tags: ['Players', 'Premium', 'Sold', 'Neon', 'Gaming'],
+        category: 'Ticker',
+        defaultParams: { size: 'default', color: 'cyan', autoplay: 'true', timer: '5000', border: 'true', position: 'bottom' },
+        parameterSchema: {
+            size: { type: 'select', label: 'Size', options: ['small', 'default', 'large'] },
+            color: { type: 'select', label: 'Neon Color', options: ['cyan', 'magenta', 'lime', 'pink', 'gold'], description: 'Neon glow color theme' },
+            autoplay: { type: 'toggle', label: 'Auto-play' },
+            timer: { type: 'number', label: 'Timer (ms)', min: 1000, max: 30000, step: 1000, description: 'Scroll speed control' },
+            border: { type: 'toggle', label: 'Show Border' },
+            position: { type: 'select', label: 'Position', options: ['top', 'bottom'] }
+        },
+        imageURL: 'https://placehold.co/400x200/0a0e1a/00d9ff?text=Neon+Ticker',
+        dimensions: { width: 1920, height: 45 }
+    },
+    {
+        id: 'elegant-ticker',
+        name: 'Elegant Minimalist Ticker',
+        description: 'Sophisticated luxury ticker with frosted glass effect, refined typography, and subtle animations',
+        route: '/overlays/elegant-ticker',
+        tags: ['Players', 'Premium', 'Sold', 'Elegant', 'Minimal'],
+        category: 'Ticker',
+        defaultParams: { size: 'default', color: 'champagne', autoplay: 'true', timer: '5000', border: 'true', position: 'bottom' },
+        parameterSchema: {
+            size: { type: 'select', label: 'Size', options: ['small', 'default', 'large'] },
+            color: { type: 'select', label: 'Color Theme', options: ['champagne', 'platinum', 'rose', 'navy', 'charcoal'], description: 'Elegant color palette' },
+            autoplay: { type: 'toggle', label: 'Auto-play' },
+            timer: { type: 'number', label: 'Timer (ms)', min: 1000, max: 30000, step: 1000, description: 'Scroll speed control' },
+            border: { type: 'toggle', label: 'Show Border' },
+            position: { type: 'select', label: 'Position', options: ['top', 'bottom'] }
+        },
+        imageURL: 'https://placehold.co/400x200/f5f5f0/d4af37?text=Elegant+Ticker',
+        dimensions: { width: 1920, height: 65 }
+    },
+    {
         id: 'current-bid',
         name: 'Current Bid',
         description: 'Large display showing only the current bid amount',
         route: '/overlays/current-bid',
         tags: ['Auction', 'Minimal'],
+        category: 'Auction Info',
         defaultParams: { size: 'medium', position: 'top-right' },
         parameterSchema: {
             size: { type: 'select', label: 'Size', options: ['small', 'medium', 'large'] },
@@ -400,6 +512,7 @@ const overlayTypes: OverlayType[] = [
         description: 'Show auction status messages when no active player',
         route: '/overlays/status',
         tags: ['Info', 'Status'],
+        category: 'Auction Info',
         defaultParams: {},
         imageURL: 'https://placehold.co/400x200/1e293b/8b5cf6?text=Status',
         dimensions: { width: 600, height: 200 }
@@ -410,6 +523,7 @@ const overlayTypes: OverlayType[] = [
         description: 'Rankings showing team standings by players or balance',
         route: '/overlays/leaderboard',
         tags: ['Teams', 'Stats'],
+        category: 'Statistics',
         defaultParams: { sortBy: 'players', position: 'top-right' },
         parameterSchema: {
             sortBy: { type: 'select', label: 'Sort By', options: ['players', 'balance', 'spent'], description: 'Sort teams by players count, remaining balance, or money spent' },
@@ -424,6 +538,7 @@ const overlayTypes: OverlayType[] = [
         description: 'Popup notification when a player is sold',
         route: '/overlays/sale-banner',
         tags: ['Auction', 'Alert'],
+        category: 'Notifications',
         defaultParams: {},
         imageURL: 'https://placehold.co/400x200/1e293b/ef4444?text=Sale+Banner',
         dimensions: { width: 450, height: 150 }
@@ -434,6 +549,7 @@ const overlayTypes: OverlayType[] = [
         description: 'Complete auction summary sorted by highest price - shows when all players sold',
         route: '/overlays/sold-summary',
         tags: ['Summary', 'Stats', 'Final'],
+        category: 'Statistics',
         defaultParams: { position: 'center' },
         parameterSchema: {
             position: { type: 'select', label: 'Position', options: ['center', 'top', 'bottom'] }
@@ -447,6 +563,7 @@ const overlayTypes: OverlayType[] = [
         description: 'Full-screen comprehensive auction display with auto-flipping team pages and complex animations - perfect for LED screens (1920x1080)',
         route: '/overlays/auction-overview',
         tags: ['Full Screen', 'LED', 'Premium', 'Comprehensive'],
+        category: 'Full Screen',
         defaultParams: {
             size: 'default',
             showBackground: 'true',
@@ -512,15 +629,72 @@ const overlayTypes: OverlayType[] = [
         imageURL: 'https://placehold.co/1920x1080/0F84D0/FFFFFF?text=Auction+Overview+LED',
         dimensions: { width: 1920, height: 1080 }
     },
+    {
+        id: 'player-highlight-led',
+        name: 'Player Highlight LED',
+        description: 'Fullscreen player spotlight that auto-expands for new selections with oversized bidding visuals.',
+        route: '/overlays/player-highlight-led',
+        tags: ['LED', 'Player', 'Spotlight'],
+        category: 'Full Screen',
+        defaultParams: {
+            showBackground: 'true',
+            spotlightSeconds: '5',
+            showTeams: 'true',
+            showSold: 'true',
+            soldItems: '5',
+            soldFlipSeconds: '8'
+        },
+        parameterSchema: {
+            showBackground: {
+                type: 'toggle',
+                label: 'Background Effects',
+                description: 'Enable animated gradient background'
+            },
+            spotlightSeconds: {
+                type: 'number',
+                label: 'Spotlight Seconds',
+                description: 'Duration for the fullscreen player takeover',
+                min: 2,
+                max: 12
+            },
+            showTeams: {
+                type: 'toggle',
+                label: 'Show Team Grid'
+            },
+            showSold: {
+                type: 'toggle',
+                label: 'Show Sold Players Flip'
+            },
+            soldItems: {
+                type: 'number',
+                label: 'Sold Items Per Page',
+                min: 3,
+                max: 8
+            },
+            soldFlipSeconds: {
+                type: 'number',
+                label: 'Sold Flip Seconds',
+                min: 4,
+                max: 15
+            }
+        },
+        imageURL: 'https://placehold.co/1920x1080/111827/34d399?text=Player+Highlight+LED',
+        dimensions: { width: 1920, height: 1080 }
+    },
 ];
 
 const OverlayDashboard: React.FC = () => {
+    const { user } = useAuth();
+    const isAdmin = user?.role === 'Admin';
+
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedTag, setSelectedTag] = useState('All');
     const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
     const [activeTournamentId, setActiveTournamentId] = useState<string | null>(null);
     const [customParams, setCustomParams] = useState<{ [overlayId: string]: { [key: string]: string } }>({});
     const [expandedEditor, setExpandedEditor] = useState<string | null>(null);
+    const [previewOverlay, setPreviewOverlay] = useState<{ url: string; name: string } | null>(null);
+    const [editOverlay, setEditOverlay] = useState<OverlayType | null>(null);
 
     // Fetch active tournament on mount
     useEffect(() => {
@@ -538,17 +712,17 @@ const OverlayDashboard: React.FC = () => {
         fetchActiveTournament();
     }, []);
 
-    const allTags = useMemo(() => {
-        const tags = new Set<string>();
-        overlayTypes.forEach(t => t.tags.forEach(tag => tags.add(tag)));
-        return ['All', ...Array.from(tags).sort()];
+    const allCategories = useMemo(() => {
+        const categories = new Set<string>();
+        overlayTypes.forEach(t => categories.add(t.category));
+        return ['All', ...Array.from(categories).sort()];
     }, []);
 
     const filteredOverlays = useMemo(() => {
         return overlayTypes.filter(overlay => {
             const matchesSearch = overlay.name.toLowerCase().includes(searchTerm.toLowerCase()) || overlay.description.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesTag = selectedTag === 'All' || overlay.tags.includes(selectedTag);
-            return matchesSearch && matchesTag;
+            const matchesCategory = selectedTag === 'All' || overlay.category === selectedTag;
+            return matchesSearch && matchesCategory;
         });
     }, [searchTerm, selectedTag]);
 
@@ -593,104 +767,299 @@ const OverlayDashboard: React.FC = () => {
         }
     };
 
+    const handleSaveOverlay = async (updates: {
+        name: string;
+        description: string;
+        category: string;
+        imageURL: string;
+        dimensions: { width: number; height: number };
+    }) => {
+        if (!editOverlay) return;
+
+        // Update the overlay in the overlayTypes array
+        const index = overlayTypes.findIndex(o => o.id === editOverlay.id);
+        if (index !== -1) {
+            overlayTypes[index] = {
+                ...overlayTypes[index],
+                ...updates
+            };
+        }
+
+        // TODO: Persist to database/backend when API is ready
+        // await fetch(`/api/overlays/${editOverlay.id}`, {
+        //     method: 'PUT',
+        //     headers: { 'Content-Type': 'application/json' },
+        //     body: JSON.stringify(updates)
+        // });
+
+        setEditOverlay(null);
+    };
+
     return (
         <div className="animate-fade-in space-y-8">
             <div>
-                <h2 className="text-3xl font-bold text-white">Overlay Library</h2>
-                <p className="text-md text-neutral-400">Modular overlay components - each can be positioned independently in OBS</p>
+                <h2 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>Overlay Library</h2>
+                <p className="text-md" style={{ color: 'var(--text-tertiary)' }}>Modular overlay components - each can be positioned independently in OBS</p>
                 {activeTournamentId && (
                     <p className="text-sm text-green-400 mt-2">✓ Active Tournament: {activeTournamentId}</p>
                 )}
             </div>
 
-            <div className="bg-neutral-800 p-6 rounded-lg border border-neutral-700 grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+            <div className="p-6 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-6 items-end" style={{
+              borderColor: 'var(--border-primary)',
+              border: `1px solid var(--border-primary)`,
+              backgroundColor: 'var(--surface-secondary)'
+            }}>
                  <div>
-                    <label htmlFor="search" className="block text-sm font-medium text-neutral-300 mb-1">Search Overlays</label>
-                    <input type="text" id="search" placeholder="Search by name or description..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary"/>
+                    <label htmlFor="search" className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Search Overlays</label>
+                    <input type="text" id="search" placeholder="Search by name or description..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{
+                      backgroundColor: 'var(--surface-elevated)',
+                      borderColor: 'var(--border-primary)',
+                      color: 'var(--text-primary)'
+                    }} className="w-full border rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary"/>
                 </div>
                 <div>
-                    <label htmlFor="filter-tag" className="block text-sm font-medium text-neutral-300 mb-1">Filter by Tag</label>
-                    <select id="filter-tag" value={selectedTag} onChange={e => setSelectedTag(e.target.value)} className="w-full bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary">
-                        {allTags.map(tag => <option key={tag} value={tag}>{tag}</option>)}
+                    <label htmlFor="filter-category" className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Filter by Category</label>
+                    <select id="filter-category" value={selectedTag} onChange={e => setSelectedTag(e.target.value)} style={{
+                      backgroundColor: 'var(--surface-elevated)',
+                      borderColor: 'var(--border-primary)',
+                      color: 'var(--text-primary)'
+                    }} className="w-full border rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary">
+                        {allCategories.map(category => <option key={category} value={category}>{category}</option>)}
                     </select>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredOverlays.map(overlay => {
-                    const overlayUrl = generateOverlayUrl(overlay);
-                    return (
-                        <div key={overlay.id} className="bg-neutral-800 rounded-lg border border-neutral-700 flex flex-col overflow-hidden group hover:border-cyan-500 transition-colors">
-                            <div className="relative">
-                                <img src={overlay.imageURL} alt={overlay.name} className="w-full h-40 object-cover" />
-                                <div className="absolute top-2 right-2 bg-neutral-900/80 backdrop-blur-sm text-xs px-2 py-1 rounded text-neutral-300">
-                                    {overlay.dimensions.width}x{overlay.dimensions.height}
-                                </div>
-                            </div>
-                            <div className="p-4 flex flex-col flex-grow">
-                                <h3 className="text-lg font-bold text-white">{overlay.name}</h3>
-                                <p className="text-sm text-neutral-400 mt-1 flex-grow">{overlay.description}</p>
-                                <div className="mt-4 flex flex-wrap gap-2">
-                                    {overlay.tags.map(tag => (
-                                        <span key={tag} className="inline-block bg-neutral-700 text-neutral-300 text-xs font-medium px-2.5 py-1 rounded-full">{tag}</span>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="p-4 bg-neutral-900/50 border-t border-neutral-700 space-y-2">
-                                <div className="flex gap-2">
-                                    {overlay.parameterSchema && (
-                                        <button
-                                            onClick={() => toggleEditor(overlay.id)}
-                                            className={`flex-1 flex items-center justify-center gap-2 font-bold py-2 px-4 rounded-md transition-colors text-sm ${
-                                                expandedEditor === overlay.id
-                                                    ? 'bg-brand-primary hover:bg-brand-primary/80 text-white'
-                                                    : 'bg-neutral-700 hover:bg-neutral-600 text-neutral-200'
-                                            }`}
+            {/* Table/List View */}
+            <div className="rounded-lg overflow-hidden" style={{
+                borderColor: 'var(--border-primary)',
+                border: `1px solid var(--border-primary)`,
+                backgroundColor: 'var(--surface-secondary)'
+            }}>
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead style={{ backgroundColor: 'var(--surface-elevated)' }}>
+                            <tr>
+                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)', width: '100px' }}>Preview</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)', width: '200px' }}>Name</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Description</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)', width: '150px' }}>Category</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)', width: '120px' }}>Dimensions</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)', width: '280px' }}>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody style={{ backgroundColor: 'var(--surface-secondary)' }}>
+                            {filteredOverlays.map((overlay, index) => {
+                                const overlayUrl = generateOverlayUrl(overlay);
+                                return (
+                                    <React.Fragment key={overlay.id}>
+                                        <tr
+                                            className="hover:bg-opacity-50 transition-colors"
+                                            style={{
+                                                borderTop: index !== 0 ? `1px solid var(--border-primary)` : 'none',
+                                                backgroundColor: 'var(--surface-secondary)'
+                                            }}
                                         >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                                            </svg>
-                                            {expandedEditor === overlay.id ? 'Hide' : 'Customize'}
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={() => handleCopy(overlayUrl)}
-                                        className={`flex-1 flex items-center justify-center gap-2 bg-neutral-600 hover:bg-neutral-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm ${
-                                            !overlay.parameterSchema ? 'flex-[2]' : ''
-                                        }`}
-                                    >
-                                        <CopyIcon className="h-4 w-4" />
-                                        {copiedUrl === overlayUrl ? 'Copied!' : 'Copy URL'}
-                                    </button>
-                                    <a
-                                        href={overlayUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm"
-                                    >
-                                        <ExternalLinkIcon className="h-4 w-4" />
-                                        Open
-                                    </a>
-                                </div>
-                                <details className="text-xs text-neutral-400">
-                                    <summary className="cursor-pointer hover:text-neutral-300">Show URL</summary>
-                                    <p className="mt-2 font-mono bg-neutral-800 p-2 rounded break-all">{overlayUrl}</p>
-                                </details>
-                            </div>
+                                            {/* Preview Thumbnail */}
+                                            <td className="px-4 py-3">
+                                                <img
+                                                    src={overlay.imageURL}
+                                                    alt={overlay.name}
+                                                    className="w-20 h-14 object-cover rounded border"
+                                                    style={{ borderColor: 'var(--border-primary)' }}
+                                                />
+                                            </td>
 
-                            {/* Parameter Editor */}
-                            {overlay.parameterSchema && expandedEditor === overlay.id && (
-                                <ParameterEditor
-                                    parameterSchema={overlay.parameterSchema}
-                                    values={customParams[overlay.id] || overlay.defaultParams}
-                                    onChange={(key, value) => handleParameterChange(overlay.id, key, value)}
-                                    onReset={() => handleResetParameters(overlay.id)}
-                                />
-                            )}
-                        </div>
-                    );
-                })}
+                                            {/* Name */}
+                                            <td className="px-4 py-3">
+                                                <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                                                    {overlay.name}
+                                                </div>
+                                            </td>
+
+                                            {/* Description */}
+                                            <td className="px-4 py-3">
+                                                <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
+                                                    {overlay.description}
+                                                </p>
+                                            </td>
+
+                                            {/* Category */}
+                                            <td className="px-4 py-3">
+                                                <span
+                                                    className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
+                                                    style={{
+                                                        backgroundColor: 'var(--surface-hover)',
+                                                        color: 'var(--text-secondary)'
+                                                    }}
+                                                >
+                                                    {overlay.category}
+                                                </span>
+                                            </td>
+
+                                            {/* Dimensions */}
+                                            <td className="px-4 py-3">
+                                                <span className="text-xs font-mono" style={{ color: 'var(--text-tertiary)' }}>
+                                                    {overlay.dimensions.width}×{overlay.dimensions.height}
+                                                </span>
+                                            </td>
+
+                                            {/* Actions */}
+                                            <td className="px-4 py-3">
+                                                <div className="flex gap-1.5 justify-end">
+                                                    {/* View Button */}
+                                                    <button
+                                                        onClick={() => setPreviewOverlay({ url: overlayUrl, name: overlay.name })}
+                                                        className="px-2.5 py-1.5 rounded text-xs font-medium transition-colors"
+                                                        style={{
+                                                            backgroundColor: 'var(--surface-elevated)',
+                                                            color: 'var(--text-primary)',
+                                                            border: `1px solid var(--border-primary)`
+                                                        }}
+                                                        title="Preview overlay"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                        </svg>
+                                                    </button>
+
+                                                    {/* Customize Button */}
+                                                    {overlay.parameterSchema && (
+                                                        <button
+                                                            onClick={() => toggleEditor(overlay.id)}
+                                                            className="px-2.5 py-1.5 rounded text-xs font-medium transition-colors"
+                                                            style={{
+                                                                backgroundColor: expandedEditor === overlay.id ? 'var(--brand-primary)' : 'var(--surface-elevated)',
+                                                                color: expandedEditor === overlay.id ? 'white' : 'var(--text-primary)',
+                                                                border: `1px solid ${expandedEditor === overlay.id ? 'var(--brand-primary)' : 'var(--border-primary)'}`
+                                                            }}
+                                                            title="Customize parameters"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
+
+                                                    {/* Copy URL Button */}
+                                                    <button
+                                                        onClick={() => handleCopy(overlayUrl)}
+                                                        className="px-2.5 py-1.5 rounded text-xs font-medium transition-colors"
+                                                        style={{
+                                                            backgroundColor: 'var(--surface-elevated)',
+                                                            color: 'var(--text-primary)',
+                                                            border: `1px solid var(--border-primary)`
+                                                        }}
+                                                        title="Copy overlay URL"
+                                                    >
+                                                        {copiedUrl === overlayUrl ? (
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                        ) : (
+                                                            <CopyIcon className="w-4 h-4" />
+                                                        )}
+                                                    </button>
+
+                                                    {/* Edit Button (Admin Only) */}
+                                                    {isAdmin && (
+                                                        <button
+                                                            onClick={() => setEditOverlay(overlay)}
+                                                            className="px-2.5 py-1.5 rounded text-xs font-medium transition-colors"
+                                                            style={{
+                                                                backgroundColor: 'var(--surface-elevated)',
+                                                                color: 'var(--text-primary)',
+                                                                border: `1px solid var(--border-primary)`
+                                                            }}
+                                                            title="Edit overlay (Admin)"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+
+                                        {/* Parameter Editor Row */}
+                                        {overlay.parameterSchema && expandedEditor === overlay.id && (
+                                            <tr style={{ backgroundColor: 'var(--surface-elevated)' }}>
+                                                <td colSpan={6} className="px-4 py-4" style={{ borderTop: `1px solid var(--border-primary)` }}>
+                                                    <ParameterEditor
+                                                        parameterSchema={overlay.parameterSchema}
+                                                        values={customParams[overlay.id] || overlay.defaultParams}
+                                                        onChange={(key, value) => handleParameterChange(overlay.id, key, value)}
+                                                        onReset={() => handleResetParameters(overlay.id)}
+                                                    />
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </React.Fragment>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Empty State */}
+                {filteredOverlays.length === 0 && (
+                    <div className="py-12 text-center" style={{ color: 'var(--text-tertiary)' }}>
+                        <svg className="mx-auto h-12 w-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p>No overlays found matching your filters.</p>
+                    </div>
+                )}
             </div>
+
+            {/* Preview Layer */}
+            {previewOverlay && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                    style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
+                    onClick={() => setPreviewOverlay(null)}
+                >
+                    <div className="relative w-full h-full max-w-7xl max-h-screen">
+                        {/* Close Button */}
+                        <button
+                            onClick={() => setPreviewOverlay(null)}
+                            className="absolute top-4 right-4 z-10 p-2 rounded-full transition-colors"
+                            style={{
+                                backgroundColor: 'var(--surface-secondary)',
+                                color: 'var(--text-primary)',
+                                border: `2px solid var(--border-primary)`
+                            }}
+                        >
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+
+                        {/* Overlay Name */}
+                        <div
+                            className="absolute top-4 left-4 z-10 px-4 py-2 rounded-lg"
+                            style={{
+                                backgroundColor: 'var(--surface-secondary)',
+                                border: `1px solid var(--border-primary)`
+                            }}
+                        >
+                            <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                                {previewOverlay.name}
+                            </p>
+                        </div>
+
+                        {/* Iframe */}
+                        <iframe
+                            src={previewOverlay.url}
+                            className="w-full h-full rounded-lg"
+                            style={{ border: `2px solid var(--border-primary)` }}
+                            title={`Preview: ${previewOverlay.name}`}
+                        />
+                    </div>
+                </div>
+            )}
 
             {!activeTournamentId && (
                 <div className="bg-yellow-900/20 border border-yellow-700/50 rounded-lg p-4">
@@ -698,6 +1067,15 @@ const OverlayDashboard: React.FC = () => {
                         ⚠️ No active tournament found. Overlay URLs will be generated without tournament ID. Start an auction in Auction Setup to auto-include tournament ID.
                     </p>
                 </div>
+            )}
+
+            {/* Edit Modal */}
+            {editOverlay && (
+                <OverlayEditModal
+                    overlay={editOverlay}
+                    onClose={() => setEditOverlay(null)}
+                    onSave={handleSaveOverlay}
+                />
             )}
         </div>
     );

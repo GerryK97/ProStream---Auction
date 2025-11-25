@@ -1,0 +1,4077 @@
+================================================================================
+                    PROSTREAM AUCTION MANAGEMENT SYSTEM
+                    COMPLETE USER DOCUMENTATION
+                    All Features & Functions Guide
+================================================================================
+
+Last Updated: 2025
+Application Version: Production-2 (Codex)
+Technology Stack: Next.js 15.5.6, React 19, MongoDB, Pusher
+
+================================================================================
+TABLE OF CONTENTS
+================================================================================
+
+1. APPLICATION OVERVIEW
+2. AUTHENTICATION & USER MANAGEMENT
+3. COMPLETE FEATURE SET BY AREA
+   A. Tournament Management
+   B. Player Management
+   C. Team Management
+   D. Auction Setup
+   E. Auction Control Panel
+   F. Overlay System (14+ Overlays)
+   G. Dashboard & Analytics
+4. USER WORKFLOWS
+5. TECHNICAL FEATURES
+6. PERMISSION MATRIX
+7. TROUBLESHOOTING & SUPPORT
+
+================================================================================
+1. APPLICATION OVERVIEW
+================================================================================
+
+WHAT IS PROSTREAM?
+------------------
+ProStream Auction Management System is a professional, full-featured platform
+for conducting live cricket/sports player auctions with real-time broadcasting
+capabilities. Designed for tournament organizers, franchises, and production
+teams who need to run seamless auctions with professional-grade streaming
+overlays.
+
+PRIMARY PURPOSE
+---------------
+• Conduct real-time player auctions with live bidding
+• Manage tournaments, teams, and player databases
+• Generate professional broadcast overlays for OBS/streaming
+• Track budgets, bids, and auction history in real-time
+• Provide synchronized data across all devices and screens
+
+USER TYPES AND ROLES
+--------------------
+
+1. ADMIN
+   - Full system access
+   - Manage all users, tournaments, teams, and players
+   - Access all features without restrictions
+   - User management and approval
+
+2. TOURNAMENT MANAGER
+   - Manage assigned tournaments
+   - Control auction flow (start/stop/restart)
+   - Manage players and teams for their tournaments
+   - Access auction control panel
+
+3. MASTER DATA MANAGER
+   - Manage master player and team databases
+   - Create, edit, and delete master data
+   - Import/export player and team data
+   - Cannot manage tournaments or run auctions
+
+4. TEAM MANAGER
+   - View assigned team information
+   - Monitor team budget and purchases
+   - Limited access to auction viewing
+
+5. PLAYER
+   - View player profile information
+   - Limited system access
+
+6. AUDIENCE
+   - View-only access (when approved)
+   - Requires admin approval after registration
+
+================================================================================
+2. AUTHENTICATION & USER MANAGEMENT
+================================================================================
+
+USER REGISTRATION (SIGN UP)
+----------------------------
+Location: /auth/signup
+
+PROCESS:
+1. Navigate to Sign Up page
+2. Fill out registration form:
+
+   USERNAME
+   - 3-50 characters
+   - Alphanumeric characters, hyphens (-), and underscores (_) allowed
+   - Must be unique
+
+   EMAIL
+   - Valid email format required
+   - Must be unique
+
+   PASSWORD
+   - Minimum 8 characters
+   - At least one uppercase letter (A-Z)
+   - At least one lowercase letter (a-z)
+   - At least one number (0-9)
+   - At least one special character (!@#$%^&*)
+
+   CONFIRM PASSWORD
+   - Must match password field
+
+   ACCOUNT TYPE (Role Selection):
+   • Audience (requires admin approval)
+   • Tournament Manager (auto-activated)
+   • Master Data Manager (auto-activated)
+   • Team Manager (auto-activated)
+   • Player (auto-activated)
+
+3. Submit registration
+4. FOR AUDIENCE ROLE: Wait for admin approval
+5. FOR OTHER ROLES: Auto-activated, proceed to login
+
+USER LOGIN
+----------
+Location: /auth/login
+
+PROCESS:
+1. Enter username and password
+2. Optional: Toggle password visibility (eye icon)
+3. Click "Login" button
+4. Redirected to homepage on successful login
+
+FEATURES:
+• Persistent session (stored in browser localStorage)
+• Auto-redirect if already logged in
+• Error messages for invalid credentials
+• Password visibility toggle
+
+USER MANAGEMENT (ADMIN ONLY)
+-----------------------------
+Location: /users
+
+VIEW USERS:
+• Active Users Tab: Shows all active users
+• Pending Approval Tab: Shows users waiting for approval
+• All Users Tab: Shows all users regardless of status
+
+USER ACTIONS:
+
+1. APPROVE USER (Pending users only)
+   - Click "Approve" button
+   - User status changes to Active
+   - User can now log in
+
+2. REJECT USER (Pending users only)
+   - Click "Reject" button
+   - User account is permanently deleted
+
+3. EDIT USER
+   - Click edit icon (pencil)
+   - Modify:
+     * Email address
+     * User role
+     * Account status (Active/Suspended/Pending Approval)
+     * Assigned Tournaments (checkbox list)
+   - Save changes
+
+4. DELETE USER
+   - Click delete icon (trash)
+   - Confirm deletion
+   - User permanently removed from system
+
+5. CREATE NEW USER (INVITE)
+   - Click "+ Invite User" button
+   - Fill invitation form:
+     * Username
+     * Email
+     * Password
+     * Role selection
+   - User created immediately (no approval needed)
+
+================================================================================
+3. COMPLETE FEATURE SET BY AREA
+================================================================================
+
+--------------------------------------------------------------------------------
+A. TOURNAMENT MANAGEMENT
+--------------------------------------------------------------------------------
+Location: /manage/tournaments
+
+CREATING TOURNAMENTS
+--------------------
+
+PROCESS:
+1. Navigate to Management Dashboard → Tournaments
+2. Fill out tournament creation form:
+
+   BASIC INFORMATION:
+   • Tournament Name (required) - e.g., "IPL 2025"
+   • Budget Per Team (required) - Total money each team receives
+   • Squad Size (required) - Number of players per team
+   • Base Price Per Player (required) - Minimum bid amount
+   • Tournament Logo (optional) - Upload image via Cloudinary
+
+3. ADVANCED: PLAYER CLASSES (Optional Feature)
+
+   Enable "Player Classes" checkbox to activate
+
+   OPTIONS:
+   • Load Defaults: Pre-populate with Icon, Platinum, Gold, Silver, Bronze
+   • Add Custom Classes: Define your own classification system
+
+   FOR EACH CLASS:
+   • Code (required) - 1-10 characters, unique identifier (e.g., "ICO", "PT")
+   • Name (required) - Display name (e.g., "Icon Player")
+   • Base Price (optional) - Overrides tournament base price for this class
+   • Color (required) - Hex color picker for visual identification
+   • Icon (optional) - 1-2 character emoji/symbol for badges
+   • Order (required) - Determines display sequence (1, 2, 3, etc.)
+
+4. BASE PRICE STRATEGY (When player classes enabled):
+   • Tournament Level: All players use same base price
+   • Player Class Based: Each class has its own base price
+
+5. Click "Create Tournament"
+
+TOURNAMENT STATUS WORKFLOW
+---------------------------
+Draft → Setup → Live → Stopped → Completed → Archived
+
+STATUS DEFINITIONS:
+• Draft: Initial creation state
+• Setup: Ready for team/player assignment
+• Live: Auction is actively running
+• Stopped: Auction paused temporarily
+• Completed: All players sold
+• Archived: Tournament archived for historical records
+
+EDITING TOURNAMENTS
+-------------------
+1. Click edit icon (pencil) on existing tournament
+2. Modify any tournament settings:
+   - Basic information
+   - Budget, squad size, base price
+   - Player classes (add/remove/modify)
+3. Click "Save Changes"
+
+DELETING TOURNAMENTS
+--------------------
+1. Click delete icon (trash)
+2. Confirm deletion
+3. WARNING: All associated data is permanently deleted:
+   - Teams registered in tournament
+   - Players registered in tournament
+   - Auction state and history
+   - Sold player records
+
+TOURNAMENT LIST VIEW
+--------------------
+DISPLAY INFORMATION:
+• Tournament logo thumbnail
+• Tournament name
+• Status badge (color-coded)
+• Budget per team (formatted currency)
+• Squad size (number of players)
+• Base price per player
+• Edit and delete action buttons
+
+TOURNAMENT FILTERING
+--------------------
+• Search by tournament name
+• Filter by status (All/Draft/Setup/Live/Stopped/Completed/Archived)
+• Sort by creation date
+
+--------------------------------------------------------------------------------
+B. PLAYER MANAGEMENT
+--------------------------------------------------------------------------------
+Location: /manage/players
+
+MASTER PLAYER DATABASE CONCEPT
+-------------------------------
+Master Players are global player profiles that can be reused across multiple
+tournaments. Creating a master player once allows you to add them to any
+tournament without re-entering data.
+
+ADDING PLAYERS (INDIVIDUAL)
+----------------------------
+
+PROCESS:
+1. Click "+ Add Player" button
+2. Fill out player creation form:
+
+   REQUIRED FIELDS:
+   • Player Name - Full name
+   • Position - Select from dropdown:
+     - Batsman
+     - Bowler
+     - All-rounder
+     - Wicket-keeper
+   • Current Club - Team/franchise name
+
+   OPTIONAL FIELDS:
+   • Suggested Class - For tournaments with player classes
+   • Career Statistics:
+     - Matches Played (number)
+     - Total Score (runs)
+     - Total Wickets (number)
+   • Player Photo - Upload image or enter URL
+     - Supports: JPG, PNG, GIF
+     - Uploaded to Cloudinary
+     - Or paste direct image URL
+
+3. Click "Add Player"
+4. Player added to master database
+5. Auto-assigned unique Player ID
+
+BULK PLAYER UPLOAD
+-------------------
+
+PROCESS:
+1. Click "Bulk Upload" button
+2. DOWNLOAD TEMPLATE:
+   - Click "Download Excel Template"
+   - Template includes columns:
+     * Name (required)
+     * Position (required): Batsman/Bowler/All-rounder/Wicket-keeper
+     * Current Club (required)
+     * Matches Played (optional)
+     * Total Score (optional)
+     * Total Wickets (optional)
+     * Photo URL (optional)
+     * Suggested Class (optional)
+
+3. FILL TEMPLATE:
+   - Open in Microsoft Excel or Google Sheets
+   - Enter player data row by row
+   - Save as .xlsx file
+
+4. UPLOAD FILE:
+   - Click "Choose File" button or drag and drop
+   - Select filled template
+   - Click "Upload Players" button
+   - System validates and imports data
+
+5. REVIEW RESULTS:
+   - Success count displayed
+   - Error count displayed (if any)
+   - Duplicate players automatically detected and skipped
+   - Validation errors shown for invalid data
+
+PLAYER LIST FEATURES
+--------------------
+
+VIEW OPTIONS:
+Table View shows all master players with columns:
+• Player ID (auto-generated unique identifier)
+• Player Photo (thumbnail, 40×40px)
+• Player Name
+• Position (badge with icon)
+• Current Club
+• Career Statistics:
+  - Matches Played
+  - Total Score (runs)
+  - Total Wickets
+• Action Buttons (Edit, Delete)
+
+PLAYER ACTIONS:
+
+1. EDIT PLAYER
+   - Click edit icon (pencil)
+   - Modify player details
+   - Save changes
+   - Updates reflected in all tournaments using this player
+
+2. DELETE PLAYER
+   - Click delete icon (trash)
+   - Confirm deletion
+   - Removes from master database
+   - Does NOT remove from existing tournaments (data preserved)
+
+3. DOWNLOAD LIST
+   - Click "Download List" button
+   - Exports all master players to Excel
+   - Includes all fields
+   - Formatted for readability
+
+4. CLEAR ALL PLAYERS
+   - Click "Clear All" button
+   - Confirm action
+   - Deletes all master players
+   - WARNING: Cannot be undone
+
+SEARCH & FILTER
+---------------
+• Search by player name
+• Filter by position (All/Batsman/Bowler/All-rounder/Wicket-keeper)
+• Filter by club
+• Real-time search results
+
+--------------------------------------------------------------------------------
+C. TEAM MANAGEMENT
+--------------------------------------------------------------------------------
+Location: /manage/teams
+
+MASTER TEAM DATABASE CONCEPT
+-----------------------------
+Similar to master players, master teams are global team profiles that can be
+reused across multiple tournaments.
+
+CREATING TEAMS
+--------------
+
+PROCESS:
+1. Click "+ Add New Team (Global)" button
+2. Fill team creation form:
+
+   REQUIRED FIELDS:
+   • Team Name - Full team name (e.g., "Mumbai Indians")
+   • Short Code - 2-5 character abbreviation (e.g., "MI", "CSK")
+   • Owner Name - Team owner/franchise owner name
+
+   OPTIONAL FIELDS:
+   • Team Logo - Upload image or enter URL
+     - Supports: JPG, PNG, GIF
+     - Uploaded to Cloudinary
+     - Or paste direct image URL
+
+3. Click "Create Team"
+4. Team added to master database
+5. Auto-assigned unique Team ID
+
+TEAM LIST
+---------
+
+DISPLAY INFORMATION:
+• Team logo thumbnail (50×50px)
+• Team name
+• Owner name
+• Short code (badge)
+• Edit and delete action buttons
+
+TEAM ACTIONS:
+
+1. EDIT TEAM
+   - Click edit icon (pencil)
+   - Modify team details:
+     * Team name
+     * Short code
+     * Owner name
+     * Team logo
+   - Save changes
+
+2. DELETE TEAM
+   - Click delete icon (trash)
+   - Confirm deletion
+   - Removes from master database
+   - Does NOT remove from existing tournaments
+
+3. CLEAR ALL TEAMS
+   - Click "Clear All" button
+   - Confirm action
+   - Deletes all master teams
+   - WARNING: Cannot be undone
+
+SEARCH & FILTER
+---------------
+• Search by team name
+• Search by owner name
+• Search by short code
+• Real-time search results
+
+--------------------------------------------------------------------------------
+D. AUCTION SETUP
+--------------------------------------------------------------------------------
+Location: /auction/setup
+
+TOURNAMENT SELECTION
+--------------------
+
+PROCESS:
+1. SELECT TOURNAMENT:
+   - Dropdown menu shows all available tournaments
+   - Displays tournament details:
+     * Tournament name
+     * Current status (badge)
+     * Budget per team
+     * Squad size
+     * Base price per player
+     * Tournament ID
+
+2. VIEW TOURNAMENT INFO:
+   - Full tournament configuration displayed
+   - Status information
+   - Player class details (if enabled)
+
+ADDING PLAYERS TO TOURNAMENT
+-----------------------------
+
+METHOD 1: ADD FROM MASTER DATABASE
+
+PROCESS:
+1. Click "+ Add Players" button
+2. Player selection modal opens
+
+3. SEARCH AND FILTER:
+   - Search bar filters by:
+     * Player name
+     * Position
+     * Current club
+   - Shows only available players (not already in tournament)
+   - Displays current player count
+
+4. SELECT PLAYER:
+   - View player card with:
+     * Player photo
+     * Name and position
+     * Career statistics
+     * Current club
+
+   - IF TOURNAMENT USES PLAYER CLASSES:
+     * Player class dropdown appears
+     * Suggested class pre-selected (if available)
+     * Can override suggested class
+     * Required to proceed
+
+5. Click "Add Player" button
+6. Player added to tournament with:
+   - Auto-assigned sequential player number (#001, #002, etc.)
+   - Player class (if applicable)
+   - Status: AVAILABLE
+   - Base price from class or tournament
+
+METHOD 2: BULK ADD FROM MASTER DATABASE
+
+PROCESS:
+1. Click "Bulk Add" button
+2. Download tournament-specific template
+3. Template includes:
+   - Player ID column (from master database)
+   - Player Class column (if tournament uses classes)
+4. Fill template with player IDs
+5. Upload completed template
+6. System validates and imports:
+   - Checks player IDs exist in master database
+   - Validates player classes (if applicable)
+   - Assigns sequential player numbers
+   - Reports success/error counts
+
+METHOD 3: CREATE NEW PLAYER
+
+PROCESS:
+1. From player selection modal, click "+ Create New" button
+2. Player creation form opens
+3. Fill player details (same as master player creation)
+4. Click "Create and Add"
+5. Player created in master database AND added to tournament
+6. Assigned sequential player number
+
+ADDING TEAMS TO TOURNAMENT
+---------------------------
+
+PROCESS:
+1. Click "+ Add Teams" button
+2. Team selection modal opens
+
+3. SEARCH AND SELECT:
+   - Search by team name or owner
+   - Shows only available teams (not already in tournament)
+   - View team details:
+     * Team logo
+     * Team name
+     * Owner name
+     * Short code
+
+4. Click "Add Team" button
+
+5. TEAM INITIALIZATION:
+   - Initial budget set (from tournament configuration)
+   - Current balance equals initial budget
+   - Players purchased count: 0
+   - Empty purchased players list
+   - Status: Active
+
+6. Team added to tournament teams list
+
+MANAGING TOURNAMENT DATA
+-------------------------
+
+REGISTERED PLAYERS PANEL:
+
+DISPLAY:
+• Total player count
+• Player list with:
+  - Player number (sequential: #001, #002, #003, etc.)
+  - Player photo thumbnail
+  - Player name
+  - Player class badge (if applicable)
+  - Position badge
+  - Match count
+  - Status badge (AVAILABLE/SOLD)
+  - Remove button
+
+ACTIONS:
+1. REMOVE PLAYER
+   - Click remove icon (X)
+   - Confirm removal
+   - Player removed from tournament
+   - Does NOT delete from master database
+   - Player number gap created (can be renumbered)
+
+2. EXPORT TO EXCEL
+   - Click "Export to Excel" button
+   - Downloads Excel file with:
+     * All player data
+     * Player numbers
+     * Classes (if applicable)
+     * Sold status
+     * Final prices (if sold)
+     * Winning teams (if sold)
+
+3. CLEAR ALL PLAYERS
+   - Click "Clear All" button
+   - Confirm action
+   - Removes all players from tournament
+   - Resets auction state
+
+REGISTERED TEAMS PANEL:
+
+DISPLAY:
+• Total team count
+• Team list with:
+  - Team logo
+  - Team name
+  - Initial budget (formatted currency)
+  - Current balance (formatted currency)
+  - Players purchased count / Squad size
+  - Remove button
+
+ACTIONS:
+1. REMOVE TEAM
+   - Click remove icon (X)
+   - Confirm removal
+   - Team removed from tournament
+   - WARNING: If team has purchased players, they become available again
+
+2. CLEAR ALL TEAMS
+   - Click "Clear All" button
+   - Confirm action
+   - Removes all teams from tournament
+   - All sold players reset to available
+
+STARTING THE AUCTION
+---------------------
+
+PRE-REQUISITES:
+• At least 2 teams registered in tournament
+• At least 1 player registered in tournament
+• Tournament status: Draft or Setup
+
+PROCESS:
+1. Click "Start Auction" button
+2. System validation:
+   - Checks team count (minimum 2)
+   - Checks player count (minimum 1)
+   - Verifies tournament status
+
+3. AUCTION INITIALIZATION:
+   - Tournament status changes to "Live"
+   - Auction state created/initialized:
+     * Current Player ID: null
+     * Current Bid: 0
+     * Winning Team ID: null
+     * Current Auction Status: "Pending"
+     * History: [] (empty)
+
+4. REAL-TIME BROADCAST:
+   - State broadcast via Pusher
+   - All connected clients receive update:
+     * Auction control panels
+     * Overlay displays
+     * Monitoring screens
+
+5. Success notification displayed
+6. "Go to Auction Control" button appears
+7. Auto-redirect option to /auction
+
+OTHER AUCTION CONTROLS:
+
+1. STOP AUCTION
+   - Click "Stop Auction" button
+   - Tournament status changes to "Stopped"
+   - Current state preserved
+   - All modifications prevented
+   - Can be restarted later
+
+2. RESTART AUCTION
+   - Available when status is "Stopped"
+   - Click "Restart Auction" button
+   - Tournament status changes back to "Live"
+   - Previous state restored
+   - Bidding can resume
+
+3. ARCHIVE TOURNAMENT
+   - Available when auction is completed
+   - Click "Archive Tournament" button
+   - Tournament status changes to "Archived"
+   - Read-only mode
+   - Historical record preserved
+
+--------------------------------------------------------------------------------
+E. AUCTION CONTROL PANEL
+--------------------------------------------------------------------------------
+Location: /auction
+
+REAL-TIME AUCTION INTERFACE
+----------------------------
+
+LAYOUT:
+┌─────────────────────────────────────────────────────────────────┐
+│ HEADER: Tournament Info, Status Indicators, Controls            │
+├──────────────┬──────────────────────────┬─────────────────────┤
+│              │                          │                     │
+│  AVAILABLE   │   CURRENT AUCTION        │   TEAMS & SOLD      │
+│  PLAYERS     │   (CENTER PANEL)         │   PLAYERS           │
+│  (LEFT)      │                          │   (RIGHT)           │
+│              │                          │                     │
+└──────────────┴──────────────────────────┴─────────────────────┘
+
+HEADER SECTION
+--------------
+
+TOURNAMENT INFORMATION:
+• Tournament name (large, prominent)
+• Budget per team (formatted)
+• Squad size
+• Base price per player
+• Player classes info (if applicable)
+
+STATUS INDICATORS:
+• LIVE INDICATOR:
+  - Green pulsing dot when auction is live
+  - Yellow dot when auction is stopped
+  - Gray dot when auction is pending
+
+• CONNECTION STATUS:
+  - Green dot: Connected to Pusher
+  - Red dot: Disconnected from Pusher
+  - Auto-reconnect on disconnect
+
+• AUCTION STATUS:
+  - "Pending" - No active player
+  - "Bidding" - Active bidding in progress
+  - "Sold" - Player just sold
+
+CONTROL BUTTONS:
+• Stop Auction (when live)
+• Restart Auction (when stopped)
+• Refresh Data
+• Export Data
+
+AVAILABLE PLAYERS PANEL (LEFT)
+-------------------------------
+
+FEATURES:
+• Search bar with real-time filtering
+  - Filters by player name
+  - Case-insensitive search
+  - Instant results
+
+• Player count display
+  - Shows total available players
+  - Updates as players are sold
+
+PLAYER LIST:
+Each player card shows:
+• Player number badge (#001, #002, etc.)
+• Player name (bold)
+• Player class badge (if applicable, color-coded)
+• Position badge (icon + text)
+• "Auction" button
+
+STARTING A PLAYER AUCTION:
+1. Locate player in list (use search if needed)
+2. Click "Auction" button next to player name
+3. Player immediately moves to center panel
+4. Current bid set to base price (from class or tournament)
+5. Auction status changes to "Bidding"
+6. Real-time broadcast via Pusher to all clients
+7. Player removed from available list
+
+RESTRICTIONS:
+• Cannot select new player while current auction is active
+• Must either sell or reset current player first
+• "Auction" buttons disabled during active auction
+
+CURRENT AUCTION PANEL (CENTER)
+-------------------------------
+
+WHEN NO PLAYER SELECTED:
+• Placeholder message: "Select a player to start the auction"
+• Large icon/illustration
+• Instructions for starting auction
+
+WHEN PLAYER SELECTED:
+
+PLAYER DISPLAY:
+• Large player photo (300×400px)
+• Player number badge (top-left corner)
+• Player name (large, bold)
+• Player class badge (if applicable, prominent)
+• Position badge with icon
+• Current club information
+
+BIDDING DISPLAY:
+• CURRENT BID:
+  - Very large number display
+  - Color-coded:
+    * Green: Active bidding
+    * Yellow: Near base price
+    * Red: High bid
+  - Formatted currency
+  - Animation on bid change
+
+• BASE PRICE DISPLAY:
+  - Smaller text below current bid
+  - "Base Price: XXX" label
+
+BIDDING CONTROLS:
+
+QUICK BID BUTTONS:
+Pre-set increment buttons arranged horizontally:
+• +1,000    (₹1,000 increment)
+• +5,000    (₹5,000 increment)
+• +10,000   (₹10,000 increment)
+• +25,000   (₹25,000 increment)
+• +50,000   (₹50,000 increment)
+
+FUNCTIONALITY:
+- Single click to place bid
+- Adds increment to current bid (or starts from base if first bid)
+- Auto-submits bid immediately
+- Visual feedback on click
+- Disabled during submission
+- Disabled if player sold
+
+CUSTOM BID INPUT:
+• Number input field
+• Pre-filled with suggested next increment
+• Placeholder shows minimum bid
+• "Set Custom Bid" button
+• Validation:
+  - Must be greater than current bid
+  - Must be numeric
+  - Cannot be negative
+• Error messages for invalid amounts
+
+BID SUBMISSION PROCESS:
+1. User clicks quick bid button OR enters custom amount
+2. System validates bid amount
+3. Current bid updated immediately
+4. Visual feedback (pulse animation)
+5. Broadcast via Pusher to all clients
+6. All overlays update in real-time
+7. Success notification (subtle)
+
+FINALIZING SALE:
+
+WINNING TEAM SELECTION:
+• Dropdown menu showing all registered teams
+• Displays:
+  - Team logo (small)
+  - Team name
+  - Current balance
+  - Warning if insufficient funds
+• Default: First team in list
+• Can change before selling
+• Required to sell player
+
+SELL PLAYER BUTTON:
+• Large, prominent green button
+• Text: "Sell Player to [Team Name]"
+• Requirements to enable:
+  - Current bid > 0
+  - Winning team selected
+  - Auction status not "Sold"
+
+SALE PROCESS:
+1. Click "Sell Player" button
+2. Confirmation dialog (optional)
+3. System processes sale:
+
+   a. UPDATE PLAYER:
+      - Set isSold = true
+      - Set finalPrice = current bid
+      - Set winningTeamId = selected team
+      - Set soldTimestamp = current time
+
+   b. UPDATE TEAM:
+      - Decrease current balance by final price
+      - Increment players purchased count
+      - Add player to team's purchased players array
+
+   c. UPDATE AUCTION STATE:
+      - Set current auction status to "Sold"
+      - Clear current player
+      - Reset current bid to 0
+      - Add sale to history array
+
+   d. BROADCAST UPDATE:
+      - Pusher event to all clients
+      - All overlays update instantly
+      - Sale banner appears (if overlay active)
+
+4. Visual feedback:
+   - Success message
+   - Confetti animation (optional)
+   - Player moves to sold list
+   - Teams panel updates
+
+5. Auction ready for next player
+
+RESET BUTTON:
+• Red button, secondary action
+• Text: "Reset"
+• Functionality:
+  - Clears current auction
+  - Returns player to available pool
+  - Resets current bid to 0
+  - Changes auction status to "Pending"
+  - Broadcasts reset via Pusher
+• Confirmation required
+• Use case: Starting player auction by mistake
+
+UNDO LAST SALE BUTTON:
+• Located in Teams/Sold panel (also in center panel)
+• Text: "Undo Last Sale"
+• Functionality:
+  - Reverses most recent sale
+  - Restores player to available pool
+  - Refunds team budget
+  - Decrements team player count
+  - Removes from sale history
+  - Broadcasts undo via Pusher
+• Only available if sales exist
+• Confirmation required
+
+TEAMS & SOLD PLAYERS PANEL (RIGHT)
+-----------------------------------
+
+TEAMS SECTION:
+
+HEADER:
+• "Teams" title
+• Team count display
+• Refresh button
+
+TEAM CARDS:
+Each team displays:
+• Team logo (60×60px)
+• Team name (bold)
+• CURRENT BALANCE:
+  - Large, prominent number
+  - Formatted currency
+  - Color-coded:
+    * Green: Healthy balance
+    * Yellow: Medium balance
+    * Red: Low balance
+  - Progress bar (optional)
+
+• MAX BID AMOUNT:
+  - Calculated value
+  - Formula: current balance - (remaining slots × base price)
+  - If last slot: entire balance available
+  - Labeled: "Max Bid: XXX"
+  - Color-coded based on viability
+
+• PLAYERS PURCHASED:
+  - "X / Y" format (e.g., "5 / 25")
+  - Progress indicator
+  - Color changes when approaching squad size
+
+• WARNING INDICATORS:
+  - ⚠️ Insufficient funds for remaining slots
+  - 🚫 Cannot afford any more players
+  - ✓ Healthy budget status
+
+VISUAL HIGHLIGHTING:
+• WINNING TEAM (current auction):
+  - Animated border (pulsing)
+  - Highlighted background
+  - Different shadow/glow effect
+  - Stands out from other teams
+
+• LOW BALANCE TEAMS:
+  - Yellow/orange tint
+  - Warning icon
+
+• FULL SQUAD TEAMS:
+  - Green checkmark
+  - "Squad Complete" badge
+  - Different card style
+
+MAX BID CALCULATION DETAILS:
+Example:
+- Current balance: ₹50,000,000
+- Squad size: 25 players
+- Players purchased: 20
+- Remaining slots: 5
+- Base price: ₹1,000,000
+- Max bid = ₹50,000,000 - (5 × ₹1,000,000) = ₹45,000,000
+
+Special case (last player):
+- Remaining slots: 1
+- Max bid = entire current balance
+
+SOLD PLAYERS SECTION:
+
+HEADER:
+• "Sold Players" title
+• Sold count display
+• "Undo Last Sale" button
+• "Clear All" button
+
+SOLD PLAYERS LIST:
+Shows recent sales in reverse chronological order (newest first)
+
+Each sale entry displays:
+• Player photo (small, 40×40px)
+• Player name with class badge
+• Final price (large, colored)
+• Team name (with team logo)
+• Sale timestamp (relative time, e.g., "2 min ago")
+
+FEATURES:
+• Scrollable list (if many sales)
+• Newest sale at top with highlight
+• Animation when new sale added
+• Click to view details (optional)
+
+ACTIONS:
+1. UNDO LAST SALE
+   - Reverses most recent sale
+   - Same functionality as center panel undo
+
+2. CLEAR ALL SALES
+   - Resets all sales in auction
+   - All players return to available
+   - All team budgets restored
+   - Confirmation required (serious action)
+
+AUCTION STATUS MESSAGES
+------------------------
+
+WHEN AUCTION STOPPED:
+• Yellow banner notification across top
+• Message: "Auction is currently stopped"
+• "Restart Auction" button visible
+• All modifications disabled
+• Can view current state
+• Cannot select players, place bids, or sell
+
+WHEN PUSHER DISCONNECTED:
+• Red banner notification
+• Message: "Connection lost - attempting to reconnect"
+• Auto-reconnect in progress
+• Manual reconnect button
+• Recent changes may not be visible
+
+WHEN ALL PLAYERS SOLD:
+• Green success banner
+• Message: "Auction Complete! All players sold"
+• Statistics summary
+• Export options
+• Archive tournament option
+
+REAL-TIME UPDATES (PUSHER INTEGRATION)
+---------------------------------------
+
+ALL CHANGES BROADCAST INSTANTLY:
+• Player selection → All clients see selected player
+• Bid placement → All clients see updated bid
+• Player sold → All clients see sale completion
+• Team budget updates → All clients see new balances
+• Auction status changes → All clients see status
+• Player reset → All clients see reset state
+
+EVENTS SUBSCRIBED:
+• auction-state-updated
+• player-selected
+• bid-placed
+• player-sold
+• auction-status-changed
+• team-updated
+
+CONNECTION MONITORING:
+• Green dot in header: Connected
+• Red dot in header: Disconnected
+• Auto-reconnect on disconnect
+• Exponential backoff retry strategy
+• Manual reconnect button
+
+SYNC GUARANTEES:
+• All connected clients see same state within 100-500ms
+• Conflict resolution via timestamp
+• Last-write-wins strategy
+• Server is source of truth
+
+KEYBOARD SHORTCUTS (Optional Feature)
+--------------------------------------
+• Space: Quick bid (+10,000)
+• Enter: Sell player
+• Esc: Reset current auction
+• Arrow Up: Next quick bid amount
+• Arrow Down: Previous quick bid amount
+• 1-5: Quick bid buttons 1-5
+
+--------------------------------------------------------------------------------
+F. OVERLAY SYSTEM (14+ PROFESSIONAL OVERLAYS)
+--------------------------------------------------------------------------------
+Location: /overlays
+
+OVERVIEW
+--------
+ProStream provides 14+ professional broadcast overlays that can be added to
+OBS (Open Broadcaster Software) as Browser Sources. All overlays sync in
+real-time with auction data via Pusher WebSocket connection.
+
+OVERLAY DASHBOARD FEATURES
+---------------------------
+
+LAYOUT:
+• Search bar (filters overlays by name/description)
+• Category filter dropdown
+• Table/List view of all overlays
+
+TABLE COLUMNS:
+• Preview thumbnail
+• Overlay name
+• Description
+• Category badge
+• Dimensions (width × height)
+• Action buttons:
+  - View (eye icon) - Opens fullscreen preview
+  - Customize (settings icon) - Opens parameter editor
+  - Copy URL (clipboard icon) - Copies overlay URL
+  - Edit (pencil icon) - Admin only, edit overlay metadata
+
+CATEGORIES:
+• Player Display
+• Team Display
+• Ticker
+• Auction Info
+• Statistics
+• Notifications
+• Full Screen
+
+================================================================================
+AVAILABLE OVERLAY TYPES (14 OVERLAYS)
+================================================================================
+
+--------------------------------------------------------------------------------
+1. PLAYER CARD
+--------------------------------------------------------------------------------
+Route: /overlays/player-card
+Description: Basic player display during auction
+Dimensions: 800×300px
+Category: Player Display
+
+PARAMETERS:
+• size: small | medium | large
+• position: top | center | bottom
+
+DISPLAYS:
+• Player photo
+• Player name
+• Player stats (matches, score, wickets)
+• Current bid amount
+• Position badge
+
+USE CASE:
+Simple, clean player display for basic broadcasts
+
+--------------------------------------------------------------------------------
+2. PREMIUM PLAYER CARD
+--------------------------------------------------------------------------------
+Route: /overlays/premium-player-card
+Description: Stylish premium card with gradient backgrounds and full customization
+Dimensions: 380×650px
+Category: Player Display
+
+PARAMETERS (30+ CUSTOMIZABLE OPTIONS):
+
+VISIBILITY CONTROLS:
+• showPlayerImage: true | false
+• showBackgroundText: true | false
+• showJerseyNumber: true | false
+• showDecorativeBadges: true | false
+• showPlayerName: true | false
+• showRoleLabel: true | false
+• showStatsSection: true | false
+• showIndividualStats: true | false (matches, score, wickets)
+
+COLOR CUSTOMIZATION:
+• gradientStart: hex color (e.g., #ff5411)
+• gradientEnd: hex color (e.g., #ffcc00)
+• cardBackground: hex color
+• playerNameColor: hex color
+• statValuesColor: hex color
+• statLabelsColor: hex color
+• jerseyBadgeGradientStart: hex color
+• jerseyBadgeGradientEnd: hex color
+• decorativeBadgeColor: hex color
+• watermarkColor: hex color
+
+LAYOUT CONTROLS:
+• cardSize: small | medium | large
+• borderRadius: none | small | medium | large
+• opacity: 0-100 (percentage)
+• position: center | left | right
+
+CONTENT CUSTOMIZATION:
+• roleLabel: text (e.g., "Player", "Star", "Legend")
+• watermarkLine1: text (background watermark)
+• watermarkLine2: text (background watermark)
+• usePlayerNameAsWatermark: true | false
+
+DISPLAYS:
+• Large player photo with frame
+• Player number (jersey style badge with gradient)
+• Player name (customizable color/position)
+• Role label badge
+• Stats section with 3 metrics
+• Decorative corner badges
+• Background watermark text
+• Gradient card background
+
+USE CASE:
+High-end production, premium broadcasts, detailed player showcases
+
+--------------------------------------------------------------------------------
+3. TEAM CARDS
+--------------------------------------------------------------------------------
+Route: /overlays/teams
+Description: Shows all teams with real-time balance, max bid, and players count
+Dimensions: 1200×200px (varies by layout)
+Category: Team Display
+
+PARAMETERS:
+
+LAYOUT & POSITION:
+• layout: horizontal | vertical | grid
+• position: top | bottom | left | right
+
+THEME:
+• themeVariant: neonPulse | emberPulse
+
+BACKGROUND STYLING:
+• useGradient: true | false
+• cardBackground: hex color (solid color when gradient off)
+• gradientStart: hex color
+• gradientEnd: hex color
+• backgroundOpacity: 10-100 (percentage)
+
+BORDERS & CORNERS:
+• borderColor: hex color
+• borderRadius: 0-48 (pixels)
+• winningBorderColor: hex color (for team currently winning auction)
+
+TYPOGRAPHY & COLORS:
+• teamNameColor: hex color
+• balanceColor: hex color
+• statsColor: hex color (players count, etc.)
+• maxBidColor: hex color
+
+DISPLAYS FOR EACH TEAM:
+• Team logo
+• Team name
+• Current balance (large, formatted)
+• Max bid amount (calculated)
+• Players purchased / Squad size
+• Winning team highlight (animated border/glow)
+
+REAL-TIME UPDATES:
+• Balance decreases when player sold
+• Players count increments
+• Winning team highlighted during active auction
+• Visual warnings for low balance
+
+USE CASE:
+Main team overview for broadcasts, shows all teams at once
+
+--------------------------------------------------------------------------------
+4. TEAM CARDS · NEON PULSE (PRESET)
+--------------------------------------------------------------------------------
+Route: /overlays/teams?themeVariant=neonPulse
+Description: Pre-configured glassmorphism preset with neon effects
+Dimensions: 1280×720px
+Category: Team Display
+
+PRE-CONFIGURED FEATURES:
+• Glassmorphism card effect
+• Cyan/purple neon glow
+• Particle grid background
+• Animated balance highlights
+• Pulsing glow on active team
+• Horizontal layout at bottom
+
+USE CASE:
+Modern, gaming-style broadcasts
+
+--------------------------------------------------------------------------------
+5. TEAM CARDS · EMBER PULSE (PRESET)
+--------------------------------------------------------------------------------
+Route: /overlays/teams?themeVariant=emberPulse
+Description: Pre-configured molten ember preset with warm gradients
+Dimensions: 1280×720px
+Category: Team Display
+
+PRE-CONFIGURED FEATURES:
+• Warm orange/red gradients
+• "Last Sold" badge
+• Heatwave animation effect
+• Badge glow animation
+• Horizontal layout at bottom
+
+USE CASE:
+Energetic, warm-toned broadcasts
+
+--------------------------------------------------------------------------------
+6. SOLD PLAYERS TICKER
+--------------------------------------------------------------------------------
+Route: /overlays/ticker
+Description: Continuous scrolling ticker showing all sold players
+Dimensions: 1920×60px
+Category: Ticker
+
+PARAMETERS:
+• speed: slow (60s) | medium (30s) | fast (15s)
+• position: top | bottom
+
+DISPLAYS:
+• Player name
+• Final price (formatted)
+• Team name
+• Team logo
+• Continuous horizontal scroll (seamless loop)
+
+ANIMATION:
+• Linear infinite scroll
+• Duplicated content for seamless loop
+• No gaps between cycles
+
+USE CASE:
+Background ticker during breaks, shows auction summary
+
+--------------------------------------------------------------------------------
+7. PREMIUM BREAKING NEWS TICKER
+--------------------------------------------------------------------------------
+Route: /overlays/premium-ticker
+Description: Single player display with slide transitions, breaking news style
+Dimensions: 1920×40px
+Category: Ticker
+
+PARAMETERS:
+• size: small | default | large
+• effect: slide-h | slide-v | fade
+• color: blue | green | purple | orange | yellow
+• autoplay: true | false
+• timer: 1000-30000 (milliseconds, time per player)
+• border: true | false
+• position: top | bottom
+
+DISPLAYS:
+• "SOLD PLAYERS" title section with arrow decoration
+• Player photo (circular)
+• Player number
+• Player name
+• Arrow separator
+• Team logo
+• Team name
+• Bullet separator
+• Final price
+• Auto-cycles through sold players
+
+FEATURES:
+• Breaking news aesthetic
+• Color-themed title bar
+• Auto-play with configurable timing
+• Smooth horizontal scroll
+• Professional news ticker style
+
+USE CASE:
+Professional broadcasts, news-style presentation
+
+--------------------------------------------------------------------------------
+8. NEON CYBERPUNK TICKER
+--------------------------------------------------------------------------------
+Route: /overlays/neon-ticker
+Description: Futuristic gaming/esports ticker with glowing neon effects
+Dimensions: 1920×45px
+Category: Ticker
+
+PARAMETERS:
+• size: small | default | large
+• color: cyan | magenta | lime | pink | gold
+• autoplay: true | false
+• timer: 1000-30000 (milliseconds)
+• border: true | false
+• position: top | bottom
+
+VISUAL FEATURES:
+• Dark gradient background (purple to black)
+• Animated neon glow borders
+• Hexagonal title section
+• Pulsing glow animation
+• Monospace tech fonts
+• Scanline overlay effect
+• Glowing image borders
+• Cyberpunk aesthetic
+
+DISPLAYS:
+• "SOLD" title in hexagonal badge
+• Player photo with neon glow
+• Player number (monospace, glowing)
+• Player name (uppercase)
+• Team logo with glow
+• Team name (glowing)
+• Final price (lime green, glowing)
+
+USE CASE:
+Esports tournaments, gaming events, tech-themed broadcasts
+
+--------------------------------------------------------------------------------
+9. ELEGANT MINIMALIST TICKER
+--------------------------------------------------------------------------------
+Route: /overlays/elegant-ticker
+Description: Sophisticated luxury ticker with frosted glass and refined typography
+Dimensions: 1920×65px
+Category: Ticker
+
+PARAMETERS:
+• size: small | default | large
+• color: champagne | platinum | rose | navy | charcoal
+• autoplay: true | false
+• timer: 1000-30000 (milliseconds)
+• border: true | false
+• position: top | bottom
+
+VISUAL FEATURES:
+• Frosted glass background with backdrop blur
+• Rounded pill-shaped design
+• Elegant serif/sans-serif typography
+• Subtle gradient backgrounds
+• Generous whitespace
+• Larger prominent player photos
+• Soft drop shadows
+• Fade-in/out gradients on edges
+• Slower, smooth ease-in-out animations
+
+COLOR THEMES:
+• Champagne: Gold/amber tones
+• Platinum: Silver/gray tones
+• Rose: Pink/rose gold tones
+• Navy: Deep blue tones
+• Charcoal: Dark gray/slate tones
+
+DISPLAYS:
+• "Sold Players" title in gradient pill
+• Player photo with shadow
+• Player name (refined typography)
+• Team logo with shadow
+• Team name (sophisticated color)
+• Final price (emerald green)
+
+USE CASE:
+Premium/VIP events, luxury brand auctions, formal tournaments, corporate events
+
+--------------------------------------------------------------------------------
+10. CURRENT BID
+--------------------------------------------------------------------------------
+Route: /overlays/current-bid
+Description: Large display showing only current bid amount
+Dimensions: 400×200px
+Category: Auction Info
+
+PARAMETERS:
+• size: small | medium | large
+• position: top-left | top-right | bottom-left | bottom-right | center
+
+DISPLAYS:
+• Current bid amount (very large number)
+• Minimal, focused display
+• No other information
+• High contrast for visibility
+
+USE CASE:
+Corner display during active bidding, minimal distraction
+
+--------------------------------------------------------------------------------
+11. STATUS OVERLAY
+--------------------------------------------------------------------------------
+Route: /overlays/status
+Description: Shows auction status messages when no active player
+Dimensions: 600×200px
+Category: Auction Info
+
+DISPLAYS:
+• "Waiting for next player" message
+• "Auction in progress" message
+• Status updates
+• Centered text display
+
+USE CASE:
+Transition screens between players
+
+--------------------------------------------------------------------------------
+12. TEAM LEADERBOARD
+--------------------------------------------------------------------------------
+Route: /overlays/leaderboard
+Description: Rankings showing team standings by various metrics
+Dimensions: 320×400px
+Category: Statistics
+
+PARAMETERS:
+• sortBy: players | balance | spent
+• position: top-left | top-right | bottom-left | bottom-right
+
+DISPLAYS:
+• Ranked team list (1st, 2nd, 3rd, etc.)
+• Team logos
+• Team names
+• Sort metric value:
+  - Players: Number of players bought
+  - Balance: Remaining balance
+  - Spent: Total money spent
+• Position numbers/badges
+
+SORTING:
+• Players: Most to least
+• Balance: Least to most (teams with less money ranked higher shows urgency)
+• Spent: Most to least (biggest spenders ranked higher)
+
+USE CASE:
+Side panel showing competitive standings during auction
+
+--------------------------------------------------------------------------------
+13. SOLD PLAYERS SUMMARY
+--------------------------------------------------------------------------------
+Route: /overlays/sold-summary
+Description: Complete auction summary sorted by highest price
+Dimensions: 1200×800px
+Category: Statistics
+
+PARAMETERS:
+• position: center | top | bottom
+
+DISPLAYS:
+• All sold players in a scrollable list
+• Sorted by final price (highest to lowest)
+• For each player:
+  - Player photo
+  - Player name
+  - Player class badge (if applicable)
+  - Final price (large, prominent)
+  - Team logo
+  - Team name
+• Total statistics:
+  - Total players sold
+  - Total money spent
+  - Average sale price
+  - Highest sale
+  - Lowest sale
+
+USE CASE:
+End of auction recap, final summary screen
+
+--------------------------------------------------------------------------------
+14. AUCTION OVERVIEW LED
+--------------------------------------------------------------------------------
+Route: /overlays/auction-overview
+Description: Full-screen comprehensive auction display with auto-flipping pages
+Dimensions: 1920×1080px (or 3840×2160px for 4K)
+Category: Full Screen
+
+PARAMETERS:
+• size: default (1920×1080) | large (3840×2160)
+• showBackground: true | false (animated background effects)
+• theme: dark | premium | vibrant
+• animationSpeed: slow | normal | fast
+• teamFlipDuration: 5-20 (seconds per page)
+• showStats: true | false (auction statistics)
+• showRecentSold: true | false (recent sold players section)
+• recentSoldCount: 3-10 (number of recent sales to show)
+• teamsPerPage: 10 | 15 | 20
+
+SECTIONS:
+
+1. CURRENT PLAYER SPOTLIGHT (if player selected):
+   • Large player display
+   • Current bid (prominent)
+   • Bidding animation
+
+2. TEAM GRID (auto-flipping):
+   • Shows teams in groups
+   • Auto-flips every X seconds (configurable)
+   • Smooth page transitions
+   • Each team shows:
+     - Logo
+     - Name
+     - Balance
+     - Players count
+     - Max bid
+
+3. AUCTION STATISTICS:
+   • Total players sold
+   • Total money spent
+   • Average sale price
+   • Highest bid
+   • Teams remaining capacity
+
+4. RECENT SOLD PLAYERS CAROUSEL:
+   • Last 3-10 sold players
+   • Auto-scrolling
+   • Player details and prices
+
+5. BACKGROUND ANIMATIONS:
+   • Particle effects
+   • Gradient shifts
+   • Subtle movements
+
+USE CASE:
+LED screens, main display boards, comprehensive overview
+
+--------------------------------------------------------------------------------
+15. PLAYER HIGHLIGHT LED
+--------------------------------------------------------------------------------
+Route: /overlays/player-highlight-led
+Description: Fullscreen player spotlight with dramatic auto-expansion
+Dimensions: 1920×1080px
+Category: Full Screen
+
+PARAMETERS:
+• showBackground: true | false (background effects)
+• spotlightSeconds: 2-12 (takeover duration when player selected)
+• showTeams: true | false (team grid in background)
+• showSold: true | false (sold players flip section)
+• soldItems: 3-8 (sold players per page)
+• soldFlipSeconds: 4-15 (seconds per sold page)
+
+FEATURES:
+
+1. PLAYER SELECTION TRIGGER:
+   • When player selected in auction control
+   • Overlay triggers fullscreen takeover
+   • Animated expansion from center
+   • Oversized player display
+
+2. SPOTLIGHT MODE:
+   • Large player photo (fills most of screen)
+   • Player details (name, stats, class)
+   • Current bid (huge display)
+   • Dramatic lighting effects
+   • Duration: configurable (2-12 seconds)
+
+3. RETURN TO GRID:
+   • After spotlight duration
+   • Smoothly transitions back to team grid
+   • Shows teams in background
+
+4. AUTO-FLIPPING SOLD SECTION:
+   • Bottom section shows recent sales
+   • Auto-flips every X seconds
+   • Shows 3-8 players per page
+
+USE CASE:
+LED screens, dramatic player reveals, high-impact presentations
+
+================================================================================
+USING OVERLAYS IN OBS (OPEN BROADCASTER SOFTWARE)
+================================================================================
+
+SETUP PROCESS
+-------------
+
+STEP 1: GENERATE OVERLAY URL
+
+1. Navigate to Overlay Dashboard (/overlays)
+2. Browse available overlays
+3. PREVIEW OVERLAY:
+   - Click eye icon (View button)
+   - Opens fullscreen preview
+   - See actual overlay in action
+   - Press ESC to close
+
+4. CUSTOMIZE PARAMETERS:
+   - Click settings icon (Customize button)
+   - Parameter editor opens in table row
+   - Adjust all available parameters:
+     * Colors (visual color picker)
+     * Numbers (slider or input)
+     * Toggles (on/off switches)
+     * Dropdowns (select options)
+     * Text inputs (custom text)
+   - Real-time preview of changes (if applicable)
+   - "Reset to Defaults" button available
+
+5. COPY URL:
+   - Click copy icon (clipboard button)
+   - Customized URL copied to clipboard
+   - URL includes all parameter values
+   - Example: /overlays/teams?layout=horizontal&color=cyan&position=bottom
+
+STEP 2: ADD TO OBS
+
+1. Open OBS Studio application
+
+2. ADD BROWSER SOURCE:
+   - Right-click in Sources panel
+   - Select "Add" → "Browser"
+   - Or click + button → Browser
+
+3. CONFIGURE BROWSER SOURCE:
+   - Name: Give descriptive name (e.g., "Team Cards Overlay")
+   - URL: Paste copied overlay URL
+   - Width: Set to overlay width (from dashboard dimensions)
+   - Height: Set to overlay height (from dashboard dimensions)
+
+   EXAMPLE:
+   - Name: Team Cards
+   - URL: http://localhost:3000/overlays/teams?layout=horizontal&position=bottom
+   - Width: 1200
+   - Height: 200
+
+4. ADVANCED OPTIONS:
+   ✓ Check: "Shutdown source when not visible" (performance)
+   ✓ Check: "Refresh browser when scene becomes active"
+   - FPS: Set to 30-60 FPS
+   - CSS: Optional custom styling
+   ✗ Uncheck: "Control audio via OBS"
+
+5. Click OK
+
+6. POSITION AND SCALE:
+   - Drag overlay to desired position
+   - Use corner handles to scale
+   - Hold SHIFT while scaling to maintain aspect ratio
+   - Use Edit → Transform for precise positioning
+
+STEP 3: CONFIGURE SETTINGS
+
+BROWSER SOURCE SETTINGS:
+• Right-click browser source → Properties
+• Adjust URL if needed
+• Change dimensions if needed
+• Modify custom CSS (advanced)
+
+REFRESH BROWSER:
+• Right-click browser source → "Refresh"
+• Or toggle visibility off/on
+• Use when overlay seems stuck
+
+INTERACT WITH PAGE:
+• Right-click browser source → "Interact"
+• Opens interactive window
+• For debugging only (not typically needed)
+
+STEP 4: REAL-TIME SYNC
+
+• Overlays auto-update via Pusher
+• No manual refresh needed
+• Changes in auction control panel instantly reflect in overlays
+• Typical latency: 100-500ms
+
+• If overlay not updating:
+  - Check Pusher connection (green dot in control panel)
+  - Refresh browser source
+  - Check tournament ID in URL matches active tournament
+  - Verify internet connection
+
+BEST PRACTICES
+--------------
+
+SCENE ORGANIZATION:
+• Create separate scenes for different overlay layouts:
+  - "Main Display" - Current player + team cards
+  - "Team Overview" - Team cards fullscreen
+  - "Player Spotlight" - Premium player card
+  - "Ticker Only" - Sold players ticker
+  - "Final Summary" - Sold summary overlay
+
+PERFORMANCE OPTIMIZATION:
+• Keep browser sources visible for optimal performance
+• Use "Shutdown when not visible" for unused overlays
+• Limit total number of browser sources (8-12 max)
+• Use appropriate FPS (30 FPS usually sufficient)
+
+SCENE TRANSITIONS:
+• Add smooth fades between scenes (200-300ms)
+• Test transitions before going live
+• Create hotkeys for quick scene switching
+
+TESTING:
+• Test all overlays before going live
+• Verify real-time sync is working
+• Check all parameters are correct
+• Test on second monitor/device
+
+TROUBLESHOOTING:
+• Overlay not showing: Check URL, dimensions, visibility
+• No real-time updates: Check Pusher connection, tournament ID
+• Performance issues: Reduce FPS, limit browser sources
+• Styling issues: Check CSS, browser cache
+
+ADVANCED TIPS:
+• Use Studio Mode for preview before switching
+• Create scene collections for different tournament types
+• Use filters (Color Correction, Chroma Key) for custom looks
+• Combine multiple overlays in one scene for complex layouts
+
+PARAMETER CUSTOMIZATION TIPS
+-----------------------------
+
+COLOR PICKER:
+• Click color swatch to open picker
+• Use eyedropper to sample colors from screen
+• Enter hex codes directly (#FF5500)
+• Adjust opacity/alpha if supported
+
+NUMBER SLIDERS:
+• Drag slider for visual adjustment
+• Click input to type exact number
+• Some have min/max constraints
+• Step increments vary (e.g., 1, 5, 10)
+
+TOGGLE SWITCHES:
+• Click to toggle on/off
+• Green = on, Gray = off
+• Instantly applies change
+
+DROPDOWN SELECTS:
+• Click to open options
+• Select from predefined choices
+• Cannot enter custom values
+
+TEXT INPUTS:
+• Click to focus
+• Type custom text
+• Some have character limits
+• Some have validation (e.g., URLs)
+
+SAVING CUSTOM CONFIGURATIONS:
+• URL parameters auto-update as you change settings
+• Copy new URL after customization
+• Save URLs in text file for reuse
+• No server-side save (URL is the save)
+
+RESET TO DEFAULTS:
+• Click "Reset to Defaults" button
+• All parameters return to original values
+• Useful if customization goes wrong
+
+--------------------------------------------------------------------------------
+G. DASHBOARD & ANALYTICS
+--------------------------------------------------------------------------------
+
+MAIN DASHBOARD (HOMEPAGE)
+--------------------------
+Location: /
+
+HERO SECTION:
+• ProStream Auction logo
+• Tagline: "Where Every Bid Matters"
+• "Get Started" call-to-action button
+
+FEATURE CARDS (3 Main Cards):
+
+1. AUCTION CONTROL:
+   • Icon: Gavel/Hammer
+   • Title: "Auction Control"
+   • Description: "Manage live auctions with real-time bidding"
+   • Button: "Go to Auction" → /auction
+
+2. TOURNAMENT MANAGEMENT:
+   • Icon: Trophy
+   • Title: "Tournament Management"
+   • Description: "Create and manage tournaments, teams, and players"
+   • Button: "Manage Data" → /manage
+
+3. STREAMING OVERLAYS:
+   • Icon: Monitor/TV
+   • Title: "Streaming Overlays"
+   • Description: "Professional overlays for OBS and streaming"
+   • Button: "Browse Overlays" → /overlays
+
+METRICS DISPLAY:
+• 45+ elite tournaments powered
+• 3s average bid sync time
+• 99.95% overlay uptime
+• 24/7 on-call support
+• 250K+ concurrent viewers handled
+• 12 active broadcast themes
+
+TESTIMONIALS:
+• User quotes and feedback
+• Partner logos
+• Success stories
+
+CONTACT PAGE
+------------
+Location: /contact
+
+FEATURES:
+• Contact information
+• Support email
+• Phone number (if applicable)
+• Office address
+• Contact form (if implemented)
+• Social media links
+
+SUPPORT OPTIONS:
+• Documentation link
+• FAQ section
+• Video tutorials link
+• Community forum link
+
+================================================================================
+4. USER WORKFLOWS
+================================================================================
+
+--------------------------------------------------------------------------------
+WORKFLOW 1: SETTING UP A NEW AUCTION (COMPLETE PROCESS)
+--------------------------------------------------------------------------------
+
+STEP 1: CREATE MASTER DATA (IF NOT EXISTS)
+
+1A. CREATE MASTER PLAYERS:
+   - Navigate to /manage/players
+
+   OPTION A: Add individual players
+   ① Click "+ Add Player" button
+   ② Fill player form:
+      - Name, Position, Club
+      - Stats, Photo
+   ③ Submit for each player
+
+   OPTION B: Bulk upload
+   ① Click "Bulk Upload" button
+   ② Download Excel template
+   ③ Fill template with player data
+   ④ Upload completed file
+   ⑤ Review import results
+
+1B. CREATE MASTER TEAMS:
+   - Navigate to /manage/teams
+   ① Click "+ Add New Team (Global)"
+   ② Fill team form:
+      - Team name
+      - Short code
+      - Owner name
+      - Team logo
+   ③ Submit for each team
+
+STEP 2: CREATE TOURNAMENT
+
+1. Navigate to /manage/tournaments
+2. Fill tournament creation form:
+   - Name: "IPL 2025"
+   - Budget Per Team: ₹100,000,000
+   - Squad Size: 25 players
+   - Base Price Per Player: ₹50,000
+   - Upload tournament logo
+
+3. OPTIONAL: Enable player classes
+   ① Check "Enable Player Classes"
+   ② Click "Load Defaults" OR create custom classes
+   ③ For each class:
+      - Set Code, Name, Base Price
+      - Choose Color, Icon
+      - Set Order
+   ④ Select pricing strategy:
+      - Tournament Level (all same base price)
+      - Player Class Based (each class has own base price)
+
+4. Click "Create Tournament"
+5. Tournament created with status: "Draft"
+
+STEP 3: ADD TEAMS TO TOURNAMENT
+
+1. Navigate to /auction/setup
+2. Select "IPL 2025" from tournament dropdown
+3. Tournament details displayed
+
+4. Add teams:
+   ① Click "+ Add Teams" button
+   ② Search for team in modal
+   ③ Click "Add Team" for each team
+   ④ Repeat for all teams (minimum 2 required)
+
+5. Verify teams in "Registered Teams" panel:
+   - Each team shows initial budget
+   - Current balance equals initial budget
+   - Players purchased: 0
+
+STEP 4: ADD PLAYERS TO TOURNAMENT
+
+1. Still in /auction/setup with tournament selected
+
+2. Add players:
+
+   METHOD A: Add from master database
+   ① Click "+ Add Players" button
+   ② Search for player
+   ③ IF tournament uses player classes:
+      - Select/confirm player class from dropdown
+   ④ Click "Add Player"
+   ⑤ Repeat for all players
+
+   METHOD B: Bulk add
+   ① Click "Bulk Add" button
+   ② Download tournament template
+   ③ Fill template with Player IDs
+   ④ Upload template
+   ⑤ Review import results
+
+   METHOD C: Create new player on-the-fly
+   ① From add player modal, click "+ Create New"
+   ② Fill player form
+   ③ Click "Create and Add"
+   ④ Player added to master DB and tournament
+
+3. Verify players in "Registered Players" panel:
+   - Players have sequential numbers (#001, #002, etc.)
+   - All players show status: AVAILABLE
+
+STEP 5: START AUCTION
+
+1. Pre-flight checks:
+   ✓ At least 2 teams added
+   ✓ At least 1 player added
+   ✓ Tournament status: Draft or Setup
+
+2. Click "Start Auction" button
+
+3. Confirmation:
+   - System validates requirements
+   - Tournament status changes to "Live"
+   - Auction state initialized:
+     * Current player: None
+     * Current bid: 0
+     * Status: Pending
+   - Real-time broadcast via Pusher
+
+4. Success notification displayed
+
+5. Options:
+   - "Go to Auction Control" button → /auction
+   - Or manually navigate to /auction
+   - Or open overlays in OBS
+
+STEP 6: PREPARE OVERLAYS (OPTIONAL)
+
+1. Navigate to /overlays
+2. Select overlays for broadcast
+3. Customize parameters
+4. Copy URLs
+5. Add to OBS as browser sources
+6. Position and test overlays
+
+AUCTION IS NOW READY TO CONDUCT!
+
+--------------------------------------------------------------------------------
+WORKFLOW 2: CONDUCTING A LIVE AUCTION
+--------------------------------------------------------------------------------
+
+PRE-AUCTION CHECKLIST
+---------------------
+□ Auction status is "Live"
+□ All teams registered and verified
+□ All players registered and verified
+□ Auctioneer device has stable internet
+□ Pusher connection is green (connected)
+□ OBS overlays are loaded and visible (if streaming)
+□ Test one player auction to verify system
+□ Backup device ready (optional but recommended)
+
+DURING AUCTION - FOR EACH PLAYER
+---------------------------------
+
+PHASE 1: SELECT PLAYER (10-15 seconds)
+
+1. Locate player in Available Players panel
+   - Use search if many players: type name/number
+   - Scroll through list
+
+2. Click "Auction" button next to player
+
+3. System response:
+   ✓ Player appears in center panel immediately
+   ✓ Player photo, details, stats displayed
+   ✓ Current bid set to base price (from class or tournament)
+   ✓ Auction status changes to "Bidding"
+   ✓ All overlays update in real-time:
+     - Player card overlay shows player
+     - Team cards update (if integrated)
+     - Current bid overlay shows base price
+   ✓ Player removed from available list
+
+PHASE 2: BIDDING (Variable duration: 30 seconds - 5 minutes)
+
+1. Teams indicate interest (offline/verbal communication)
+
+2. Auctioneer places bids based on team signals:
+
+   FOR QUICK BIDDING:
+   - Click Quick Bid buttons (+1K, +5K, +10K, +25K, +50K)
+   - One click = instant bid placement
+   - Visual feedback (pulse animation)
+   - All overlays update within 500ms
+
+   FOR CUSTOM AMOUNTS:
+   - Enter amount in custom bid input
+   - Click "Set Custom Bid" button
+   - Validation occurs (must exceed current bid)
+   - Overlays update on success
+
+3. Bidding continues until:
+   - No more teams interested
+   - Or maximum bid reached
+   - Or auctioneer decides to finalize
+
+4. Throughout bidding:
+   ✓ Current bid displays prominently
+   ✓ All teams see updates on overlays
+   ✓ Team max bids are calculated and shown
+   ✓ Warnings appear for teams with insufficient funds
+
+PHASE 3: FINALIZE SALE (15-20 seconds)
+
+1. Auctioneer announces: "Going once, going twice..."
+
+2. Select winning team:
+   - Click winning team dropdown
+   - Select correct team (verify team name)
+   - Ensure team has sufficient funds
+
+3. Click "Sell Player to [Team Name]" button
+
+4. System processes sale:
+   ✓ Player marked as sold
+   ✓ Final price recorded
+   ✓ Team budget decreased by final price
+   ✓ Team players count incremented
+   ✓ Player moved to Sold Players list
+   ✓ Auction status changes to "Sold"
+   ✓ Real-time broadcast to all clients
+   ✓ Overlays update:
+     - Team cards show new balance
+     - Player moves to sold ticker
+     - Sale banner appears (if overlay active)
+     - Leaderboard updates
+
+5. Brief pause (5-10 seconds)
+   - Allow overlays to display sale
+   - Teams process the sale
+   - Stats update
+
+6. Ready for next player
+
+CORRECTIONS & EDGE CASES
+-------------------------
+
+UNDO LAST SALE:
+• If mistake made, click "Undo Last Sale"
+• Confirmation required
+• Player returns to available
+• Team budget restored
+• Use sparingly
+
+RESET CURRENT AUCTION:
+• If wrong player selected
+• Click "Reset" button
+• Player returns to available pool
+• Ready to select different player
+
+AUCTION ERRORS:
+• Pusher disconnection: Wait for auto-reconnect or manual refresh
+• Wrong bid entered: Cannot undo individual bids, continue or sell
+• Network issues: System is fault-tolerant, state preserved
+
+SPECIAL SCENARIOS:
+
+UNSOLD PLAYER (if needed):
+• Complete auction without selling
+• Click "Reset" to return player
+• Player can be auctioned later
+
+LAST PLAYER FOR TEAM:
+• System shows team's maximum bid
+• Team can spend entire remaining balance
+• No minimum reserve needed for future players
+
+TEAM BUDGET EXHAUSTED:
+• Team cannot bid above max bid amount
+• Visual warning in team card
+• Team can still bid within limits
+
+POST-AUCTION ACTIVITIES
+------------------------
+
+1. REVIEW SOLD PLAYERS:
+   - Check Sold Players list
+   - Verify all players sold (or note unsold)
+   - Verify all teams within budget
+
+2. EXPORT DATA:
+   - Navigate to /auction/setup
+   - Select completed tournament
+   - Click "Export to Excel"
+   - File downloads with complete auction data
+
+3. STOP AUCTION:
+   - Click "Stop Auction" button when complete
+   - Tournament status changes to "Stopped"
+   - Can restart if needed
+
+4. LATER: ARCHIVE TOURNAMENT:
+   - When fully complete
+   - Click "Archive Tournament"
+   - Status changes to "Archived"
+   - Read-only mode for historical records
+
+5. CELEBRATE!
+   - Auction successfully completed
+   - All data preserved
+   - Ready for next tournament
+
+--------------------------------------------------------------------------------
+WORKFLOW 3: USING OVERLAYS FOR STREAMING
+--------------------------------------------------------------------------------
+
+SETUP PHASE (BEFORE STREAM)
+----------------------------
+
+STEP 1: SELECT OVERLAYS (30-45 minutes)
+
+1. Navigate to /overlays
+2. Browse all 14+ available overlays
+3. Preview each overlay (click eye icon)
+4. Identify needs:
+   - Need player display? → Premium Player Card
+   - Need team overview? → Team Cards
+   - Need ticker? → Neon Ticker or Elegant Ticker
+   - Need current bid? → Current Bid overlay
+   - Need statistics? → Leaderboard or Sold Summary
+   - Need full screen? → Auction Overview LED
+
+5. Select 4-6 overlays for broadcast:
+   RECOMMENDED STARTER SET:
+   - Premium Player Card (player spotlight)
+   - Team Cards (team overview)
+   - Neon Cyberpunk Ticker (sold players)
+   - Current Bid (bid amount)
+   - Leaderboard (team standings)
+   - Sale Banner (celebration)
+
+STEP 2: CUSTOMIZE OVERLAYS (45-60 minutes)
+
+For each selected overlay:
+
+1. Click settings icon (customize)
+2. Parameter editor opens
+3. Customize to match branding:
+
+   COLORS:
+   - Match team/brand colors
+   - Use color picker
+   - Test contrast and visibility
+
+   POSITIONS:
+   - Top vs bottom
+   - Left vs right
+   - Center vs corner
+
+   SIZES:
+   - Small for minimal
+   - Large for prominence
+   - Default for balance
+
+   EFFECTS:
+   - Animation speed
+   - Transitions
+   - Theme variants
+
+4. Preview changes (if real-time preview available)
+5. Copy customized URL when satisfied
+6. Save URL in document for reference
+
+STEP 3: ADD TO OBS (60-90 minutes)
+
+1. Open OBS Studio
+
+2. Create scenes for different broadcast moments:
+
+   SCENE 1: "Main Auction"
+   - Add Premium Player Card (center, 380×650)
+   - Add Team Cards (bottom, 1200×200)
+   - Add Current Bid (top-right, 400×200)
+
+   SCENE 2: "Team Overview"
+   - Add Team Cards (fullscreen variant)
+   - Add Leaderboard (side panel)
+   - Add Sold Ticker (bottom)
+
+   SCENE 3: "Player Spotlight"
+   - Add Premium Player Card (large, center)
+   - Add Current Bid (large, top)
+   - Minimal other overlays
+
+   SCENE 4: "Ticker & Summary"
+   - Add Neon Ticker (top or bottom)
+   - Add Sold Summary (center)
+   - For breaks between players
+
+3. For each overlay in each scene:
+   ① Right-click sources → Add → Browser
+   ② Name descriptively (e.g., "Player Card - Center")
+   ③ Paste copied URL
+   ④ Set width and height (from overlay dimensions)
+   ⑤ Check "Shutdown when not visible"
+   ⑥ Check "Refresh on scene active"
+   ⑦ Set FPS to 30-60
+   ⑧ Click OK
+
+4. Position and scale each overlay:
+   - Drag to desired position
+   - Scale with corner handles (SHIFT to maintain ratio)
+   - Use Edit → Transform for precision
+   - Layer order: Drag in sources list
+
+5. Test visibility and updates:
+   - Switch between scenes
+   - Verify all overlays appear
+   - Check for any visual glitches
+
+STEP 4: CREATE SCENE TRANSITIONS (15-30 minutes)
+
+1. Go to Scene Transitions section
+2. Add transitions:
+   - Fade: 200-300ms (smooth, professional)
+   - Cut: 0ms (instant switch)
+   - Stinger: Custom animation (advanced)
+
+3. Set default transition to Fade (300ms)
+
+4. Create hotkeys:
+   - F1: Main Auction scene
+   - F2: Team Overview scene
+   - F3: Player Spotlight scene
+   - F4: Ticker & Summary scene
+
+5. Test transitions:
+   - Switch between scenes
+   - Verify smooth transitions
+   - No visual stuttering
+
+STEP 5: FINAL TESTING (30-45 minutes)
+
+1. Start test auction:
+   - Select a player
+   - Place test bids
+   - Sell player to team
+   - Verify all overlays update
+
+2. Check each scene:
+   - All overlays visible
+   - Real-time updates working
+   - Positions correct
+   - Colors/themes correct
+   - No performance issues
+
+3. Test on second monitor/device:
+   - View stream output
+   - Check for any issues
+   - Verify readability
+
+4. Performance check:
+   - Monitor CPU/GPU usage
+   - Should be <30% for streaming PC
+   - Reduce FPS if needed
+
+5. Create backup plan:
+   - Save OBS scene collection
+   - Document overlay URLs
+   - Note any custom settings
+
+DURING STREAM
+--------------
+
+SETUP (10-15 minutes before stream):
+
+1. Open OBS
+2. Load saved scene collection
+3. Open auction control panel at /auction
+4. Verify Pusher connection (green dot)
+5. Test one overlay update
+6. Start OBS stream/recording
+
+SCENE MANAGEMENT DURING AUCTION:
+
+BETWEEN PLAYERS:
+• Scene: "Team Overview"
+• Shows all teams
+• Leaderboard visible
+• Ticker shows previous sales
+
+PLAYER SELECTED:
+• Scene: "Main Auction" or "Player Spotlight"
+• Player card displays selected player
+• Current bid shows base price
+• Teams visible
+
+DURING BIDDING:
+• Stay on "Main Auction" scene
+• Keep current bid prominent
+• Team cards show live balances
+• Optional: Switch to "Player Spotlight" for focus
+
+PLAYER SOLD:
+• Brief pause on current scene
+• Sale banner appears (if overlay active)
+• Team cards update instantly
+• Ticker adds new sale
+• After 3-5 seconds, ready for next player
+
+BREAKS/INTERMISSIONS:
+• Scene: "Ticker & Summary"
+• Shows sold players ticker
+• Optional: Sold summary
+• Leaderboard
+
+FINAL MOMENTS:
+• Scene: "Ticker & Summary"
+• Sold Players Summary overlay
+• Final statistics
+• Leaderboard showing final standings
+
+DYNAMIC ADJUSTMENTS:
+
+• Zoom into player card if needed
+• Toggle overlay visibility (eye icon in OBS)
+• Adjust opacity (right-click source → Filters)
+• Change scenes based on auction flow
+
+TROUBLESHOOTING DURING STREAM:
+
+OVERLAY NOT UPDATING:
+① Check Pusher connection in control panel
+② Refresh browser source (right-click → Refresh)
+③ Toggle visibility off/on
+④ Verify tournament ID matches
+
+PERFORMANCE ISSUES:
+① Reduce browser source FPS
+② Hide unused overlays
+③ Lower OBS output resolution
+④ Close unnecessary applications
+
+VISUAL GLITCHES:
+① Refresh browser source
+② Check internet connection
+③ Reduce animation speed in overlay parameters
+
+POST-STREAM
+-----------
+
+1. STOP STREAM:
+   - Stop OBS recording/stream
+   - Keep auction control open until data exported
+
+2. SAVE OBS CONFIGURATION:
+   - File → Save Scene Collection
+   - Name: "[Tournament Name] - [Date]"
+
+3. EXPORT AUCTION DATA:
+   - Navigate to /auction/setup
+   - Export to Excel
+   - Save for records
+
+4. ARCHIVE RECORDINGS:
+   - Move OBS recordings to storage
+   - Upload to YouTube/archive
+   - Tag with tournament name/date
+
+5. REVIEW & IMPROVE:
+   - Note what worked well
+   - Note any issues
+   - Plan improvements for next stream
+
+--------------------------------------------------------------------------------
+WORKFLOW 4: MANAGING RESULTS AND DATA EXPORT
+--------------------------------------------------------------------------------
+
+EXPORT TOURNAMENT PLAYERS
+--------------------------
+
+1. Navigate to /auction/setup
+2. Select tournament from dropdown
+3. Registered Players panel displayed
+
+4. Click "Export to Excel" button
+5. Excel file downloads with filename:
+   "Tournament_Players_[TournamentName]_[Date].xlsx"
+
+6. File contains columns:
+   - Player Number (#001, #002, etc.)
+   - Player Name
+   - Position
+   - Current Club
+   - Matches Played
+   - Total Score
+   - Total Wickets
+   - Player Class (if applicable)
+   - Sold Status (TRUE/FALSE)
+   - Final Price (if sold)
+   - Winning Team (if sold)
+   - Sold Timestamp (if sold)
+
+EXPORT MASTER PLAYERS
+----------------------
+
+1. Navigate to /manage/players
+2. Master players list displayed
+
+3. Click "Download List" button
+4. Excel file downloads with filename:
+   "Master_Players_[Date].xlsx"
+
+5. File contains all master player data:
+   - Player ID
+   - Name
+   - Position
+   - Current Club
+   - Career Statistics
+   - Photo URL
+   - Suggested Class
+   - Created Date
+
+VIEW AUCTION HISTORY
+---------------------
+
+1. Navigate to /auction (auction control panel)
+2. Sold Players section on right side
+
+3. Displays:
+   - All sold players in chronological order
+   - Most recent at top
+   - For each sale:
+     * Player name and photo
+     * Final price
+     * Winning team
+     * Sale time (relative, e.g., "2 min ago")
+
+4. Scrollable if many sales
+5. Real-time updates as players sold
+
+GENERATE REPORTS (MANUAL PROCESS)
+----------------------------------
+
+Using exported Excel data:
+
+1. TEAM SPENDING REPORT:
+   - Open tournament export
+   - Create pivot table
+   - Rows: Team Name
+   - Values: Sum of Final Price
+   - Result: Total spent per team
+
+2. PLAYER PRICE DISTRIBUTION:
+   - Sort by Final Price (descending)
+   - Identify highest/lowest sales
+   - Calculate average, median
+   - Create charts
+
+3. TEAM ROSTER SUMMARY:
+   - Filter by Team Name
+   - List all players purchased
+   - Show total spent
+   - Show remaining balance
+
+4. POSITION-BASED ANALYSIS:
+   - Group by Position
+   - Calculate average price per position
+   - Identify most expensive positions
+
+5. CLASS-BASED ANALYSIS (if applicable):
+   - Group by Player Class
+   - Calculate average price per class
+   - Compare to base prices
+
+ADVANCED DATA ANALYSIS
+-----------------------
+
+Using Excel formulas or data analysis tools:
+
+FORMULAS:
+• Total Spent: =SUM(FinalPrice)
+• Average Sale: =AVERAGE(FinalPrice)
+• Highest Sale: =MAX(FinalPrice)
+• Lowest Sale: =MIN(FinalPrice)
+• Players Per Team: =COUNTIF(Team, "TeamName")
+
+PIVOT TABLES:
+• Team vs Position matrix
+• Class vs Final Price analysis
+• Time series (if timestamps exported)
+
+CHARTS:
+• Bar chart: Team spending comparison
+• Pie chart: Budget distribution
+• Line chart: Sale prices over time
+• Scatter plot: Player stats vs price
+
+EXPORT FOR EXTERNAL TOOLS:
+
+CSV FORMAT:
+• Open Excel file
+• File → Save As → CSV
+• Import into:
+  - Google Sheets
+  - Tableau
+  - Power BI
+  - R/Python for analysis
+
+JSON FORMAT (if needed):
+• Use online converter (Excel to JSON)
+• Or export from database directly
+• For custom applications
+
+ARCHIVING AND STORAGE
+----------------------
+
+BEST PRACTICES:
+
+1. IMMEDIATE BACKUP:
+   - Export data immediately after auction
+   - Save to cloud storage (Google Drive, Dropbox)
+   - Keep local backup
+
+2. NAMING CONVENTION:
+   - Use consistent naming: [Tournament]_[Date]_[DataType]
+   - Example: "IPL2025_20250125_Players.xlsx"
+
+3. VERSION CONTROL:
+   - If re-exporting, add version number
+   - Example: "IPL2025_Final_v2.xlsx"
+
+4. FOLDER STRUCTURE:
+   Tournament_Name/
+   ├── Players.xlsx
+   ├── Teams.xlsx
+   ├── AuctionResults.xlsx
+   ├── Reports/
+   │   ├── TeamSpending.pdf
+   │   └── Summary.pdf
+   └── Overlays/
+       └── SavedURLs.txt
+
+5. RETENTION:
+   - Keep auction data for minimum 2-3 years
+   - Archive old tournaments to external drive
+   - Maintain master player/team databases indefinitely
+
+================================================================================
+5. TECHNICAL FEATURES
+================================================================================
+
+--------------------------------------------------------------------------------
+A. REAL-TIME UPDATES (PUSHER WEBSOCKET)
+--------------------------------------------------------------------------------
+
+TECHNOLOGY
+----------
+• Service: Pusher Channels
+• Protocol: WebSockets (with fallback to HTTP long-polling)
+• Cluster: ap2 (Asia Pacific 2)
+
+HOW IT WORKS
+------------
+
+1. CONNECTION ESTABLISHMENT:
+   • Client connects to Pusher on page load
+   • Authentication via public API key
+   • Channel subscription based on tournament ID
+   • Format: "tournament-{tournamentId}"
+
+2. EVENT BROADCASTING:
+   • Server triggers events on state changes
+   • Events sent to tournament-specific channel
+   • All subscribed clients receive events
+   • Sub-second latency (typically 100-500ms)
+
+3. CLIENT HANDLING:
+   • Clients listen for specific event types
+   • Event data includes full state update
+   • Client updates local state
+   • React components re-render automatically
+
+EVENTS BROADCAST
+----------------
+
+1. auction-state-updated
+   • Triggered: Any auction state change
+   • Data: Complete AuctionState object
+   • Includes:
+     - currentPlayerId
+     - currentBid
+     - winningTeamId
+     - currentAuctionStatus
+     - history array
+
+2. player-selected
+   • Triggered: When player selected for auction
+   • Data: Player object + auction state
+   • Updates:
+     - Current player display
+     - Player removed from available list
+
+3. bid-placed
+   • Triggered: When new bid placed
+   • Data: New bid amount
+   • Updates:
+     - Current bid display
+     - All bid-related overlays
+
+4. player-sold
+   • Triggered: When player sold to team
+   • Data:
+     - Player object (with sale info)
+     - Team object (with updated balance)
+     - Final price
+   • Updates:
+     - Sold players list
+     - Team balances
+     - Team player counts
+     - Auction state reset
+
+5. auction-status-changed
+   • Triggered: Tournament status change (Live/Stopped/etc.)
+   • Data: New status
+   • Updates:
+     - Status indicators
+     - Available controls
+
+6. team-updated
+   • Triggered: Team data change
+   • Data: Updated team object
+   • Updates:
+     - Team balances
+     - Player counts
+
+CHANNELS
+--------
+
+TOURNAMENT CHANNEL:
+• Format: "tournament-{tournamentId}"
+• Private: No (public channel)
+• Subscribed by:
+  - Auction control panels
+  - All overlay pages
+  - Monitoring dashboards
+
+CONNECTION MONITORING
+---------------------
+
+INDICATORS:
+• Green dot: Connected and subscribed
+• Red dot: Disconnected
+• Status text: "Connected" or "Disconnected"
+
+AUTO-RECONNECT:
+• Exponential backoff retry strategy
+• Retry intervals: 1s, 2s, 4s, 8s, 16s, 32s (max)
+• Continues indefinitely until connected
+
+MANUAL RECONNECT:
+• "Reconnect" button available when disconnected
+• Forces immediate reconnection attempt
+
+SYNC GUARANTEES
+---------------
+
+• All connected clients see same state within 100-500ms
+• Conflict resolution: Server state is source of truth
+• Last-write-wins strategy for concurrent updates
+• Optimistic UI updates with server confirmation
+
+USER BENEFITS
+-------------
+
+1. MULTIPLE USERS:
+   • Multiple users can view auction simultaneously
+   • All see same data in real-time
+   • No conflicts or race conditions
+
+2. AUTOMATIC OVERLAY SYNC:
+   • Overlays in OBS update automatically
+   • No manual refresh needed
+   • Perfect sync with auction actions
+
+3. ALL DEVICES SYNCHRONIZED:
+   • Desktop, laptop, tablet, phone
+   • All show identical state
+   • Seamless multi-device experience
+
+4. INSTANT FEEDBACK:
+   • Bid placed → All clients see immediately
+   • Player sold → All overlays update
+   • Status change → All users notified
+
+--------------------------------------------------------------------------------
+B. DATA PERSISTENCE (MONGODB)
+--------------------------------------------------------------------------------
+
+DATABASE
+--------
+• Technology: MongoDB (NoSQL document database)
+• ODM: Mongoose (schema validation)
+• Hosting: MongoDB Atlas (cloud)
+
+COLLECTIONS
+-----------
+
+1. USERS:
+   Schema:
+   - username: String, unique, required
+   - email: String, unique, required
+   - password: String, hashed (bcrypt)
+   - role: String, enum (Admin, TournamentManager, etc.)
+   - accountStatus: String, enum (Active, Suspended, PendingApproval)
+   - assignedTournaments: Array of ObjectIds
+   - createdAt: Date
+   - updatedAt: Date
+
+2. TOURNAMENTS:
+   Schema:
+   - name: String, required
+   - budgetPerTeam: Number, required
+   - squadSize: Number, required
+   - basePricePerPlayer: Number, required
+   - logoURL: String
+   - status: String, enum (Draft, Setup, Live, Stopped, Completed, Archived)
+   - playerClasses: Array of PlayerClass objects
+     * code: String
+     * name: String
+     * basePrice: Number
+     * color: String
+     * icon: String
+     * order: Number
+   - basePriceStrategy: String, enum (tournament-level, player-class-based)
+   - createdBy: ObjectId (User reference)
+   - createdAt: Date
+   - updatedAt: Date
+
+3. MASTERPLAYERS:
+   Schema:
+   - name: String, required
+   - position: String, enum (Batsman, Bowler, All-rounder, Wicket-keeper)
+   - currentClub: String, required
+   - matchesPlayed: Number
+   - totalScore: Number
+   - totalWickets: Number
+   - photoURL: String
+   - suggestedClass: String
+   - createdAt: Date
+   - updatedAt: Date
+
+4. MASTERTEAMS:
+   Schema:
+   - name: String, required, unique
+   - shortCode: String, required
+   - ownerName: String, required
+   - logoURL: String
+   - createdAt: Date
+   - updatedAt: Date
+
+5. PLAYERS (Tournament-specific instances):
+   Schema:
+   - tournamentId: ObjectId, required
+   - masterPlayerId: ObjectId (reference to MasterPlayer)
+   - playerNo: String (e.g., "001", "002")
+   - name: String, required
+   - position: String
+   - currentClub: String
+   - matchesPlayed: Number
+   - totalScore: Number
+   - totalWickets: Number
+   - photoURL: String
+   - playerClass: String
+   - isSold: Boolean, default false
+   - finalPrice: Number
+   - winningTeamId: ObjectId
+   - soldTimestamp: Date
+   - createdAt: Date
+   - updatedAt: Date
+
+6. TEAMS (Tournament-specific instances):
+   Schema:
+   - tournamentId: ObjectId, required
+   - masterTeamId: ObjectId (reference to MasterTeam)
+   - name: String, required
+   - shortCode: String
+   - ownerName: String
+   - logoURL: String
+   - initialBudget: Number, required
+   - currentBalance: Number, required
+   - playersPurchased: Number, default 0
+   - purchasedPlayers: Array of ObjectIds
+   - createdAt: Date
+   - updatedAt: Date
+
+7. AUCTIONSTATE:
+   Schema:
+   - tournamentId: ObjectId, required, unique
+   - currentPlayerId: ObjectId (null if no active player)
+   - currentBid: Number, default 0
+   - winningTeamId: ObjectId (null if no bids)
+   - currentAuctionStatus: String, enum (Pending, Bidding, Sold)
+   - history: Array of SaleHistory objects
+     * playerId: ObjectId
+     * teamId: ObjectId
+     * finalPrice: Number
+     * soldAt: Date
+   - createdAt: Date
+   - updatedAt: Date
+
+8. OVERLAYCONFIGS (Future feature):
+   Schema:
+   - userId: ObjectId
+   - overlayType: String
+   - parameters: Object (key-value pairs)
+   - name: String
+   - createdAt: Date
+   - updatedAt: Date
+
+DATA RELATIONSHIPS
+------------------
+
+MASTER TO TOURNAMENT:
+• One MasterPlayer → Many Players (across tournaments)
+• One MasterTeam → Many Teams (across tournaments)
+
+TOURNAMENT HIERARCHIES:
+• One Tournament → Many Players
+• One Tournament → Many Teams
+• One Tournament → One AuctionState
+
+PLAYER TO TEAM:
+• Many Players → One Team (when sold)
+• Team.purchasedPlayers array references Player._id
+
+USER TO TOURNAMENT:
+• Many Users → Many Tournaments (via assignedTournaments)
+
+DATA INTEGRITY
+--------------
+
+UNIQUE CONSTRAINTS:
+• Users: username, email
+• Tournaments: None (can have duplicate names)
+• MasterPlayers: None (can have duplicate names)
+• MasterTeams: name (must be unique)
+• Players: playerNo per tournament (composite unique)
+• AuctionState: tournamentId (one per tournament)
+
+REFERENTIAL INTEGRITY:
+• Mongoose validation ensures ObjectId references exist
+• Cascade delete: When tournament deleted, all related data deleted
+• Soft delete: Not implemented (hard delete used)
+
+INDEXES:
+• Users: username, email
+• Tournaments: status, createdBy
+• Players: tournamentId, isSold, winningTeamId
+• Teams: tournamentId
+• AuctionState: tournamentId
+
+--------------------------------------------------------------------------------
+C. IMAGE UPLOADS (CLOUDINARY CDN)
+--------------------------------------------------------------------------------
+
+SERVICE
+-------
+• Provider: Cloudinary
+• Plan: Free tier (or paid based on usage)
+• Features:
+  - Image optimization
+  - Multiple format support
+  - CDN delivery
+  - Thumbnail generation
+
+SUPPORTED UPLOADS
+-----------------
+
+1. PLAYER PHOTOS:
+   • Upload location: /manage/players, /auction/setup
+   • Accepted formats: JPG, PNG, GIF
+   • Max size: 5MB
+   • Folder: "prostream-auction/players"
+
+2. TEAM LOGOS:
+   • Upload location: /manage/teams, /auction/setup
+   • Accepted formats: JPG, PNG, GIF
+   • Max size: 5MB
+   • Folder: "prostream-auction/teams"
+
+3. TOURNAMENT LOGOS:
+   • Upload location: /manage/tournaments
+   • Accepted formats: JPG, PNG, GIF
+   • Max size: 5MB
+   • Folder: "prostream-auction/tournaments"
+
+UPLOAD PROCESS
+--------------
+
+1. USER SELECTS FILE:
+   • Click "Upload" button or drag-and-drop
+   • File picker opens
+   • User selects image file
+
+2. CLIENT VALIDATION:
+   • Check file type (image/*)
+   • Check file size (<5MB)
+   • Display error if invalid
+
+3. UPLOAD TO CLOUDINARY:
+   • FormData created with file
+   • POST to /api/upload endpoint
+   • Server-side upload to Cloudinary
+   • Upload_stream used (no local storage)
+
+4. CLOUDINARY PROCESSING:
+   • Image uploaded to cloud
+   • Auto-optimization applied
+   • Multiple sizes generated (if configured)
+   • CDN URLs generated
+
+5. RESPONSE:
+   • Cloudinary returns secure URL
+   • URL saved in database
+   • URL used in <img> tags
+
+6. DISPLAY:
+   • Images loaded from Cloudinary CDN
+   • Fast delivery via global CDN
+   • Lazy loading applied
+
+IMAGE OPTIMIZATION
+------------------
+
+AUTOMATIC:
+• Format conversion (WebP for supported browsers)
+• Quality compression (80-90%)
+• Resize on-the-fly via URL parameters
+• Lazy loading attributes
+
+THUMBNAIL GENERATION:
+• Multiple sizes available via URL params
+• Example: .../image.jpg?w=200&h=200 (200×200 thumbnail)
+
+CDN DELIVERY:
+• Global CDN (Cloudinary's infrastructure)
+• Edge caching for fast delivery
+• HTTPS secure URLs
+• 99.9% uptime SLA
+
+FALLBACKS
+---------
+
+1. NO UPLOAD:
+   • Placeholder images used
+   • Players: Generic player silhouette
+   • Teams: Generic team logo
+   • Tournaments: Generic trophy icon
+
+2. GENERATED AVATARS:
+   • Player initials used
+   • Colored background (based on name hash)
+   • Consistent colors per player
+
+3. FAILED UPLOAD:
+   • Error message displayed
+   • User can retry
+   • Or continue without image
+
+4. BROKEN IMAGE LINKS:
+   • onError handler in <img> tags
+   • Falls back to placeholder
+   • No broken image icons shown
+
+API ENDPOINT
+------------
+
+Route: /api/upload
+Method: POST
+Content-Type: multipart/form-data
+
+Request:
+• file: File (required)
+• folder: String (optional, default: "prostream-auction")
+
+Response (Success):
+{
+  "success": true,
+  "url": "https://res.cloudinary.com/.../image.jpg",
+  "publicId": "prostream-auction/players/abc123"
+}
+
+Response (Error):
+{
+  "error": "Error message",
+  "details": "Cloudinary error details"
+}
+
+--------------------------------------------------------------------------------
+D. THEME SYSTEM (DARK/LIGHT MODE)
+--------------------------------------------------------------------------------
+
+IMPLEMENTATION
+--------------
+• Technology: CSS Custom Properties (CSS Variables)
+• Storage: localStorage
+• Default: Dark mode
+
+AVAILABLE THEMES
+----------------
+
+1. DARK MODE (Default):
+   • Dark backgrounds
+   • Light text
+   • High contrast
+   • Reduced eye strain
+
+2. LIGHT MODE:
+   • Light backgrounds
+   • Dark text
+   • Clean, bright
+   • Traditional look
+
+THEME VARIABLES
+---------------
+
+CSS CUSTOM PROPERTIES:
+
+/* Surface Colors */
+--surface-primary: Main background color
+--surface-secondary: Panel backgrounds
+--surface-card: Card backgrounds
+--surface-elevated: Elevated component backgrounds
+--surface-hover: Hover state backgrounds
+
+/* Text Colors */
+--text-primary: Primary text (headings, important)
+--text-secondary: Secondary text (labels, metadata)
+--text-tertiary: Tertiary text (hints, placeholders)
+
+/* Brand Colors */
+--brand-primary: Primary brand color (#4F46E5 indigo)
+--brand-secondary: Secondary brand color (#10B981 green)
+
+/* Status Colors */
+--status-success: Success state (#10B981 green)
+--status-danger: Error/danger state (#EF4444 red)
+--status-warning: Warning state (#F59E0B amber)
+--status-info: Information state (#3B82F6 blue)
+--status-purple: Purple accent (#8B5CF6)
+--status-yellow: Yellow accent (#F59E0B)
+
+/* Border Colors */
+--border-primary: Primary borders
+--border-secondary: Secondary borders
+
+/* Misc */
+--shadow-sm: Small shadow
+--shadow-md: Medium shadow
+--shadow-lg: Large shadow
+
+DARK MODE VALUES:
+--surface-primary: #0f172a (slate-900)
+--surface-secondary: #1e293b (slate-800)
+--text-primary: #f1f5f9 (slate-100)
+--text-secondary: #cbd5e1 (slate-300)
+
+LIGHT MODE VALUES:
+--surface-primary: #ffffff (white)
+--surface-secondary: #f8fafc (slate-50)
+--text-primary: #0f172a (slate-900)
+--text-secondary: #475569 (slate-600)
+
+THEME TOGGLE
+------------
+
+LOCATION:
+• Navigation bar (header)
+• Icon: Sun (light mode) / Moon (dark mode)
+
+FUNCTIONALITY:
+1. User clicks theme toggle button
+2. JavaScript toggles theme class on <html> element
+3. CSS variables update based on class
+4. Preference saved to localStorage
+5. All components update instantly (no page reload)
+
+PERSISTENCE:
+• Key: "theme"
+• Value: "dark" or "light"
+• Loaded on page load
+• Persists across sessions
+
+CODE EXAMPLE:
+```javascript
+const toggleTheme = () => {
+  const currentTheme = localStorage.getItem('theme') || 'dark';
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  document.documentElement.classList.toggle('light-mode');
+  localStorage.setItem('theme', newTheme);
+};
+```
+
+OVERLAY SUPPORT
+---------------
+
+• Overlays use same theme system
+• CSS variables applied to overlay pages
+• Can be overridden via URL parameters (future feature)
+• Custom color schemes per overlay maintain theme structure
+
+ACCESSIBILITY
+-------------
+
+• High contrast maintained in both modes
+• WCAG 2.1 AA compliant color ratios
+• Consistent contrast ratios across themes
+• Text remains readable in all contexts
+
+--------------------------------------------------------------------------------
+E. BULK OPERATIONS
+--------------------------------------------------------------------------------
+
+BULK PLAYER IMPORT
+------------------
+
+TECHNOLOGY:
+• Excel file upload (XLSX format)
+• SheetJS library (xlsx) for parsing
+• Validation on server-side
+
+TEMPLATE SYSTEM:
+• Download Excel template with pre-defined columns
+• Template includes:
+  - Column headers
+  - Example rows
+  - Data validation (dropdowns)
+  - Instructions sheet
+
+UPLOAD PROCESS:
+1. User downloads template
+2. User fills template with player data
+3. User uploads filled template
+4. Server parses Excel file
+5. Server validates each row:
+   - Required fields present
+   - Data types correct
+   - Values in valid range
+6. Server creates players in database
+7. Duplicate detection:
+   - Check by name + position + club
+   - Skip duplicates (don't create)
+8. Success/error report returned:
+   - Total rows processed
+   - Successful imports
+   - Failed imports (with reasons)
+   - Duplicate skips
+
+ERROR HANDLING:
+• Invalid Excel format → Clear error message
+• Missing required columns → Column names listed
+• Invalid data types → Row number + field indicated
+• Duplicate players → Listed in report
+• Database errors → Generic error, logged server-side
+
+BULK PLAYER EXPORT
+------------------
+
+FORMATS:
+• Excel (XLSX) - Default
+• CSV - Available via "Save As" in Excel
+
+CONTENT:
+• All player fields included
+• Formatted for readability
+• Re-importable (can export → modify → import)
+
+HEADERS:
+• Player ID
+• Name
+• Position
+• Current Club
+• Matches Played
+• Total Score
+• Total Wickets
+• Photo URL
+• Player Class (if applicable)
+• Sold Status
+• Final Price (if sold)
+• Winning Team (if sold)
+
+USE CASES:
+• Backup player data
+• Share data with others
+• Modify data in Excel (then re-import)
+• Analysis in Excel/Google Sheets
+
+BULK TEAM IMPORT
+----------------
+
+SIMILAR TO PLAYER IMPORT:
+• Excel template system
+• Validation on upload
+• Duplicate detection
+• Error reporting
+
+TEAM-SPECIFIC FIELDS:
+• Team Name
+• Short Code
+• Owner Name
+• Logo URL
+
+BULK ADD TO TOURNAMENT
+----------------------
+
+FUNCTIONALITY:
+• Add multiple players to tournament at once
+• Uses Player IDs from master database
+• Validates Player IDs exist
+• Assigns player classes in bulk
+
+TEMPLATE:
+• Column: Player ID (from master database)
+• Column: Player Class (if tournament uses classes)
+• Validation ensures IDs exist
+
+PROCESS:
+1. Download tournament-specific template
+2. Fill with Player IDs (from master player list)
+3. Optionally assign classes
+4. Upload
+5. Players added to tournament with sequential numbers
+
+--------------------------------------------------------------------------------
+F. PERMISSION SYSTEM (ROLE-BASED ACCESS CONTROL)
+--------------------------------------------------------------------------------
+
+RBAC IMPLEMENTATION
+-------------------
+
+COMPONENTS:
+1. Route Protection: ProtectedRoute component
+2. API Middleware: JWT token validation
+3. Permission Checks: Role-based feature access
+
+ROUTE PROTECTION
+----------------
+
+MECHANISM:
+• ProtectedRoute component wraps pages
+• Checks:
+  - User is authenticated (has valid JWT)
+  - User role is in allowed roles list
+• Actions:
+  - If not authenticated → Redirect to /auth/login
+  - If wrong role → Redirect to /auth/unauthorized
+  - If authorized → Render page
+
+EXAMPLE:
+```tsx
+<ProtectedRoute allowedRoles={['Admin', 'TournamentManager']}>
+  <AuctionControlPanel />
+</ProtectedRoute>
+```
+
+API MIDDLEWARE
+--------------
+
+JWT TOKEN VALIDATION:
+• Token stored in localStorage
+• Sent in Authorization header
+• Format: "Bearer {token}"
+• Server validates signature
+• Server checks expiration
+• Server extracts user role
+
+ROLE VERIFICATION:
+• API routes check user role
+• Compare against required roles
+• Return 403 Forbidden if unauthorized
+
+TOURNAMENT ASSIGNMENT CHECKS:
+• For Tournament Managers
+• Verify user assigned to specific tournament
+• Prevent access to other tournaments
+
+PERMISSION MATRIX
+-----------------
+
+See detailed matrix in Section 6 below
+
+FEATURE FLAGS
+-------------
+
+ADMIN-ONLY FEATURES:
+• User management (approve, edit, delete)
+• Edit overlay metadata
+• System settings (future)
+
+TOURNAMENT MANAGER FEATURES:
+• Edit assigned tournaments only
+• Cannot edit other tournaments
+• Cannot manage users
+
+MASTER DATA MANAGER FEATURES:
+• Manage global player/team databases
+• Cannot manage tournaments
+• Cannot conduct auctions
+
+CONDITIONAL UI
+--------------
+
+EXAMPLE:
+```tsx
+{isAdmin && (
+  <button onClick={handleEditOverlay}>
+    Edit Overlay
+  </button>
+)}
+```
+
+• Features hidden if user lacks permission
+• Prevents confusion (no "unauthorized" errors)
+• Clean, role-appropriate UI
+
+--------------------------------------------------------------------------------
+G. ADDITIONAL FEATURES
+--------------------------------------------------------------------------------
+
+SEARCH & FILTER
+---------------
+
+IMPLEMENTATION:
+• Real-time client-side filtering
+• Case-insensitive search
+• Multiple filter criteria combinable
+
+LOCATIONS:
+1. Player Management:
+   - Search by name, position, club
+   - Filter by position dropdown
+   - Real-time results
+
+2. Team Management:
+   - Search by team name, owner
+   - Real-time results
+
+3. User Management:
+   - Search by username, email
+   - Filter by status (Active/Pending/All)
+   - Filter by role
+
+4. Auction Control:
+   - Search available players by name
+   - Instant filtering
+
+5. Overlays Dashboard:
+   - Search by overlay name, description
+   - Filter by category
+   - Combined search + filter
+
+RESPONSIVE DESIGN
+-----------------
+
+BREAKPOINTS:
+• Mobile: <640px
+• Tablet: 640px - 1024px
+• Desktop: >1024px
+
+MOBILE OPTIMIZATIONS:
+• Hamburger menu navigation
+• Stacked layouts instead of grids
+• Larger touch targets (48×48px minimum)
+• Simplified tables (horizontal scroll)
+• Bottom sheets for modals
+
+TABLET OPTIMIZATIONS:
+• Two-column layouts
+• Side-by-side panels
+• Optimized for portrait and landscape
+
+DESKTOP FULL FEATURES:
+• Multi-column layouts
+• Advanced data tables
+• Keyboard shortcuts
+• Hover states
+
+TOUCH-FRIENDLY CONTROLS:
+• Large buttons (minimum 44×44px)
+• Adequate spacing between clickable elements
+• Swipe gestures (where applicable)
+• No hover-dependent features
+
+ERROR HANDLING
+--------------
+
+FORM VALIDATION:
+• Real-time validation as user types
+• Clear error messages next to fields
+• Submit button disabled until valid
+• Visual indicators (red borders, icons)
+
+NETWORK ERRORS:
+• Retry logic with exponential backoff
+• User-friendly error messages
+• "Retry" buttons for failed operations
+• Offline detection and messaging
+
+API ERRORS:
+• 400 Bad Request → Form validation errors shown
+• 401 Unauthorized → Redirect to login
+• 403 Forbidden → "Access denied" message
+• 404 Not Found → "Resource not found" message
+• 500 Internal Server Error → "Something went wrong" generic message
+
+FALLBACK STATES:
+• Loading states (spinners, skeletons)
+• Empty states (no data available)
+• Error states (retry options)
+• Offline states (queue actions)
+
+PERFORMANCE OPTIMIZATION
+------------------------
+
+IMAGE OPTIMIZATION:
+• Lazy loading images (loading="lazy")
+• CDN delivery (Cloudinary)
+• Responsive images (srcset)
+• WebP format (for supported browsers)
+
+COMPONENT OPTIMIZATION:
+• React.memo for expensive components
+• useMemo for expensive calculations
+• useCallback for stable function references
+• Efficient re-rendering (minimal state changes)
+
+PUSHER CONNECTION:
+• Single connection shared across components
+• Connection pooling
+• Automatic reconnection
+• Efficient event handling
+
+BUNDLE SIZE:
+• Code splitting by route
+• Dynamic imports for large components
+• Tree shaking (removes unused code)
+• Minification in production
+
+KEYBOARD SHORTCUTS (Future Feature)
+------------------------------------
+
+PLANNED SHORTCUTS:
+• Space: Quick bid (+10,000)
+• Enter: Sell player
+• Esc: Close modal / Reset auction
+• Arrow Up/Down: Navigate player list
+• Ctrl+F: Focus search
+• Ctrl+S: Save (where applicable)
+
+ACCESSIBILITY
+-------------
+
+ARIA LABELS:
+• All interactive elements labeled
+• Screen reader descriptions
+• Role attributes for custom components
+
+SEMANTIC HTML:
+• Proper heading hierarchy (h1 → h2 → h3)
+• <button> for buttons (not <div>)
+• <nav> for navigation
+• <main> for main content
+
+FOCUS MANAGEMENT:
+• Visible focus indicators
+• Logical tab order
+• Focus trap in modals
+• Focus return when modal closes
+
+SCREEN READER SUPPORT:
+• Alternative text for images
+• Labels for form inputs
+• Status announcements (aria-live)
+• Descriptive link text
+
+COLOR CONTRAST:
+• WCAG 2.1 AA compliance
+• Minimum 4.5:1 for normal text
+• Minimum 3:1 for large text
+• High contrast mode support
+
+KEYBOARD NAVIGATION:
+• All features accessible via keyboard
+• No mouse-only interactions
+• Escape key closes modals
+• Enter key submits forms
+
+================================================================================
+6. PERMISSION MATRIX
+================================================================================
+
+DETAILED ROLE PERMISSIONS
+--------------------------
+
+LEGEND:
+✓ = Full Access
+◐ = Limited Access (conditions apply)
+✗ = No Access
+
+--------------------------------------------------------------------------------
+| FEATURE / ACTION              | Admin | Tournament | Master | Team | Player | Audience |
+|                               |       | Manager    | Data   |      |        |          |
+|                               |       |            | Mgr    |      |        |          |
+--------------------------------------------------------------------------------
+| AUTHENTICATION & PROFILE      |       |            |        |      |        |          |
+| - View Dashboard              | ✓     | ✓          | ✓      | ✓    | ✓      | ✓        |
+| - Edit Own Profile            | ✓     | ✓          | ✓      | ✓    | ✓      | ✓        |
+| - Change Own Password         | ✓     | ✓          | ✓      | ✓    | ✓      | ✓        |
+| - Logout                      | ✓     | ✓          | ✓      | ✓    | ✓      | ✓        |
+--------------------------------------------------------------------------------
+| USER MANAGEMENT               |       |            |        |      |        |          |
+| - View All Users              | ✓     | ✗          | ✗      | ✗    | ✗      | ✗        |
+| - Approve Pending Users       | ✓     | ✗          | ✗      | ✗    | ✗      | ✗        |
+| - Reject Users                | ✓     | ✗          | ✗      | ✗    | ✗      | ✗        |
+| - Edit Any User               | ✓     | ✗          | ✗      | ✗    | ✗      | ✗        |
+| - Delete Users                | ✓     | ✗          | ✗      | ✗    | ✗      | ✗        |
+| - Create/Invite Users         | ✓     | ✗          | ✗      | ✗    | ✗      | ✗        |
+| - Assign Users to Tournaments | ✓     | ✗          | ✗      | ✗    | ✗      | ✗        |
+--------------------------------------------------------------------------------
+| TOURNAMENT MANAGEMENT         |       |            |        |      |        |          |
+| - View All Tournaments        | ✓     | ◐          | ✗      | ✗    | ✗      | ✗        |
+| - Create Tournaments          | ✓     | ✗          | ✗      | ✗    | ✗      | ✗        |
+| - Edit Any Tournament         | ✓     | ✗          | ✗      | ✗    | ✗      | ✗        |
+| - Edit Assigned Tournament    | ✓     | ✓          | ✗      | ✗    | ✗      | ✗        |
+| - Delete Any Tournament       | ✓     | ✗          | ✗      | ✗    | ✗      | ✗        |
+| - Configure Player Classes    | ✓     | ◐          | ✗      | ✗    | ✗      | ✗        |
+--------------------------------------------------------------------------------
+| MASTER PLAYER DATABASE        |       |            |        |      |        |          |
+| - View Master Players         | ✓     | ✓          | ✓      | ✗    | ✗      | ✗        |
+| - Create Master Players       | ✓     | ✗          | ✓      | ✗    | ✗      | ✗        |
+| - Edit Master Players         | ✓     | ✗          | ✓      | ✗    | ✗      | ✗        |
+| - Delete Master Players       | ✓     | ✗          | ✓      | ✗    | ✗      | ✗        |
+| - Bulk Import Players         | ✓     | ✗          | ✓      | ✗    | ✗      | ✗        |
+| - Export Master Players       | ✓     | ✓          | ✓      | ✗    | ✗      | ✗        |
+--------------------------------------------------------------------------------
+| MASTER TEAM DATABASE          |       |            |        |      |        |          |
+| - View Master Teams           | ✓     | ✓          | ✓      | ✗    | ✗      | ✗        |
+| - Create Master Teams         | ✓     | ✗          | ✓      | ✗    | ✗      | ✗        |
+| - Edit Master Teams           | ✓     | ✗          | ✓      | ✗    | ✗      | ✗        |
+| - Delete Master Teams         | ✓     | ✗          | ✓      | ✗    | ✗      | ✗        |
+| - Bulk Import Teams           | ✓     | ✗          | ✓      | ✗    | ✗      | ✗        |
+--------------------------------------------------------------------------------
+| AUCTION SETUP                 |       |            |        |      |        |          |
+| - Access Auction Setup        | ✓     | ✓          | ✗      | ✗    | ✗      | ✗        |
+| - Add Players to Tournament   | ✓     | ✓          | ✗      | ✗    | ✗      | ✗        |
+| - Remove Players from Tour.   | ✓     | ✓          | ✗      | ✗    | ✗      | ✗        |
+| - Add Teams to Tournament     | ✓     | ✓          | ✗      | ✗    | ✗      | ✗        |
+| - Remove Teams from Tour.     | ✓     | ✓          | ✗      | ✗    | ✗      | ✗        |
+| - Assign Player Classes       | ✓     | ✓          | ✗      | ✗    | ✗      | ✗        |
+| - Export Tournament Data      | ✓     | ✓          | ✗      | ✗    | ✗      | ✗        |
+--------------------------------------------------------------------------------
+| AUCTION CONTROL               |       |            |        |      |        |          |
+| - Access Auction Control      | ✓     | ✓          | ✗      | ✗    | ✗      | ✗        |
+| - Start Auction               | ✓     | ✓          | ✗      | ✗    | ✗      | ✗        |
+| - Stop Auction                | ✓     | ✓          | ✗      | ✗    | ✗      | ✗        |
+| - Restart Auction             | ✓     | ✓          | ✗      | ✗    | ✗      | ✗        |
+| - Select Player for Auction   | ✓     | ✓          | ✗      | ✗    | ✗      | ✗        |
+| - Place Bids                  | ✓     | ✓          | ✗      | ✗    | ✗      | ✗        |
+| - Sell Player                 | ✓     | ✓          | ✗      | ✗    | ✗      | ✗        |
+| - Undo Last Sale              | ✓     | ✓          | ✗      | ✗    | ✗      | ✗        |
+| - Reset Current Auction       | ✓     | ✓          | ✗      | ✗    | ✗      | ✗        |
+| - Clear All Sales             | ✓     | ✓          | ✗      | ✗    | ✗      | ✗        |
+| - View Auction (Read-only)    | ✓     | ✓          | ✗      | ◐    | ✗      | ◐        |
+--------------------------------------------------------------------------------
+| OVERLAY SYSTEM                |       |            |        |      |        |          |
+| - View Overlay Dashboard      | ✓     | ✓          | ✓      | ✓    | ✓      | ✓        |
+| - Preview Overlays            | ✓     | ✓          | ✓      | ✓    | ✓      | ✓        |
+| - Customize Overlay Params    | ✓     | ✓          | ✗      | ✗    | ✗      | ✗        |
+| - Copy Overlay URLs           | ✓     | ✓          | ✓      | ✓    | ✓      | ✓        |
+| - Edit Overlay Metadata       | ✓     | ✗          | ✗      | ✗    | ✗      | ✗        |
+| - Access Overlay Pages        | ✓     | ✓          | ✓      | ✓    | ✓      | ✓        |
+--------------------------------------------------------------------------------
+| DATA EXPORT                   |       |            |        |      |        |          |
+| - Export Master Players       | ✓     | ✓          | ✓      | ✗    | ✗      | ✗        |
+| - Export Tournament Players   | ✓     | ✓          | ✗      | ✗    | ✗      | ✗        |
+| - Export Auction Results      | ✓     | ✓          | ✗      | ✗    | ✗      | ✗        |
+--------------------------------------------------------------------------------
+| SYSTEM SETTINGS               |       |            |        |      |        |          |
+| - Change Theme (Dark/Light)   | ✓     | ✓          | ✓      | ✓    | ✓      | ✓        |
+| - Configure Notifications     | ✓     | ✓          | ✓      | ✓    | ✓      | ✓        |
+--------------------------------------------------------------------------------
+
+CONDITIONAL ACCESS DETAILS
+--------------------------
+
+Tournament Manager:
+• "View All Tournaments" (◐): Can only view assigned tournaments
+• "Edit Assigned Tournament" (✓): Full edit for assigned tournaments only
+• "Configure Player Classes" (◐): Only for assigned tournaments
+
+Team Manager:
+• "View Auction" (◐): Can view auction for assigned team only
+• "View Own Team": Can see team balance, purchased players
+
+Audience:
+• "View Auction" (◐): Read-only view if approved by admin
+
+ROLE HIERARCHY
+--------------
+
+From Highest to Lowest Privilege:
+1. Admin (full system access)
+2. Tournament Manager (tournament-specific full access)
+3. Master Data Manager (global data management)
+4. Team Manager (view own team)
+5. Player (view own profile)
+6. Audience (view-only, requires approval)
+
+================================================================================
+7. TROUBLESHOOTING & SUPPORT
+================================================================================
+
+COMMON ISSUES
+-------------
+
+1. OVERLAYS NOT UPDATING IN REAL-TIME
+
+SYMPTOMS:
+• Overlays show stale data
+• Bids not reflecting in OBS
+• Player selection not visible
+
+SOLUTIONS:
+① Check Pusher connection in auction control panel
+   - Look for green dot (connected) vs red dot (disconnected)
+   - If red, wait for auto-reconnect or click manual reconnect
+
+② Verify tournament ID in overlay URL matches active tournament
+   - Check URL parameter: ?tournament=xxx
+   - Compare with tournament ID in auction setup
+
+③ Refresh browser source in OBS
+   - Right-click browser source → Refresh
+   - Or toggle visibility off/on
+
+④ Check internet connection
+   - Ensure stable connection on all devices
+   - Check firewall isn't blocking WebSocket connections
+
+⑤ Verify Pusher credentials in .env.local
+   - NEXT_PUBLIC_PUSHER_KEY must be set
+   - NEXT_PUBLIC_PUSHER_CLUSTER must be set
+   - Restart dev server after adding credentials
+
+2. IMAGES NOT LOADING
+
+SYMPTOMS:
+• Player photos show broken image icons
+• Team logos not visible
+• Tournament logos missing
+
+SOLUTIONS:
+① Verify Cloudinary credentials
+   - Check CLOUDINARY_CLOUD_NAME in .env.local
+   - Check CLOUDINARY_API_KEY in .env.local
+   - Check CLOUDINARY_API_SECRET in .env.local
+
+② Check image URLs in database
+   - Open browser console
+   - Look for 404 errors on image URLs
+   - Verify URLs are accessible
+
+③ Use fallback placeholder
+   - System should auto-fallback to placeholders
+   - If not, check console for JavaScript errors
+
+④ Re-upload images
+   - Delete broken image
+   - Upload new image via upload button
+
+3. LOGIN NOT WORKING
+
+SYMPTOMS:
+• "Invalid credentials" error
+• Login button not responding
+• Redirect loop
+
+SOLUTIONS:
+① Verify username and password correct
+   - Username is case-sensitive
+   - Password must match exactly
+
+② Check account status
+   - Contact admin to verify account is Active
+   - Audience accounts require admin approval
+
+③ Clear browser cache and cookies
+   - Hard refresh: Ctrl+Shift+R (Windows) or Cmd+Shift+R (Mac)
+   - Clear localStorage: Open DevTools → Application → Storage → Clear
+
+④ Check MongoDB connection
+   - Verify MONGODB_URI in .env.local
+   - Ensure database is accessible
+
+⑤ Check JWT secret
+   - Verify NEXTAUTH_SECRET in .env.local
+   - Restart server after changing
+
+4. AUCTION WON'T START
+
+SYMPTOMS:
+• "Start Auction" button disabled or errors
+• Validation errors
+
+SOLUTIONS:
+① Verify minimum requirements met:
+   - At least 2 teams registered ✓
+   - At least 1 player registered ✓
+   - Tournament status is "Draft" or "Setup" ✓
+
+② Check tournament status
+   - Navigate to /manage/tournaments
+   - Verify tournament is not already "Live"
+   - If wrong status, edit tournament to reset
+
+③ Check for database connection issues
+   - Look for error messages in browser console
+   - Check server logs for database errors
+
+④ Refresh page and try again
+   - Sometimes state can be stale
+   - Hard refresh browser
+
+5. PLAYER ALREADY IN TOURNAMENT ERROR
+
+SYMPTOMS:
+• Cannot add player to tournament
+• "Player already exists" error
+
+SOLUTIONS:
+① Check Registered Players panel
+   - Player may already be in list
+   - Use search to find player
+
+② Remove player if duplicate
+   - Click remove button on existing player
+   - Re-add with correct details
+
+③ Check player number assignment
+   - System auto-assigns sequential numbers
+   - If gap in numbers, this is normal
+
+6. TEAM BUDGET CALCULATION INCORRECT
+
+SYMPTOMS:
+• Team balance shows wrong amount
+• Max bid calculation seems off
+
+SOLUTIONS:
+① Verify initial budget set correctly
+   - Check tournament settings
+   - Initial budget should match tournament budget per team
+
+② Check all sold players for team
+   - Sum of final prices should equal spent amount
+   - Remaining balance = initial - spent
+
+③ Use "Undo Last Sale" if sale was error
+   - This will refund team budget
+   - Then re-sell correctly
+
+④ Manually verify calculation
+   - Export data to Excel
+   - Calculate manually to compare
+
+7. BROWSER SOURCE BLANK IN OBS
+
+SYMPTOMS:
+• OBS shows blank screen for overlay
+• No content visible in browser source
+
+SOLUTIONS:
+① Check URL is complete and correct
+   - Should start with http://localhost:3000 (dev)
+   - Should include full path (/overlays/...)
+   - Should include all parameters
+
+② Verify width and height set correctly
+   - Match overlay dimensions from dashboard
+   - Not too small (minimum 100×100)
+
+③ Check browser source settings
+   - FPS should be 30-60
+   - "Shutdown when not visible" may cause issues (uncheck to test)
+
+④ Interact with page to debug
+   - Right-click browser source → Interact
+   - Check for JavaScript errors in console
+
+⑤ Restart OBS
+   - Close and reopen OBS
+   - Sometimes cache issues resolved this way
+
+8. PERMISSION DENIED / UNAUTHORIZED
+
+SYMPTOMS:
+• "You are not authorized" message
+• Redirect to /auth/unauthorized
+
+SOLUTIONS:
+① Verify user role
+   - Check with admin what role assigned
+   - Some features require specific roles
+
+② Check tournament assignment
+   - Tournament Managers must be assigned to tournament
+   - Contact admin to assign
+
+③ Re-login
+   - Logout and login again
+   - Token may have expired
+
+④ Contact admin
+   - Request role change if needed
+   - Request tournament assignment
+
+9. BULK UPLOAD FAILING
+
+SYMPTOMS:
+• Excel upload shows errors
+• Some rows import, others fail
+
+SOLUTIONS:
+① Download template again
+   - Use latest template
+   - Don't modify column headers
+
+② Check data format
+   - Position must be exact: Batsman, Bowler, All-rounder, Wicket-keeper
+   - Numbers must be numbers (not text)
+   - Required fields must be filled
+
+③ Remove special characters
+   - Avoid emoji in names
+   - Use standard ASCII characters
+
+④ Upload smaller batches
+   - Instead of 100 players, try 20 at a time
+   - Easier to identify problematic rows
+
+⑤ Check error report
+   - System shows which rows failed and why
+   - Fix those specific rows and re-upload
+
+10. PERFORMANCE ISSUES / LAG
+
+SYMPTOMS:
+• Slow page loads
+• Auction control panel laggy
+• Overlays stuttering
+
+SOLUTIONS:
+① Check internet speed
+   - Minimum 10 Mbps recommended
+   - Test at speedtest.net
+
+② Reduce number of browser sources in OBS
+   - Maximum 8-12 recommended
+   - Hide unused overlays
+
+③ Lower OBS FPS
+   - 30 FPS sufficient for overlays
+   - 60 FPS only if needed for smooth animations
+
+④ Close unused browser tabs
+   - Each overlay page uses resources
+   - Close tabs not actively needed
+
+⑤ Check CPU/GPU usage
+   - Open Task Manager (Windows) or Activity Monitor (Mac)
+   - If >80%, close other applications
+
+⑥ Use wired internet connection
+   - WiFi can be unstable for real-time updates
+   - Ethernet cable recommended for auctioneer
+
+SUPPORT OPTIONS
+---------------
+
+DOCUMENTATION:
+• This complete user guide (COMPLETE_USER_DOCUMENTATION.txt)
+• In-app help tooltips
+• Video tutorials (if available)
+
+CONTACT:
+• Email: support@prostream-auction.com (example)
+• Contact page: /contact
+• GitHub Issues: (if open source)
+
+COMMUNITY:
+• User forum (if available)
+• Discord server (if available)
+• FAQ section
+
+TROUBLESHOOTING CHECKLIST
+--------------------------
+
+Before contacting support, try these steps:
+
+□ Clear browser cache and cookies
+□ Hard refresh page (Ctrl+Shift+R)
+□ Logout and login again
+□ Check internet connection
+□ Restart browser
+□ Restart dev server (npm run dev)
+□ Check .env.local file for correct credentials
+□ Verify MongoDB connection
+□ Check Pusher connection status
+□ Review browser console for errors
+□ Review server logs for errors
+
+When contacting support, include:
+
+• Description of issue
+• Steps to reproduce
+• Expected behavior vs actual behavior
+• Screenshots or screen recordings
+• Browser version and OS
+• Any error messages from console
+• User role and permissions
+• Tournament ID (if applicable)
+
+================================================================================
+END OF DOCUMENTATION
+================================================================================
+
+This comprehensive guide covers all features, functions, and workflows in the
+ProStream Auction Management System from a user's perspective, from initial
+setup through conducting auctions to managing results.
+
+For the latest updates and additional resources, visit the application
+dashboard or contact support.
+
+Version: 1.0
+Last Updated: 2025
+Application: ProStream Auction Management System
+Technology: Next.js 15.5.6, React 19, MongoDB, Pusher, Cloudinary
+
+================================================================================

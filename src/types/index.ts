@@ -128,7 +128,7 @@ export interface OverlayTemplate {
   _id: string;
   name: string;
   description: string;
-  imageURL: string;
+  imageURL?: string;
   tags: string[];
   isPremium: boolean;
   styles: OverlayStyles;
@@ -180,4 +180,156 @@ export interface PremiumPlayerCardContent {
   backgroundTextLine1: string;  // Custom text for watermark line 1
   backgroundTextLine2: string;  // Custom text for watermark line 2
   usePlayerNameAsWatermark: boolean;  // Use player name or custom text
+}
+
+// Overlay Management System Types
+export type OverlayCategory =
+  | 'player-info'
+  | 'team-info'
+  | 'auction-status'
+  | 'tickers'
+  | 'led-displays'
+  | 'banners'
+  | 'other';
+
+export type OverlayType =
+  | 'player-card'
+  | 'premium-player-card'
+  | 'teams'
+  | 'ticker'
+  | 'premium-ticker'
+  | 'current-bid'
+  | 'status'
+  | 'leaderboard'
+  | 'sale-banner'
+  | 'sold-summary'
+  | 'auction-overview'
+  | 'player-highlight-led';
+
+export type AnimationType = 'none' | 'fade' | 'slide' | 'zoom' | 'bounce';
+export type AnimationDirection = 'up' | 'down' | 'left' | 'right';
+
+export interface OverlayAnimation {
+  entry: {
+    type: AnimationType;
+    direction?: AnimationDirection;
+    duration: number; // milliseconds
+  };
+  exit: {
+    type: AnimationType;
+    direction?: AnimationDirection;
+    duration: number;
+  };
+  loop?: boolean;
+  loopDuration?: number;
+}
+
+export interface OverlayPosition {
+  x: number; // pixels or percentage
+  y: number;
+  unit: 'px' | '%';
+}
+
+export interface OverlaySize {
+  width: number;
+  height: number;
+  unit: 'px' | '%';
+  aspectRatioLocked: boolean;
+  preset?: '1080p' | '720p' | '4K' | 'custom';
+}
+
+export interface DisplayRule {
+  _id: string;
+  name: string;
+  type: 'auction-state' | 'time-based' | 'event-based';
+  condition: string; // JSON string of condition logic
+  action: 'show' | 'hide';
+  enabled: boolean;
+}
+
+export interface OverlayScene {
+  _id: string;
+  name: string;
+  description: string;
+  overlayIds: string[]; // Array of OverlayConfig IDs
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface OverlayConfig {
+  _id: string;
+  name: string;
+  description: string;
+  overlayType: OverlayType;
+  category: OverlayCategory;
+  imageURL?: string; // Preview image
+  isActive: boolean;
+  isTemplate: boolean; // Whether this is a reusable template
+
+  // Layout
+  position: OverlayPosition;
+  size: OverlaySize;
+  zIndex: number;
+  opacity: number; // 0-100
+
+  // Customization
+  parameters: Record<string, any>; // Dynamic parameters based on overlay type
+  animations?: OverlayAnimation;
+  displayRules?: DisplayRule[];
+
+  // Association
+  tournamentId?: string | null; // null for global templates
+  sceneIds?: string[]; // Scenes this overlay belongs to
+
+  // Metadata
+  createdBy: string; // User ID
+  createdAt: Date;
+  updatedAt: Date;
+  version: number; // For version control
+  parentConfigId?: string; // If cloned from another config
+
+  // Usage tracking
+  viewCount?: number;
+  lastUsedAt?: Date;
+
+  // Access control
+  isLocked: boolean; // Prevent editing during live events
+  allowedRoles?: string[]; // Roles that can edit this overlay
+}
+
+export interface OverlayTemplate {
+  _id: string;
+  name: string;
+  description: string;
+  overlayType: OverlayType;
+  category: OverlayCategory;
+  imageURL?: string;
+  parameters: Record<string, any>;
+  animations?: OverlayAnimation;
+  isPublic: boolean; // Available to all users
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+  usageCount?: number;
+}
+
+export interface OverlayHistory {
+  _id: string;
+  overlayConfigId: string;
+  version: number;
+  changes: Record<string, any>; // What was changed
+  changedBy: string; // User ID
+  changedAt: Date;
+  comment?: string;
+}
+
+// Analytics
+export interface OverlayAnalytics {
+  overlayConfigId: string;
+  displayCount: number;
+  totalDisplayDuration: number; // milliseconds
+  averageDisplayDuration: number;
+  lastDisplayedAt: Date;
+  errorCount: number;
+  loadTime: number; // milliseconds
 }

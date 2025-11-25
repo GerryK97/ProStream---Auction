@@ -5,7 +5,8 @@ import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
 import { MasterTeamModel } from '@/models/MasterTeam';
 import { MasterPlayerModel } from '@/models/MasterPlayer';
-import { Tournament, Team, Player, MasterTeam, MasterPlayer } from '@/types';
+import { OverlayConfigModel, OverlaySceneModel, OverlayHistoryModel, OverlayAnalyticsModel } from '@/models/OverlayConfig';
+import { Tournament, Team, Player, MasterTeam, MasterPlayer, OverlayConfig, OverlayScene, OverlayHistory } from '@/types';
 import { canAccessTournament, canAccessTeam, canAccessPlayer, canAccessMasterTeam, canAccessMasterPlayer } from './permissions';
 
 // Helper function to generate IDs
@@ -911,4 +912,209 @@ export const seedDatabase = async () => {
 
     console.log('✅ Database seeded successfully!');
   }
+};
+
+// Overlay Configuration operations
+export const overlayConfigDB = {
+  getAll: async (): Promise<OverlayConfig[]> => {
+    await connectToDatabase();
+    return await OverlayConfigModel.find().lean() as any;
+  },
+
+  getAllForUser: async (
+    userId: string,
+    userRole: string,
+    tournamentId?: string | null
+  ): Promise<OverlayConfig[]> => {
+    await connectToDatabase();
+
+    // Admin sees all overlays
+    if (userRole === 'Admin') {
+      const query = tournamentId ? { tournamentId } : {};
+      return await OverlayConfigModel.find(query).lean() as any;
+    }
+
+    // Build query: overlays created by user OR global templates
+    const query: any = {
+      $or: [
+        { createdBy: userId },
+        { isTemplate: true, tournamentId: null }, // Global templates
+      ],
+    };
+
+    // If tournamentId provided, also include overlays for that tournament
+    if (tournamentId) {
+      query.$or.push({ tournamentId });
+    }
+
+    return await OverlayConfigModel.find(query).lean() as any;
+  },
+
+  getById: async (id: string): Promise<OverlayConfig | null> => {
+    await connectToDatabase();
+    return await OverlayConfigModel.findOne({ _id: id }).lean() as any;
+  },
+
+  getByType: async (overlayType: string): Promise<OverlayConfig[]> => {
+    await connectToDatabase();
+    return await OverlayConfigModel.find({ overlayType }).lean() as any;
+  },
+
+  getByCategory: async (category: string): Promise<OverlayConfig[]> => {
+    await connectToDatabase();
+    return await OverlayConfigModel.find({ category }).lean() as any;
+  },
+
+  getTemplates: async (): Promise<OverlayConfig[]> => {
+    await connectToDatabase();
+    return await OverlayConfigModel.find({ isTemplate: true }).lean() as any;
+  },
+
+  create: async (
+    data: Omit<OverlayConfig, '_id' | 'createdAt' | 'updatedAt' | 'version'>,
+    createdBy: string
+  ): Promise<OverlayConfig> => {
+    await connectToDatabase();
+    const newConfig: any = {
+      _id: generateId('overlay'),
+      ...data,
+      createdBy,
+      version: 1,
+      viewCount: 0,
+    };
+    const doc = await OverlayConfigModel.create(newConfig);
+    return doc.toObject();
+  },
+
+  update: async (id: string, data: Partial<Omit<OverlayConfig, '_id'>>, userId: string): Promise<OverlayConfig | null> => {
+    await connectToDatabase();
+
+    // Get current version
+    const current = await OverlayConfigModel.findOne({ _id: id }).lean() as any;
+    if (!current) return null;
+
+    // Save to history before updating
+    await OverlayHistoryModel.create({
+      _id: generateId('history'),
+      overlayConfigId: id,
+      version: current.version || 1,
+      changes: data,
+      changedBy: userId,
+      changedAt: new Date(),
+    });
+
+    // Update with incremented version
+    const updated = await OverlayConfigModel.findOneAndUpdate(
+      { _id: id },
+      {
+        $set: { ...data, updatedAt: new Date() },
+        $inc: { version: 1 }
+      },
+      { new: true }
+    ).lean();
+
+    return updated as any;
+  },
+
+  delete: async (id: string): Promise<boolean> => {
+    await connectToDatabase();
+    const result = await OverlayConfigModel.deleteOne({ _id: id });
+    return result.deletedCount > 0;
+  },
+
+  duplicate: async (id: string, createdBy: string): Promise<OverlayConfig | null> => {
+    await connectToDatabase();
+    const original = await OverlayConfigModel.findOne({ _id: id }).lean() as any;
+    if (!original) return null;
+
+    const newConfig: any = {
+      ...original,
+      _id: generateId('overlay'),
+      name: `${original.name} (Copy)`,
+      createdBy,
+      parentConfigId: id,
+      version: 1,
+      viewCount: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const doc = await OverlayConfigModel.create(newConfig);
+    return doc.toObject();
+  },
+
+  incrementViewCount: async (id: string): Promise<void> => {
+    await connectToDatabase();
+    await OverlayConfigModel.updateOne(
+      { _id: id },
+      {
+        $inc: { viewCount: 1 },
+        $set: { lastUsedAt: new Date() }
+      }
+    );
+  },
+
+  lock: async (id: string, locked: boolean): Promise<OverlayConfig | null> => {
+    await connectToDatabase();
+    const updated = await OverlayConfigModel.findOneAndUpdate(
+      { _id: id },
+      { $set: { isLocked: locked } },
+      { new: true }
+    ).lean();
+    return updated as any;
+  },
+};
+
+// Overlay Scene operations
+export const overlaySceneDB = {
+  getAll: async (): Promise<OverlayScene[]> => {
+    await connectToDatabase();
+    return await OverlaySceneModel.find().lean() as any;
+  },
+
+  getById: async (id: string): Promise<OverlayScene | null> => {
+    await connectToDatabase();
+    return await OverlaySceneModel.findOne({ _id: id }).lean() as any;
+  },
+
+  create: async (data: Omit<OverlayScene, '_id' | 'createdAt' | 'updatedAt'>): Promise<OverlayScene> => {
+    await connectToDatabase();
+    const newScene: any = {
+      _id: generateId('scene'),
+      ...data,
+    };
+    const doc = await OverlaySceneModel.create(newScene);
+    return doc.toObject();
+  },
+
+  update: async (id: string, data: Partial<Omit<OverlayScene, '_id'>>): Promise<OverlayScene | null> => {
+    await connectToDatabase();
+    const updated = await OverlaySceneModel.findOneAndUpdate(
+      { _id: id },
+      { $set: data },
+      { new: true }
+    ).lean();
+    return updated as any;
+  },
+
+  delete: async (id: string): Promise<boolean> => {
+    await connectToDatabase();
+    const result = await OverlaySceneModel.deleteOne({ _id: id });
+    return result.deletedCount > 0;
+  },
+};
+
+// Overlay History operations
+export const overlayHistoryDB = {
+  getByConfigId: async (overlayConfigId: string): Promise<OverlayHistory[]> => {
+    await connectToDatabase();
+    return await OverlayHistoryModel.find({ overlayConfigId })
+      .sort({ version: -1 })
+      .lean() as any;
+  },
+
+  getByVersion: async (overlayConfigId: string, version: number): Promise<OverlayHistory | null> => {
+    await connectToDatabase();
+    return await OverlayHistoryModel.findOne({ overlayConfigId, version }).lean() as any;
+  },
 };

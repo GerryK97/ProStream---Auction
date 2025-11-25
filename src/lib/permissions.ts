@@ -74,6 +74,7 @@ export function canPerformAction(
       masterTeam: ['create', 'read', 'update', 'delete', 'manage'],
       auction: ['create', 'read', 'update', 'delete', 'manage'],
       user: ['create', 'read', 'update', 'delete', 'manage'],
+      overlayConfig: ['create', 'read', 'update', 'delete', 'manage'],
     },
     Tournament: {
       tournament: ['read', 'update', 'manage'],
@@ -82,6 +83,7 @@ export function canPerformAction(
       auction: ['read', 'update', 'manage'],
       masterPlayer: ['read'],
       masterTeam: ['read'],
+      overlayConfig: ['create', 'read', 'update', 'delete'],
       user: [],
     },
     MasterManager: {
@@ -91,6 +93,7 @@ export function canPerformAction(
       team: ['read'],
       player: ['read'],
       auction: ['read'],
+      overlayConfig: ['read'],
       user: [],
     },
     Team: {
@@ -100,6 +103,7 @@ export function canPerformAction(
       masterPlayer: ['read'],
       masterTeam: ['read'],
       auction: ['read'],
+      overlayConfig: ['read'],
       user: [],
     },
     Player: {
@@ -107,6 +111,7 @@ export function canPerformAction(
       player: ['read'],
       masterPlayer: ['read'],
       auction: ['read'],
+      overlayConfig: ['read'],
       team: [],
       masterTeam: [],
       user: [],
@@ -116,6 +121,7 @@ export function canPerformAction(
       tournament: ['read'],
       player: ['read'],
       team: ['read'],
+      overlayConfig: ['read'],
       masterPlayer: [],
       masterTeam: [],
       user: [],
