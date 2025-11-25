@@ -6,9 +6,10 @@ import { canPerformAction } from '@/lib/permissions';
 // POST /api/overlay-configs/[id]/lock - Lock/unlock an overlay config
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -29,7 +30,7 @@ export async function POST(
       );
     }
 
-    const updated = await overlayConfigDB.lock(params.id, locked);
+    const updated = await overlayConfigDB.lock(id, locked);
 
     if (!updated) {
       return NextResponse.json(

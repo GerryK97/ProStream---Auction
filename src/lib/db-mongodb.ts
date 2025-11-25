@@ -990,14 +990,14 @@ export const overlayConfigDB = {
     await connectToDatabase();
 
     // Get current version
-    const current = await OverlayConfigModel.findOne({ _id: id }).lean();
+    const current = await OverlayConfigModel.findOne({ _id: id }).lean() as any;
     if (!current) return null;
 
     // Save to history before updating
     await OverlayHistoryModel.create({
       _id: generateId('history'),
       overlayConfigId: id,
-      version: current.version,
+      version: current.version || 1,
       changes: data,
       changedBy: userId,
       changedAt: new Date(),
@@ -1024,7 +1024,7 @@ export const overlayConfigDB = {
 
   duplicate: async (id: string, createdBy: string): Promise<OverlayConfig | null> => {
     await connectToDatabase();
-    const original = await OverlayConfigModel.findOne({ _id: id }).lean();
+    const original = await OverlayConfigModel.findOne({ _id: id }).lean() as any;
     if (!original) return null;
 
     const newConfig: any = {

@@ -6,9 +6,10 @@ import { canPerformAction } from '@/lib/permissions';
 // GET /api/overlay-configs/[id] - Get single overlay config
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -18,7 +19,7 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const config = await overlayConfigDB.getById(params.id);
+    const config = await overlayConfigDB.getById(id);
 
     if (!config) {
       return NextResponse.json({ error: 'Overlay config not found' }, { status: 404 });
@@ -46,9 +47,10 @@ export async function GET(
 // PUT /api/overlay-configs/[id] - Update overlay config
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -59,7 +61,7 @@ export async function PUT(
     }
 
     // Check if config exists and user has access
-    const existing = await overlayConfigDB.getById(params.id);
+    const existing = await overlayConfigDB.getById(id);
     if (!existing) {
       return NextResponse.json({ error: 'Overlay config not found' }, { status: 404 });
     }
@@ -82,7 +84,7 @@ export async function PUT(
     // Remove fields that shouldn't be updated via this endpoint
     const { _id, createdBy, createdAt, version, viewCount, ...updateData } = body;
 
-    const updated = await overlayConfigDB.update(params.id, updateData, user.userId);
+    const updated = await overlayConfigDB.update(id, updateData, user.userId);
 
     if (!updated) {
       return NextResponse.json({ error: 'Failed to update overlay config' }, { status: 500 });
@@ -101,9 +103,10 @@ export async function PUT(
 // DELETE /api/overlay-configs/[id] - Delete overlay config
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -114,7 +117,7 @@ export async function DELETE(
     }
 
     // Check if config exists and user has access
-    const existing = await overlayConfigDB.getById(params.id);
+    const existing = await overlayConfigDB.getById(id);
     if (!existing) {
       return NextResponse.json({ error: 'Overlay config not found' }, { status: 404 });
     }
@@ -132,7 +135,7 @@ export async function DELETE(
       );
     }
 
-    const deleted = await overlayConfigDB.delete(params.id);
+    const deleted = await overlayConfigDB.delete(id);
 
     if (!deleted) {
       return NextResponse.json({ error: 'Failed to delete overlay config' }, { status: 500 });

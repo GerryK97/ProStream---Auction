@@ -6,9 +6,10 @@ import { canPerformAction } from '@/lib/permissions';
 // GET /api/overlay-scenes/[id] - Get single overlay scene
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -18,7 +19,7 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const scene = await overlaySceneDB.getById(params.id);
+    const scene = await overlaySceneDB.getById(id);
 
     if (!scene) {
       return NextResponse.json({ error: 'Scene not found' }, { status: 404 });
@@ -37,9 +38,10 @@ export async function GET(
 // PUT /api/overlay-scenes/[id] - Update overlay scene
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -52,7 +54,7 @@ export async function PUT(
     const body = await request.json();
     const { _id, createdAt, updatedAt, ...updateData } = body;
 
-    const updated = await overlaySceneDB.update(params.id, updateData);
+    const updated = await overlaySceneDB.update(id, updateData);
 
     if (!updated) {
       return NextResponse.json({ error: 'Scene not found' }, { status: 404 });
@@ -71,9 +73,10 @@ export async function PUT(
 // DELETE /api/overlay-scenes/[id] - Delete overlay scene
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -83,7 +86,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const deleted = await overlaySceneDB.delete(params.id);
+    const deleted = await overlaySceneDB.delete(id);
 
     if (!deleted) {
       return NextResponse.json({ error: 'Scene not found' }, { status: 404 });

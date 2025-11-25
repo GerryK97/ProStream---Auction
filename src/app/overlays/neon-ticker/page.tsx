@@ -1,11 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import OverlayWrapper from '@/components/overlays/OverlayWrapper';
 import NeonCyberpunkTickerOverlay from '@/components/overlays/NeonCyberpunkTickerOverlay';
 
-export default function NeonCyberpunkTickerPage() {
+function NeonCyberpunkTickerContent() {
     const searchParams = useSearchParams();
 
     // Parse URL parameters
@@ -36,5 +36,13 @@ export default function NeonCyberpunkTickerPage() {
                 );
             }}
         </OverlayWrapper>
+    );
+}
+
+export default function NeonCyberpunkTickerPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <NeonCyberpunkTickerContent />
+        </Suspense>
     );
 }

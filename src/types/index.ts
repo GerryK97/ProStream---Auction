@@ -128,7 +128,7 @@ export interface OverlayTemplate {
   _id: string;
   name: string;
   description: string;
-  imageURL: string;
+  imageURL?: string;
   tags: string[];
   isPremium: boolean;
   styles: OverlayStyles;

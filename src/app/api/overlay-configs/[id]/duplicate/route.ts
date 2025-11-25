@@ -6,9 +6,10 @@ import { canPerformAction } from '@/lib/permissions';
 // POST /api/overlay-configs/[id]/duplicate - Duplicate an overlay config
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -18,7 +19,7 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const duplicated = await overlayConfigDB.duplicate(params.id, user.userId);
+    const duplicated = await overlayConfigDB.duplicate(id, user.userId);
 
     if (!duplicated) {
       return NextResponse.json(

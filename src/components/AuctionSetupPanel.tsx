@@ -205,9 +205,10 @@ const AddPlayerFromDatabase: React.FC<AddPlayerFromDatabaseProps> = ({
                                                 [player._id]: e.target.value
                                             }))}
                                             className="flex-1 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-                                            style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
                                             style={{
-                                                color: classConfig?.color || 'inherit'
+                                                backgroundColor: 'var(--surface-elevated)',
+                                                border: '1px solid var(--border-primary)',
+                                                color: classConfig?.color || 'var(--text-primary)'
                                             }}
                                         >
                                             <option value="">None</option>
@@ -828,8 +829,10 @@ const AuctionSetupPanel: React.FC = () => {
                                                 setIsDropdownOpen(false);
                                             }}
                                               className={`w-full text-left p-3 transition-colors`}
-                                              style={{ backgroundColor: t._id === selectedTournamentId ? 'var(--surface-hover)' : 'transparent', color: t._id === selectedTournamentId ? 'var(--brand-primary)' : 'var(--text-primary)' }}
-                                              style={{ backgroundColor: t._id === selectedTournamentId ? 'var(--surface-hover)' : undefined, color: t._id === selectedTournamentId ? 'var(--brand-primary)' : undefined }}
+                                              style={{
+                                                backgroundColor: t._id === selectedTournamentId ? 'var(--surface-hover)' : 'transparent',
+                                                color: t._id === selectedTournamentId ? 'var(--brand-primary)' : 'var(--text-primary)'
+                                              }}
                                               >
                                             <div className="flex items-center justify-between">
                                                 <p className="font-semibold">{t.name}</p>

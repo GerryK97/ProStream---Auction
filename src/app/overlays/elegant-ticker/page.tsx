@@ -1,11 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import OverlayWrapper from '@/components/overlays/OverlayWrapper';
 import ElegantMinimalistTickerOverlay from '@/components/overlays/ElegantMinimalistTickerOverlay';
 
-export default function ElegantMinimalistTickerPage() {
+function ElegantMinimalistTickerContent() {
     const searchParams = useSearchParams();
 
     // Parse URL parameters
@@ -36,5 +36,13 @@ export default function ElegantMinimalistTickerPage() {
                 );
             }}
         </OverlayWrapper>
+    );
+}
+
+export default function ElegantMinimalistTickerPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <ElegantMinimalistTickerContent />
+        </Suspense>
     );
 }
