@@ -22,29 +22,16 @@ interface OverlayType {
 const teamCardsDefaultParams = {
     layout: 'horizontal',
     position: 'bottom',
-    useGradient: 'false',
-    cardBackground: '#000000',
-    gradientStart: '#0891b2',
-    gradientEnd: '#06b6d4',
-    borderColor: '#06b6d4',
-    borderRadius: '8',
-    backgroundOpacity: '80',
-    teamNameColor: '#ffffff',
-    balanceColor: '#4ade80',
-    statsColor: '#d4d4d8',
-    maxBidColor: '#22d3ee',
-    winningBorderColor: '#ef4444',
-    themeVariant: 'neonPulse'
+    variant: 'neon'
 };
 
 const teamCardsParameterSchema: { [key: string]: ParameterConfig } = {
-    themeVariant: {
+    variant: {
         type: 'select',
-        label: 'Theme Variant',
-        options: ['neonPulse', 'emberPulse'],
-        description: 'Switch between neon or ember presets'
+        label: 'Design Variant',
+        options: ['neon', 'ember', 'midnight'],
+        description: 'Pick the built-in design preset'
     },
-    // Layout & Position
     layout: {
         type: 'select',
         label: 'Layout',
@@ -56,76 +43,6 @@ const teamCardsParameterSchema: { [key: string]: ParameterConfig } = {
         label: 'Position',
         options: ['top', 'bottom', 'left', 'right'],
         description: 'Overlay position on screen'
-    },
-
-    // Background Style
-    useGradient: {
-        type: 'toggle',
-        label: 'Use Gradient Background',
-        description: 'Enable gradient instead of solid color'
-    },
-    cardBackground: {
-        type: 'color',
-        label: 'Card Background',
-        description: 'Solid background color (when gradient is off)'
-    },
-    gradientStart: {
-        type: 'color',
-        label: 'Gradient Start Color',
-        description: 'Starting color for gradient background'
-    },
-    gradientEnd: {
-        type: 'color',
-        label: 'Gradient End Color',
-        description: 'Ending color for gradient background'
-    },
-    backgroundOpacity: {
-        type: 'number',
-        label: 'Background Opacity (%)',
-        min: 10,
-        max: 100,
-        description: 'Card background transparency'
-    },
-
-    // Borders & Corners
-    borderColor: {
-        type: 'color',
-        label: 'Border Color',
-        description: 'Color for card border'
-    },
-    borderRadius: {
-        type: 'number',
-        label: 'Border Radius (px)',
-        min: 0,
-        max: 48,
-        description: 'Card corner roundness'
-    },
-    winningBorderColor: {
-        type: 'color',
-        label: 'Winning Team Border',
-        description: 'Border color when team is currently winning'
-    },
-
-    // Typography & Stats
-    teamNameColor: {
-        type: 'color',
-        label: 'Team Name Color',
-        description: 'Color for the team title text'
-    },
-    balanceColor: {
-        type: 'color',
-        label: 'Balance Color',
-        description: 'Color for team balance'
-    },
-    statsColor: {
-        type: 'color',
-        label: 'Stats Color',
-        description: 'Color for stats text'
-    },
-    maxBidColor: {
-        type: 'color',
-        label: 'Max Bid Color',
-        description: 'Color for max bid amount'
     }
 };
 
@@ -144,6 +61,95 @@ const overlayTypes: OverlayType[] = [
         },
         imageURL: 'https://placehold.co/400x200/1e293b/06b6d4?text=Player+Card',
         dimensions: { width: 800, height: 300 }
+    },
+    {
+        id: 'football-player-card',
+        name: 'Football Player Card',
+        description: 'Football-style horizontal card with diagonal separator, jersey number, and match stats - inspired by Barcelona design',
+        route: '/overlays/football-player-card',
+        tags: ['Player', 'Auction', 'Football', 'Sport'],
+        category: 'Player Display',
+        defaultParams: {
+            position: 'center',
+            primaryColor: '#FCD000',
+            accentColor: '#E7C403',
+            textColor: '#1e293b',
+            statLabelColor: '#64748b',
+            cardSize: 'medium',
+            borderRadius: 'medium',
+            showPlayerImage: 'true',
+            showJerseyNumber: 'true',
+            showStats: 'true',
+            showCurrentBid: 'true',
+            diagonalStyle: 'true'
+        },
+        parameterSchema: {
+            position: {
+                type: 'select',
+                label: 'Position',
+                options: ['center', 'left', 'right'],
+                description: 'Overlay position on screen'
+            },
+            primaryColor: {
+                type: 'color',
+                label: 'Primary Background Color',
+                description: 'Main card background color (default: Barcelona yellow)'
+            },
+            accentColor: {
+                type: 'color',
+                label: 'Accent Color',
+                description: 'Jersey number and bid highlight color'
+            },
+            textColor: {
+                type: 'color',
+                label: 'Text Color',
+                description: 'Player name and stat values color'
+            },
+            statLabelColor: {
+                type: 'color',
+                label: 'Stat Label Color',
+                description: 'Color for stat labels (Position, Club, etc.)'
+            },
+            cardSize: {
+                type: 'select',
+                label: 'Card Size',
+                options: ['small', 'medium', 'large'],
+                description: 'Overall card dimensions'
+            },
+            borderRadius: {
+                type: 'select',
+                label: 'Border Radius',
+                options: ['none', 'small', 'medium', 'large'],
+                description: 'Corner rounding style'
+            },
+            showPlayerImage: {
+                type: 'toggle',
+                label: 'Show Player Image',
+                description: 'Display player photo'
+            },
+            showJerseyNumber: {
+                type: 'toggle',
+                label: 'Show Jersey Number',
+                description: 'Display player number badge'
+            },
+            showStats: {
+                type: 'toggle',
+                label: 'Show Stats',
+                description: 'Display player statistics (Position, Club, Matches)'
+            },
+            showCurrentBid: {
+                type: 'toggle',
+                label: 'Show Current Bid',
+                description: 'Display current bid amount badge'
+            },
+            diagonalStyle: {
+                type: 'toggle',
+                label: 'Diagonal Separator',
+                description: 'Show white diagonal separator element'
+            }
+        },
+        imageURL: 'https://placehold.co/450x250/FCD000/1e293b?text=Football+Card',
+        dimensions: { width: 450, height: 250 }
     },
     {
         id: 'premium-player-card',
@@ -355,7 +361,7 @@ const overlayTypes: OverlayType[] = [
     {
         id: 'teams',
         name: 'Team Cards',
-        description: 'Show all teams with balances, max bids, and players purchased - fully customizable backgrounds and colors',
+        description: 'Show all teams with balances, max bids, and players purchased. Choose a preset (Neon, Ember, Midnight) plus layout/position—colors are fixed per preset.',
         route: '/overlays/teams',
         tags: ['Teams', 'Auction', 'Customizable'],
         category: 'Team Display',
@@ -374,7 +380,7 @@ const overlayTypes: OverlayType[] = [
         defaultParams: {
             layout: 'horizontal',
             position: 'bottom',
-            themeVariant: 'neonPulse'
+            variant: 'neon'
         },
         parameterSchema: teamCardsParameterSchema,
         imageURL: '/overlay-previews/team-cards-neon.png',
@@ -390,10 +396,26 @@ const overlayTypes: OverlayType[] = [
         defaultParams: {
             layout: 'horizontal',
             position: 'bottom',
-            themeVariant: 'emberPulse'
+            variant: 'ember'
         },
         parameterSchema: teamCardsParameterSchema,
         imageURL: '/overlay-previews/team-cards-ember.png',
+        dimensions: { width: 1280, height: 720 }
+    },
+    {
+        id: 'team-cards-midnight',
+        name: 'Team Cards · Midnight Slate',
+        description: 'Executive-grade slate design with understated gradients, crisp typography, and unobtrusive motion.',
+        route: '/overlays/teams',
+        tags: ['Teams', 'Auction', 'Preset', 'Professional'],
+        category: 'Team Display',
+        defaultParams: {
+            layout: 'horizontal',
+            position: 'bottom',
+            variant: 'midnight'
+        },
+        parameterSchema: teamCardsParameterSchema,
+        imageURL: '/overlay-previews/team-cards-midnight.png',
         dimensions: { width: 1280, height: 720 }
     },
     {

@@ -227,6 +227,65 @@ $themes = @(
                 Caption = 'Ready for bidding';
             }
         );
+    },
+    @{
+        Name = 'Midnight Slate';
+        Output = 'team-cards-midnight.png';
+        Background = @{
+            Start = '#0f172a';
+            End = '#1f2937';
+        };
+        Overlay = @{
+            Caption = '#e2e8f0';
+        };
+        Card = @{
+            Start = '#111827';
+            End = '#1f2937';
+            Radius = 24;
+        };
+        Border = @{
+            Base = '#334155';
+            Winning = '#2563eb';
+        };
+        Text = @{
+            Primary = '#f8fafc';
+            Secondary = '#cbd5f5';
+            Balance = '#f8fafc';
+            MaxBid = '#e2e8f0';
+            Badge = '#cbd5f5';
+        };
+        Teams = @(
+            @{
+                Name = 'Cobalt Titans';
+                PlayersPurchased = 8;
+                SquadSize = 16;
+                SlotsLeft = 8;
+                Balance = '$58,400';
+                MaxBid = '$15,200';
+                Progress = 0.5;
+                ProgressColors = @{ Start = '#0ea5e9'; End = '#14b8a6'; };
+                Logo = @{ Inner = '#1d4ed8'; Outer = '#0f172a'; };
+                Accent = @{ Icon = '•'; Label = 'Match Status'; Start = '#94a3b8'; End = '#1d4ed8'; };
+                Badge = @{ Background = '#0f766e'; Text = '#f0fdfa'; };
+                IsWinning = $false;
+                Caption = 'Professional slate profile';
+            },
+            @{
+                Name = 'Monarch Capitals';
+                PlayersPurchased = 10;
+                SquadSize = 16;
+                SlotsLeft = 6;
+                Balance = '$44,950';
+                MaxBid = '$9,800';
+                Progress = 0.62;
+                ProgressColors = @{ Start = '#1d4ed8'; End = '#475569'; };
+                Logo = @{ Inner = '#475569'; Outer = '#94a3b8'; };
+                Accent = @{ Icon = '•'; Label = 'Last Sold'; Start = '#64748b'; End = '#0f172a'; };
+                Badge = @{ Background = '#1d4ed8'; Text = '#f8fafc'; };
+                IsWinning = $true;
+                Caption = 'Current leading bidder';
+            }
+        );
     }
 )
 
