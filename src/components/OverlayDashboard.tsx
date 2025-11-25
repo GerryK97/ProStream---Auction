@@ -700,7 +700,14 @@ const OverlayDashboard: React.FC = () => {
     useEffect(() => {
         const fetchActiveTournament = async () => {
             try {
-                const response = await fetch('/api/tournaments/active');
+                // Get auth token from localStorage
+                const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+                const headers: Record<string, string> = {};
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+
+                const response = await fetch('/api/tournaments/active', { headers });
                 if (response.ok) {
                     const tournament = await response.json();
                     setActiveTournamentId(tournament._id);
