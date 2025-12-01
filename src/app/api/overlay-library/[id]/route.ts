@@ -6,12 +6,13 @@ import { getUserFromRequest } from '@/lib/request-helpers';
 // GET /api/overlay-library/[id] - Get single overlay library item
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectToDatabase();
 
-    const overlay = await OverlayLibraryModel.findById(params.id);
+    const { id } = await params;
+    const overlay = await OverlayLibraryModel.findById(id);
 
     if (!overlay) {
       return NextResponse.json(
@@ -33,7 +34,7 @@ export async function GET(
 // PUT /api/overlay-library/[id] - Update overlay library item
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Authenticate user
@@ -44,13 +45,14 @@ export async function PUT(
 
     await connectToDatabase();
 
+    const { id } = await params;
     const body = await request.json();
 
     // Remove _id from update if present
     delete body._id;
 
     const updatedOverlay = await OverlayLibraryModel.findByIdAndUpdate(
-      params.id,
+      id,
       body,
       { new: true, runValidators: true }
     );
@@ -75,7 +77,7 @@ export async function PUT(
 // DELETE /api/overlay-library/[id] - Delete overlay library item
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Authenticate user
@@ -86,7 +88,8 @@ export async function DELETE(
 
     await connectToDatabase();
 
-    const deletedOverlay = await OverlayLibraryModel.findByIdAndDelete(params.id);
+    const { id } = await params;
+    const deletedOverlay = await OverlayLibraryModel.findByIdAndDelete(id);
 
     if (!deletedOverlay) {
       return NextResponse.json(
