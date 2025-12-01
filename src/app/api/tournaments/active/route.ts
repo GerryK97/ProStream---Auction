@@ -11,20 +11,26 @@ export async function GET(request: NextRequest) {
 
     // Check for overlay token in URL query params
     const overlayToken = getOverlayTokenFromRequest(request);
-    const isValidOverlayToken = validateOverlayToken(overlayToken);
 
-    // If overlay token is provided but invalid, return 401
-    if (overlayToken && !isValidOverlayToken) {
-      return NextResponse.json(
-        { error: 'Invalid overlay token' },
-        { status: 401 }
-      );
+    // Only validate if it looks like an overlay token (not a JWT)
+    // JWT tokens start with "eyJ", overlay tokens don't
+    const isJWT = overlayToken?.startsWith('eyJ');
+
+    if (overlayToken && !isJWT) {
+      const isValidOverlayToken = validateOverlayToken(overlayToken);
+
+      // If overlay token is provided but invalid, return 401
+      if (!isValidOverlayToken) {
+        return NextResponse.json(
+          { error: 'Invalid overlay token' },
+          { status: 401 }
+        );
+      }
     }
 
-    // If no valid overlay token, check for regular authentication
-    // (This part can be expanded to check JWT from Authorization header if needed)
-    // For now, we allow access with valid overlay token OR no authentication
-    // (the OverlayWrapper will show the error state if authentication is required)
+    // JWT tokens and Authorization headers are handled by middleware
+    // For now, we allow access with valid overlay token OR JWT token OR no authentication
+    // (the OverlayWrapper will handle authentication states)
 
     // Find tournament with Live or Stopped status
     const activeTournament = await TournamentModel.findOne({
