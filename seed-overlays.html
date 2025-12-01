@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seed Overlay Library</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+        .container {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 24px;
+        }
+        h1 {
+            margin-top: 0;
+            color: #06b6d4;
+        }
+        button {
+            background: #06b6d4;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            margin-top: 16px;
+        }
+        button:hover {
+            background: #0891b2;
+        }
+        button:disabled {
+            background: #475569;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 6px;
+            background: #334155;
+            border: 1px solid #475569;
+        }
+        .success {
+            background: #064e3b;
+            border-color: #065f46;
+            color: #6ee7b7;
+        }
+        .error {
+            background: #7f1d1d;
+            border-color: #991b1b;
+            color: #fca5a5;
+        }
+        .info {
+            background: #1e3a8a;
+            border-color: #1e40af;
+            color: #93c5fd;
+        }
+        .warning {
+            background: #78350f;
+            border-color: #92400e;
+            color: #fcd34d;
+        }
+        input {
+            width: 100%;
+            padding: 8px 12px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        label {
+            display: block;
+            margin-top: 16px;
+            font-weight: 500;
+            color: #cbd5e1;
+        }
+        .checkbox {
+            width: auto;
+            margin-right: 8px;
+        }
+        .checkbox-label {
+            display: inline;
+            font-weight: normal;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Seed Overlay Library Database</h1>
+        <p>This tool will seed your overlay library database with the existing overlay data from OverlayDashboard.tsx</p>
+
+        <label>
+            API Endpoint
+            <input type="text" id="apiUrl" value="/api/overlay-library/seed" />
+        </label>
+
+        <label>
+            <input type="checkbox" id="clearExisting" class="checkbox" checked />
+            <span class="checkbox-label">Clear existing overlays before seeding</span>
+        </label>
+
+        <button id="seedBtn" onclick="seedDatabase()">Seed Database</button>
+
+        <div id="status" class="status" style="display: none;"></div>
+    </div>
+
+    <script>
+        async function seedDatabase() {
+            const statusDiv = document.getElementById('status');
+            const seedBtn = document.getElementById('seedBtn');
+            const apiUrl = document.getElementById('apiUrl').value;
+            const clearExisting = document.getElementById('clearExisting').checked;
+
+            // Get auth token from localStorage
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                showStatus('error', 'No authentication token found. Please login first.');
+                return;
+            }
+
+            // Disable button
+            seedBtn.disabled = true;
+            showStatus('info', 'Fetching overlay data from OverlayDashboard...');
+
+            try {
+                // Fetch the OverlayDashboard component source to extract overlayTypes
+                const dashboardResponse = await fetch('/overlays');
+
+                // Note: In production, you would need to extract the overlayTypes array
+                // from the OverlayDashboard.tsx file manually or use a build-time script
+
+                showStatus('warning', 'Manual step required: You need to copy the overlayTypes array from src/components/OverlayDashboard.tsx (lines 49-684) and paste it into this script.');
+
+                // For now, show instructions
+                alert(`Please follow these steps:
+
+1. Open src/components/OverlayDashboard.tsx
+2. Copy the overlayTypes array (lines 49-684)
+3. Open your browser console (F12)
+4. Run this command:
+
+const overlays = [/* paste array here */];
+const token = localStorage.getItem('auth_token');
+
+fetch('${apiUrl}', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': \`Bearer \${token}\`
+  },
+  body: JSON.stringify({
+    overlays: overlays,
+    clearExisting: ${clearExisting}
+  })
+})
+.then(r => r.json())
+.then(data => {
+  console.log('Seed result:', data);
+  alert('Database seeded successfully! Inserted ' + data.inserted + ' overlays');
+})
+.catch(err => {
+  console.error('Seed error:', err);
+  alert('Error seeding database: ' + err.message);
+});`);
+
+                seedBtn.disabled = false;
+
+            } catch (error) {
+                showStatus('error', `Error: ${error.message}`);
+                seedBtn.disabled = false;
+            }
+        }
+
+        function showStatus(type, message) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            statusDiv.style.display = 'block';
+        }
+
+        // Check if user is logged in on page load
+        window.addEventListener('load', () => {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                showStatus('warning', 'You must be logged in to use this tool. Please login first.');
+            } else {
+                showStatus('success', 'Authentication token found. Ready to seed database.');
+            }
+        });
+    </script>
+</body>
+</html>

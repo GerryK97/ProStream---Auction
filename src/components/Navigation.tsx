@@ -50,7 +50,13 @@ const Navigation: React.FC = () => {
       hasPrefetchedRoutes.current = true;
       router.prefetch('/auction');
       router.prefetch('/auction/setup');
-      fetch('/api/auction/bootstrap').catch(() => undefined);
+      // Bootstrap auction data with auth token
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      fetch('/api/auction/bootstrap', { headers }).catch(() => undefined);
     }
   }, [router, user]);
 

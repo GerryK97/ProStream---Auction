@@ -33,6 +33,7 @@ function PremiumPlayerCardContent() {
     const playerNameColor = searchParams.get('playerNameColor') || '#1e293b';
     const statValueColor = searchParams.get('statValueColor') || '#1e293b';
     const statLabelColor = searchParams.get('statLabelColor') || '#9ca3af';
+    const statsSectionBackground = searchParams.get('statsSectionBackground') || '#f1f5f9';
     const jerseyBadgeGradientStart = searchParams.get('jerseyBadgeGradientStart') || '#ff5411';
     const jerseyBadgeGradientEnd = searchParams.get('jerseyBadgeGradientEnd') || '#ffcc00';
     const decorativeBadgeColor = searchParams.get('decorativeBadgeColor') || '#ffffff';
@@ -45,7 +46,6 @@ function PremiumPlayerCardContent() {
 
     // Content parameters
     const roleLabel = searchParams.get('roleLabel') || 'Player';
-    const usePlayerNameAsWatermark = searchParams.get('usePlayerNameAsWatermark') !== 'false';
     const backgroundTextLine1 = searchParams.get('backgroundTextLine1') || '';
     const backgroundTextLine2 = searchParams.get('backgroundTextLine2') || '';
 
@@ -75,6 +75,7 @@ function PremiumPlayerCardContent() {
                     playerNameColor={playerNameColor}
                     statValueColor={statValueColor}
                     statLabelColor={statLabelColor}
+                    statsSectionBackground={statsSectionBackground}
                     jerseyBadgeGradientStart={jerseyBadgeGradientStart}
                     jerseyBadgeGradientEnd={jerseyBadgeGradientEnd}
                     decorativeBadgeColor={decorativeBadgeColor}
@@ -85,7 +86,6 @@ function PremiumPlayerCardContent() {
                     opacity={opacity}
                     // Content
                     roleLabel={roleLabel}
-                    usePlayerNameAsWatermark={usePlayerNameAsWatermark}
                     backgroundTextLine1={backgroundTextLine1}
                     backgroundTextLine2={backgroundTextLine2}
                 />

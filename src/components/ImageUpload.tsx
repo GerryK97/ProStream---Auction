@@ -35,8 +35,16 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         formData.append('file', file);
         formData.append('folder', `prostream-auction/${folder}`);
 
+        // Get auth token
+        const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+        const headers: Record<string, string> = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
         const response = await fetch('/api/upload', {
           method: 'POST',
+          headers: headers,
           body: formData,
         });
 

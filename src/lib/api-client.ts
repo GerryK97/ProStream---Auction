@@ -5,7 +5,7 @@ const API_BASE_URL = '/api';
 // Get auth token from localStorage
 function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('authToken');
+  return localStorage.getItem('auth_token'); // Fixed: use 'auth_token' to match the key used throughout the app
 }
 
 // Get headers with authentication

@@ -69,9 +69,18 @@ const OverlayEditModal: React.FC<OverlayEditModalProps> = ({ overlay, onClose, o
         try {
             const formDataUpload = new FormData();
             formDataUpload.append('file', file);
+            formDataUpload.append('folder', 'prostream-auction/overlays'); // Specify overlay folder
+
+            // Get auth token
+            const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+            const headers: Record<string, string> = {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
 
             const response = await fetch('/api/upload', {
                 method: 'POST',
+                headers: headers,
                 body: formDataUpload,
             });
 

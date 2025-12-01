@@ -492,6 +492,7 @@ const AuctionSetupPanel: React.FC = () => {
         try {
             const response = await fetch(`/api/players/${playerId}`, {
                 method: 'DELETE',
+                headers: getAuthHeaders(),
             });
             if (response.ok) {
                 setRefreshTrigger(prev => prev + 1);
@@ -506,6 +507,7 @@ const AuctionSetupPanel: React.FC = () => {
         try {
             const response = await fetch(`/api/teams/${teamId}`, {
                 method: 'DELETE',
+                headers: getAuthHeaders(),
             });
             if (response.ok) {
                 setRefreshTrigger(prev => prev + 1);
@@ -987,6 +989,7 @@ const AuctionSetupPanel: React.FC = () => {
                                     try {
                                         const response = await fetch(`/api/tournaments/${selectedTournament._id}/archive`, {
                                             method: 'POST',
+                                            headers: getAuthHeaders(),
                                         });
                                         const data = await response.json();
 

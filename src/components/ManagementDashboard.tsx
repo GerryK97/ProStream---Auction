@@ -202,9 +202,16 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
                 <PlayerForm
                     onSave={async (playerData) => {
                         try {
+                            // Get auth token
+                            const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+                            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+                            if (token) {
+                                headers['Authorization'] = `Bearer ${token}`;
+                            }
+
                             const response = await fetch('/api/master-players', {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
+                                headers: headers,
                                 body: JSON.stringify(playerData),
                             });
                             if (response.ok) {
@@ -225,9 +232,16 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
                         playerToEdit={editingPlayer}
                         onSave={async (playerData) => {
                             try {
+                                // Get auth token
+                                const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+                                const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+                                if (token) {
+                                    headers['Authorization'] = `Bearer ${token}`;
+                                }
+
                                 const response = await fetch(`/api/master-players/${editingPlayer._id}`, {
                                     method: 'PUT',
-                                    headers: { 'Content-Type': 'application/json' },
+                                    headers: headers,
                                     body: JSON.stringify(playerData),
                                 });
                                 if (response.ok) {
@@ -373,10 +387,17 @@ const TournamentManagementPanel: React.FC<{
                     key={editingTournament?._id || 'new'}
                     onSave={async (data) => {
                         try {
+                            // Get auth token
+                            const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+                            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+                            if (token) {
+                                headers['Authorization'] = `Bearer ${token}`;
+                            }
+
                             if (editingTournament) {
                                 const response = await fetch(`/api/tournaments/${editingTournament._id}`, {
                                     method: 'PUT',
-                                    headers: { 'Content-Type': 'application/json' },
+                                    headers: headers,
                                     body: JSON.stringify(data),
                                 });
                                 if (response.ok) {
@@ -386,7 +407,7 @@ const TournamentManagementPanel: React.FC<{
                             } else {
                                 const response = await fetch('/api/tournaments', {
                                     method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
+                                    headers: headers,
                                     body: JSON.stringify(data),
                                 });
                                 if (response.ok) {
@@ -828,10 +849,17 @@ const TeamManagementPanel: React.FC<{
                     editingTeam={editingTeam}
                     onSave={async (data) => {
                         try {
+                            // Get auth token
+                            const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+                            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+                            if (token) {
+                                headers['Authorization'] = `Bearer ${token}`;
+                            }
+
                             if (editingTeam) {
                                 const response = await fetch(`/api/master-teams/${editingTeam._id}`, {
                                     method: 'PUT',
-                                    headers: { 'Content-Type': 'application/json' },
+                                    headers: headers,
                                     body: JSON.stringify(data),
                                 });
                                 if (response.ok) {
@@ -841,7 +869,7 @@ const TeamManagementPanel: React.FC<{
                             } else {
                                 const response = await fetch('/api/master-teams', {
                                     method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
+                                    headers: headers,
                                     body: JSON.stringify(data),
                                 });
                                 if (response.ok) {
@@ -975,7 +1003,14 @@ const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => voi
     const handleDownloadMasterPlayers = async () => {
         setDownloading(true);
         try {
-            const response = await fetch('/api/master-players/export');
+            // Get auth token
+            const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+            const headers: Record<string, string> = {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch('/api/master-players/export', { headers });
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Download failed');

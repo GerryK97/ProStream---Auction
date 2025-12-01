@@ -63,95 +63,6 @@ const overlayTypes: OverlayType[] = [
         dimensions: { width: 800, height: 300 }
     },
     {
-        id: 'football-player-card',
-        name: 'Football Player Card',
-        description: 'Football-style horizontal card with diagonal separator, jersey number, and match stats - inspired by Barcelona design',
-        route: '/overlays/football-player-card',
-        tags: ['Player', 'Auction', 'Football', 'Sport'],
-        category: 'Player Display',
-        defaultParams: {
-            position: 'center',
-            primaryColor: '#FCD000',
-            accentColor: '#E7C403',
-            textColor: '#1e293b',
-            statLabelColor: '#64748b',
-            cardSize: 'medium',
-            borderRadius: 'medium',
-            showPlayerImage: 'true',
-            showJerseyNumber: 'true',
-            showStats: 'true',
-            showCurrentBid: 'true',
-            diagonalStyle: 'true'
-        },
-        parameterSchema: {
-            position: {
-                type: 'select',
-                label: 'Position',
-                options: ['center', 'left', 'right'],
-                description: 'Overlay position on screen'
-            },
-            primaryColor: {
-                type: 'color',
-                label: 'Primary Background Color',
-                description: 'Main card background color (default: Barcelona yellow)'
-            },
-            accentColor: {
-                type: 'color',
-                label: 'Accent Color',
-                description: 'Jersey number and bid highlight color'
-            },
-            textColor: {
-                type: 'color',
-                label: 'Text Color',
-                description: 'Player name and stat values color'
-            },
-            statLabelColor: {
-                type: 'color',
-                label: 'Stat Label Color',
-                description: 'Color for stat labels (Position, Club, etc.)'
-            },
-            cardSize: {
-                type: 'select',
-                label: 'Card Size',
-                options: ['small', 'medium', 'large'],
-                description: 'Overall card dimensions'
-            },
-            borderRadius: {
-                type: 'select',
-                label: 'Border Radius',
-                options: ['none', 'small', 'medium', 'large'],
-                description: 'Corner rounding style'
-            },
-            showPlayerImage: {
-                type: 'toggle',
-                label: 'Show Player Image',
-                description: 'Display player photo'
-            },
-            showJerseyNumber: {
-                type: 'toggle',
-                label: 'Show Jersey Number',
-                description: 'Display player number badge'
-            },
-            showStats: {
-                type: 'toggle',
-                label: 'Show Stats',
-                description: 'Display player statistics (Position, Club, Matches)'
-            },
-            showCurrentBid: {
-                type: 'toggle',
-                label: 'Show Current Bid',
-                description: 'Display current bid amount badge'
-            },
-            diagonalStyle: {
-                type: 'toggle',
-                label: 'Diagonal Separator',
-                description: 'Show white diagonal separator element'
-            }
-        },
-        imageURL: 'https://placehold.co/450x250/FCD000/1e293b?text=Football+Card',
-        dimensions: { width: 450, height: 250 }
-    },
-    {
         id: 'premium-player-card',
         name: 'Premium Player Card',
         description: 'Stylish premium player card with gradient background, jersey number, and stats - fully customizable',
@@ -179,6 +90,7 @@ const overlayTypes: OverlayType[] = [
             playerNameColor: '#1e293b',
             statValueColor: '#1e293b',
             statLabelColor: '#9ca3af',
+            statsSectionBackground: '#f1f5f9',
             jerseyBadgeGradientStart: '#ff5411',
             jerseyBadgeGradientEnd: '#ffcc00',
             decorativeBadgeColor: '#ffffff',
@@ -189,7 +101,6 @@ const overlayTypes: OverlayType[] = [
             opacity: '100',
             // Content
             roleLabel: 'Player',
-            usePlayerNameAsWatermark: 'true',
             backgroundTextLine1: '',
             backgroundTextLine2: ''
         },
@@ -255,21 +166,16 @@ const overlayTypes: OverlayType[] = [
             },
 
             // === BACKGROUND TEXT CUSTOMIZATION ===
-            usePlayerNameAsWatermark: {
-                type: 'toggle',
-                label: 'Use Player Name as Watermark',
-                description: 'Use player name or custom text for background'
-            },
             backgroundTextLine1: {
                 type: 'text',
                 label: 'Background Text Line 1',
-                description: 'Custom watermark text (first line) - only if player name disabled',
+                description: 'Custom watermark text (first line)',
                 placeholder: 'e.g., AUCTION'
             },
             backgroundTextLine2: {
                 type: 'text',
                 label: 'Background Text Line 2',
-                description: 'Custom watermark text (second line) - only if player name disabled',
+                description: 'Custom watermark text (second line)',
                 placeholder: 'e.g., 2025'
             },
 
@@ -303,6 +209,11 @@ const overlayTypes: OverlayType[] = [
                 type: 'color',
                 label: 'Stat Labels Color',
                 description: 'Color of statistics labels'
+            },
+            statsSectionBackground: {
+                type: 'color',
+                label: 'Stats Section Background',
+                description: 'Background color for the stats area'
             },
             jerseyBadgeGradientStart: {
                 type: 'color',
@@ -350,8 +261,8 @@ const overlayTypes: OverlayType[] = [
             // === CONTENT CONTROLS ===
             roleLabel: {
                 type: 'text',
-                label: 'Role Label Text',
-                description: 'Custom text for role label',
+                label: 'Role Label Text (Fallback)',
+                description: 'Fallback text when player class is not available or disabled',
                 placeholder: 'e.g., Player, Star, Legend'
             }
         },
@@ -693,38 +604,80 @@ const OverlayDashboard: React.FC = () => {
     const [activeTournamentId, setActiveTournamentId] = useState<string | null>(null);
     const [customParams, setCustomParams] = useState<{ [overlayId: string]: { [key: string]: string } }>({});
     const [expandedEditor, setExpandedEditor] = useState<string | null>(null);
-    const [previewOverlay, setPreviewOverlay] = useState<{ url: string; name: string } | null>(null);
+    const [previewOverlay, setPreviewOverlay] = useState<{ url: string; name: string; imageURL?: string } | null>(null);
     const [editOverlay, setEditOverlay] = useState<OverlayType | null>(null);
+    const [overlays, setOverlays] = useState<OverlayType[]>(overlayTypes); // Start with hardcoded, then fetch from API
+    const [isLoadingOverlays, setIsLoadingOverlays] = useState(false);
 
-    // Fetch active tournament on mount
+    // Fetch overlays and active tournament on mount
     useEffect(() => {
-        const fetchActiveTournament = async () => {
+        const fetchData = async () => {
             try {
-                const response = await fetch('/api/tournaments/active');
-                if (response.ok) {
-                    const tournament = await response.json();
+                // Get auth token from localStorage
+                const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+                const headers: Record<string, string> = {};
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+
+                // Fetch overlays from API
+                setIsLoadingOverlays(true);
+                const overlaysResponse = await fetch('/api/overlay-library', { headers });
+                if (overlaysResponse.ok) {
+                    const overlaysData = await overlaysResponse.json();
+
+                    // If API returns data, use it; otherwise keep hardcoded fallback
+                    if (overlaysData && overlaysData.length > 0) {
+                        // Convert API data to OverlayType format
+                        const formattedOverlays = overlaysData.map((overlay: any) => ({
+                            id: overlay._id,
+                            name: overlay.name,
+                            description: overlay.description,
+                            route: overlay.route,
+                            tags: overlay.tags,
+                            category: overlay.category,
+                            defaultParams: overlay.defaultParams,
+                            parameterSchema: overlay.parameterSchema,
+                            imageURL: overlay.imageURL,
+                            dimensions: overlay.dimensions
+                        }));
+                        setOverlays(formattedOverlays);
+                    } else {
+                        console.warn('API returned empty overlay list, using hardcoded fallback data');
+                        // Keep the hardcoded overlayTypes that were set in initial state
+                    }
+                } else {
+                    console.warn('Failed to fetch overlays from API, using fallback data');
+                }
+                setIsLoadingOverlays(false);
+
+                // Fetch active tournament
+                const tournamentResponse = await fetch('/api/tournaments/active', { headers });
+                if (tournamentResponse.ok) {
+                    const tournament = await tournamentResponse.json();
                     setActiveTournamentId(tournament._id);
                 }
             } catch (error) {
-                console.error('Failed to fetch active tournament:', error);
+                console.error('Failed to fetch data:', error);
+                setIsLoadingOverlays(false);
             }
         };
-        fetchActiveTournament();
+        fetchData();
     }, []);
 
     const allCategories = useMemo(() => {
         const categories = new Set<string>();
-        overlayTypes.forEach(t => categories.add(t.category));
+        overlays.forEach(t => categories.add(t.category));
         return ['All', ...Array.from(categories).sort()];
-    }, []);
+    }, [overlays]);
 
     const filteredOverlays = useMemo(() => {
-        return overlayTypes.filter(overlay => {
+        return overlays.filter(overlay => {
             const matchesSearch = overlay.name.toLowerCase().includes(searchTerm.toLowerCase()) || overlay.description.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesCategory = selectedTag === 'All' || overlay.category === selectedTag;
             return matchesSearch && matchesCategory;
         });
-    }, [searchTerm, selectedTag]);
+    }, [searchTerm, selectedTag, overlays]);
 
     const generateOverlayUrl = (overlay: OverlayType) => {
         const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
@@ -741,7 +694,7 @@ const OverlayDashboard: React.FC = () => {
         setCustomParams(prev => ({
             ...prev,
             [overlayId]: {
-                ...(prev[overlayId] || overlayTypes.find(o => o.id === overlayId)?.defaultParams || {}),
+                ...(prev[overlayId] || overlays.find(o => o.id === overlayId)?.defaultParams || {}),
                 [key]: value
             }
         }));
@@ -776,21 +729,47 @@ const OverlayDashboard: React.FC = () => {
     }) => {
         if (!editOverlay) return;
 
-        // Update the overlay in the overlayTypes array
-        const index = overlayTypes.findIndex(o => o.id === editOverlay.id);
-        if (index !== -1) {
-            overlayTypes[index] = {
-                ...overlayTypes[index],
-                ...updates
+        try {
+            // Get auth token from localStorage
+            const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json'
             };
-        }
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
 
-        // TODO: Persist to database/backend when API is ready
-        // await fetch(`/api/overlays/${editOverlay.id}`, {
-        //     method: 'PUT',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify(updates)
-        // });
+            // Persist to database
+            const response = await fetch(`/api/overlay-library/${editOverlay.id}`, {
+                method: 'PUT',
+                headers,
+                body: JSON.stringify(updates)
+            });
+
+            if (response.ok) {
+                const updatedOverlay = await response.json();
+
+                // Update the overlay in local state
+                setOverlays(prev => prev.map(o =>
+                    o.id === editOverlay.id
+                        ? {
+                            ...o,
+                            name: updatedOverlay.name,
+                            description: updatedOverlay.description,
+                            category: updatedOverlay.category,
+                            imageURL: updatedOverlay.imageURL,
+                            dimensions: updatedOverlay.dimensions
+                        }
+                        : o
+                ));
+            } else {
+                console.error('Failed to save overlay');
+                alert('Failed to save overlay changes');
+            }
+        } catch (error) {
+            console.error('Error saving overlay:', error);
+            alert('Error saving overlay changes');
+        }
 
         setEditOverlay(null);
     };
@@ -909,7 +888,7 @@ const OverlayDashboard: React.FC = () => {
                                                 <div className="flex gap-1.5 justify-end">
                                                     {/* View Button */}
                                                     <button
-                                                        onClick={() => setPreviewOverlay({ url: overlayUrl, name: overlay.name })}
+                                                        onClick={() => setPreviewOverlay({ url: overlayUrl, name: overlay.name, imageURL: overlay.imageURL })}
                                                         className="px-2.5 py-1.5 rounded text-xs font-medium transition-colors"
                                                         style={{
                                                             backgroundColor: 'var(--surface-elevated)',
@@ -1050,13 +1029,32 @@ const OverlayDashboard: React.FC = () => {
                             </p>
                         </div>
 
-                        {/* Iframe */}
-                        <iframe
-                            src={previewOverlay.url}
-                            className="w-full h-full rounded-lg"
-                            style={{ border: `2px solid var(--border-primary)` }}
-                            title={`Preview: ${previewOverlay.name}`}
-                        />
+                        {/* Preview Image */}
+                        <div className="w-full h-full flex items-center justify-center">
+                            {previewOverlay.imageURL ? (
+                                <img
+                                    src={previewOverlay.imageURL}
+                                    alt={`Preview: ${previewOverlay.name}`}
+                                    className="max-w-full max-h-full object-contain rounded-lg"
+                                    style={{ border: `2px solid var(--border-primary)` }}
+                                />
+                            ) : (
+                                <div
+                                    className="flex flex-col items-center justify-center gap-4 p-8 rounded-lg"
+                                    style={{
+                                        backgroundColor: 'var(--surface-secondary)',
+                                        border: `2px dashed var(--border-primary)`,
+                                        color: 'var(--text-tertiary)'
+                                    }}
+                                >
+                                    <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <p className="text-sm">No preview image available</p>
+                                    <p className="text-xs">Upload an image using the Edit button</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
