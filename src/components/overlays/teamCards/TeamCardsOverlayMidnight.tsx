@@ -59,16 +59,7 @@ const TeamCardsOverlayMidnight: React.FC<TeamCardsOverlayBaseProps> = ({
                                 }}
                             />
                             <div className="relative z-10 p-4 flex flex-col gap-3">
-                                <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.25em] text-[#94a3b8]">
-                                    <span
-                                        className="flex items-center gap-2 px-2 py-1 rounded-full"
-                                        style={{
-                                            background:
-                                                'linear-gradient(90deg, rgba(148, 163, 184, 0.25), rgba(30, 64, 175, 0.15))'
-                                        }}
-                                    >
-                                        <span>•</span>Match Status
-                                    </span>
+                                <div className="flex items-center justify-end text-[10px] uppercase tracking-[0.25em] text-[#94a3b8]">
                                     <span
                                         className="px-3 py-1 rounded-full font-semibold tracking-tight text-[11px]"
                                         style={{

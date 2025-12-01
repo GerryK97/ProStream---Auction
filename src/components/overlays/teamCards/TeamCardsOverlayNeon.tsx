@@ -59,16 +59,7 @@ const TeamCardsOverlayNeon: React.FC<TeamCardsOverlayBaseProps> = ({
                                 }}
                             />
                             <div className="relative z-10 p-4 flex flex-col gap-3">
-                                <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.25em] text-[#a5f3fc]">
-                                    <span
-                                        className="flex items-center gap-2 px-2 py-1 rounded-full"
-                                        style={{
-                                            background:
-                                                'linear-gradient(90deg, rgba(59, 130, 246, 0.35), rgba(168, 85, 247, 0.15))'
-                                        }}
-                                    >
-                                        <span>⚡</span>Neon Pulse
-                                    </span>
+                                <div className="flex items-center justify-end text-[10px] uppercase tracking-[0.25em] text-[#a5f3fc]">
                                     <span
                                         className="px-3 py-1 rounded-full font-semibold tracking-tight text-[11px]"
                                         style={{

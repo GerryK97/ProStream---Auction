@@ -270,18 +270,6 @@ const overlayTypes: OverlayType[] = [
         dimensions: { width: 380, height: 650 }
     },
     {
-        id: 'teams',
-        name: 'Team Cards',
-        description: 'Show all teams with balances, max bids, and players purchased. Choose a preset (Neon, Ember, Midnight) plus layout/position—colors are fixed per preset.',
-        route: '/overlays/teams',
-        tags: ['Teams', 'Auction', 'Customizable'],
-        category: 'Team Display',
-        defaultParams: { ...teamCardsDefaultParams },
-        parameterSchema: teamCardsParameterSchema,
-        imageURL: 'https://placehold.co/400x200/1e293b/22c55e?text=Team+Cards',
-        dimensions: { width: 1200, height: 200 }
-    },
-    {
         id: 'team-cards-neon',
         name: 'Team Cards · Neon Pulse',
         description: 'Glassmorphism preset with cyan/purple glow, particle grid, and neon balance highlights.',
