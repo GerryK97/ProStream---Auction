@@ -421,7 +421,7 @@ const overlayTypes: OverlayType[] = [
             bidColor: '#60a5fa',
             accentColor: '#2563eb',
             shadowColor: 'rgba(37, 99, 235, 0.5)',
-            showPlayerName: 'true',
+            showPlayerName: 'false',
             showGlow: 'true',
             borderRadius: 'large',
             opacity: '100'

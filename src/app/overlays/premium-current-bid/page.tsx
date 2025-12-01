@@ -22,7 +22,7 @@ function PremiumCurrentBidContent() {
     const shadowColor = searchParams.get('shadowColor') || 'rgba(37, 99, 235, 0.5)';
 
     // Style options
-    const showPlayerName = searchParams.get('showPlayerName') !== 'false';
+    const showPlayerName = searchParams.get('showPlayerName') === 'true';
     const showGlow = searchParams.get('showGlow') !== 'false';
     const borderRadius = (searchParams.get('borderRadius') as 'none' | 'small' | 'medium' | 'large') || 'large';
     const opacity = parseInt(searchParams.get('opacity') || '100');

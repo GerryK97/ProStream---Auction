@@ -37,7 +37,7 @@ const PremiumCurrentBidOverlay: React.FC<PremiumCurrentBidOverlayProps> = ({
     bidColor = '#60a5fa',
     accentColor = '#2563eb',
     shadowColor = 'rgba(37, 99, 235, 0.5)',
-    showPlayerName = true,
+    showPlayerName = false,
     showGlow = true,
     borderRadius = 'large',
     opacity = 100
@@ -171,7 +171,7 @@ const PremiumCurrentBidOverlay: React.FC<PremiumCurrentBidOverlayProps> = ({
                                 animation: auctionState.currentBid > 0 ? 'bidPulse 0.5s ease-out' : 'none'
                             }}
                         >
-                            ₹{formatCurrency(auctionState.currentBid)}
+                            {formatCurrency(auctionState.currentBid)}
                         </p>
                     </div>
 
