@@ -204,7 +204,8 @@ const PremiumCurrentBidOverlay: React.FC<PremiumCurrentBidOverlayProps> = ({
                         <div
                             className="w-1.5 h-1.5 rounded-full animate-pulse"
                             style={{
-                                backgroundColor: auctionState.currentAuctionStatus === 'Active' ? '#10b981' : '#ef4444'
+                                backgroundColor: auctionState.currentAuctionStatus === 'Bidding' ? '#10b981' :
+                                                 auctionState.currentAuctionStatus === 'Sold' ? '#3b82f6' : '#ef4444'
                             }}
                         />
                         <p
