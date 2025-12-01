@@ -15,13 +15,13 @@ const navLinks = [
 
 const subnav = {
   auction: [
-    { href: '/auction', label: 'Auction Control' },
-    { href: '/auction/setup', label: 'Auction Setup' },
+    { href: '/auction', label: 'Control Room', description: 'Manage live bidding' },
+    { href: '/auction/setup', label: 'Setup', description: 'Configure rules & lots' },
   ],
   manage: [
-    { href: '/manage?view=tournaments', label: 'Tournament' },
-    { href: '/manage?view=teams', label: 'Team' },
-    { href: '/manage?view=players', label: 'Player' },
+    { href: '/manage?view=tournaments', label: 'Tournaments', description: 'Leagues & Series' },
+    { href: '/manage?view=teams', label: 'Teams', description: 'Franchise management' },
+    { href: '/manage?view=players', label: 'Players', description: 'Roster management' },
   ],
 } as const;
 
@@ -38,6 +38,13 @@ const Navigation: React.FC = () => {
   const [mobileAuctionOpen, setMobileAuctionOpen] = useState(false);
   const [mobileManageOpen, setMobileManageOpen] = useState(false);
   const hasPrefetchedRoutes = useRef(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     setDrawerOpen(false);
@@ -50,7 +57,6 @@ const Navigation: React.FC = () => {
       hasPrefetchedRoutes.current = true;
       router.prefetch('/auction');
       router.prefetch('/auction/setup');
-      // Bootstrap auction data with auth token
       const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
       const headers: Record<string, string> = {};
       if (token) {
@@ -90,206 +96,151 @@ const Navigation: React.FC = () => {
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   const ProStreamLogo = () => (
-    <Link href="/" className="flex items-center gap-3">
-      <img
-        src="https://res.cloudinary.com/diitsd6nz/image/upload/v1760794476/ProSteam_logo_h9pb8b.png"
-        alt="ProStream Logo"
-        className="h-10 w-10 object-contain"
-      />
-      <div>
-        <p className="text-xl font-bold leading-tight">
+    <Link href="/" className="flex items-center gap-3 group">
+      <div className="relative">
+        <div className="absolute inset-0 bg-brand-primary/20 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <img
+          src="https://res.cloudinary.com/diitsd6nz/image/upload/v1760794476/ProSteam_logo_h9pb8b.png"
+          alt="ProStream Logo"
+          className="h-10 w-10 object-contain relative z-10"
+        />
+      </div>
+      <div className="flex flex-col">
+        <p className="text-xl font-display font-bold leading-none tracking-tight">
           <span style={{ color: 'var(--brand-primary)' }}>Pro</span>
           <span style={{ color: 'var(--brand-secondary)' }}>Stream</span>
-          <span style={{ color: 'var(--text-primary)' }}> Auction</span>
         </p>
+        <span className="text-[0.65rem] uppercase tracking-[0.2em] font-bold" style={{ color: 'var(--text-muted)' }}>Auction</span>
       </div>
     </Link>
   );
 
-  const LinkGroup = () => (
-    <div className="flex items-center gap-6 text-sm font-semibold relative">
-      {/* Auction trigger */}
-      <div className="relative">
-        <button
-          ref={auctionBtnRef}
-          aria-haspopup="menu"
-          aria-expanded={openMenu === 'auction'}
-          onClick={() => setOpenMenu(openMenu === 'auction' ? null : 'auction')}
-          className={`transition-colors flex items-center gap-1 rounded-full px-3 py-1 ${
-            isActive('/auction') ? 'text-brand-primary' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
-          }`}
-          style={{ backgroundColor: openMenu === 'auction' ? 'var(--surface-hover)' : 'transparent' }}
-          onMouseEnter={(e) => {
-            if (openMenu !== 'auction') e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
-          }}
-          onMouseLeave={(e) => {
-            if (openMenu !== 'auction') e.currentTarget.style.backgroundColor = 'transparent';
-          }}
+  const NavItem = ({
+    label,
+    active,
+    onClick,
+    hasDropdown,
+    open,
+    btnRef
+  }: {
+    label: string,
+    active: boolean,
+    onClick?: () => void,
+    hasDropdown?: boolean,
+    open?: boolean,
+    btnRef?: React.RefObject<HTMLButtonElement | null>
+  }) => (
+    <button
+      ref={btnRef}
+      onClick={onClick}
+      className={`
+        relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-300
+        flex items-center gap-1
+        ${active || open
+          ? 'text-white shadow-[0_0_20px_-5px_var(--brand-primary)]'
+          : 'hover:bg-surface-hover'
+        }
+      `}
+      style={{
+        backgroundColor: active || open ? 'var(--brand-primary)' : undefined,
+        color: active || open ? '#ffffff' : 'var(--text-secondary)'
+      }}
+    >
+      {label}
+      {hasDropdown && (
+        <svg
+          viewBox="0 0 24 24"
+          className={`w-4 h-4 transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         >
-          <span>Auction</span>
-          <svg
-            viewBox="0 0 24 24"
-            className="h-3 w-3"
-            style={{
-              transition: 'transform .2s ease',
-              transform: openMenu === 'auction' ? 'rotate(180deg)' : 'rotate(0deg)'
-            }}
-            aria-hidden="true"
-          >
-            <path
-              d="M7 10l5 5 5-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
-        {openMenu === 'auction' && (
-          <div
-            ref={dropdownRef}
-            role="menu"
-            className="absolute left-0 mt-3 min-w-[220px] rounded-2xl border p-2 shadow-2xl backdrop-blur"
-            style={{
-              borderColor: 'var(--nav-border)',
-              backgroundColor: 'var(--nav-background)'
-            }}
-          >
-            {subnav.auction.map((item) => {
-              const active = pathname.startsWith(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  role="menuitem"
-                  href={item.href}
-                  className={`block rounded-xl px-3 py-2 transition-colors ${active ? 'font-semibold' : ''}`}
-                  style={{
-                    color: active ? 'var(--brand-primary)' : 'var(--text-secondary)'
-                  }}
-                  onClick={() => setOpenMenu(null)}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </div>
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      )}
+    </button>
+  );
 
-      {/* Manage trigger */}
-      <div className="relative">
-        <button
-          ref={manageBtnRef}
-          aria-haspopup="menu"
-          aria-expanded={openMenu === 'manage'}
-          onClick={() => setOpenMenu(openMenu === 'manage' ? null : 'manage')}
-          className={`transition-colors flex items-center gap-1 rounded-full px-3 py-1 ${
-            isActive('/manage') ? 'text-brand-primary' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
-          }`}
-          style={{ backgroundColor: openMenu === 'manage' ? 'var(--surface-hover)' : 'transparent' }}
-          onMouseEnter={(e) => {
-            if (openMenu !== 'manage') e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
-          }}
-          onMouseLeave={(e) => {
-            if (openMenu !== 'manage') e.currentTarget.style.backgroundColor = 'transparent';
-          }}
-        >
-          <span>Manage</span>
-          <svg
-            viewBox="0 0 24 24"
-            className="h-3 w-3"
-            style={{
-              transition: 'transform .2s ease',
-              transform: openMenu === 'manage' ? 'rotate(180deg)' : 'rotate(0deg)'
-            }}
-            aria-hidden="true"
-          >
-            <path
-              d="M7 10l5 5 5-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
-        {openMenu === 'manage' && (
-          <div
-            ref={dropdownRef}
-            role="menu"
-            className="absolute left-0 mt-3 min-w-[220px] rounded-2xl border p-2 shadow-2xl backdrop-blur"
-            style={{
-              borderColor: 'var(--nav-border)',
-              backgroundColor: 'var(--nav-background)'
-            }}
-          >
-            {subnav.manage.map((item) => {
-              const active = pathname.startsWith('/manage') && pathname.includes(item.href.split('=')[1]?.split('&')[0] || '');
-              return (
-                <Link
-                  key={item.href}
-                  role="menuitem"
-                  href={item.href}
-                  className={`block rounded-xl px-3 py-2 transition-colors ${active ? 'font-semibold' : ''}`}
-                  style={{
-                    color: active ? 'var(--brand-primary)' : 'var(--text-secondary)'
-                  }}
-                  onClick={() => setOpenMenu(null)}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </div>
+  const Dropdown = ({ items, type }: { items: typeof subnav.auction | typeof subnav.manage, type: 'auction' | 'manage' }) => (
+    <div
+      ref={dropdownRef}
+      className="absolute top-full left-0 mt-4 w-64 p-2 rounded-2xl backdrop-blur-xl border animate-fade-in origin-top-left z-50 shadow-2xl"
+      style={{
+        backgroundColor: 'var(--nav-background)',
+        borderColor: 'var(--nav-border)'
+      }}
+    >
+      <div className="grid gap-1">
+        {items.map((item) => {
+          const active = type === 'manage'
+            ? pathname.startsWith('/manage') && pathname.includes(item.href.split('=')[1]?.split('&')[0] || '')
+            : pathname === item.href;
 
-      {/* Other links with tiny hover background */}
-      {(() => {
-        const list = ['/overlays', '/contact'] as const;
-        const items = [...list];
-        if (user?.role === 'Admin') items.splice(1, 0, '/users' as any);
-        return items.map((href) => {
-          const label = href === '/overlays' ? 'Overlays' : href === '/contact' ? 'Contact' : 'Users';
           return (
             <Link
-              key={href}
-              href={href}
-              className={`transition-colors rounded-full px-3 py-1 ${
-                isActive(href) ? 'text-brand-primary' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
-              }`}
-              style={{ backgroundColor: isActive(href) ? 'var(--surface-hover)' : 'transparent' }}
-              onMouseEnter={(e) => {
-                if (!isActive(href)) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface-hover)';
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive(href)) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+              key={item.href}
+              href={item.href}
+              onClick={() => setOpenMenu(null)}
+              className="group flex flex-col gap-0.5 p-3 rounded-xl transition-all duration-200 hover:bg-surface-hover"
+              style={{
+                backgroundColor: active ? 'rgba(79, 70, 229, 0.1)' : undefined,
+                color: active ? 'var(--brand-primary)' : 'var(--text-secondary)'
               }}
             >
-              {label}
+              <span className="font-semibold text-sm">{item.label}</span>
+              <span
+                className="text-xs"
+                style={{
+                  color: active ? 'rgba(79, 70, 229, 0.7)' : 'var(--text-muted)'
+                }}
+              >
+                {item.description}
+              </span>
             </Link>
           );
-        });
-      })()}
+        })}
+      </div>
     </div>
   );
+
+  const ThemeToggle = () => {
+    const [isHovered, setIsHovered] = React.useState(false);
+
+    return (
+      <button
+        onClick={toggleTheme}
+        className="relative w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300"
+        aria-label="Toggle theme"
+        style={{
+          color: isHovered ? 'var(--text-primary)' : 'var(--text-secondary)',
+          backgroundColor: isHovered ? 'var(--surface-hover)' : 'transparent'
+        }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        {theme === 'light' ? (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+        ) : (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        )}
+      </button>
+    );
+  };
 
   const AuthButtons = () =>
     user ? (
       <button
         onClick={handleLogout}
-        className="rounded-full px-4 py-2 text-sm font-semibold transition"
+        className="px-5 py-2 rounded-full text-sm font-semibold bg-surface-elevated border transition-all duration-300"
         style={{
-          backgroundColor: 'var(--surface-hover)',
           color: 'var(--text-primary)',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = 'var(--surface-elevated)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
+          borderColor: 'var(--border-primary)'
         }}
       >
         Logout
@@ -297,80 +248,92 @@ const Navigation: React.FC = () => {
     ) : (
       <Link
         href="/auth/login"
-        className="rounded-full px-4 py-2 text-sm font-semibold transition"
+        className="px-5 py-2 rounded-full text-sm font-semibold text-white shadow-lg hover:shadow-brand-primary/40 hover:-translate-y-0.5 transition-all duration-300"
         style={{
-          backgroundColor: 'var(--surface-elevated)',
-          color: 'var(--text-primary)',
+          backgroundColor: 'var(--brand-primary)',
+          boxShadow: '0 10px 15px -3px rgba(79, 70, 229, 0.25)'
         }}
       >
         Login
       </Link>
     );
 
-  const ThemeToggle = () => (
-    <label className="inline-flex items-center relative cursor-pointer">
-      <input
-        type="checkbox"
-        checked={theme === 'light'}
-        onChange={toggleTheme}
-        className="peer hidden"
-        aria-label="Toggle theme"
-      />
-      <div className="relative w-[77px] h-[35px] bg-white peer-checked:bg-zinc-500 rounded-full after:absolute after:content-[''] after:w-[28px] after:h-[28px] after:bg-gradient-to-r from-orange-500 to-yellow-400 peer-checked:after:from-zinc-900 peer-checked:after:to-zinc-900 after:rounded-full after:top-[3.5px] after:left-[3.5px] active:after:w-[35px] peer-checked:after:left-[73.5px] peer-checked:after:translate-x-[-100%] shadow-sm duration-300 after:duration-300 after:shadow-md" />
-      <svg
-        height={0}
-        width={100}
-        viewBox="0 0 24 24"
-        data-name="Layer 1"
-        id="Layer_1"
-        xmlns="http://www.w3.org/2000/svg"
-        className="fill-white peer-checked:opacity-60 absolute w-4 h-4 left-[9px]"
-      >
-        <path d="M12,17c-2.76,0-5-2.24-5-5s2.24-5,5-5,5,2.24,5,5-2.24,5-5,5ZM13,0h-2V5h2V0Zm0,19h-2v5h2v-5ZM5,11H0v2H5v-2Zm19,0h-5v2h5v-2Zm-2.81-6.78l-1.41-1.41-3.54,3.54,1.41,1.41,3.54-3.54ZM7.76,17.66l-1.41-1.41-3.54,3.54,1.41,1.41,3.54-3.54Zm0-11.31l-3.54-3.54-1.41,1.41,3.54,3.54,1.41-1.41Zm13.44,13.44l-3.54-3.54-1.41,1.41,3.54,3.54,1.41-1.41Z" />
-      </svg>
-      <svg
-        height={512}
-        width={512}
-        viewBox="0 0 24 24"
-        data-name="Layer 1"
-        id="Layer_1"
-        xmlns="http://www.w3.org/2000/svg"
-        className="fill-black opacity-60 peer-checked:opacity-70 peer-checked:fill-white absolute w-4 h-4 right-[9px]"
-      >
-        <path d="M12.009,24A12.067,12.067,0,0,1,.075,10.725,12.121,12.121,0,0,1,10.1.152a13,13,0,0,1,5.03.206,2.5,2.5,0,0,1,1.8,1.8,2.47,2.47,0,0,1-.7,2.425c-4.559,4.168-4.165,10.645.807,14.412h0a2.5,2.5,0,0,1-.7,4.319A13.875,13.875,0,0,1,12.009,24Zm.074-22a10.776,10.776,0,0,0-1.675.127,10.1,10.1,0,0,0-8.344,8.8A9.928,9.928,0,0,0,4.581,18.7a10.473,10.473,0,0,0,11.093,2.734.5.5,0,0,0,.138-.856h0C9.883,16.1,9.417,8.087,14.865,3.124a.459.459,0,0,0,.127-.465.491.491,0,0,0-.356-.362A10.68,10.68,0,0,0,12.083,2ZM20.5,12a1,1,0,0,1-.97-.757l-.358-1.43L17.74,9.428a1,1,0,0,1,.035-1.94l1.4-.325.351-1.406a1,1,0,0,1,1.94,0l.355,1.418,1.418.355a1,1,0,0,1,0,1.94l-1.418.355-.355,1.418A1,1,0,0,1,20.5,12ZM16,14a1,1,0,0,0,2,0A1,1,0,0,0,16,14Zm6,4a1,1,0,0,0,2,0A1,1,0,0,0,22,18Z" />
-      </svg>
-    </label>
-  );
-
-  if (isLoading) {
-    return (
-      <nav className="fixed inset-x-0 top-4 z-50 flex justify-center px-4">
-        <div className="flex h-14 w-full max-w-5xl items-center justify-between rounded-2xl border border-[var(--nav-border)] bg-[var(--nav-background)] px-4 shadow-xl">
-          <div className="h-4 w-32 animate-pulse rounded-full bg-white/30" />
-          <div className="h-4 w-20 animate-pulse rounded-full bg-white/30" />
-        </div>
-      </nav>
-    );
-  }
+  if (isLoading) return null;
 
   return (
-    <nav className="fixed inset-x-0 top-4 z-50 flex justify-center px-4">
-      <div className="flex h-16 w-full max-w-5xl items-center justify-between rounded-3xl border border-[var(--nav-border)] bg-[var(--nav-background)] px-6 shadow-2xl backdrop-blur-lg">
+    <nav className={`fixed inset-x-0 top-0 z-50 flex justify-center px-4 transition-all duration-300 ${scrolled ? 'pt-4' : 'pt-6'}`}>
+      <div
+        className={`
+          relative flex items-center justify-between w-full max-w-6xl px-6 py-3
+          rounded-full border transition-all duration-300
+          ${scrolled
+            ? 'backdrop-blur-xl shadow-2xl'
+            : 'border-transparent'
+          }
+        `}
+        style={{
+          backgroundColor: scrolled ? 'var(--nav-background)' : 'transparent',
+          borderColor: scrolled ? 'var(--nav-border)' : 'transparent'
+        }}
+      >
         <ProStreamLogo />
 
-        <div className="hidden items-center gap-6 md:flex">
-          <LinkGroup />
-          <ThemeToggle />
-          <AuthButtons />
+        {/* Desktop Navigation */}
+        <div className="hidden md:flex items-center gap-2">
+          <div className="flex items-center p-1 rounded-full bg-surface-secondary/50 border border-white/5 backdrop-blur-sm">
+            <div className="relative">
+              <NavItem
+                label="Auction"
+                active={isActive('/auction')}
+                hasDropdown
+                open={openMenu === 'auction'}
+                onClick={() => setOpenMenu(openMenu === 'auction' ? null : 'auction')}
+                btnRef={auctionBtnRef}
+              />
+              {openMenu === 'auction' && <Dropdown items={subnav.auction} type="auction" />}
+            </div>
+
+            <div className="relative">
+              <NavItem
+                label="Manage"
+                active={isActive('/manage')}
+                hasDropdown
+                open={openMenu === 'manage'}
+                onClick={() => setOpenMenu(openMenu === 'manage' ? null : 'manage')}
+                btnRef={manageBtnRef}
+              />
+              {openMenu === 'manage' && <Dropdown items={subnav.manage} type="manage" />}
+            </div>
+
+            <Link href="/overlays">
+              <NavItem label="Overlays" active={isActive('/overlays')} />
+            </Link>
+
+            {user?.role === 'Admin' && (
+              <Link href="/users">
+                <NavItem label="Users" active={isActive('/users')} />
+              </Link>
+            )}
+
+            <Link href="/contact">
+              <NavItem label="Contact" active={isActive('/contact')} />
+            </Link>
+          </div>
+
+          <div className="w-px h-8 bg-border-primary mx-2" />
+
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <AuthButtons />
+          </div>
         </div>
 
+        {/* Mobile Menu Button */}
         <button
-          type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-full md:hidden transition"
+          className="md:hidden w-10 h-10 flex items-center justify-center rounded-full bg-surface-elevated border"
           style={{
             borderColor: 'var(--border-primary)',
-            color: 'var(--text-primary)',
-            border: `1px solid var(--border-primary)`,
+            color: 'var(--text-primary)'
           }}
           onClick={() => setDrawerOpen(!drawerOpen)}
         >
@@ -378,26 +341,39 @@ const Navigation: React.FC = () => {
         </button>
       </div>
 
+      {/* Mobile Drawer */}
       {drawerOpen && (
-        <div className="absolute top-20 w-full max-w-5xl rounded-3xl border border-[var(--nav-border)] bg-[var(--nav-background)] p-6 shadow-2xl backdrop-blur">
-          <div className="grid gap-3">
-            {/* Auction collapsible */}
-            <div className="rounded-2xl p-4 font-semibold transition" style={{ border: `1px solid var(--border-primary)` }}>
-              <button className="w-full text-left flex items-center justify-between" onClick={() => setMobileAuctionOpen((v) => !v)} style={{ color: 'var(--text-primary)' }}>
+        <div
+          className="absolute top-24 inset-x-4 p-4 rounded-3xl backdrop-blur-xl border animate-slide-up md:hidden shadow-2xl"
+          style={{
+            backgroundColor: 'var(--nav-background)',
+            borderColor: 'var(--nav-border)'
+          }}
+        >
+          <div className="flex flex-col gap-2">
+            {/* Auction Section */}
+            <div className="p-4 rounded-2xl bg-surface-elevated/50 border" style={{ borderColor: 'var(--border-primary)' }}>
+              <button
+                className="w-full flex items-center justify-between font-semibold mb-2"
+                style={{ color: 'var(--text-primary)' }}
+                onClick={() => setMobileAuctionOpen(!mobileAuctionOpen)}
+              >
                 <span>Auction</span>
-                <span>{mobileAuctionOpen ? '▾' : '▸'}</span>
+                <span className={`transition-transform ${mobileAuctionOpen ? 'rotate-180' : ''}`}>▾</span>
               </button>
+
               {mobileAuctionOpen && (
-                <div className="mt-3 grid gap-2">
-                  {subnav.auction.map((item) => (
+                <div className="flex flex-col gap-2 pl-2 border-l-2 ml-1" style={{ borderColor: 'var(--border-primary)' }}>
+                  {subnav.auction.map(item => (
                     <Link
                       key={item.href}
                       href={item.href}
-                      className="rounded-xl px-3 py-2"
+                      className="py-2 px-3 rounded-lg text-sm"
                       style={{
-                        border: `1px solid var(--border-primary)`,
-                        color: pathname.startsWith(item.href) ? 'var(--brand-primary)' : 'var(--text-secondary)'
+                        color: pathname === item.href ? 'var(--brand-primary)' : 'var(--text-secondary)',
+                        backgroundColor: pathname === item.href ? 'rgba(79, 70, 229, 0.1)' : undefined
                       }}
+                      onClick={() => setDrawerOpen(false)}
                     >
                       {item.label}
                     </Link>
@@ -406,23 +382,29 @@ const Navigation: React.FC = () => {
               )}
             </div>
 
-            {/* Manage collapsible */}
-            <div className="rounded-2xl p-4 font-semibold transition" style={{ border: `1px solid var(--border-primary)` }}>
-              <button className="w-full text-left flex items-center justify-between" onClick={() => setMobileManageOpen((v) => !v)} style={{ color: 'var(--text-primary)' }}>
+            {/* Manage Section */}
+            <div className="p-4 rounded-2xl bg-surface-elevated/50 border" style={{ borderColor: 'var(--border-primary)' }}>
+              <button
+                className="w-full flex items-center justify-between font-semibold mb-2"
+                style={{ color: 'var(--text-primary)' }}
+                onClick={() => setMobileManageOpen(!mobileManageOpen)}
+              >
                 <span>Manage</span>
-                <span>{mobileManageOpen ? '▾' : '▸'}</span>
+                <span className={`transition-transform ${mobileManageOpen ? 'rotate-180' : ''}`}>▾</span>
               </button>
+
               {mobileManageOpen && (
-                <div className="mt-3 grid gap-2">
-                  {subnav.manage.map((item) => (
+                <div className="flex flex-col gap-2 pl-2 border-l-2 ml-1" style={{ borderColor: 'var(--border-primary)' }}>
+                  {subnav.manage.map(item => (
                     <Link
                       key={item.href}
                       href={item.href}
-                      className="rounded-xl px-3 py-2"
+                      className="py-2 px-3 rounded-lg text-sm"
                       style={{
-                        border: `1px solid var(--border-primary)`,
-                        color: pathname.startsWith('/manage') && pathname.includes(item.href.split('=')[1]?.split('&')[0] || '') ? 'var(--brand-primary)' : 'var(--text-secondary)'
+                        color: pathname.includes(item.href.split('?')[0]) ? 'var(--brand-primary)' : 'var(--text-secondary)',
+                        backgroundColor: pathname.includes(item.href.split('?')[0]) ? 'rgba(79, 70, 229, 0.1)' : undefined
                       }}
+                      onClick={() => setDrawerOpen(false)}
                     >
                       {item.label}
                     </Link>
@@ -431,29 +413,34 @@ const Navigation: React.FC = () => {
               )}
             </div>
 
-            {/* Other single links */}
-            {(() => {
-              const base = [{href:'/overlays', label:'Overlays'}, {href:'/contact', label:'Contact'}];
-              const list = user?.role === 'Admin' ? [...base.slice(0,1), {href:'/users', label:'Users'}, ...base.slice(1)] : base;
-              return list.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="rounded-2xl p-4 font-semibold transition"
-                  style={{
-                    border: `1px solid var(--border-primary)`,
-                    backgroundColor: isActive(link.href) ? 'var(--surface-hover)' : 'transparent',
-                    color: isActive(link.href) ? 'var(--brand-primary)' : 'var(--text-primary)'
-                  }}
-                >
-                  {link.label}
-                </Link>
-              ));
-            })()}
-          </div>
-          <div className="mt-6 flex items-center justify-between">
-            <ThemeToggle />
-            <AuthButtons />
+            <Link
+              href="/overlays"
+              className="p-4 rounded-2xl bg-surface-elevated/50 border font-semibold"
+              style={{
+                borderColor: 'var(--border-primary)',
+                color: 'var(--text-primary)'
+              }}
+              onClick={() => setDrawerOpen(false)}
+            >
+              Overlays
+            </Link>
+
+            <Link
+              href="/contact"
+              className="p-4 rounded-2xl bg-surface-elevated/50 border font-semibold"
+              style={{
+                borderColor: 'var(--border-primary)',
+                color: 'var(--text-primary)'
+              }}
+              onClick={() => setDrawerOpen(false)}
+            >
+              Contact
+            </Link>
+
+            <div className="mt-4 flex items-center justify-between px-2">
+              <ThemeToggle />
+              <AuthButtons />
+            </div>
           </div>
         </div>
       )}
