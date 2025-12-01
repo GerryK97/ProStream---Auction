@@ -406,6 +406,44 @@ const overlayTypes: OverlayType[] = [
         dimensions: { width: 400, height: 200 }
     },
     {
+        id: 'premium-current-bid',
+        name: 'Premium Current Bid',
+        description: 'Premium current bid display with modern design, glow effects, and full color customization',
+        route: '/overlays/premium-current-bid',
+        tags: ['Auction', 'Premium', 'Customizable'],
+        category: 'Auction Info',
+        defaultParams: {
+            size: 'medium',
+            position: 'top-right',
+            backgroundColor: 'rgba(17, 24, 39, 0.95)',
+            borderColor: '#3b82f6',
+            labelColor: '#93c5fd',
+            bidColor: '#60a5fa',
+            accentColor: '#2563eb',
+            shadowColor: 'rgba(37, 99, 235, 0.5)',
+            showPlayerName: 'true',
+            showGlow: 'true',
+            borderRadius: 'large',
+            opacity: '100'
+        },
+        parameterSchema: {
+            size: { type: 'select', label: 'Size', options: ['small', 'medium', 'large'], description: 'Overlay size' },
+            position: { type: 'select', label: 'Position', options: ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'], description: 'Screen position' },
+            backgroundColor: { type: 'color', label: 'Background Color', description: 'Main background color (supports rgba)' },
+            borderColor: { type: 'color', label: 'Border Color', description: 'Border accent color' },
+            labelColor: { type: 'color', label: 'Label Color', description: 'Text color for labels' },
+            bidColor: { type: 'color', label: 'Bid Amount Color', description: 'Color for the bid amount' },
+            accentColor: { type: 'color', label: 'Accent Color', description: 'Gradient and highlight color' },
+            shadowColor: { type: 'color', label: 'Shadow/Glow Color', description: 'Glow effect color (supports rgba)' },
+            showPlayerName: { type: 'toggle', label: 'Show Player Name', description: 'Display current player name' },
+            showGlow: { type: 'toggle', label: 'Show Glow Effect', description: 'Enable glow/shadow effects' },
+            borderRadius: { type: 'select', label: 'Border Radius', options: ['none', 'small', 'medium', 'large'], description: 'Corner roundness' },
+            opacity: { type: 'number', label: 'Opacity', min: 0, max: 100, step: 5, description: 'Overall transparency (0-100)' }
+        },
+        imageURL: 'https://placehold.co/400x200/1e3a8a/60a5fa?text=Premium+Current+Bid',
+        dimensions: { width: 500, height: 250 }
+    },
+    {
         id: 'status',
         name: 'Status Overlay',
         description: 'Show auction status messages when no active player',
