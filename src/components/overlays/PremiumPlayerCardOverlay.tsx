@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Player, Team, Tournament } from '@/types';
+import ClassBadge from '@/components/shared/ClassBadge';
 
 interface PremiumPlayerCardOverlayProps {
     currentPlayer: Player | undefined;
@@ -30,6 +31,7 @@ interface PremiumPlayerCardOverlayProps {
     playerNameColor?: string;
     statValueColor?: string;
     statLabelColor?: string;
+    statsSectionBackground?: string;
     jerseyBadgeGradientStart?: string;
     jerseyBadgeGradientEnd?: string;
     decorativeBadgeColor?: string;
@@ -42,7 +44,6 @@ interface PremiumPlayerCardOverlayProps {
 
     // Content settings
     roleLabel?: string;
-    usePlayerNameAsWatermark?: boolean;
     backgroundTextLine1?: string;
     backgroundTextLine2?: string;
 }
@@ -72,6 +73,7 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
     playerNameColor = '#1e293b',
     statValueColor = '#1e293b',
     statLabelColor = '#9ca3af',
+    statsSectionBackground = '#f1f5f9',
     jerseyBadgeGradientStart = '#ff5411',
     jerseyBadgeGradientEnd = '#ffcc00',
     decorativeBadgeColor = '#ffffff',
@@ -84,7 +86,6 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
 
     // Content defaults
     roleLabel = 'Player',
-    usePlayerNameAsWatermark = true,
     backgroundTextLine1 = '',
     backgroundTextLine2 = ''
 }) => {
@@ -127,18 +128,9 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
         showWickets && { value: currentPlayer.stats.totalWickets, label: 'Wickets' }
     ].filter(Boolean);
 
-    // Determine watermark text
-    let watermarkLine1 = '';
-    let watermarkLine2 = '';
-
-    if (usePlayerNameAsWatermark) {
-        const nameParts = currentPlayer.name.split(' ');
-        watermarkLine1 = nameParts[0] || '';
-        watermarkLine2 = nameParts.slice(1).join(' ') || '';
-    } else {
-        watermarkLine1 = backgroundTextLine1;
-        watermarkLine2 = backgroundTextLine2;
-    }
+    // Use custom background text for watermark
+    const watermarkLine1 = backgroundTextLine1;
+    const watermarkLine2 = backgroundTextLine2;
 
     return (
         <div className={`w-full h-full flex items-center ${positionConfig[position]}`}>
@@ -245,12 +237,23 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
                                     </h2>
                                 )}
                                 {showRoleLabel && (
-                                    <div
-                                        className="text-sm drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
-                                        style={{ color: statLabelColor }}
-                                    >
-                                        {roleLabel}
-                                    </div>
+                                    currentPlayer.playerClass && tournament?.usePlayerClasses ? (
+                                        <div className="flex justify-center mt-1">
+                                            <ClassBadge
+                                                tournament={tournament}
+                                                player={currentPlayer}
+                                                variant="inline"
+                                                showIcon={true}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div
+                                            className="text-sm drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
+                                            style={{ color: statLabelColor }}
+                                        >
+                                            {roleLabel}
+                                        </div>
+                                    )
                                 )}
                             </div>
                         )}
@@ -259,9 +262,10 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
                     {/* Stats Section */}
                     {showStatsSection && visibleStats.length > 0 && (
                         <div
-                            className="mx-auto grid w-fit divide-x divide-custom-gray-200 py-5 dark:divide-custom-gray-600"
+                            className="grid divide-x divide-custom-gray-200 py-5 px-4 dark:divide-custom-gray-600 rounded-lg"
                             style={{
-                                gridTemplateColumns: `repeat(${visibleStats.length}, 1fr)`
+                                gridTemplateColumns: `repeat(${visibleStats.length}, 1fr)`,
+                                backgroundColor: statsSectionBackground
                             }}
                         >
                             {visibleStats.map((stat: any, index) => (

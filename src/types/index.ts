@@ -333,3 +333,34 @@ export interface OverlayAnalytics {
   errorCount: number;
   loadTime: number; // milliseconds
 }
+
+// Overlay Library - Catalog of available overlay templates
+export interface ParameterOption {
+  type: 'select' | 'color' | 'toggle' | 'text' | 'number';
+  label: string;
+  options?: string[];
+  description?: string;
+  min?: number;
+  max?: number;
+  default?: any;
+}
+
+export interface OverlayLibraryItem {
+  _id: string;
+  name: string;
+  description: string;
+  route: string; // Route to the overlay page (e.g., '/overlays/player-card')
+  tags: string[];
+  category: string; // 'Player Display', 'Team Display', etc.
+  defaultParams: Record<string, any>;
+  parameterSchema: Record<string, ParameterOption>;
+  imageURL?: string; // Preview image URL
+  dimensions: {
+    width: number;
+    height: number;
+  };
+  isActive: boolean;
+  createdBy?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}

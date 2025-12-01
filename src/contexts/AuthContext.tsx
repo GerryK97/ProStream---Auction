@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Initialize auth state from localStorage
   useEffect(() => {
-    const storedToken = localStorage.getItem('authToken');
+    const storedToken = localStorage.getItem('auth_token');
     if (storedToken) {
       setToken(storedToken);
       // Verify the token is still valid
@@ -63,13 +63,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(tokenToVerify);
       } else {
         // Token is invalid, clear auth
-        localStorage.removeItem('authToken');
+        localStorage.removeItem('auth_token');
         setToken(null);
         setUser(null);
       }
     } catch (err) {
       console.error('Token verification error:', err);
-      localStorage.removeItem('authToken');
+      localStorage.removeItem('auth_token');
       setToken(null);
       setUser(null);
     } finally {
@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Store token in localStorage
-      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('auth_token', data.token);
       setToken(data.token);
       setUser(data.user);
     } catch (err) {
@@ -135,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // If auto-approved, store token
       if (data.token) {
-        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('auth_token', data.token);
         setToken(data.token);
         setUser(data.user);
       }
@@ -163,7 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Continue with local logout even if API fails
     } finally {
       // Clear local storage and state
-      localStorage.removeItem('authToken');
+      localStorage.removeItem('auth_token');
       setToken(null);
       setUser(null);
       setError(null);
