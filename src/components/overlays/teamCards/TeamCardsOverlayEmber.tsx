@@ -59,16 +59,7 @@ const TeamCardsOverlayEmber: React.FC<TeamCardsOverlayBaseProps> = ({
                                 }}
                             />
                             <div className="relative z-10 p-4 flex flex-col gap-3">
-                                <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.25em] text-[#fed7aa]">
-                                    <span
-                                        className="flex items-center gap-2 px-2 py-1 rounded-full"
-                                        style={{
-                                            background:
-                                                'linear-gradient(90deg, rgba(249, 115, 22, 0.45), rgba(220, 38, 38, 0.2))'
-                                        }}
-                                    >
-                                        <span>🔥</span>Ember Rush
-                                    </span>
+                                <div className="flex items-center justify-end text-[10px] uppercase tracking-[0.25em] text-[#fed7aa]">
                                     <span
                                         className="px-3 py-1 rounded-full font-semibold tracking-tight text-[11px]"
                                         style={{
