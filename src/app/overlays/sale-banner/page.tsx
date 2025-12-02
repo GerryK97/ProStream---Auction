@@ -44,7 +44,7 @@ export default function SaleBannerOverlayPage() {
                 </div>
             </div>
         }>
-            <SaleBannerPage />
+            <SaleBannerContent />
         </Suspense>
     );
 }
