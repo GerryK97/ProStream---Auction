@@ -100,17 +100,13 @@ const SoldPlayersSummaryOverlayPremium: React.FC<SoldPlayersSummaryOverlayPremiu
                         />
                     </div>
 
-                    <h1 className="text-5xl font-bold tracking-wide drop-shadow-[0_8px_16px_rgba(0,0,0,0.9)] mb-2 relative z-10"
+                    <h1 className="text-4xl font-bold tracking-wide drop-shadow-[0_8px_16px_rgba(0,0,0,0.9)] mb-2 relative z-10"
                         style={{ color: textColor, letterSpacing: '0.05em' }}>
-                        🏆 AUCTION SUMMARY
-                    </h1>
-                    <p className="text-xl drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] relative z-10"
-                        style={{ color: accentColor }}>
-                        {allPlayersSold
+                        🏆 {allPlayersSold
                             ? `All ${totalPlayers} Players Sold - Final Summary`
                             : `${soldPlayers.length} of ${totalPlayers} Players Sold`
                         }
-                    </p>
+                    </h1>
                     {totalPages > 1 && (
                         <p className="text-sm mt-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] relative z-10"
                             style={{ color: `${textColor}80` }}>
@@ -271,7 +267,7 @@ const SoldPlayersSummaryOverlayPremium: React.FC<SoldPlayersSummaryOverlayPremiu
                                             style={{
                                                 color: isTopThree ? priceColor : textColor
                                             }}>
-                                            ₹{formatCurrency(player.finalPrice || 0)}
+                                            {formatCurrency(player.finalPrice || 0)}
                                         </span>
                                     </div>
                                 </div>
@@ -294,7 +290,7 @@ const SoldPlayersSummaryOverlayPremium: React.FC<SoldPlayersSummaryOverlayPremiu
                         <div className="col-span-3 flex items-center justify-end">
                             <span className="text-2xl font-bold drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)]"
                                 style={{ color: priceColor }}>
-                                ₹{formatCurrency(sortedPlayers.reduce((sum, p) => sum + (p.finalPrice || 0), 0))}
+                                {formatCurrency(sortedPlayers.reduce((sum, p) => sum + (p.finalPrice || 0), 0))}
                             </span>
                         </div>
                     </div>

@@ -71,6 +71,49 @@ export default function HomePage() {
     { value: '12', label: 'Active broadcast themes' },
   ];
 
+  const pricingTiers = [
+    {
+      name: 'Free',
+      price: '0 LKR',
+      cadence: 'per tournament',
+      description: 'Up to 2 teams to trial the control room with unlimited players.',
+      perks: [
+        '2 teams per tournament',
+        'Unlimited players',
+        'Core auction controls',
+        'No custom branding overlays',
+      ],
+      accent: 'var(--text-muted)',
+    },
+    {
+      name: 'Standard',
+      price: '5,000 LKR',
+      cadence: 'per tournament',
+      description: 'For full events that need polished overlays and tight roster control.',
+      perks: [
+        'Includes 10 teams; unlimited players',
+        'Each additional team: 500 LKR',
+        'Customized branding overlay',
+        'Live support for event day',
+      ],
+      accent: 'var(--brand-primary)',
+      badge: 'Most booked',
+    },
+    {
+      name: 'Offer (Monthly Access)',
+      price: '7,500 LKR',
+      cadence: 'per month',
+      description: 'Ideal for leagues running multiple auctions and ongoing broadcasts.',
+      perks: [
+        '2 tournaments included; unlimited teams/players',
+        'Customized branding overlay',
+        '1 additional overlay design request per month',
+        'Early access to new features',
+      ],
+      accent: 'var(--brand-secondary)',
+    },
+  ];
+
   return (
     <div className="relative min-h-screen overflow-hidden" style={{ backgroundColor: 'var(--surface-primary)' }}>
       <BackgroundAnimation />
@@ -106,6 +149,122 @@ export default function HomePage() {
                   color={highlight.color}
                 />
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Pricing Section */}
+        <section className="px-4 py-16 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <div className="mx-auto max-w-3xl text-center">
+              <p className="text-sm font-semibold uppercase tracking-[0.5em]" style={{ color: 'color-mix(in oklab, var(--brand-primary) 80%, transparent)' }}>
+                Pricing strategies
+              </p>
+              <h3 className="mt-3 text-3xl font-bold sm:text-4xl" style={{ color: 'var(--text-secondary)' }}>
+                Direct-only purchasing, tailored to your auction
+              </h3>
+              <p className="mt-4 text-base sm:text-lg" style={{ color: 'var(--text-tertiary)' }}>
+                Every engagement is finalized by speaking with our producers so we can match overlays, staffing,
+                and delivery timelines to your broadcast stack. No self-serve checkout.
+              </p>
+            </div>
+
+            <div className="mt-12 grid gap-6 lg:grid-cols-3">
+              {pricingTiers.map((tier) => (
+                <div
+                  key={tier.name}
+                  className="flex h-full flex-col rounded-2xl p-6 shadow-[0_20px_60px_rgba(0,0,0,0.2)]"
+                  style={{
+                    borderColor: 'var(--border-primary)',
+                    border: '1px solid var(--border-primary)',
+                    background: 'linear-gradient(135deg, color-mix(in oklab, var(--surface-elevated) 85%, transparent), color-mix(in oklab, var(--surface-secondary) 70%, transparent))',
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.3em]" style={{ color: tier.accent }}>
+                        {tier.name}
+                      </p>
+                      <p className="mt-2 text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                        {tier.price}
+                      </p>
+                      <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--text-muted)' }}>{tier.cadence}</p>
+                    </div>
+                    {tier.badge && (
+                      <span
+                        className="rounded-full px-3 py-1 text-xs font-semibold"
+                        style={{
+                          backgroundColor: 'color-mix(in oklab, var(--brand-secondary) 15%, var(--surface-elevated))',
+                          color: 'var(--brand-secondary)',
+                          border: '1px solid color-mix(in oklab, var(--brand-secondary) 25%, var(--border-primary))',
+                        }}
+                      >
+                        {tier.badge}
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="mt-4 text-sm" style={{ color: 'var(--text-tertiary)' }}>
+                    {tier.description}
+                  </p>
+
+                  <ul className="mt-6 space-y-3">
+                    {tier.perks.map((perk) => (
+                      <li key={perk} className="flex items-start gap-3 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                        <span
+                          className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold"
+                          style={{ backgroundColor: 'color-mix(in oklab, tier.accent 10%, var(--surface-elevated))', color: tier.accent }}
+                        >
+                          <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3-3a1 1 0 011.414-1.414L8.5 11.836l6.543-6.543a1 1 0 011.664 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </span>
+                        <span>{perk}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <div className="mt-6 rounded-xl p-4" style={{ backgroundColor: 'color-mix(in oklab, var(--surface-primary) 60%, transparent)', border: '1px solid var(--border-primary)' }}>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: 'var(--text-muted)' }}>
+                      Purchase flow
+                    </p>
+                    <p className="mt-2 text-sm" style={{ color: 'var(--text-tertiary)' }}>
+                      Purchase is completed via a direct call with our team to align scope, tech stack, and delivery dates.
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-10 flex flex-col gap-4 rounded-2xl p-6 sm:flex-row sm:items-center sm:justify-between" style={{
+              borderColor: 'var(--border-primary)',
+              border: '1px solid var(--border-primary)',
+              backgroundColor: 'color-mix(in oklab, var(--surface-secondary) 90%, transparent)'
+            }}>
+              <div>
+                <p className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Ready to purchase?</p>
+                <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
+                  We schedule a 20-minute fit check, then send a tailored quote with deployment milestones.
+                </p>
+              </div>
+              <div className="flex flex-col items-start gap-2 sm:items-end">
+                <a
+                  href="mailto:sales@prostream.app?subject=ProStream%20Auction%20Pricing"
+                  className="inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2"
+                  style={{
+                    backgroundColor: 'var(--brand-primary)',
+                    color: 'var(--text-on-brand)',
+                    boxShadow: '0 15px 35px color-mix(in oklab, var(--brand-primary) 35%, transparent)'
+                  }}
+                >
+                  Talk with us
+                </a>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Direct-only purchases. Responses within one business day.</p>
+              </div>
             </div>
           </div>
         </section>
@@ -209,7 +368,7 @@ export default function HomePage() {
                   team mirrored the same data in OBS. Zero missed lots, no frantic spreadsheets, and a
                   flawless viewer experience."
                 </blockquote>
-                <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Riya Menon — Tournament Director, Grand League</p>
+                <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Riya Menon - Tournament Director, Grand League</p>
               </div>
 
               <div className="grid gap-6 sm:grid-cols-2">

@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const navLinks = [
+  { href: '/', label: 'Home' },
   { href: '/auction', label: 'Auction' },
   { href: '/manage', label: 'Manage' },
   { href: '/overlays', label: 'Overlays' },
@@ -281,6 +282,10 @@ const Navigation: React.FC = () => {
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-2">
           <div className="flex items-center p-1 rounded-full bg-surface-secondary/50 border border-white/5 backdrop-blur-sm">
+            <Link href="/">
+              <NavItem label="Home" active={isActive('/')} />
+            </Link>
+
             <div className="relative">
               <NavItem
                 label="Auction"
@@ -351,6 +356,18 @@ const Navigation: React.FC = () => {
           }}
         >
           <div className="flex flex-col gap-2">
+            <Link
+              href="/"
+              className="p-4 rounded-2xl bg-surface-elevated/50 border font-semibold"
+              style={{
+                borderColor: 'var(--border-primary)',
+                color: 'var(--text-primary)'
+              }}
+              onClick={() => setDrawerOpen(false)}
+            >
+              Home
+            </Link>
+
             {/* Auction Section */}
             <div className="p-4 rounded-2xl bg-surface-elevated/50 border" style={{ borderColor: 'var(--border-primary)' }}>
               <button

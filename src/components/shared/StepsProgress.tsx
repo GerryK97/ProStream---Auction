@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 interface Step {
@@ -33,6 +33,29 @@ export default function StepsProgress({ currentStep, steps = DEFAULT_STEPS, clas
   // Convert 1-indexed to 0-indexed
   const currentStepIndex = currentStep - 1;
   const progressPercentage = (currentStepIndex / (steps.length - 1)) * 100;
+  const [renderedWidth, setRenderedWidth] = useState(progressPercentage);
+
+  useEffect(() => {
+    // Try to animate from the previous step (even across page remounts) using sessionStorage as a handoff
+    let startWidth = progressPercentage;
+
+    try {
+      const storedStep = Number(sessionStorage.getItem('stepsProgress:lastStep'));
+      if (!Number.isNaN(storedStep)) {
+        const prevIndex = Math.max(0, Math.min(storedStep - 1, steps.length - 1));
+        startWidth = (prevIndex / (steps.length - 1)) * 100;
+      }
+      sessionStorage.setItem('stepsProgress:lastStep', String(currentStep));
+    } catch {
+      // Ignore storage issues and fall back to the current step width
+    }
+
+    setRenderedWidth(startWidth);
+
+    // Defer setting the final width to trigger the animation frame
+    const frame = requestAnimationFrame(() => setRenderedWidth(progressPercentage));
+    return () => cancelAnimationFrame(frame);
+  }, [progressPercentage, currentStep, steps.length]);
 
   return (
     <div className={`w-full py-4 px-4 ${className}`}>
@@ -47,7 +70,7 @@ export default function StepsProgress({ currentStep, steps = DEFAULT_STEPS, clas
         <div
           className="absolute top-1/2 left-0 h-2 -translate-y-1/2 rounded-full transition-all duration-500 ease-out z-0"
           style={{
-            width: `${progressPercentage}%`,
+            width: `${renderedWidth}%`,
             backgroundColor: 'var(--brand-primary)'
           }}
         />
