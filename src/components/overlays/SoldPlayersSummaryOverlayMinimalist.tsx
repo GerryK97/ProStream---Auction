@@ -83,18 +83,19 @@ const SoldPlayersSummaryOverlayMinimalist: React.FC<SoldPlayersSummaryOverlayMin
                             borderColor: borderColor
                         }}
                     >
-                        <h1 className="text-4xl font-semibold mb-2"
+                        <h1 className="text-3xl font-semibold mb-2"
                             style={{ color: textColor }}>
-                            Auction Summary
-                        </h1>
-                        <p className="text-base"
-                            style={{ color: `${textColor}99`, opacity: 0.7 }}>
                             {allPlayersSold
-                                ? `All ${totalPlayers} sold`
-                                : `${soldPlayers.length} of ${totalPlayers} sold`
+                                ? `All ${totalPlayers} Players Sold`
+                                : `${soldPlayers.length} of ${totalPlayers} Players Sold`
                             }
-                            {totalPages > 1 && ` · Page ${currentPage + 1} of ${totalPages}`}
-                        </p>
+                        </h1>
+                        {totalPages > 1 && (
+                            <p className="text-sm"
+                                style={{ color: `${textColor}99`, opacity: 0.7 }}>
+                                Page {currentPage + 1} of {totalPages}
+                            </p>
+                        )}
                     </div>
 
                     {/* List Header */}

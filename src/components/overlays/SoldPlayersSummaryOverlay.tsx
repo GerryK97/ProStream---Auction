@@ -62,15 +62,12 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
             <div className="w-[900px] flex flex-col">
                 {/* Header */}
                 <div className="border-2 border-cyan-500 rounded-t-lg p-6 text-center">
-                    <h1 className="text-5xl font-bold text-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)] mb-2">
-                        AUCTION COMPLETE
-                    </h1>
-                    <p className="text-xl text-cyan-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                    <h1 className="text-4xl font-bold text-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)] mb-2">
                         {allPlayersSold
                             ? `All ${totalPlayers} Players Sold - Final Summary`
                             : `${soldPlayers.length} of ${totalPlayers} Players Sold`
                         }
-                    </p>
+                    </h1>
                     {totalPages > 1 && (
                         <p className="text-sm text-neutral-300 mt-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                             Page {currentPage + 1} of {totalPages}
