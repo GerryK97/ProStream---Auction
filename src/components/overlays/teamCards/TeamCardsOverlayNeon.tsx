@@ -92,7 +92,7 @@ const TeamCardsOverlayNeon: React.FC<TeamCardsOverlayBaseProps> = ({
                                         </div>
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-semibold text-lg truncate" style={{ color: '#ecfeff' }}>
+                                        <p className="font-semibold text-lg break-words" style={{ color: '#ecfeff', lineHeight: '1.2' }}>
                                             {team.name}
                                         </p>
                                         <p className="text-sm" style={{ color: '#bae6fd' }}>

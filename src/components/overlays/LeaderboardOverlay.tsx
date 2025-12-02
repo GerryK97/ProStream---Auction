@@ -8,6 +8,8 @@ interface LeaderboardOverlayProps {
     tournament: Tournament | null;
     sortBy?: 'players' | 'balance' | 'spent';
     position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+    backgroundColor?: string;
+    opacity?: number;
 }
 
 const formatCurrency = (amount: number) => amount.toLocaleString();
@@ -16,7 +18,9 @@ const LeaderboardOverlay: React.FC<LeaderboardOverlayProps> = ({
     teams,
     tournament,
     sortBy = 'players',
-    position = 'top-right'
+    position = 'top-right',
+    backgroundColor = 'rgba(0, 0, 0, 0.8)',
+    opacity = 100
 }) => {
     if (teams.length === 0 || !tournament) {
         return null;
@@ -45,8 +49,8 @@ const LeaderboardOverlay: React.FC<LeaderboardOverlayProps> = ({
     };
 
     return (
-        <div className={`fixed ${positionConfig[position]} w-80`}>
-            <div className="rounded-lg border-2 border-cyan-500 p-4">
+        <div className={`fixed ${positionConfig[position]} w-80`} style={{ opacity: opacity / 100 }}>
+            <div className="rounded-lg border-2 border-cyan-500 p-4 backdrop-blur-md" style={{ backgroundColor }}>
                 <h3 className="text-xl font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] mb-3 text-center border-b-2 border-cyan-500 pb-2">
                     TEAM STANDINGS
                 </h3>

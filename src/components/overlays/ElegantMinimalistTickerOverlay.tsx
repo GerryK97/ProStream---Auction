@@ -12,6 +12,7 @@ interface ElegantMinimalistTickerProps {
     timer?: number;
     border?: boolean;
     position?: 'top' | 'bottom';
+    opacity?: number;
 }
 
 const formatCurrency = (amount: number) => amount.toLocaleString();
@@ -28,7 +29,8 @@ const ElegantMinimalistTickerOverlay: React.FC<ElegantMinimalistTickerProps> = (
     autoplay = true,
     timer = 5000,
     border = true,
-    position = 'bottom'
+    position = 'bottom',
+    opacity = 100
 }) => {
     // Early return if no sold players
     if (!soldPlayers || soldPlayers.length === 0) {
@@ -117,7 +119,7 @@ const ElegantMinimalistTickerOverlay: React.FC<ElegantMinimalistTickerProps> = (
     const positionClass = position === 'top' ? 'top-8' : 'bottom-8';
 
     return (
-        <div className={`fixed ${positionClass} left-0 right-0 px-12 z-50`}>
+        <div className={`fixed ${positionClass} left-0 right-0 px-12 z-50`} style={{ opacity: opacity / 100 }}>
             <div
                 className={`relative ${currentSize.height} overflow-hidden rounded-full ${
                     border ? `border ${currentColor.border}` : ''

@@ -378,14 +378,15 @@ const overlayTypes: OverlayType[] = [
         route: '/overlays/elegant-ticker',
         tags: ['Players', 'Premium', 'Sold', 'Elegant', 'Minimal'],
         category: 'Ticker',
-        defaultParams: { size: 'default', color: 'champagne', autoplay: 'true', timer: '5000', border: 'true', position: 'bottom' },
+        defaultParams: { size: 'default', color: 'champagne', autoplay: 'true', timer: '5000', border: 'true', position: 'bottom', opacity: '100' },
         parameterSchema: {
             size: { type: 'select', label: 'Size', options: ['small', 'default', 'large'] },
             color: { type: 'select', label: 'Color Theme', options: ['champagne', 'platinum', 'rose', 'navy', 'charcoal'], description: 'Elegant color palette' },
             autoplay: { type: 'toggle', label: 'Auto-play' },
             timer: { type: 'number', label: 'Timer (ms)', min: 1000, max: 30000, step: 1000, description: 'Scroll speed control' },
             border: { type: 'toggle', label: 'Show Border' },
-            position: { type: 'select', label: 'Position', options: ['top', 'bottom'] }
+            position: { type: 'select', label: 'Position', options: ['top', 'bottom'] },
+            opacity: { type: 'number', label: 'Opacity', min: 0, max: 100, step: 5, description: 'Overall transparency (0-100)' }
         },
         imageURL: 'https://placehold.co/400x200/f5f5f0/d4af37?text=Elegant+Ticker',
         dimensions: { width: 1920, height: 65 }
@@ -461,24 +462,98 @@ const overlayTypes: OverlayType[] = [
         route: '/overlays/leaderboard',
         tags: ['Teams', 'Stats'],
         category: 'Statistics',
-        defaultParams: { sortBy: 'players', position: 'top-right' },
+        defaultParams: {
+            sortBy: 'players',
+            position: 'top-right',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            opacity: '100'
+        },
         parameterSchema: {
             sortBy: { type: 'select', label: 'Sort By', options: ['players', 'balance', 'spent'], description: 'Sort teams by players count, remaining balance, or money spent' },
-            position: { type: 'select', label: 'Position', options: ['top-left', 'top-right', 'bottom-left', 'bottom-right'] }
+            position: { type: 'select', label: 'Position', options: ['top-left', 'top-right', 'bottom-left', 'bottom-right'] },
+            backgroundColor: { type: 'color', label: 'Background Color', description: 'Background color (supports rgba)' },
+            opacity: { type: 'number', label: 'Opacity', min: 0, max: 100, step: 5, description: 'Overall transparency (0-100)' }
         },
         imageURL: 'https://placehold.co/400x200/1e293b/f59e0b?text=Leaderboard',
         dimensions: { width: 320, height: 400 }
     },
     {
+        id: 'premium-leaderboard',
+        name: 'Premium Leaderboard',
+        description: 'Modern premium leaderboard with glassmorphism, custom colors, and smooth animations',
+        route: '/overlays/premium-leaderboard',
+        tags: ['Teams', 'Stats', 'Premium', 'Customizable'],
+        category: 'Statistics',
+        defaultParams: {
+            sortBy: 'players',
+            position: 'top-right',
+            backgroundColor: 'rgba(17, 24, 39, 0.95)',
+            accentColor: '#3b82f6',
+            headerColor: '#60a5fa',
+            textColor: '#f0f9ff',
+            opacity: '100'
+        },
+        parameterSchema: {
+            sortBy: { type: 'select', label: 'Sort By', options: ['players', 'balance', 'spent'], description: 'Sort teams by players count, remaining balance, or money spent' },
+            position: { type: 'select', label: 'Position', options: ['top-left', 'top-right', 'bottom-left', 'bottom-right'], description: 'Screen position' },
+            backgroundColor: { type: 'color', label: 'Background Color', description: 'Main background color (supports rgba)' },
+            accentColor: { type: 'color', label: 'Accent Color', description: 'Border and highlight color' },
+            headerColor: { type: 'color', label: 'Header Color', description: 'Title and badge text color' },
+            textColor: { type: 'color', label: 'Text Color', description: 'Team name and general text color' },
+            opacity: { type: 'number', label: 'Opacity', min: 0, max: 100, step: 5, description: 'Overall transparency (0-100)' }
+        },
+        imageURL: 'https://placehold.co/400x200/1e3a8a/60a5fa?text=Premium+Leaderboard',
+        dimensions: { width: 384, height: 500 }
+    },
+    {
         id: 'sale-banner',
-        name: 'Sale Banner',
-        description: 'Popup notification when a player is sold',
+        name: 'Sold Players Flipper',
+        description: 'Auto-flipping display showing sold players one at a time with customizable duration',
         route: '/overlays/sale-banner',
-        tags: ['Auction', 'Alert'],
+        tags: ['Auction', 'Players', 'Sold', 'Animated'],
         category: 'Notifications',
-        defaultParams: {},
-        imageURL: 'https://placehold.co/400x200/1e293b/ef4444?text=Sale+Banner',
-        dimensions: { width: 450, height: 150 }
+        defaultParams: {
+            position: 'top-right',
+            backgroundColor: 'rgba(17, 24, 39, 0.95)',
+            opacity: '100',
+            displayDuration: '5000'
+        },
+        parameterSchema: {
+            position: { type: 'select', label: 'Position', options: ['top-left', 'top-right', 'bottom-left', 'bottom-right'], description: 'Screen position' },
+            backgroundColor: { type: 'color', label: 'Background Color', description: 'Background color (supports rgba)' },
+            opacity: { type: 'number', label: 'Opacity', min: 0, max: 100, step: 5, description: 'Overall transparency (0-100)' },
+            displayDuration: { type: 'number', label: 'Display Duration (ms)', min: 1000, max: 30000, step: 1000, description: 'Time to show each player in milliseconds (1000ms = 1 second)' }
+        },
+        imageURL: 'https://placehold.co/400x200/1e293b/10b981?text=Sold+Players+Flipper',
+        dimensions: { width: 384, height: 280 }
+    },
+    {
+        id: 'sale-banner-premium',
+        name: 'Sold Players Flipper · Premium',
+        description: 'Premium auto-flipping display with golden accents, gradient frames, and full color customization',
+        route: '/overlays/sale-banner-premium',
+        tags: ['Auction', 'Players', 'Sold', 'Animated', 'Premium'],
+        category: 'Notifications',
+        defaultParams: {
+            position: 'top-right',
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            accentColor: '#f59e0b',
+            textColor: '#f1f5f9',
+            priceColor: '#fbbf24',
+            opacity: '100',
+            displayDuration: '5000'
+        },
+        parameterSchema: {
+            position: { type: 'select', label: 'Position', options: ['top-left', 'top-right', 'bottom-left', 'bottom-right'], description: 'Screen position' },
+            backgroundColor: { type: 'color', label: 'Background Color', description: 'Main background color (supports rgba)' },
+            accentColor: { type: 'color', label: 'Accent Color', description: 'Border, badge, and highlight color' },
+            textColor: { type: 'color', label: 'Text Color', description: 'Player and team name color' },
+            priceColor: { type: 'color', label: 'Price Color', description: 'Final price display color' },
+            opacity: { type: 'number', label: 'Opacity', min: 0, max: 100, step: 5, description: 'Overall transparency (0-100)' },
+            displayDuration: { type: 'number', label: 'Display Duration (ms)', min: 1000, max: 30000, step: 1000, description: 'Time to show each player in milliseconds (1000ms = 1 second)' }
+        },
+        imageURL: 'https://placehold.co/400x200/0f172a/f59e0b?text=Premium+Flipper',
+        dimensions: { width: 420, height: 320 }
     },
     {
         id: 'sold-summary',
