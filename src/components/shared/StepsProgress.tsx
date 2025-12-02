@@ -1,9 +1,18 @@
 'use client';
 
-import Link from 'next/link';
 import React from 'react';
+import Link from 'next/link';
 
-type Step = { label: string; href: string };
+interface Step {
+  label: string;
+  href: string;
+}
+
+interface StepsProgressProps {
+  currentStep: number;        // 1-6 (1-indexed)
+  steps?: Step[];             // Optional, uses DEFAULT_STEPS if not provided
+  className?: string;         // Optional CSS class
+}
 
 const DEFAULT_STEPS: Step[] = [
   { label: 'Setup Tournament', href: '/manage/tournaments' },
@@ -14,40 +23,107 @@ const DEFAULT_STEPS: Step[] = [
   { label: 'Start Auction', href: '/auction' },
 ];
 
-interface StepsProgressProps {
-  currentStep: number; // 1..6
-  steps?: Step[];
-  className?: string;
-}
+const getStepStatus = (index: number, currentIndex: number) => {
+  if (index < currentIndex) return 'completed';
+  if (index === currentIndex) return 'active';
+  return 'pending';
+};
 
 export default function StepsProgress({ currentStep, steps = DEFAULT_STEPS, className = '' }: StepsProgressProps) {
-  const safeCurrent = Math.min(Math.max(currentStep, 1), steps.length);
+  // Convert 1-indexed to 0-indexed
+  const currentStepIndex = currentStep - 1;
+  const progressPercentage = (currentStepIndex / (steps.length - 1)) * 100;
 
   return (
-    <nav aria-label="Auction steps" className={`steps-tube ${className}`.trim()}>
-      <ol className="steps-tube__grid">
-        {steps.map((step, idx) => {
-          const index = idx + 1;
-          const completed = index < safeCurrent;
-          const active = index === safeCurrent;
-          return (
-            <li key={step.href} className={`tube-wrap ${completed ? 'step--completed' : ''} ${active ? 'step--active' : ''}`.trim()}>
-              <div className="tube" aria-hidden />
-              <Link href={step.href} aria-current={active ? 'step' : undefined} className="circle">
-                {completed ? (
-                  <svg viewBox="0 0 24 24" className="step__check" aria-hidden>
-                    <path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                ) : (
-                  index
-                )}
+    <div className={`w-full py-4 px-4 ${className}`}>
+      <div className="relative">
+        {/* Background Progress Track */}
+        <div
+          className="absolute top-1/2 left-0 right-0 h-2 -translate-y-1/2 rounded-full z-0"
+          style={{ backgroundColor: 'var(--border-primary)' }}
+        />
+
+        {/* Active Progress Bar */}
+        <div
+          className="absolute top-1/2 left-0 h-2 -translate-y-1/2 rounded-full transition-all duration-500 ease-out z-0"
+          style={{
+            width: `${progressPercentage}%`,
+            backgroundColor: 'var(--brand-primary)'
+          }}
+        />
+
+        {/* Steps Container */}
+        <div className="relative flex justify-between w-full z-10">
+          {steps.map((step, index) => {
+            const status = getStepStatus(index, currentStepIndex);
+            const isActiveOrCompleted = status === 'active' || status === 'completed';
+
+            return (
+              <Link
+                key={index}
+                href={step.href}
+                className="relative flex flex-col items-center group cursor-pointer"
+              >
+                {/* Numbered Circle */}
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-300 ${
+                    isActiveOrCompleted
+                      ? 'text-white scale-110'
+                      : 'text-[var(--text-tertiary)]'
+                  } ${status === 'active' ? 'ring-4' : ''}`}
+                  style={{
+                    backgroundColor: status === 'completed'
+                      ? 'var(--brand-primary)'
+                      : status === 'active'
+                      ? 'var(--brand-primary)'
+                      : 'var(--surface-elevated)',
+                    borderColor: status === 'completed'
+                      ? 'var(--brand-primary)'
+                      : status === 'active'
+                      ? 'var(--brand-primary)'
+                      : 'var(--border-primary)',
+                    ...(status === 'active' && {
+                      '--tw-ring-color': 'color-mix(in oklab, var(--brand-primary) 20%, transparent)'
+                    } as React.CSSProperties)
+                  }}
+                >
+                  {index + 1}
+                </div>
+
+                {/* Floating Tooltip */}
+                <div
+                  className={`absolute top-14 px-3 py-2 rounded-lg backdrop-blur-md shadow-lg border transition-all duration-300 transform -translate-x-1/2 left-1/2 ${
+                    status === 'active'
+                      ? 'opacity-100 translate-y-0'
+                      : 'opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0'
+                  }`}
+                  style={{
+                    backgroundColor: 'var(--surface-elevated)',
+                    borderColor: 'var(--border-primary)'
+                  }}
+                >
+                  {/* Tooltip Arrow */}
+                  <div
+                    className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 border-t border-l"
+                    style={{
+                      backgroundColor: 'var(--surface-elevated)',
+                      borderColor: 'var(--border-primary)'
+                    }}
+                  />
+
+                  {/* Label Text */}
+                  <p
+                    className="text-xs font-bold whitespace-nowrap"
+                    style={{ color: 'var(--text-primary)' }}
+                  >
+                    {step.label}
+                  </p>
+                </div>
               </Link>
-              <Link href={step.href} className="step__label">{step.label}</Link>
-            </li>
-          );
-        })}
-      </ol>
-    </nav>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
-

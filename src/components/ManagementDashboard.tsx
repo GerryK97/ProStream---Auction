@@ -25,6 +25,12 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
     const [masterPlayers, setMasterPlayers] = useState<MasterPlayer[]>([]);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+    // Pagination state for players
+    const [currentPage, setCurrentPage] = useState(1);
+    const [playersPerPage, setPlayersPerPage] = useState(50);
+    const [totalPlayers, setTotalPlayers] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+
     const [isAddPlayerModalOpen, setAddPlayerModalOpen] = useState(false);
     const [editingTeam, setEditingTeam] = useState<MasterTeam | null>(null);
     const [editingPlayer, setEditingPlayer] = useState<MasterPlayer | null>(null);
@@ -53,7 +59,7 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
                         requests.push(fetch('/api/master-teams', { headers }));
                         break;
                     case 'players':
-                        requests.push(fetch('/api/master-players', { headers }));
+                        requests.push(fetch(`/api/master-players?page=${currentPage}&limit=${playersPerPage}`, { headers }));
                         break;
                     case 'tournaments':
                         // Tournaments already fetched above
@@ -88,7 +94,13 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
                             if (playersRes.ok) {
                                 const playersData = await playersRes.json();
                                 // Handle paginated response
-                                setMasterPlayers(Array.isArray(playersData) ? playersData : playersData.data || []);
+                                if (playersData.data && playersData.pagination) {
+                                    setMasterPlayers(playersData.data);
+                                    setTotalPlayers(playersData.pagination.total);
+                                    setTotalPages(playersData.pagination.pages);
+                                } else {
+                                    setMasterPlayers(Array.isArray(playersData) ? playersData : []);
+                                }
                             }
                         }
                         break;
@@ -99,13 +111,14 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
         };
 
         fetchData();
-    }, [refreshTrigger, view]);
+    }, [refreshTrigger, view, currentPage, playersPerPage]);
 
     useEffect(() => {
         setAddPlayerModalOpen(false);
         setEditingTeam(null);
         setEditingPlayer(null);
         setPlayerToDelete(null);
+        setCurrentPage(1); // Reset pagination when view changes
     }, [view]);
 
     // Clear all master players
@@ -188,6 +201,15 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
                             onEditPlayer={setEditingPlayer}
                             onDeletePlayer={setPlayerToDelete}
                             onClearAll={() => setShowClearPlayersConfirm(true)}
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            totalPlayers={totalPlayers}
+                            playersPerPage={playersPerPage}
+                            onPageChange={setCurrentPage}
+                            onPerPageChange={(perPage) => {
+                                setPlayersPerPage(perPage);
+                                setCurrentPage(1);
+                            }}
                         />;
             default:
                 return <div className="text-center p-8" style={{ color: 'var(--text-tertiary)' }}>This section is under construction.</div>;
@@ -995,7 +1017,19 @@ const TeamCreationForm: React.FC<{
     );
 };
 
-const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => void; onEditPlayer: (player: MasterPlayer) => void; onDeletePlayer: (player: MasterPlayer) => void; onClearAll: () => void; }> = ({ players, onAddPlayer, onEditPlayer, onDeletePlayer, onClearAll }) => {
+const PlayersSection: React.FC<{
+    players: MasterPlayer[];
+    onAddPlayer: () => void;
+    onEditPlayer: (player: MasterPlayer) => void;
+    onDeletePlayer: (player: MasterPlayer) => void;
+    onClearAll: () => void;
+    currentPage: number;
+    totalPages: number;
+    totalPlayers: number;
+    playersPerPage: number;
+    onPageChange: (page: number) => void;
+    onPerPageChange: (perPage: number) => void;
+}> = ({ players, onAddPlayer, onEditPlayer, onDeletePlayer, onClearAll, currentPage, totalPages, totalPlayers, playersPerPage, onPageChange, onPerPageChange }) => {
     const [showBulkUpload, setShowBulkUpload] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
     const [downloading, setDownloading] = useState(false);
@@ -1125,6 +1159,95 @@ const PlayersSection: React.FC<{ players: MasterPlayer[]; onAddPlayer: () => voi
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                    <div className="mt-6 flex items-center justify-between px-4">
+                        {/* Left: Items per page selector */}
+                        <div className="flex items-center gap-3">
+                            <span style={{ color: 'var(--text-secondary)' }} className="text-sm">
+                                Players per page:
+                            </span>
+                            <select
+                                value={playersPerPage}
+                                onChange={(e) => onPerPageChange(Number(e.target.value))}
+                                className="rounded-lg px-3 py-2 text-sm font-medium transition-colors"
+                                style={{
+                                    backgroundColor: 'var(--surface-elevated)',
+                                    color: 'var(--text-primary)',
+                                    border: '1px solid var(--border-primary)'
+                                }}
+                            >
+                                <option value={25}>25</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                            </select>
+                            <span style={{ color: 'var(--text-tertiary)' }} className="text-sm">
+                                Showing {((currentPage - 1) * playersPerPage) + 1}-{Math.min(currentPage * playersPerPage, totalPlayers)} of {totalPlayers}
+                            </span>
+                        </div>
+
+                        {/* Right: Page navigation */}
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => onPageChange(currentPage - 1)}
+                                disabled={currentPage === 1}
+                                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                style={{
+                                    backgroundColor: 'var(--surface-elevated)',
+                                    color: 'var(--text-primary)',
+                                    border: '1px solid var(--border-primary)'
+                                }}
+                            >
+                                Previous
+                            </button>
+
+                            {/* Page numbers */}
+                            <div className="flex items-center gap-1">
+                                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                    let pageNum;
+                                    if (totalPages <= 5) {
+                                        pageNum = i + 1;
+                                    } else if (currentPage <= 3) {
+                                        pageNum = i + 1;
+                                    } else if (currentPage >= totalPages - 2) {
+                                        pageNum = totalPages - 4 + i;
+                                    } else {
+                                        pageNum = currentPage - 2 + i;
+                                    }
+
+                                    return (
+                                        <button
+                                            key={pageNum}
+                                            onClick={() => onPageChange(pageNum)}
+                                            className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${currentPage === pageNum ? 'text-white' : ''}`}
+                                            style={{
+                                                backgroundColor: currentPage === pageNum ? 'var(--brand-primary)' : 'var(--surface-elevated)',
+                                                color: currentPage === pageNum ? 'white' : 'var(--text-primary)',
+                                                border: `1px solid ${currentPage === pageNum ? 'var(--brand-primary)' : 'var(--border-primary)'}`
+                                            }}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            <button
+                                onClick={() => onPageChange(currentPage + 1)}
+                                disabled={currentPage === totalPages}
+                                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                style={{
+                                    backgroundColor: 'var(--surface-elevated)',
+                                    color: 'var(--text-primary)',
+                                    border: '1px solid var(--border-primary)'
+                                }}
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </section>
     );
