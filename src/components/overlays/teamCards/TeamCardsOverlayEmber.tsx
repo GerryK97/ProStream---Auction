@@ -92,7 +92,7 @@ const TeamCardsOverlayEmber: React.FC<TeamCardsOverlayBaseProps> = ({
                                         </div>
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-semibold text-lg truncate" style={{ color: '#fef3c7' }}>
+                                        <p className="font-semibold text-lg break-words" style={{ color: '#fef3c7', lineHeight: '1.2' }}>
                                             {team.name}
                                         </p>
                                         <p className="text-sm" style={{ color: '#fed7aa' }}>

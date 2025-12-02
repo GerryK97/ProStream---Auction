@@ -15,6 +15,7 @@ function ElegantMinimalistTickerContent() {
     const timer = parseInt(searchParams.get('timer') || '5000');
     const border = searchParams.get('border') !== 'false';
     const position = (searchParams.get('position') as 'top' | 'bottom') || 'bottom';
+    const opacity = parseInt(searchParams.get('opacity') || '100');
 
     return (
         <OverlayWrapper>
@@ -32,6 +33,7 @@ function ElegantMinimalistTickerContent() {
                         timer={timer}
                         border={border}
                         position={position}
+                        opacity={opacity}
                     />
                 );
             }}

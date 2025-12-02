@@ -3,25 +3,37 @@
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import OverlayWrapper from '@/components/overlays/OverlayWrapper';
-import LeaderboardOverlay from '@/components/overlays/LeaderboardOverlay';
+import PremiumLeaderboardOverlay from '@/components/overlays/PremiumLeaderboardOverlay';
 
-function LeaderboardContent() {
+function PremiumLeaderboardContent() {
     const searchParams = useSearchParams();
     const tournamentId = searchParams.get('tournament') || undefined;
+
+    // Layout parameters
     const sortBy = (searchParams.get('sortBy') as 'players' | 'balance' | 'spent') || 'players';
     const position = (searchParams.get('position') as 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right') || 'top-right';
-    const backgroundColor = searchParams.get('backgroundColor') || 'rgba(0, 0, 0, 0.8)';
+
+    // Color parameters
+    const backgroundColor = searchParams.get('backgroundColor') || 'rgba(17, 24, 39, 0.95)';
+    const accentColor = searchParams.get('accentColor') || '#3b82f6';
+    const headerColor = searchParams.get('headerColor') || '#60a5fa';
+    const textColor = searchParams.get('textColor') || '#f0f9ff';
+
+    // Style options
     const opacity = parseInt(searchParams.get('opacity') || '100');
 
     return (
         <OverlayWrapper tournamentId={tournamentId}>
             {({ teams, tournament }) => (
-                <LeaderboardOverlay
+                <PremiumLeaderboardOverlay
                     teams={teams}
                     tournament={tournament}
                     sortBy={sortBy}
                     position={position}
                     backgroundColor={backgroundColor}
+                    accentColor={accentColor}
+                    headerColor={headerColor}
+                    textColor={textColor}
                     opacity={opacity}
                 />
             )}
@@ -29,7 +41,7 @@ function LeaderboardContent() {
     );
 }
 
-export default function LeaderboardOverlayPage() {
+export default function PremiumLeaderboardOverlayPage() {
     return (
         <Suspense fallback={
             <div className="w-full h-full flex items-center justify-center bg-blue-900/90">
@@ -40,7 +52,7 @@ export default function LeaderboardOverlayPage() {
                 </div>
             </div>
         }>
-            <LeaderboardContent />
+            <PremiumLeaderboardContent />
         </Suspense>
     );
 }
