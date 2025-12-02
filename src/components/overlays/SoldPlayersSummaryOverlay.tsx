@@ -50,8 +50,8 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
         return () => clearInterval(timer);
     }, [totalPages]);
 
-    // Hide if not all players are sold
-    if (!allPlayersSold || !tournament) {
+    // Hide if no players are sold or no tournament
+    if (!tournament || soldPlayers.length === 0) {
         return null;
     }
 
@@ -66,7 +66,10 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                         AUCTION COMPLETE
                     </h1>
                     <p className="text-xl text-cyan-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                        All {totalPlayers} Players Sold - Final Summary
+                        {allPlayersSold
+                            ? `All ${totalPlayers} Players Sold - Final Summary`
+                            : `${soldPlayers.length} of ${totalPlayers} Players Sold`
+                        }
                     </p>
                     {totalPages > 1 && (
                         <p className="text-sm text-neutral-300 mt-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">

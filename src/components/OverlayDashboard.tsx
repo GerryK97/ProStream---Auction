@@ -558,15 +558,128 @@ const overlayTypes: OverlayType[] = [
     {
         id: 'sold-summary',
         name: 'Sold Players Summary',
-        description: 'Complete auction summary sorted by highest price - shows when all players sold',
+        description: 'Auction summary showing all sold players sorted by price - updates in real-time',
         route: '/overlays/sold-summary',
-        tags: ['Summary', 'Stats', 'Final'],
+        tags: ['Summary', 'Stats', 'Live'],
         category: 'Statistics',
         defaultParams: { position: 'center' },
         parameterSchema: {
-            position: { type: 'select', label: 'Position', options: ['center', 'top', 'bottom'] }
+            position: {
+                type: 'select',
+                label: 'Position',
+                options: ['center', 'top', 'bottom'],
+                description: 'Overlay screen position'
+            }
         },
-        imageURL: 'https://placehold.co/400x200/1e293b/10b981?text=Final+Summary',
+        imageURL: 'https://placehold.co/400x200/1e293b/06b6d4?text=Sold+Summary',
+        dimensions: { width: 1200, height: 800 }
+    },
+    {
+        id: 'sold-summary-premium',
+        name: 'Sold Players Summary · Premium',
+        description: 'Premium auction summary with luxury styling, golden accents, and full color customization',
+        route: '/overlays/sold-summary-premium',
+        tags: ['Summary', 'Stats', 'Live', 'Premium'],
+        category: 'Statistics',
+        defaultParams: {
+            position: 'center',
+            accentColor: '#f59e0b',
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            textColor: '#f1f5f9',
+            priceColor: '#fbbf24',
+            itemsPerPage: '20'
+        },
+        parameterSchema: {
+            position: {
+                type: 'select',
+                label: 'Position',
+                options: ['center', 'top', 'bottom'],
+                description: 'Overlay screen position'
+            },
+            accentColor: {
+                type: 'color',
+                label: 'Accent Color',
+                description: 'Border and highlight color (gold/amber recommended)'
+            },
+            backgroundColor: {
+                type: 'color',
+                label: 'Background Color',
+                description: 'Main background color (supports rgba)'
+            },
+            textColor: {
+                type: 'color',
+                label: 'Text Color',
+                description: 'Player and team names color'
+            },
+            priceColor: {
+                type: 'color',
+                label: 'Price Color',
+                description: 'Price display color'
+            },
+            itemsPerPage: {
+                type: 'number',
+                label: 'Players Per Page',
+                min: 5,
+                max: 50,
+                step: 5,
+                description: 'Number of players to show per page'
+            }
+        },
+        imageURL: 'https://placehold.co/400x200/0f172a/f59e0b?text=Premium+Summary',
+        dimensions: { width: 1200, height: 800 }
+    },
+    {
+        id: 'sold-summary-minimalist',
+        name: 'Sold Players Summary · Minimalist',
+        description: 'Clean minimalist auction summary with simple design and customizable colors',
+        route: '/overlays/sold-summary-minimalist',
+        tags: ['Summary', 'Stats', 'Live', 'Minimalist'],
+        category: 'Statistics',
+        defaultParams: {
+            position: 'center',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+            textColor: '#ffffff',
+            accentColor: '#6366f1',
+            itemsPerPage: '20'
+        },
+        parameterSchema: {
+            position: {
+                type: 'select',
+                label: 'Position',
+                options: ['center', 'top', 'bottom'],
+                description: 'Overlay screen position'
+            },
+            backgroundColor: {
+                type: 'color',
+                label: 'Background Color',
+                description: 'Main background color (supports rgba)'
+            },
+            borderColor: {
+                type: 'color',
+                label: 'Border Color',
+                description: 'Border and divider lines color'
+            },
+            textColor: {
+                type: 'color',
+                label: 'Text Color',
+                description: 'All text color'
+            },
+            accentColor: {
+                type: 'color',
+                label: 'Accent Color',
+                description: 'Highlight color for top players'
+            },
+            itemsPerPage: {
+                type: 'number',
+                label: 'Players Per Page',
+                min: 5,
+                max: 50,
+                step: 5,
+                description: 'Number of players to show per page'
+            }
+        },
+        imageURL: 'https://placehold.co/400x200/ffffff/6366f1?text=Minimalist+Summary',
         dimensions: { width: 1200, height: 800 }
     },
     {
