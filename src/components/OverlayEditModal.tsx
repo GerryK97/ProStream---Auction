@@ -85,14 +85,16 @@ const OverlayEditModal: React.FC<OverlayEditModalProps> = ({ overlay, onClose, o
             });
 
             if (!response.ok) {
-                throw new Error('Upload failed');
+                const errorData = await response.json();
+                console.error('Upload failed:', errorData);
+                throw new Error(errorData.error || 'Upload failed');
             }
 
             const data = await response.json();
             setFormData({ ...formData, imageURL: data.url });
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to upload image:', error);
-            setUploadError('Failed to upload image. Please try again.');
+            setUploadError(error.message || 'Failed to upload image. Please try again.');
         } finally {
             setIsUploading(false);
         }

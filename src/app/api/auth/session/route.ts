@@ -55,6 +55,8 @@ export async function GET(request: NextRequest) {
           assignedTournaments: user.assignedTournaments,
           assignedTeams: user.assignedTeams,
           assignedPlayer: user.assignedPlayer,
+          plan: (user as any).plan || 'Free',
+          tournamentAllowance: (user as any).tournamentAllowance ?? 1,
         },
       },
       { status: 200 }
@@ -119,6 +121,8 @@ export async function POST(request: NextRequest) {
           assignedTournaments: user.assignedTournaments,
           assignedTeams: user.assignedTeams,
           assignedPlayer: user.assignedPlayer,
+          plan: (user as any).plan || 'Free',
+          tournamentAllowance: (user as any).tournamentAllowance ?? 1,
         },
       },
       { status: 200 }

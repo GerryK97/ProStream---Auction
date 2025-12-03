@@ -15,6 +15,9 @@ interface User {
   role: string;
   status: string;
   createdAt: string;
+  plan?: 'Free' | 'Standard' | 'Offer';
+  tournamentAllowance?: number;
+  assignedTournaments?: string[];
 }
 
 interface EditingUser extends User {
@@ -40,16 +43,20 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<EditingUser | null>(null);
   const [editFormData, setEditFormData] = useState({
     email: '',
-    role: 'Audience',
+    role: 'Tournament',
     status: 'Active',
     assignedTournaments: [] as string[],
+    plan: 'Free' as 'Free' | 'Standard' | 'Offer',
+    tournamentAllowance: 1,
   });
   const [formData, setFormData] = useState({
     username: '',
     email: '',
     password: '',
-    role: 'Audience',
+    role: 'Tournament',
     status: 'Active',
+    plan: 'Free' as 'Free' | 'Standard' | 'Offer',
+    tournamentAllowance: 1,
   });
 
   // Check authorization
@@ -127,8 +134,10 @@ export default function UsersPage() {
         username: '',
         email: '',
         password: '',
-        role: 'Audience',
+        role: 'Tournament',
         status: 'Active',
+        plan: 'Free',
+        tournamentAllowance: 1,
       });
       setShowCreateModal(false);
 
@@ -222,7 +231,9 @@ export default function UsersPage() {
       email: user.email,
       role: user.role,
       status: user.status,
-      assignedTournaments: (user as any).assignedTournaments || [],
+      assignedTournaments: user.assignedTournaments || [],
+      plan: (user.plan as any) || 'Free',
+      tournamentAllowance: user.tournamentAllowance ?? 1,
     });
     setShowEditModal(true);
   };
@@ -251,9 +262,11 @@ export default function UsersPage() {
       setEditingUser(null);
       setEditFormData({
         email: '',
-        role: 'Audience',
+        role: 'Tournament',
         status: 'Active',
         assignedTournaments: [],
+        plan: 'Free',
+        tournamentAllowance: 1,
       });
 
       // Refresh users list
@@ -552,6 +565,44 @@ export default function UsersPage() {
                       </select>
                     </div>
 
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Plan</label>
+                        <select
+                          value={formData.plan}
+                          onChange={(e) => setFormData({ ...formData, plan: e.target.value as 'Free' | 'Standard' | 'Offer' })}
+                          style={{
+                            backgroundColor: 'var(--surface-elevated)',
+                            borderColor: 'var(--border-primary)',
+                            color: 'var(--text-primary)'
+                          }}
+                          className="w-full px-4 py-2 border rounded focus:outline-none focus:border-blue-500"
+                        >
+                          <option value="Free">Free</option>
+                          <option value="Standard">Standard</option>
+                          <option value="Offer">Offer (Monthly)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Tournament Allowance</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={formData.tournamentAllowance}
+                          onChange={(e) => setFormData({ ...formData, tournamentAllowance: Number(e.target.value) || 0 })}
+                          style={{
+                            backgroundColor: 'var(--surface-elevated)',
+                            borderColor: 'var(--border-primary)',
+                            color: 'var(--text-primary)'
+                          }}
+                          className="w-full px-4 py-2 border rounded focus:outline-none focus:border-blue-500"
+                          required
+                        />
+                        <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Default is 1 for new users.</p>
+                      </div>
+                    </div>
+
                     <div className="flex gap-4 pt-4">
                       <button
                         type="button"
@@ -629,6 +680,34 @@ export default function UsersPage() {
                         <option value="Suspended">Suspended</option>
                         <option value="PendingApproval">Pending Approval</option>
                       </select>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Plan</label>
+                        <select
+                          value={editFormData.plan}
+                          onChange={(e) => setEditFormData({ ...editFormData, plan: e.target.value as 'Free' | 'Standard' | 'Offer' })}
+                          className="w-full px-4 py-2 rounded focus:outline-none"
+                          style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
+                        >
+                          <option value="Free">Free</option>
+                          <option value="Standard">Standard</option>
+                          <option value="Offer">Offer (Monthly)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Tournament Allowance</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={editFormData.tournamentAllowance}
+                          onChange={(e) => setEditFormData({ ...editFormData, tournamentAllowance: Number(e.target.value) || 0 })}
+                          className="w-full px-4 py-2 rounded focus:outline-none"
+                          style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
+                        />
+                      </div>
                     </div>
 
                     <div>

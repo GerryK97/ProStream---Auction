@@ -13,6 +13,7 @@ import { getAuthHeaders } from '@/lib/api-client';
 import DeleteButton from './shared/DeleteButton';
 import ClearAllButton from './shared/ClearAllButton';
 import EditButton from './shared/EditButton';
+import { useAuth } from '@/contexts/AuthContext';
 
 type ManagementView = 'tournaments' | 'teams' | 'players';
 
@@ -391,6 +392,8 @@ const TournamentManagementPanel: React.FC<{
     tournaments: Tournament[];
     onRefresh: () => void;
 }> = ({ tournaments, onRefresh }) => {
+    const { user } = useAuth();
+    const isAdmin = user?.role === 'Admin';
     const [tournamentToDelete, setTournamentToDelete] = useState<Tournament | null>(null);
     const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
 
@@ -472,12 +475,16 @@ const TournamentManagementPanel: React.FC<{
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 flex-shrink-0">
-                                    <EditButton onClick={() => handleEdit(t)} ariaLabel={`Edit ${t.name}`} className="shrink-0" />
-                                    <DeleteButton
-                                        ariaLabel={`Delete tournament ${t.name}`}
-                                        onClick={() => handleDelete(t)}
-                                        className="shrink-0"
-                                    />
+                                    {isAdmin && (
+                                      <>
+                                        <EditButton onClick={() => handleEdit(t)} ariaLabel={`Edit ${t.name}`} className="shrink-0" />
+                                        <DeleteButton
+                                            ariaLabel={`Delete tournament ${t.name}`}
+                                            onClick={() => handleDelete(t)}
+                                            className="shrink-0"
+                                        />
+                                      </>
+                                    )}
                                 </div>
                             </li>
                         ))}

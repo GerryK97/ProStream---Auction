@@ -11,6 +11,8 @@ export interface User {
   assignedTournaments?: string[];
   assignedTeams?: string[];
   assignedPlayer?: string;
+   plan?: 'Free' | 'Standard' | 'Offer';
+   tournamentAllowance?: number;
 }
 
 interface AuthContextType {
@@ -19,7 +21,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<void>;
-  signup: (username: string, email: string, password: string, role?: string) => Promise<void>;
+  signup: (username: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
   error: string | null;
@@ -113,7 +115,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     username: string,
     email: string,
     password: string,
-    role: string = 'Audience'
   ) => {
     try {
       setError(null);
@@ -124,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, email, password, role }),
+        body: JSON.stringify({ username, email, password }),
       });
 
       const data = await response.json();

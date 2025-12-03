@@ -48,6 +48,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (user.plan === 'Free' && Array.isArray(body.overlayIds) && body.overlayIds.length > 5) {
+      return NextResponse.json(
+        { error: 'Free plan allows up to 5 active overlays at once. Upgrade for unlimited.' },
+        { status: 403 }
+      );
+    }
+
     const sceneData = {
       name: body.name,
       description: body.description || '',

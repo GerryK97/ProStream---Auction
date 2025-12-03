@@ -119,6 +119,8 @@ export async function PUT(
       assignedTournaments,
       assignedTeams,
       assignedPlayer,
+      plan,
+      tournamentAllowance,
     } = await request.json();
 
     // Update fields
@@ -130,6 +132,26 @@ export async function PUT(
     if (assignedTournaments) user.assignedTournaments = assignedTournaments;
     if (assignedTeams) user.assignedTeams = assignedTeams;
     if (assignedPlayer !== undefined) user.assignedPlayer = assignedPlayer;
+    if (plan) {
+      const allowedPlans = ['Free', 'Standard', 'Offer'];
+      if (!allowedPlans.includes(plan)) {
+        return NextResponse.json(
+          { error: 'Invalid plan selected' },
+          { status: 400 }
+        );
+      }
+      (user as any).plan = plan;
+    }
+    if (tournamentAllowance !== undefined) {
+      const parsedAllowance = Number(tournamentAllowance);
+      if (!Number.isFinite(parsedAllowance) || parsedAllowance < 0) {
+        return NextResponse.json(
+          { error: 'Invalid tournament allowance' },
+          { status: 400 }
+        );
+      }
+      (user as any).tournamentAllowance = parsedAllowance;
+    }
 
     await user.save();
 

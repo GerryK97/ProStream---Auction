@@ -10,7 +10,6 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState('Audience');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
@@ -69,18 +68,11 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      await signup(username, email, password, role);
-      setSuccessMessage(
-        role === 'Audience'
-          ? 'Account created successfully! Your account is pending admin approval. You will receive an email once approved.'
-          : 'Account created successfully! You can now login.'
-      );
-
-      if (role !== 'Audience') {
-        setTimeout(() => {
-          router.push('/auth/login');
-        }, 2000);
-      }
+      await signup(username, email, password);
+      setSuccessMessage('Account created successfully! You can now login as a Tournament Manager.');
+      setTimeout(() => {
+        router.push('/auth/login');
+      }, 2000);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Signup failed. Please try again.'
@@ -220,33 +212,11 @@ export default function SignupPage() {
               />
             </div>
 
-            {/* Role Selection */}
-            <div>
-              <label htmlFor="role" className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-                Account Type
-              </label>
-              <select
-                id="role"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                disabled={isLoading}
-                style={{
-                  backgroundColor: 'var(--surface-elevated)',
-                  borderColor: 'var(--border-primary)',
-                  color: 'var(--text-primary)',
-                }}
-                className="w-full px-4 py-2 border rounded text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
-              >
-                <option value="Audience">Audience</option>
-                <option value="Tournament">Tournament Manager</option>
-                <option value="MasterManager">Master Data Manager</option>
-                <option value="Team">Team Manager</option>
-                <option value="Player">Player</option>
-              </select>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-                {role === 'Audience'
-                  ? 'Pending admin approval'
-                  : 'Automatically activated'}
+            {/* Role Info */}
+            <div className="rounded-md p-3" style={{ backgroundColor: 'var(--surface-subtle)', border: '1px solid var(--border-primary)' }}>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Role</p>
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                New accounts start as <strong style={{ color: 'var(--text-primary)' }}>Tournament Manager</strong>. Admins can change roles later if needed.
               </p>
             </div>
 

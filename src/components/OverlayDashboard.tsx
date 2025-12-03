@@ -806,6 +806,158 @@ const overlayTypes: OverlayType[] = [
         imageURL: 'https://placehold.co/1920x1080/111827/34d399?text=Player+Highlight+LED',
         dimensions: { width: 1920, height: 1080 }
     },
+    {
+        id: 'player-highlight-led-premium',
+        name: 'Player Highlight LED · Premium',
+        description: 'Luxury fullscreen player spotlight with gold/amber accents, metallic effects, and animated shimmer.',
+        route: '/overlays/player-highlight-led-premium',
+        tags: ['LED', 'Player', 'Spotlight', 'Premium'],
+        category: 'Full Screen',
+        defaultParams: {
+            showBackground: 'true',
+            spotlightSeconds: '5',
+            showTeams: 'true',
+            showSold: 'true',
+            soldItems: '5',
+            soldFlipSeconds: '8',
+            accentColor: '#f59e0b',
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            textColor: '#f1f5f9',
+            bidColor: '#fbbf24'
+        },
+        parameterSchema: {
+            showBackground: {
+                type: 'toggle',
+                label: 'Background Effects',
+                description: 'Enable animated gradient background'
+            },
+            spotlightSeconds: {
+                type: 'number',
+                label: 'Spotlight Seconds',
+                description: 'Duration for the fullscreen player takeover',
+                min: 2,
+                max: 12
+            },
+            showTeams: {
+                type: 'toggle',
+                label: 'Show Team Grid'
+            },
+            showSold: {
+                type: 'toggle',
+                label: 'Show Sold Players Flip'
+            },
+            soldItems: {
+                type: 'number',
+                label: 'Sold Items Per Page',
+                min: 3,
+                max: 8
+            },
+            soldFlipSeconds: {
+                type: 'number',
+                label: 'Sold Flip Seconds',
+                min: 4,
+                max: 15
+            },
+            accentColor: {
+                type: 'color',
+                label: 'Accent Color',
+                description: 'Primary accent color for headers and highlights (default: amber #f59e0b)'
+            },
+            backgroundColor: {
+                type: 'color',
+                label: 'Background Color',
+                description: 'Main background color with opacity (default: rgba(15, 23, 42, 0.95))'
+            },
+            textColor: {
+                type: 'color',
+                label: 'Text Color',
+                description: 'Primary text color (default: #f1f5f9)'
+            },
+            bidColor: {
+                type: 'color',
+                label: 'Bid Color',
+                description: 'Color for bid amount display with metallic shine (default: #fbbf24)'
+            }
+        },
+        imageURL: 'https://placehold.co/1920x1080/0f172a/f59e0b?text=Player+LED+Premium',
+        dimensions: { width: 1920, height: 1080 }
+    },
+    {
+        id: 'player-highlight-led-minimalist',
+        name: 'Player Highlight LED · Minimalist',
+        description: 'Clean, modern fullscreen player spotlight with minimalist design and simple borders.',
+        route: '/overlays/player-highlight-led-minimalist',
+        tags: ['LED', 'Player', 'Spotlight', 'Minimalist'],
+        category: 'Full Screen',
+        defaultParams: {
+            showBackground: 'false',
+            spotlightSeconds: '5',
+            showTeams: 'true',
+            showSold: 'true',
+            soldItems: '5',
+            soldFlipSeconds: '8',
+            backgroundColor: 'rgba(255, 255, 255, 0.03)',
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+            textColor: '#ffffff',
+            accentColor: '#6366f1'
+        },
+        parameterSchema: {
+            showBackground: {
+                type: 'toggle',
+                label: 'Background Effects',
+                description: 'Enable animated gradient background'
+            },
+            spotlightSeconds: {
+                type: 'number',
+                label: 'Spotlight Seconds',
+                description: 'Duration for the fullscreen player takeover',
+                min: 2,
+                max: 12
+            },
+            showTeams: {
+                type: 'toggle',
+                label: 'Show Team Grid'
+            },
+            showSold: {
+                type: 'toggle',
+                label: 'Show Sold Players Flip'
+            },
+            soldItems: {
+                type: 'number',
+                label: 'Sold Items Per Page',
+                min: 3,
+                max: 8
+            },
+            soldFlipSeconds: {
+                type: 'number',
+                label: 'Sold Flip Seconds',
+                min: 4,
+                max: 15
+            },
+            backgroundColor: {
+                type: 'color',
+                label: 'Background Color',
+                description: 'Main background color with opacity (default: rgba(255, 255, 255, 0.03))'
+            },
+            borderColor: {
+                type: 'color',
+                label: 'Border Color',
+                description: 'Border color for cards and elements (default: rgba(255, 255, 255, 0.1))'
+            },
+            textColor: {
+                type: 'color',
+                label: 'Text Color',
+                description: 'Primary text color (default: #ffffff)'
+            },
+            accentColor: {
+                type: 'color',
+                label: 'Accent Color',
+                description: 'Accent color for highlights and stats (default: indigo #6366f1)'
+            }
+        },
+        imageURL: 'https://placehold.co/1920x1080/000000/6366f1?text=Player+LED+Minimalist',
+        dimensions: { width: 1920, height: 1080 }
+    },
 ];
 
 const OverlayDashboard: React.FC = () => {
@@ -944,7 +1096,6 @@ const OverlayDashboard: React.FC = () => {
         if (!editOverlay) return;
 
         try {
-            // Get auth token from localStorage
             const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json'
@@ -953,17 +1104,19 @@ const OverlayDashboard: React.FC = () => {
                 headers['Authorization'] = `Bearer ${token}`;
             }
 
-            // Persist to database
-            const response = await fetch(`/api/overlay-library/${editOverlay.id}`, {
+            // Core payload for updating existing overlays
+            const updatePayload = {
+                ...updates
+            };
+
+            const putResponse = await fetch(`/api/overlay-library/${editOverlay.id}`, {
                 method: 'PUT',
                 headers,
-                body: JSON.stringify(updates)
+                body: JSON.stringify(updatePayload)
             });
 
-            if (response.ok) {
-                const updatedOverlay = await response.json();
-
-                // Update the overlay in local state
+            if (putResponse.ok) {
+                const updatedOverlay = await putResponse.json();
                 setOverlays(prev => prev.map(o =>
                     o.id === editOverlay.id
                         ? {
@@ -976,9 +1129,48 @@ const OverlayDashboard: React.FC = () => {
                         }
                         : o
                 ));
+                alert('Overlay saved successfully!');
+            } else if (putResponse.status === 404) {
+                // If the overlay was never seeded, create it with full data from the client model
+                const createPayload = {
+                    _id: editOverlay.id,
+                    name: updates.name ?? editOverlay.name,
+                    description: updates.description ?? editOverlay.description,
+                    category: updates.category ?? editOverlay.category,
+                    imageURL: updates.imageURL ?? editOverlay.imageURL,
+                    dimensions: updates.dimensions ?? editOverlay.dimensions,
+                    route: editOverlay.route,
+                    tags: editOverlay.tags,
+                    defaultParams: editOverlay.defaultParams,
+                    parameterSchema: editOverlay.parameterSchema
+                };
+
+                const postResponse = await fetch('/api/overlay-library', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(createPayload)
+                });
+
+                if (postResponse.ok) {
+                    const createdOverlay = await postResponse.json();
+                    setOverlays(prev => prev.map(o => o.id === editOverlay.id ? {
+                        ...o,
+                        name: createdOverlay.name,
+                        description: createdOverlay.description,
+                        category: createdOverlay.category,
+                        imageURL: createdOverlay.imageURL,
+                        dimensions: createdOverlay.dimensions
+                    } : o));
+                    alert('Overlay saved successfully!');
+                } else {
+                    const errorData = await postResponse.json();
+                    console.error('Failed to create overlay from dashboard:', errorData);
+                    alert(`Failed to save overlay changes: ${errorData.error || 'Unknown error'}`);
+                }
             } else {
-                console.error('Failed to save overlay');
-                alert('Failed to save overlay changes');
+                const errorData = await putResponse.json();
+                console.error('Failed to save overlay:', errorData);
+                alert(`Failed to save overlay changes: ${errorData.error || 'Unknown error'}`);
             }
         } catch (error) {
             console.error('Error saving overlay:', error);
