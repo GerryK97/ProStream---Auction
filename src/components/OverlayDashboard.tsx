@@ -1009,7 +1009,7 @@ const OverlayDashboard: React.FC = () => {
                         }));
 
                         // Create a map of API overlays by ID for quick lookup
-                        const apiOverlayMap = new Map(apiOverlays.map(o => [o.id, o]));
+                        const apiOverlayMap = new Map(apiOverlays.map((o: OverlayType) => [o.id, o]));
 
                         // Merge: prefer API data if exists, otherwise use hardcoded
                         const mergedOverlays = overlayTypes.map(hardcodedOverlay => {
