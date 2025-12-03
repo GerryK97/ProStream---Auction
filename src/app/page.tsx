@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Navigation from '@/components/Navigation';
-import BackgroundAnimation from '@/components/landing/BackgroundAnimation';
 import Hero from '@/components/landing/Hero';
 import FeatureCard from '@/components/landing/FeatureCard';
 
@@ -116,7 +115,6 @@ export default function HomePage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden" style={{ backgroundColor: 'var(--surface-primary)' }}>
-      <BackgroundAnimation />
       <Navigation />
 
       <main className="relative z-10 flex flex-col gap-24 pb-16 pt-6 lg:pb-24">
@@ -397,7 +395,7 @@ export default function HomePage() {
         borderTop: `1px solid var(--border-primary)`
       }}>
         <div className="mx-auto max-w-7xl text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-          <p>&copy; {new Date().getFullYear()} ProStream Auction Management System. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} ProStream. All rights reserved.</p>
         </div>
       </footer>
     </div>
