@@ -253,7 +253,7 @@ export default function HomePage() {
               </div>
               <div className="flex flex-col items-start gap-2 sm:items-end">
                 <a
-                  href="mailto:sales@prostream.app?subject=ProStream%20Auction%20Pricing"
+                  href="/contact"
                   className="inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2"
                   style={{
                     backgroundColor: 'var(--brand-primary)',

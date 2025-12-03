@@ -11,6 +11,8 @@ export interface RequestUser {
   role: UserRole;
   assignedTournaments: string[];
   assignedTeams: string[];
+  plan: 'Free' | 'Standard' | 'Offer';
+  tournamentAllowance: number;
 }
 
 /**
@@ -37,7 +39,7 @@ export async function getUserFromRequest(request: NextRequest): Promise<RequestU
     // Fetch user from database to get assigned tournaments/teams
     await require('@/lib/mongodb').connectToDatabase();
     const user = await User.findById(payload.userId).select(
-      'role assignedTournaments assignedTeams'
+      'role assignedTournaments assignedTeams plan tournamentAllowance'
     );
 
     if (!user) {
@@ -49,6 +51,8 @@ export async function getUserFromRequest(request: NextRequest): Promise<RequestU
       role: user.role as UserRole,
       assignedTournaments: user.assignedTournaments || [],
       assignedTeams: user.assignedTeams || [],
+      plan: (user as any).plan || 'Free',
+      tournamentAllowance: (user as any).tournamentAllowance ?? 1,
     };
   } catch (error) {
     console.error('Error extracting user from request:', error);

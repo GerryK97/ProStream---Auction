@@ -54,6 +54,13 @@ export async function PUT(
     const body = await request.json();
     const { _id, createdAt, updatedAt, ...updateData } = body;
 
+    if (user.plan === 'Free' && Array.isArray(updateData.overlayIds) && updateData.overlayIds.length > 5) {
+      return NextResponse.json(
+        { error: 'Free plan allows up to 5 active overlays at once. Upgrade for unlimited.' },
+        { status: 403 }
+      );
+    }
+
     const updated = await overlaySceneDB.update(id, updateData);
 
     if (!updated) {

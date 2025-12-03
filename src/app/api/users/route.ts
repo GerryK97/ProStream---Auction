@@ -117,20 +117,33 @@ export async function POST(request: NextRequest) {
       username,
       email,
       password,
-      role,
+      role = 'Tournament',
       status = 'Active',
       assignedTournaments = [],
       assignedTeams = [],
       assignedPlayer = null,
+      plan = 'Free',
+      tournamentAllowance = 1,
     } = await request.json();
 
     // Validation
-    if (!username || !email || !password || !role) {
+    if (!username || !email || !password) {
       return NextResponse.json(
-        { error: 'Username, email, password, and role are required' },
+        { error: 'Username, email, and password are required' },
         { status: 400 }
       );
     }
+
+    const allowedPlans = ['Free', 'Standard', 'Offer'];
+    if (!allowedPlans.includes(plan)) {
+      return NextResponse.json(
+        { error: 'Invalid plan selected' },
+        { status: 400 }
+      );
+    }
+
+    const parsedAllowance = Number(tournamentAllowance ?? 1);
+    const safeAllowance = Number.isFinite(parsedAllowance) && parsedAllowance >= 0 ? parsedAllowance : 1;
 
     // Check if username exists
     const existingUsername = await User.findOne({ username: username.toLowerCase() });
@@ -165,6 +178,8 @@ export async function POST(request: NextRequest) {
       assignedTournaments,
       assignedTeams,
       assignedPlayer,
+      plan,
+      tournamentAllowance: safeAllowance,
     });
 
     await user.save();

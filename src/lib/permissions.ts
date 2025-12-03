@@ -77,7 +77,7 @@ export function canPerformAction(
       overlayConfig: ['create', 'read', 'update', 'delete', 'manage'],
     },
     Tournament: {
-      tournament: ['read', 'update', 'manage'],
+      tournament: ['create', 'read'],
       team: ['create', 'read', 'update', 'delete', 'manage'],
       player: ['create', 'read', 'update', 'delete', 'manage'],
       auction: ['read', 'update', 'manage'],

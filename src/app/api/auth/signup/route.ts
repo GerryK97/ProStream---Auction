@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
 
-    const { username, email, password, role = 'Audience' } = await request.json();
+    const { username, email, password } = await request.json();
 
     // Validation
     if (!username || !email || !password) {
@@ -70,20 +70,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate role
-    const validRoles = ['Admin', 'Tournament', 'MasterManager', 'Team', 'Player', 'Audience'];
-    if (!validRoles.includes(role)) {
-      return NextResponse.json(
-        { error: 'Invalid role' },
-        { status: 400 }
-      );
-    }
-
     // Hash password
     const passwordHash = await hashPassword(password);
 
     // Determine if user should be auto-approved
-    const isAutoApproved = shouldAutoApproveRole(role);
+    const defaultRole: 'Tournament' = 'Tournament';
+    const isAutoApproved = shouldAutoApproveRole(defaultRole);
     const status = isAutoApproved ? 'Active' : 'PendingApproval';
 
     // Create user
@@ -93,7 +85,9 @@ export async function POST(request: NextRequest) {
       username: username.toLowerCase(),
       email: email.toLowerCase(),
       passwordHash,
-      role,
+      role: defaultRole,
+      plan: 'Free',
+      tournamentAllowance: 1,
       status,
     });
 
@@ -118,6 +112,8 @@ export async function POST(request: NextRequest) {
           email: user.email,
           role: user.role,
           status: user.status,
+          plan: user.plan,
+          tournamentAllowance: user.tournamentAllowance,
         },
         token: isAutoApproved ? token : null,
       },

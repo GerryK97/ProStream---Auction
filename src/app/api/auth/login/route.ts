@@ -73,6 +73,8 @@ export async function POST(request: NextRequest) {
           email: user.email,
           role: user.role,
           status: user.status,
+          plan: (user as any).plan || 'Free',
+          tournamentAllowance: (user as any).tournamentAllowance ?? 1,
         },
         token,
       },
