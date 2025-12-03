@@ -992,10 +992,10 @@ const OverlayDashboard: React.FC = () => {
                 if (overlaysResponse.ok) {
                     const overlaysData = await overlaysResponse.json();
 
-                    // If API returns data, use it; otherwise keep hardcoded fallback
+                    // Merge API data with hardcoded overlays
                     if (overlaysData && overlaysData.length > 0) {
                         // Convert API data to OverlayType format
-                        const formattedOverlays = overlaysData.map((overlay: any) => ({
+                        const apiOverlays = overlaysData.map((overlay: any) => ({
                             id: overlay._id,
                             name: overlay.name,
                             description: overlay.description,
@@ -1007,7 +1007,17 @@ const OverlayDashboard: React.FC = () => {
                             imageURL: overlay.imageURL,
                             dimensions: overlay.dimensions
                         }));
-                        setOverlays(formattedOverlays);
+
+                        // Create a map of API overlays by ID for quick lookup
+                        const apiOverlayMap = new Map(apiOverlays.map(o => [o.id, o]));
+
+                        // Merge: prefer API data if exists, otherwise use hardcoded
+                        const mergedOverlays = overlayTypes.map(hardcodedOverlay => {
+                            const apiOverlay = apiOverlayMap.get(hardcodedOverlay.id);
+                            return apiOverlay || hardcodedOverlay;
+                        });
+
+                        setOverlays(mergedOverlays);
                     } else {
                         console.warn('API returned empty overlay list, using hardcoded fallback data');
                         // Keep the hardcoded overlayTypes that were set in initial state
