@@ -1,4 +1,3 @@
-import BackgroundAnimation from '@/components/landing/BackgroundAnimation';
 import Navigation from '@/components/Navigation';
 
 const contactChannels = [
@@ -52,7 +51,6 @@ const contactChannels = [
 export default function ContactPage() {
   return (
     <div className="relative min-h-screen overflow-hidden" style={{ backgroundColor: 'var(--surface-primary)', color: 'var(--text-primary)' }}>
-      <BackgroundAnimation />
       <Navigation />
 
       <main className="relative z-10 px-4 py-20 sm:px-6 lg:px-8">
