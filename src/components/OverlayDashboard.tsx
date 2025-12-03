@@ -1014,7 +1014,7 @@ const OverlayDashboard: React.FC = () => {
                         // Merge: prefer API data if exists, otherwise use hardcoded
                         const mergedOverlays: OverlayType[] = overlayTypes.map((hardcodedOverlay: OverlayType): OverlayType => {
                             const apiOverlay = apiOverlayMap.get(hardcodedOverlay.id);
-                            return apiOverlay || hardcodedOverlay;
+                            return apiOverlay ? apiOverlay : hardcodedOverlay;
                         });
 
                         setOverlays(mergedOverlays);
