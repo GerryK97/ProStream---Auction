@@ -33,17 +33,34 @@ export async function GET(request: NextRequest) {
     // For now, we allow access with valid overlay token OR JWT token OR no authentication
     // (the OverlayWrapper will handle authentication states)
 
-    // If a user is authenticated, scope to their accessible tournaments (created or assigned)
+    // Get authenticated user (if any)
     const user = await getUserFromRequest(request);
+
+    // If NO user is authenticated, return null (no active tournament for unauthenticated requests)
+    if (!user) {
+      return NextResponse.json(null);
+    }
+
+    // Build query based on user role
     const query: any = { status: { $in: ['Live', 'Stopped'] } };
-    if (user) {
+
+    // Admin sees ANY active tournament
+    if (user.role === 'Admin') {
+      // Query already set to find any active tournament
+    }
+    // Tournament role sees ONLY active tournaments they created
+    else if (user.role === 'Tournament') {
+      query.createdBy = user.userId;
+    }
+    // Other roles see active tournaments they created OR assigned to them
+    else {
       query.$or = [
         { createdBy: user.userId },
         { _id: { $in: user.assignedTournaments || [] } },
       ];
     }
 
-    // Find tournament with Live or Stopped status (scoped if user present)
+    // Find tournament with Live or Stopped status (scoped by user)
     const activeTournament = await TournamentModel.findOne(query)
       .sort({ _id: -1 }) // Get most recent if multiple
       .lean();
