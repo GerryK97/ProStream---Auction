@@ -93,7 +93,12 @@ export const tournamentDB = {
       return await TournamentModel.find().lean() as any;
     }
 
-    // Build query: tournaments created by user OR assigned to user
+    // Tournament role sees ONLY tournaments they created (same as Master Data pattern)
+    if (userRole === 'Tournament') {
+      return await TournamentModel.find({ createdBy: userId }).lean() as any;
+    }
+
+    // Other roles: tournaments created by user OR assigned to user
     const tournaments = await TournamentModel.find({
       $or: [
         { createdBy: userId },

@@ -207,10 +207,15 @@ export function canAccessTournament(
   // Admin can access all tournaments
   if (userRole === 'Admin') return true;
 
+  // Tournament role can ONLY access if they created it (same as Master Data pattern)
+  if (userRole === 'Tournament') {
+    return tournament.createdBy === userId;
+  }
+
   // User can access if they created it
   if (tournament.createdBy === userId) return true;
 
-  // User can access if it's assigned to them
+  // Other roles can access if it's assigned to them
   if (assignedTournaments.includes(tournament._id)) return true;
 
   return false;

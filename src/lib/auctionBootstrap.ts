@@ -5,6 +5,7 @@ import { PlayerModel } from '@/models/Player';
 import { TeamModel } from '@/models/Team';
 import { EMPTY_AUCTION_STATE } from './auctionDefaults';
 import { AuctionState, Player, Team, Tournament } from '@/types';
+import { canAccessTournament } from '@/lib/permissions';
 
 export interface AuctionBootstrapPayload {
   tournament: Tournament | null;
@@ -63,15 +64,59 @@ const serializeTeam = (team: any): Team => {
   };
 };
 
-export async function getAuctionBootstrapData(tournamentId?: string | null): Promise<AuctionBootstrapPayload> {
+export async function getAuctionBootstrapData(
+  tournamentId?: string | null,
+  userId?: string,
+  userRole?: string,
+  assignedTournaments?: string[]
+): Promise<AuctionBootstrapPayload> {
   await connectToDatabase();
 
   let tournamentDoc: Tournament | null = null;
 
   if (tournamentId) {
+    // When specific tournament ID is provided, fetch it directly
     tournamentDoc = (await TournamentModel.findById(tournamentId).lean()) as Tournament | null;
+
+    // Verify user has access to this tournament
+    if (tournamentDoc && userId && userRole) {
+      const hasAccess = canAccessTournament(userId, userRole, tournamentDoc, assignedTournaments || []);
+      if (!hasAccess) {
+        tournamentDoc = null; // User doesn't have access
+      }
+    }
   } else {
-    tournamentDoc = (await TournamentModel.findOne({ status: { $in: ['Live', 'Stopped'] } })
+    // No specific tournament - find active tournament user has access to
+    if (!userId || !userRole) {
+      // No user context - return null (no tournament)
+      return {
+        tournament: null,
+        auctionState: { ...EMPTY_AUCTION_STATE },
+        players: [],
+        teams: [],
+      };
+    }
+
+    // Build query based on user role (same logic as /api/tournaments/active)
+    const query: any = { status: { $in: ['Live', 'Stopped'] } };
+
+    // Admin sees ANY active tournament
+    if (userRole === 'Admin') {
+      // Query already set to find any active tournament
+    }
+    // Tournament role sees ONLY active tournaments they created
+    else if (userRole === 'Tournament') {
+      query.createdBy = userId;
+    }
+    // Other roles see active tournaments they created OR assigned to them
+    else {
+      query.$or = [
+        { createdBy: userId },
+        { _id: { $in: assignedTournaments || [] } },
+      ];
+    }
+
+    tournamentDoc = (await TournamentModel.findOne(query)
       .sort({ updatedAt: -1 })
       .lean()) as Tournament | null;
   }
