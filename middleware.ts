@@ -8,6 +8,7 @@ const PUBLIC_ROUTES = [
   '/auth/login',
   '/auth/signup',
   '/auth/unauthorized',
+  '/contact',
   '/api/auth/login',
   '/api/auth/signup',
   '/api/auth/session',
