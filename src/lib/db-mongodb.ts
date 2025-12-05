@@ -148,7 +148,7 @@ export const masterTeamDB = {
   /**
    * Get master teams accessible to a user
    * Admin: sees all master teams
-   * MasterManager: sees only teams they created
+   * MasterManager/Tournament: sees only teams they created
    * Others: no access (empty array)
    */
   getAllForUser: async (userId: string, userRole: string): Promise<MasterTeam[]> => {
@@ -159,8 +159,8 @@ export const masterTeamDB = {
       return await MasterTeamModel.find().sort({ name: 1 }).lean() as any;
     }
 
-    // MasterManager sees only teams they created
-    if (userRole === 'MasterManager') {
+    // MasterManager and Tournament see only teams they created
+    if (userRole === 'MasterManager' || userRole === 'Tournament') {
       return await MasterTeamModel.find({ createdBy: userId }).sort({ name: 1 }).lean() as any;
     }
 
@@ -198,7 +198,7 @@ export const masterTeamDB = {
         .lean() as any;
     }
 
-    if (userRole === 'MasterManager') {
+    if (userRole === 'MasterManager' || userRole === 'Tournament') {
       return await MasterTeamModel.find({ createdBy: userId })
         .sort({ name: 1 })
         .skip(skip)
@@ -225,7 +225,7 @@ export const masterTeamDB = {
       return await MasterTeamModel.countDocuments();
     }
 
-    if (userRole === 'MasterManager') {
+    if (userRole === 'MasterManager' || userRole === 'Tournament') {
       return await MasterTeamModel.countDocuments({ createdBy: userId });
     }
 
@@ -314,7 +314,7 @@ export const masterPlayerDB = {
   /**
    * Get master players accessible to a user
    * Admin: sees all master players
-   * MasterManager: sees only players they created
+   * MasterManager/Tournament: sees only players they created
    * Others: no access (empty array)
    */
   getAllForUser: async (userId: string, userRole: string): Promise<MasterPlayer[]> => {
@@ -325,8 +325,8 @@ export const masterPlayerDB = {
       return await MasterPlayerModel.find().sort({ name: 1 }).lean() as any;
     }
 
-    // MasterManager sees only players they created
-    if (userRole === 'MasterManager') {
+    // MasterManager and Tournament see only players they created
+    if (userRole === 'MasterManager' || userRole === 'Tournament') {
       return await MasterPlayerModel.find({ createdBy: userId }).sort({ name: 1 }).lean() as any;
     }
 
@@ -364,7 +364,7 @@ export const masterPlayerDB = {
         .lean() as any;
     }
 
-    if (userRole === 'MasterManager') {
+    if (userRole === 'MasterManager' || userRole === 'Tournament') {
       return await MasterPlayerModel.find({ createdBy: userId })
         .sort({ name: 1 })
         .skip(skip)
@@ -391,7 +391,7 @@ export const masterPlayerDB = {
       return await MasterPlayerModel.countDocuments();
     }
 
-    if (userRole === 'MasterManager') {
+    if (userRole === 'MasterManager' || userRole === 'Tournament') {
       return await MasterPlayerModel.countDocuments({ createdBy: userId });
     }
 

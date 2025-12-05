@@ -486,6 +486,7 @@ const AuctionSetupPanel: React.FC = () => {
     const [showClearTeamsConfirm, setShowClearTeamsConfirm] = useState(false);
     const [clearingPlayers, setClearingPlayers] = useState(false);
     const [clearingTeams, setClearingTeams] = useState(false);
+    const [syncingAll, setSyncingAll] = useState(false);
 
     // Handle player removal from tournament (delete tournament instance)
     const handleRemovePlayer = async (playerId: string) => {
@@ -602,6 +603,77 @@ const AuctionSetupPanel: React.FC = () => {
             alert(`Failed to clear teams: ${error.message}`);
         } finally {
             setClearingTeams(false);
+        }
+    };
+
+    // Sync all available master players to tournament
+    const handleSyncAll = async () => {
+        if (!selectedTournament) return;
+
+        setSyncingAll(true);
+        try {
+            // Get available master players (not already in tournament)
+            const tournamentMasterPlayerIds = new Set(
+                tournamentPlayers.map(p => p.masterPlayerId).filter(Boolean)
+            );
+            const availablePlayers = masterPlayers.filter(
+                p => !tournamentMasterPlayerIds.has(p._id)
+            );
+
+            if (availablePlayers.length === 0) {
+                alert('All players are already synced to this tournament');
+                return;
+            }
+
+            let successCount = 0;
+            let failCount = 0;
+            const errors: string[] = [];
+
+            // Add each available player
+            for (const player of availablePlayers) {
+                try {
+                    const response = await fetch('/api/players/create-from-master', {
+                        method: 'POST',
+                        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            masterPlayerId: player._id,
+                            tournamentId: selectedTournament._id,
+                            playerClass: player.suggestedClass || undefined
+                        }),
+                    });
+
+                    if (response.ok) {
+                        successCount++;
+                    } else {
+                        const data = await response.json();
+                        failCount++;
+                        errors.push(`${player.name}: ${data.error || 'Unknown error'}`);
+                    }
+                } catch (error: any) {
+                    failCount++;
+                    errors.push(`${player.name}: ${error.message || 'Failed to add'}`);
+                }
+            }
+
+            // Show results
+            let message = `Sync completed: ${successCount} player(s) added`;
+            if (failCount > 0) {
+                message += `, ${failCount} failed`;
+                if (errors.length > 0) {
+                    message += `\n\nErrors:\n${errors.slice(0, 5).join('\n')}`;
+                    if (errors.length > 5) {
+                        message += `\n... and ${errors.length - 5} more`;
+                    }
+                }
+            }
+            alert(message);
+
+            // Refresh tournament data
+            setRefreshTrigger(prev => prev + 1);
+        } catch (error: any) {
+            alert(`Failed to sync players: ${error.message}`);
+        } finally {
+            setSyncingAll(false);
         }
     };
 
@@ -1040,7 +1112,14 @@ const AuctionSetupPanel: React.FC = () => {
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-xl font-bold">Registered Players</h3>
                         <div className="flex gap-2">
-                             <button className="text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors hover:opacity-80" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}>Sync All</button>
+                             <button
+                                onClick={handleSyncAll}
+                                disabled={syncingAll || masterPlayers.length === 0}
+                                className="text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+                                style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}
+                             >
+                                {syncingAll ? 'Syncing...' : 'Sync All'}
+                             </button>
                              <button
                                 onClick={handleExportPlayers}
                                 disabled={exportingPlayers || tournamentPlayers.length === 0}

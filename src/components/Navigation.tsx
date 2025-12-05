@@ -6,23 +6,15 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
-const navLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/auction', label: 'Auction' },
-  { href: '/manage', label: 'Manage' },
-  { href: '/overlays', label: 'Overlays' },
-  { href: '/contact', label: 'Contact' },
-];
-
 const subnav = {
   auction: [
     { href: '/auction', label: 'Control Room', description: 'Manage live bidding' },
     { href: '/auction/setup', label: 'Setup', description: 'Configure rules & lots' },
   ],
   manage: [
-    { href: '/manage?view=tournaments', label: 'Tournaments', description: 'Leagues & Series' },
-    { href: '/manage?view=teams', label: 'Teams', description: 'Franchise management' },
-    { href: '/manage?view=players', label: 'Players', description: 'Roster management' },
+    { href: '/manage/tournaments', label: 'Tournaments', description: 'Leagues & Series', roles: ['Admin', 'Tournament'] },
+    { href: '/manage/teams', label: 'Teams', description: 'Franchise management', roles: ['Admin', 'Tournament', 'MasterManager'] },
+    { href: '/manage/players', label: 'Players', description: 'Roster management', roles: ['Admin', 'Tournament', 'MasterManager'] },
   ],
 } as const;
 
@@ -164,22 +156,29 @@ const Navigation: React.FC = () => {
     </button>
   );
 
-  const Dropdown = ({ items, type }: { items: typeof subnav.auction | typeof subnav.manage, type: 'auction' | 'manage' }) => (
-    <div
-      ref={dropdownRef}
-      className="absolute top-full left-0 mt-4 w-64 p-2 rounded-2xl backdrop-blur-xl border animate-fade-in origin-top-left z-50 shadow-2xl"
-      style={{
-        backgroundColor: 'var(--nav-background)',
-        borderColor: 'var(--nav-border)'
-      }}
-    >
-      <div className="grid gap-1">
-        {items.map((item) => {
-          const active = type === 'manage'
-            ? pathname.startsWith('/manage') && pathname.includes(item.href.split('=')[1]?.split('&')[0] || '')
-            : pathname === item.href;
+  const Dropdown = ({ items, type }: { items: typeof subnav.auction | typeof subnav.manage, type: 'auction' | 'manage' }) => {
+    // Filter items based on user role
+    const filteredItems = items.filter((item: any) => {
+      // If item doesn't have roles property, show it to everyone
+      if (!item.roles) return true;
+      // Otherwise check if user's role is in the allowed roles
+      return user && item.roles.includes(user.role);
+    });
 
-          return (
+    return (
+      <div
+        ref={dropdownRef}
+        className="absolute top-full left-0 mt-4 w-64 p-2 rounded-2xl backdrop-blur-xl border animate-fade-in origin-top-left z-50 shadow-2xl"
+        style={{
+          backgroundColor: 'var(--nav-background)',
+          borderColor: 'var(--nav-border)'
+        }}
+      >
+        <div className="grid gap-1">
+          {filteredItems.map((item: any) => {
+            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+            return (
             <Link
               key={item.href}
               href={item.href}
@@ -204,7 +203,8 @@ const Navigation: React.FC = () => {
         })}
       </div>
     </div>
-  );
+    );
+  };
 
   const ThemeToggle = () => {
     const [isHovered, setIsHovered] = React.useState(false);
@@ -412,20 +412,25 @@ const Navigation: React.FC = () => {
 
               {mobileManageOpen && (
                 <div className="flex flex-col gap-2 pl-2 border-l-2 ml-1" style={{ borderColor: 'var(--border-primary)' }}>
-                  {subnav.manage.map(item => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className="py-2 px-3 rounded-lg text-sm"
-                      style={{
-                        color: pathname.includes(item.href.split('?')[0]) ? 'var(--brand-primary)' : 'var(--text-secondary)',
-                        backgroundColor: pathname.includes(item.href.split('?')[0]) ? 'rgba(79, 70, 229, 0.1)' : undefined
-                      }}
-                      onClick={() => setDrawerOpen(false)}
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
+                  {subnav.manage
+                    .filter((item: any) => !item.roles || (user && item.roles.includes(user.role)))
+                    .map((item: any) => {
+                      const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className="py-2 px-3 rounded-lg text-sm"
+                          style={{
+                            color: isActive ? 'var(--brand-primary)' : 'var(--text-secondary)',
+                            backgroundColor: isActive ? 'rgba(79, 70, 229, 0.1)' : undefined
+                          }}
+                          onClick={() => setDrawerOpen(false)}
+                        >
+                          {item.label}
+                        </Link>
+                      );
+                    })}
                 </div>
               )}
             </div>
