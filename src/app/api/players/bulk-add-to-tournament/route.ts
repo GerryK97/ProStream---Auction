@@ -6,6 +6,8 @@ import { TournamentModel } from '@/models/Tournament';
 import { playerDB } from '@/lib/db-mongodb';
 import { Tournament } from '@/types';
 import { connectToDatabase } from '@/lib/mongodb';
+import { getUserFromRequest } from '@/lib/request-helpers';
+import { canPerformAction } from '@/lib/permissions';
 
 interface ExcelRow {
   'Master Player ID'?: string;
@@ -99,6 +101,17 @@ function resolvePlayerClassShortCode(
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
+
+    // Authenticate user
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user has permission to create players
+    if (!canPerformAction(user.role, 'create', 'player')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -261,7 +274,8 @@ export async function POST(request: NextRequest) {
         await playerDB.createFromMaster(
           masterPlayerId,
           tournamentId,
-          playerClass || undefined
+          playerClass || undefined,
+          user.userId
         );
         result.imported++;
       } catch (error: any) {
