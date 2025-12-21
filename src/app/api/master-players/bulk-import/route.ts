@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import { masterPlayerDB } from '@/lib/db-mongodb';
 import { MasterPlayerModel } from '@/models/MasterPlayer';
+import { getUserFromRequest } from '@/lib/request-helpers';
+import { canPerformAction } from '@/lib/permissions';
 
 interface ExcelRow {
   Name?: string;
@@ -37,6 +39,17 @@ function validateRow(row: ExcelRow, rowNumber: number): { valid: boolean; error?
 
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate user
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user has permission to create master players
+    if (!canPerformAction(user.role, 'create', 'masterPlayer')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
@@ -167,7 +180,11 @@ export async function POST(request: NextRequest) {
             // Generate sequential ID based on starting count + index
             const playerNumber = (startingCount + i + 1).toString().padStart(3, '0');
             const playerId = `PS${playerNumber}`;
-            const playerWithId = { ...player.data, _id: playerId };
+            const playerWithId = {
+              ...player.data,
+              _id: playerId,
+              createdBy: user.userId
+            };
 
             await masterPlayerDB.create(playerWithId);
             result.imported++;
