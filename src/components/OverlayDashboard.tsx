@@ -5,6 +5,8 @@ import { CopyIcon, ExternalLinkIcon } from './icons';
 import ParameterEditor, { ParameterConfig } from './overlays/parameters/ParameterEditor';
 import { useAuth } from '@/contexts/AuthContext';
 import OverlayEditModal from './OverlayEditModal';
+import { useTournamentContext } from '@/contexts/TournamentContext';
+import TournamentSelector from './TournamentSelector';
 
 interface OverlayType {
     id: string;
@@ -963,6 +965,13 @@ const overlayTypes: OverlayType[] = [
 const OverlayDashboard: React.FC = () => {
     const { user } = useAuth();
     const isAdmin = user?.role === 'Admin';
+    const {
+        selectedTournamentId,
+        setSelectedTournamentId,
+        selectedTournament,
+        tournaments,
+        loading: tournamentsLoading
+    } = useTournamentContext();
 
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedTag, setSelectedTag] = useState('All');
@@ -1026,13 +1035,6 @@ const OverlayDashboard: React.FC = () => {
                     console.warn('Failed to fetch overlays from API, using fallback data');
                 }
                 setIsLoadingOverlays(false);
-
-                // Fetch active tournament
-                const tournamentResponse = await fetch('/api/tournaments/active', { headers });
-                if (tournamentResponse.ok) {
-                    const tournament = await tournamentResponse.json();
-                    setActiveTournamentId(tournament._id);
-                }
             } catch (error) {
                 console.error('Failed to fetch data:', error);
                 setIsLoadingOverlays(false);
@@ -1040,6 +1042,36 @@ const OverlayDashboard: React.FC = () => {
         };
         fetchData();
     }, []);
+
+    // Handle tournament selection - sync activeTournamentId with selectedTournamentId from context
+    useEffect(() => {
+        if (selectedTournamentId) {
+            setActiveTournamentId(selectedTournamentId);
+        } else {
+            // Fall back to active tournament detection
+            const loadActiveTournament = async () => {
+                try {
+                    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+                    const headers: Record<string, string> = {};
+                    if (token) {
+                        headers['Authorization'] = `Bearer ${token}`;
+                    }
+
+                    const tournamentResponse = await fetch('/api/tournaments/active', { headers });
+                    if (tournamentResponse.ok) {
+                        const tournament = await tournamentResponse.json();
+                        if (tournament) {
+                            setActiveTournamentId(tournament._id);
+                            setSelectedTournamentId(tournament._id); // Auto-select
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch active tournament:', error);
+                }
+            };
+            loadActiveTournament();
+        }
+    }, [selectedTournamentId, setSelectedTournamentId]);
 
     const allCategories = useMemo(() => {
         const categories = new Set<string>();
@@ -1192,6 +1224,14 @@ const OverlayDashboard: React.FC = () => {
 
     return (
         <div className="animate-fade-in space-y-8">
+            {/* Tournament Selector */}
+            <div className="mb-6">
+                <TournamentSelector
+                    label="Select Tournament for Overlays"
+                    className="max-w-2xl"
+                />
+            </div>
+
             <div>
                 <h2 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>Overlay Library</h2>
                 <p className="text-md" style={{ color: 'var(--text-tertiary)' }}>Modular overlay components - each can be positioned independently in OBS</p>

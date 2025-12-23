@@ -5,10 +5,25 @@ import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { triggerAuctionStarted } from '@/lib/pusher-server';
+import { getUserFromRequest } from '@/lib/request-helpers';
+import { canPerformAction } from '@/lib/permissions';
 
 // POST /api/auction/start - Start auction with validation
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate user
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user has permission to manage auctions
+    if (!canPerformAction(user.role, 'manage', 'auction')) {
+      return NextResponse.json({
+        error: `Your role (${user.role}) does not have permission to start auctions.`
+      }, { status: 403 });
+    }
+
     await connectToDatabase();
     const { tournamentId } = await request.json();
 
@@ -28,15 +43,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if another tournament is already live
-    const liveTournament = await TournamentModel.findOne({
+    // Check if user has access to this tournament
+    // Admin: can manage any tournament
+    // Tournament role: can only manage tournaments they created
+    const hasAccess = user.role === 'Admin' ||
+                     (user.role === 'Tournament' && (tournament as any).createdBy === user.userId);
+
+    if (!hasAccess) {
+      return NextResponse.json({
+        error: 'You do not have permission to manage this tournament.'
+      }, { status: 403 });
+    }
+
+    // Check if this user has another tournament already live
+    // Only restrict the same user from running multiple tournaments simultaneously
+    // Different users can run their own tournaments at the same time
+    const userLiveTournament = await TournamentModel.findOne({
       status: 'Live',
-      _id: { $ne: tournamentId }
+      _id: { $ne: tournamentId },
+      createdBy: user.userId  // Only check tournaments created by this user
     }).lean();
 
-    if (liveTournament) {
+    if (userLiveTournament) {
       return NextResponse.json(
-        { error: `Another tournament "${(liveTournament as any).name}" is already live. Stop it before starting this auction.` },
+        { error: `Your tournament "${(userLiveTournament as any).name}" is already live. Stop it before starting this auction.` },
         { status: 400 }
       );
     }

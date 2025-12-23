@@ -75,9 +75,9 @@ export default function HomePage() {
       name: 'Free',
       price: '0 LKR',
       cadence: 'per tournament',
-      description: 'Up to 2 teams to trial the control room with unlimited players.',
+      description: 'Up to 5 teams to trial the control room with unlimited players.',
       perks: [
-        '2 teams per tournament',
+        '5 teams per tournament',
         'Unlimited players',
         'Core auction controls',
         'No custom branding overlays',
@@ -100,11 +100,11 @@ export default function HomePage() {
     },
     {
       name: 'Offer (Monthly Access)',
-      price: '7,500 LKR',
+      price: '15,000 LKR',
       cadence: 'per month',
       description: 'Ideal for leagues running multiple auctions and ongoing broadcasts.',
       perks: [
-        '2 tournaments included; unlimited teams/players',
+        '5 tournaments included; unlimited teams/players',
         'Customized branding overlay',
         '1 additional overlay design request per month',
         'Early access to new features',
@@ -366,7 +366,7 @@ export default function HomePage() {
                   team mirrored the same data in OBS. Zero missed lots, no frantic spreadsheets, and a
                   flawless viewer experience."
                 </blockquote>
-                <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Riya Menon - Tournament Director, Grand League</p>
+                <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Akram Azeez - Live Plus</p>
               </div>
 
               <div className="grid gap-6 sm:grid-cols-2">

@@ -288,15 +288,27 @@ const ManagementDashboard: React.FC<{ view: ManagementView }> = ({ view }) => {
                             <button onClick={() => setPlayerToDelete(null)} className="text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 hover:opacity-80" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}>Cancel</button>
                             <button onClick={async () => {
                                 try {
+                                    // Get auth token
+                                    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+                                    const headers: Record<string, string> = {};
+                                    if (token) {
+                                        headers['Authorization'] = `Bearer ${token}`;
+                                    }
+
                                     const response = await fetch(`/api/master-players/${playerToDelete._id}`, {
                                         method: 'DELETE',
+                                        headers: headers,
                                     });
                                     if (response.ok) {
                                         setRefreshTrigger(prev => prev + 1);
                                         setPlayerToDelete(null);
+                                    } else {
+                                        const errorData = await response.json();
+                                        alert(`Failed to delete player: ${errorData.error || 'Unknown error'}`);
                                     }
                                 } catch (error) {
                                     console.error('Failed to delete player:', error);
+                                    alert('Failed to delete player. Please try again.');
                                 }
                             }} className="text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 hover:opacity-80" style={{ backgroundColor: 'var(--status-danger)' }}>Delete</button>
                         </div>
@@ -410,7 +422,7 @@ const TournamentManagementPanel: React.FC<{
             <div className="lg:col-span-2">
                 <CreateTournamentForm
                     key={editingTournament?._id || 'new'}
-                    onSave={async (data) => {
+                    onSave={async (data, newOwnerId) => {
                         try {
                             // Get auth token
                             const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
@@ -420,14 +432,33 @@ const TournamentManagementPanel: React.FC<{
                             }
 
                             if (editingTournament) {
+                                // Update tournament data
                                 const response = await fetch(`/api/tournaments/${editingTournament._id}`, {
                                     method: 'PUT',
                                     headers: headers,
                                     body: JSON.stringify(data),
                                 });
                                 if (response.ok) {
+                                    // If owner changed, transfer ownership
+                                    if (newOwnerId) {
+                                        const transferResponse = await fetch(`/api/tournaments/${editingTournament._id}/transfer-ownership`, {
+                                            method: 'POST',
+                                            headers: headers,
+                                            body: JSON.stringify({ newOwnerId }),
+                                        });
+
+                                        if (transferResponse.ok) {
+                                            alert('Tournament updated and ownership transferred successfully!');
+                                        } else {
+                                            const errorData = await transferResponse.json();
+                                            alert(`Tournament updated, but ownership transfer failed: ${errorData.error || 'Unknown error'}`);
+                                        }
+                                    }
                                     onRefresh();
                                     setEditingTournament(null);
+                                } else {
+                                    const errorData = await response.json();
+                                    alert(`Failed to update tournament: ${errorData.error || 'Unknown error'}`);
                                 }
                             } else {
                                 const response = await fetch('/api/tournaments', {
@@ -437,10 +468,14 @@ const TournamentManagementPanel: React.FC<{
                                 });
                                 if (response.ok) {
                                     onRefresh();
+                                } else {
+                                    const errorData = await response.json();
+                                    alert(`Failed to create tournament: ${errorData.error || 'Unknown error'}`);
                                 }
                             }
                         } catch (error) {
                             console.error('Failed to save tournament:', error);
+                            alert('Failed to save tournament. Please try again.');
                         }
                     }}
                     tournamentToEdit={editingTournament}
@@ -500,15 +535,27 @@ const TournamentManagementPanel: React.FC<{
                             <button onClick={() => setTournamentToDelete(null)} className="text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 hover:opacity-80" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}>Cancel</button>
                             <button onClick={async () => {
                                 try {
+                                    // Get auth token
+                                    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+                                    const headers: Record<string, string> = {};
+                                    if (token) {
+                                        headers['Authorization'] = `Bearer ${token}`;
+                                    }
+
                                     const response = await fetch(`/api/tournaments/${tournamentToDelete._id}`, {
                                         method: 'DELETE',
+                                        headers: headers,
                                     });
                                     if (response.ok) {
                                         onRefresh();
                                         setTournamentToDelete(null);
+                                    } else {
+                                        const errorData = await response.json();
+                                        alert(`Failed to delete tournament: ${errorData.error || 'Unknown error'}`);
                                     }
                                 } catch (error) {
                                     console.error('Failed to delete tournament:', error);
+                                    alert('Failed to delete tournament. Please try again.');
                                 }
                             }} className="text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 hover:opacity-80" style={{ backgroundColor: 'var(--status-danger)' }}>Delete</button>
                         </div>
@@ -539,10 +586,12 @@ const getStatusBadge = (status: Tournament['status']) => {
 };
 
 const CreateTournamentForm: React.FC<{
-    onSave: (data: Omit<Tournament, '_id' | 'status'>) => void;
+    onSave: (data: Omit<Tournament, '_id' | 'status'>, newOwnerId?: string) => void;
     tournamentToEdit?: Tournament | null;
     onCancelEdit?: () => void;
 }> = ({ onSave, tournamentToEdit, onCancelEdit }) => {
+    const { user } = useAuth();
+    const isAdmin = user?.role === 'Admin';
     const isEditing = !!tournamentToEdit;
     const [name, setName] = useState(tournamentToEdit?.name || '');
     const [budget, setBudget] = useState(tournamentToEdit?.budgetPerTeam.toString() || '');
@@ -556,6 +605,40 @@ const CreateTournamentForm: React.FC<{
     const [basePriceStrategy, setBasePriceStrategy] = useState<BasePriceStrategy>(
         tournamentToEdit?.basePriceStrategy || 'tournament-level'
     );
+    const [selectedOwnerId, setSelectedOwnerId] = useState(tournamentToEdit?.createdBy || '');
+    const [users, setUsers] = useState<any[]>([]);
+    const [loadingUsers, setLoadingUsers] = useState(false);
+
+    // Fetch users for owner dropdown (Admin only)
+    useEffect(() => {
+        if (isAdmin && isEditing) {
+            const fetchUsers = async () => {
+                setLoadingUsers(true);
+                try {
+                    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+                    const headers: Record<string, string> = {};
+                    if (token) {
+                        headers['Authorization'] = `Bearer ${token}`;
+                    }
+
+                    const response = await fetch('/api/users?limit=100&status=Active', {
+                        headers
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        setUsers(data.data || []);
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch users:', error);
+                } finally {
+                    setLoadingUsers(false);
+                }
+            };
+
+            fetchUsers();
+        }
+    }, [isAdmin, isEditing]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -578,6 +661,9 @@ const CreateTournamentForm: React.FC<{
             }
         }
 
+        // Pass new owner ID only if Admin is editing and owner changed
+        const ownerChanged = isAdmin && isEditing && selectedOwnerId && selectedOwnerId !== tournamentToEdit?.createdBy;
+
         onSave({
             name,
             budgetPerTeam: parseInt(budget, 10),
@@ -588,10 +674,11 @@ const CreateTournamentForm: React.FC<{
             playerClasses: usePlayerClasses ? playerClasses : [],
             basePriceStrategy,
             year: parseInt(name.split(' ').pop() || new Date().getFullYear().toString(), 10) || new Date().getFullYear()
-        });
+        }, ownerChanged ? selectedOwnerId : undefined);
         if (!isEditing) {
            setName(''); setBudget(''); setSquadSize(''); setBasePrice(''); setLogoURL('');
            setUsePlayerClasses(false); setPlayerClasses([]); setBasePriceStrategy('tournament-level');
+           setSelectedOwnerId('');
         }
     }
 
@@ -613,6 +700,44 @@ const CreateTournamentForm: React.FC<{
                     previewShape="square"
                     id="tournament-logo"
                 />
+
+                {/* Owner Selection (Admin Only, Edit Mode Only) */}
+                {isAdmin && isEditing && (
+                    <div className="border-t pt-4" style={{ borderColor: 'var(--border-primary)' }}>
+                        <label htmlFor="owner-select" className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                            Tournament Owner (Admin Only)
+                        </label>
+                        {loadingUsers ? (
+                            <div className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Loading users...</div>
+                        ) : (
+                            <>
+                                <select
+                                    id="owner-select"
+                                    value={selectedOwnerId}
+                                    onChange={(e) => setSelectedOwnerId(e.target.value)}
+                                    className="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                                    style={{
+                                        backgroundColor: 'var(--surface-elevated)',
+                                        borderColor: 'var(--border-primary)',
+                                        color: 'var(--text-primary)'
+                                    }}
+                                >
+                                    <option value="">-- Select Owner --</option>
+                                    {users.map((u) => (
+                                        <option key={u._id} value={u._id}>
+                                            {u.username} ({u.email}) - {u.role}
+                                        </option>
+                                    ))}
+                                </select>
+                                {selectedOwnerId && selectedOwnerId !== tournamentToEdit?.createdBy && (
+                                    <p className="mt-2 text-sm" style={{ color: 'var(--status-warning)' }}>
+                                        Warning: Changing the owner will transfer all ownership rights to the selected user.
+                                    </p>
+                                )}
+                            </>
+                        )}
+                    </div>
+                )}
 
                 {/* Player Classes Section */}
                 <div className="border-t pt-4" style={{ borderColor: 'var(--border-primary)' }}>
@@ -857,15 +982,26 @@ const TeamManagementPanel: React.FC<{
     const handleConfirmDelete = async () => {
         if (teamToDelete) {
             try {
+                const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+                const headers: Record<string, string> = {};
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+
                 const response = await fetch(`/api/master-teams/${teamToDelete._id}`, {
                     method: 'DELETE',
+                    headers: headers,
                 });
                 if (response.ok) {
                     onRefresh();
                     setTeamToDelete(null);
+                } else {
+                    const errorData = await response.json();
+                    alert(`Failed to delete team: ${errorData.error || 'Unknown error'}`);
                 }
             } catch (error) {
                 console.error('Failed to delete team:', error);
+                alert('Failed to delete team. Please try again.');
             }
         }
     };

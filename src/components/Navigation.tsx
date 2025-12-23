@@ -314,6 +314,10 @@ const Navigation: React.FC = () => {
               <NavItem label="Overlays" active={isActive('/overlays')} />
             </Link>
 
+            <Link href="/editor">
+              <NavItem label="Editor" active={isActive('/editor')} />
+            </Link>
+
             {user?.role === 'Admin' && (
               <Link href="/users">
                 <NavItem label="Users" active={isActive('/users')} />
@@ -446,6 +450,32 @@ const Navigation: React.FC = () => {
             >
               Overlays
             </Link>
+
+            <Link
+              href="/editor"
+              className="p-4 rounded-2xl bg-surface-elevated/50 border font-semibold"
+              style={{
+                borderColor: 'var(--border-primary)',
+                color: 'var(--text-primary)'
+              }}
+              onClick={() => setDrawerOpen(false)}
+            >
+              Editor
+            </Link>
+
+            {user?.role === 'Admin' && (
+              <Link
+                href="/users"
+                className="p-4 rounded-2xl bg-surface-elevated/50 border font-semibold"
+                style={{
+                  borderColor: 'var(--border-primary)',
+                  color: 'var(--text-primary)'
+                }}
+                onClick={() => setDrawerOpen(false)}
+              >
+                Users
+              </Link>
+            )}
 
             <Link
               href="/contact"

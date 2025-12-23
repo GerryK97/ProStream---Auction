@@ -77,7 +77,9 @@ export async function POST(request: NextRequest) {
 
     // Check if user has permission to create tournaments
     if (!canPerformAction(user.role, 'create', 'tournament')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({
+        error: `Your role (${user.role}) does not have permission to create tournaments. Please contact an administrator.`
+      }, { status: 403 });
     }
 
     // Enforce per-user tournament allowance (non-admin)
