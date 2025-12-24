@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import QuotationForm from '@/components/invoiceit/QuotationForm';
 
 export default function CreateQuotationPage() {
   return (
@@ -32,9 +33,7 @@ export default function CreateQuotationPage() {
               borderColor: 'var(--border-primary)'
             }}
           >
-            <p className="text-center py-12" style={{ color: 'var(--text-secondary)' }}>
-              Quotation creation form will be implemented in Phase 7
-            </p>
+            <QuotationForm mode="create" />
           </div>
         </div>
       </div>
