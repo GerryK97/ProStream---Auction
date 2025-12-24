@@ -25,12 +25,26 @@ export async function GET(request: NextRequest) {
     // If tournamentId is provided, filter by tournament
     if (tournamentId) {
       await connectToDatabase();
+
+      // Check if user has access to this tournament
+      // Admin: access to all tournaments
+      // Tournament role: access to tournaments they created
+      // Other roles: access to assigned tournaments
+      let hasAccess = user.role === 'Admin' || user.assignedTournaments.includes(tournamentId);
+
+      // Also check if user created this tournament (for Tournament role)
+      if (!hasAccess && user.role === 'Tournament') {
+        const { TournamentModel } = await import('@/models/Tournament');
+        const tournament = await TournamentModel.findById(tournamentId).select('createdBy').lean() as { createdBy: string } | null;
+        hasAccess = tournament?.createdBy === user.userId;
+      }
+
+      if (!hasAccess) {
+        return NextResponse.json({ error: 'Access denied to this tournament' }, { status: 403 });
+      }
+
       const teams = await TeamModel.find({ tournamentId }).lean();
-      // Filter teams the user has access to
-      const userAccessibleTeams = teams.filter(team =>
-        user.role === 'Admin' || team.createdBy === user.userId || team.tournamentId === tournamentId
-      );
-      return NextResponse.json(userAccessibleTeams);
+      return NextResponse.json(teams);
     }
 
     // Otherwise, return teams accessible to the user

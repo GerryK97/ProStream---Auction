@@ -2,6 +2,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { useAuction } from '@/hooks/useAuction';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTournamentContext } from '@/contexts/TournamentContext';
 import { Player, Team, Tournament, PlayerStats, MasterTeam, MasterPlayer } from '@/types';
 import { getAuthHeaders } from '@/lib/api-client';
 import Modal from './Modal';
@@ -469,6 +471,8 @@ const TeamForm: React.FC<TeamFormProps> = ({ onSave }) => {
 
 const AuctionSetupPanel: React.FC = () => {
     const { tournament, setTournamentStatus, addPlayer, deletePlayer, addTeam, deleteTeam } = useAuction();
+    const { user } = useAuth();
+    const { refreshTournaments } = useTournamentContext();
 
     const [isAddPlayerModalOpen, setAddPlayerModalOpen] = useState(false);
     const [isBulkAddPlayerModalOpen, setBulkAddPlayerModalOpen] = useState(false);
@@ -487,6 +491,9 @@ const AuctionSetupPanel: React.FC = () => {
     const [clearingPlayers, setClearingPlayers] = useState(false);
     const [clearingTeams, setClearingTeams] = useState(false);
     const [syncingAll, setSyncingAll] = useState(false);
+    const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
+    const [completingTournament, setCompletingTournament] = useState(false);
+    const [reactivatingTournament, setReactivatingTournament] = useState(false);
 
     // Handle player removal from tournament (delete tournament instance)
     const handleRemovePlayer = async (playerId: string) => {
@@ -674,6 +681,57 @@ const AuctionSetupPanel: React.FC = () => {
             alert(`Failed to sync players: ${error.message}`);
         } finally {
             setSyncingAll(false);
+        }
+    };
+
+    // Handle Complete Tournament
+    const handleCompleteTournament = async () => {
+        if (!selectedTournament) return;
+
+        setCompletingTournament(true);
+        try {
+            const response = await fetch(`/api/tournaments/${selectedTournament._id}/complete`, {
+                method: 'POST',
+                headers: getAuthHeaders()
+            });
+
+            if (response.ok) {
+                alert('Tournament marked as completed!');
+                setRefreshTrigger(prev => prev + 1);
+            } else {
+                const error = await response.json();
+                alert(`Failed to complete tournament: ${error.error}`);
+            }
+        } catch (error: any) {
+            alert(`Error completing tournament: ${error.message}`);
+        } finally {
+            setCompletingTournament(false);
+            setShowCompleteConfirm(false);
+        }
+    };
+
+    // Handle Reactivate Tournament (Admin only)
+    const handleReactivateTournament = async () => {
+        if (!selectedTournament || user?.role !== 'Admin') return;
+
+        setReactivatingTournament(true);
+        try {
+            const response = await fetch(`/api/tournaments/${selectedTournament._id}/reactivate`, {
+                method: 'POST',
+                headers: getAuthHeaders()
+            });
+
+            if (response.ok) {
+                alert('Tournament reactivated successfully!');
+                setRefreshTrigger(prev => prev + 1);
+            } else {
+                const error = await response.json();
+                alert(`Failed to reactivate: ${error.error}`);
+            }
+        } catch (error: any) {
+            alert(`Error reactivating tournament: ${error.message}`);
+        } finally {
+            setReactivatingTournament(false);
         }
     };
 
@@ -979,9 +1037,15 @@ const AuctionSetupPanel: React.FC = () => {
 
                                         if (response.ok) {
                                             setRefreshTrigger(prev => prev + 1);
+                                            // Refresh tournament list to update status in selector
+                                            await refreshTournaments();
+                                        } else {
+                                            // Show error message to user
+                                            alert(`Failed to start auction: ${data.error || 'Unknown error'}`);
                                         }
                                     } catch (error) {
                                         console.error('Failed to start auction:', error);
+                                        alert('Failed to start auction. Please try again.');
                                     }
                                 }}
                                 className="text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2 hover:opacity-80"
@@ -1009,9 +1073,14 @@ const AuctionSetupPanel: React.FC = () => {
 
                                         if (response.ok) {
                                             setRefreshTrigger(prev => prev + 1);
+                                            // Refresh tournament list to update status in selector
+                                            await refreshTournaments();
+                                        } else {
+                                            alert(`Failed to stop auction: ${data.error || 'Unknown error'}`);
                                         }
                                     } catch (error) {
                                         console.error('Failed to stop auction:', error);
+                                        alert('Failed to stop auction. Please try again.');
                                     }
                                 }}
                                 className="text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2 hover:opacity-80"
@@ -1039,9 +1108,14 @@ const AuctionSetupPanel: React.FC = () => {
 
                                         if (response.ok) {
                                             setRefreshTrigger(prev => prev + 1);
+                                            // Refresh tournament list to update status in selector
+                                            await refreshTournaments();
+                                        } else {
+                                            alert(`Failed to restart auction: ${data.error || 'Unknown error'}`);
                                         }
                                     } catch (error) {
                                         console.error('Failed to restart auction:', error);
+                                        alert('Failed to restart auction. Please try again.');
                                     }
                                 }}
                                 className="text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2 hover:opacity-80"
@@ -1051,6 +1125,35 @@ const AuctionSetupPanel: React.FC = () => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                 </svg>
                                 Restart Auction
+                            </button>
+                        )}
+
+                        {/* Complete Auction Button - Show for Live or Stopped */}
+                        {(isAuctionLive || isAuctionStopped) && (
+                            <button
+                                onClick={() => setShowCompleteConfirm(true)}
+                                className="text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2 hover:opacity-80"
+                                style={{ backgroundColor: 'var(--status-info)' }}
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Complete Auction
+                            </button>
+                        )}
+
+                        {/* Reactivate Tournament Button - Show for Completed (Admin Only) */}
+                        {isAuctionCompleted && user?.role === 'Admin' && (
+                            <button
+                                onClick={handleReactivateTournament}
+                                disabled={reactivatingTournament}
+                                className="text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2 hover:opacity-80 disabled:opacity-60 disabled:cursor-not-allowed"
+                                style={{ backgroundColor: 'var(--status-warning)' }}
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                {reactivatingTournament ? 'Reactivating...' : 'Reactivate Tournament (Admin)'}
                             </button>
                         )}
 
@@ -1347,6 +1450,41 @@ const AuctionSetupPanel: React.FC = () => {
                             style={{ backgroundColor: 'var(--status-danger)' }}
                         >
                             {clearingTeams ? 'Clearing...' : 'Clear All Teams'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal isOpen={showCompleteConfirm} onClose={() => setShowCompleteConfirm(false)} title="Complete Tournament?" size="sm">
+                <div className="space-y-4">
+                    <div className="rounded-lg p-4" style={{ color: 'var(--status-warning)', border: '1px solid color-mix(in oklab, var(--status-warning) 40%, transparent)', background: 'color-mix(in oklab, var(--status-warning) 12%, transparent)' }}>
+                        <p className="font-semibold mb-2">Important: Completing the Tournament</p>
+                        <p className="text-sm">Marking this tournament as completed will deactivate it and prevent further auction operations.</p>
+                    </div>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                        Are you sure you want to mark this tournament as completed?
+                    </p>
+                    <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--surface-subtle)' }}>
+                        <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Note for Non-Admins:</p>
+                        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                            Only administrators can reactivate a completed tournament. Contact an admin if you need to reopen this tournament later.
+                        </p>
+                    </div>
+                    <div className="flex gap-3 justify-end pt-4">
+                        <button
+                            onClick={() => setShowCompleteConfirm(false)}
+                            className="text-white font-bold py-2 px-4 rounded-lg transition-colors hover:opacity-80"
+                            style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleCompleteTournament}
+                            disabled={completingTournament}
+                            className="disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-lg transition-colors hover:opacity-80"
+                            style={{ backgroundColor: 'var(--status-info)' }}
+                        >
+                            {completingTournament ? 'Completing...' : 'Yes, Complete Tournament'}
                         </button>
                     </div>
                 </div>

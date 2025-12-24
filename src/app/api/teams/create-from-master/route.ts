@@ -28,16 +28,24 @@ export async function POST(request: NextRequest) {
 
     // Enforce per-plan team limits when assigning to a tournament
     const plan = user.plan || 'Free';
-    if (plan === 'Free') {
-      await connectToDatabase();
-      const currentTeams = await TeamModel.countDocuments({ tournamentId });
-      if (currentTeams >= 2) {
-        return NextResponse.json(
-          { error: 'Free plan allows up to 2 teams per tournament. Upgrade for more teams.' },
-          { status: 403 }
-        );
-      }
+    await connectToDatabase();
+    const currentTeams = await TeamModel.countDocuments({ tournamentId });
+
+    if (plan === 'Free' && currentTeams >= 5) {
+      return NextResponse.json(
+        { error: 'Free plan allows up to 5 teams per tournament. Upgrade to Standard or Offer for more teams.' },
+        { status: 403 }
+      );
     }
+
+    if (plan === 'Standard' && currentTeams >= 10) {
+      return NextResponse.json(
+        { error: 'Standard plan includes 10 teams per tournament. Upgrade to Offer plan for unlimited teams, or contact admin to add more teams (500 LKR each).' },
+        { status: 403 }
+      );
+    }
+
+    // Offer plan: unlimited teams (no check needed)
 
     const newTeam = await teamDB.createFromMaster(masterTeamId, tournamentId, user.userId);
     return NextResponse.json(newTeam, { status: 201 });

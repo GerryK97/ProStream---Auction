@@ -8,6 +8,8 @@ import { imageOptimizers } from '@/lib/imageOptimization';
 import ClassBadge from '@/components/shared/ClassBadge';
 import { getFormattedBasePrice, getClassBasePrice } from '@/lib/playerClassUtils';
 import { getAuthHeaders } from '@/lib/api-client';
+import { useTournamentContext } from '@/contexts/TournamentContext';
+import TournamentSelector from './TournamentSelector';
 
 const formatCurrency = (amount: number) => amount.toLocaleString();
 
@@ -334,30 +336,48 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const initialTournamentId = initialData?.tournament?._id ?? null;
     const [liveTournamentId, setLiveTournamentId] = useState<string | null>(initialTournamentId);
 
-    // Fetch active tournament ID on component mount only
+    const {
+        selectedTournamentId,
+        setSelectedTournamentId,
+        selectedTournament,
+        tournaments,
+        loading: tournamentsLoading
+    } = useTournamentContext();
+
+    // Handle tournament selection - sync liveTournamentId with selectedTournamentId from context
     // Real-time updates are handled by Pusher, no need to refresh after every action
     useEffect(() => {
+        // If initialTournamentId is provided, use it
         if (initialTournamentId) {
             setLiveTournamentId(initialTournamentId);
             return;
         }
 
-        const loadActiveTournament = async () => {
-            try {
-                const response = await fetch('/api/tournaments/active', { headers: getAuthHeaders() });
+        // Use manually selected tournament from context
+        if (selectedTournamentId) {
+            setLiveTournamentId(selectedTournamentId);
+        } else {
+            // Fall back to active tournament detection
+            const loadActiveTournament = async () => {
+                try {
+                    const response = await fetch('/api/tournaments/active', { headers: getAuthHeaders() });
 
-                if (response.ok) {
-                    const tournament = await response.json();
-                    setLiveTournamentId(tournament?._id || null);
+                    if (response.ok) {
+                        const tournament = await response.json();
+                        if (tournament) {
+                            setLiveTournamentId(tournament._id);
+                            setSelectedTournamentId(tournament._id); // Auto-select
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch active tournament:', error);
+                    setLiveTournamentId(null);
                 }
-            } catch (error) {
-                console.error('Failed to fetch active tournament:', error);
-                setLiveTournamentId(null);
-            }
-        };
+            };
 
-        loadActiveTournament();
-    }, [initialTournamentId]);
+            loadActiveTournament();
+        }
+    }, [initialTournamentId, selectedTournamentId, setSelectedTournamentId]);
 
     // Use Pusher hook to get real-time auction updates
     const {
@@ -368,6 +388,9 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         isConnected,
         error: pusherError,
     } = usePusherAuction(liveTournamentId, initialData || undefined);
+
+    // Detect loading state: tournamentId is set but tournament data hasn't loaded yet
+    const isLoading = liveTournamentId && !liveTournament && !pusherError;
 
     // Display Pusher errors
     useEffect(() => {
@@ -408,23 +431,47 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     // Check if tournament is live
     if (!liveTournament) {
         return (
-            <div className="flex items-center justify-center h-[calc(100vh-12rem)] animate-fade-in">
-                <div className="border border-[var(--border-primary)] rounded-lg p-12 max-w-2xl text-center" style={{ backgroundColor: 'var(--surface-secondary)' }}>
-                    <div className="mb-6">
-                        <svg className="w-24 h-24 mx-auto text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
+            <div className="animate-fade-in space-y-6">
+                {/* Tournament Selector */}
+                <div className="mb-6">
+                    <TournamentSelector
+                        label="Select Tournament"
+                        className="max-w-2xl"
+                    />
+                </div>
+
+                <div className="flex items-center justify-center h-[calc(100vh-15rem)]">
+                    <div className="border border-[var(--border-primary)] rounded-lg p-12 max-w-2xl text-center" style={{ backgroundColor: 'var(--surface-secondary)' }}>
+                        <div className="mb-6">
+                            <svg className="w-24 h-24 mx-auto text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                        </div>
+                        <h2 className="text-3xl font-bold mb-4 text-[var(--text-primary)]">
+                            {isLoading ? 'Loading Tournament...' : 'Auction Not Started'}
+                        </h2>
+                        <p className="text-[var(--text-tertiary)] mb-6 text-lg">
+                            {isLoading
+                                ? 'Please wait while we load the tournament data...'
+                                : tournamentsLoading
+                                    ? 'Loading tournaments...'
+                                    : 'No active tournament selected. Please select a tournament above or start one from the Auction Setup page.'
+                            }
+                        </p>
+                        {pusherError && (
+                            <div className="mb-4 p-3 rounded-lg border border-red-500 bg-red-900/20 text-red-400">
+                                {pusherError}
+                            </div>
+                        )}
+                        {!isLoading && (
+                            <a
+                                href="/auction/setup"
+                                className="inline-block bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-8 rounded-lg transition-colors"
+                            >
+                                Go to Auction Setup
+                            </a>
+                        )}
                     </div>
-                    <h2 className="text-3xl font-bold mb-4 text-[var(--text-primary)]">Auction Not Started</h2>
-                    <p className="text-[var(--text-tertiary)] mb-6 text-lg">
-                        No live auction found. Please go to Auction Setup and click &apos;Start Auction&apos; to begin.
-                    </p>
-                    <a
-                        href="/auction/setup"
-                        className="inline-block bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-8 rounded-lg transition-colors"
-                    >
-                        Go to Auction Setup
-                    </a>
                 </div>
             </div>
         );
@@ -610,6 +657,18 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
 
     return (
         <div className="animate-fade-in space-y-4">
+            {/* Tournament Selector */}
+            <div className="mb-4">
+                <TournamentSelector
+                    label="Select Tournament"
+                    className="max-w-2xl"
+                />
+            </div>
+
+            {error && (
+                <div className="alert alert-danger mb-4 p-3 rounded-lg border border-red-500 bg-red-900/20 text-red-400">{error}</div>
+            )}
+
             {/* Auction Header */}
             <div className="border border-[var(--border-primary)] rounded-lg p-4" style={{ backgroundColor: 'var(--surface-secondary)' }}>
                 <div className="flex items-center justify-between">

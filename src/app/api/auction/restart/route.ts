@@ -4,10 +4,25 @@ import { TournamentModel } from '@/models/Tournament';
 import { PlayerModel } from '@/models/Player';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { triggerAuctionRestarted } from '@/lib/pusher-server';
+import { getUserFromRequest } from '@/lib/request-helpers';
+import { canPerformAction } from '@/lib/permissions';
 
 // POST /api/auction/restart - Restart a stopped auction
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate user
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user has permission to manage auctions
+    if (!canPerformAction(user.role, 'manage', 'auction')) {
+      return NextResponse.json({
+        error: `Your role (${user.role}) does not have permission to restart auctions.`
+      }, { status: 403 });
+    }
+
     await connectToDatabase();
     const { tournamentId } = await request.json();
 
@@ -25,6 +40,16 @@ export async function POST(request: NextRequest) {
         { error: 'Tournament not found' },
         { status: 404 }
       );
+    }
+
+    // Check if user has access to this tournament
+    const hasAccess = user.role === 'Admin' ||
+                     (user.role === 'Tournament' && (tournament as any).createdBy === user.userId);
+
+    if (!hasAccess) {
+      return NextResponse.json({
+        error: 'You do not have permission to manage this tournament.'
+      }, { status: 403 });
     }
 
     // Check if tournament is stopped

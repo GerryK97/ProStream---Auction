@@ -50,6 +50,7 @@ type AuctionAction =
   | { type: 'AUCTION_RESET'; data: AuctionResetEvent }
   | { type: 'AUCTION_UNDO'; data: AuctionUndoEvent }
   | { type: 'STATE_UPDATE'; data: AuctionStateUpdateEvent }
+  | { type: 'SET_ERROR'; error: string }
   | { type: 'CLEAR_ERROR' };
 import { EMPTY_AUCTION_STATE } from '@/lib/auctionDefaults';
 
@@ -165,6 +166,12 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         error: null,
       };
 
+    case 'SET_ERROR':
+      return {
+        ...state,
+        error: action.error,
+      };
+
     case 'CLEAR_ERROR':
       return {
         ...state,
@@ -207,9 +214,15 @@ export function usePusherAuction(
 
   // Fetch initial data if not provided
   const fetchInitialData = useCallback(async () => {
-    if (!tournamentId || initialData) return;
+    // Don't fetch if no tournament ID
+    if (!tournamentId) return;
+
+    // Don't fetch if we already have valid initial data with a tournament
+    if (initialData && initialData.tournament) return;
 
     try {
+      console.log(`[usePusherAuction] Fetching initial data for tournament: ${tournamentId}`);
+
       // Fetch all data in parallel for 75% faster load time
       const startTime = Date.now();
       const headers = getAuthHeaders();
@@ -229,6 +242,11 @@ export function usePusherAuction(
 
       console.log(`[usePusherAuction] Parallel data fetch completed in ${Date.now() - startTime}ms`);
 
+      // Add validation logging
+      if (!tournamentData) {
+        console.error(`[usePusherAuction] Failed to fetch tournament data for ${tournamentId}`);
+      }
+
       // Batch all initial data updates into a single state change
       dispatch({
         type: 'SET_INITIAL_DATA',
@@ -241,9 +259,12 @@ export function usePusherAuction(
       });
     } catch (err) {
       console.error('Error fetching initial auction data:', err);
-      // Error will be set in reducer's SET_INITIAL_DATA action
+      dispatch({
+        type: 'SET_ERROR',
+        error: 'Failed to load tournament data. Please try again.'
+      });
     }
-  }, [tournamentId, initialData]);
+  }, [tournamentId]);
 
   useEffect(() => {
     // Don't connect if no tournament ID
@@ -365,7 +386,8 @@ export function usePusherAuction(
       console.error('[Pusher] Error setting up connection:', err);
       setIsConnected(false);
     }
-  }, [tournamentId, fetchInitialData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tournamentId]);
 
   return {
     tournament: state.tournament,

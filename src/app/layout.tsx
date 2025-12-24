@@ -3,6 +3,7 @@ import './globals.css';
 import { AuctionProvider } from '@/hooks/useAuction';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { TournamentProvider } from '@/contexts/TournamentContext';
 
 export const metadata: Metadata = {
   title: 'ProStream Auction',
@@ -26,7 +27,9 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <ThemeProvider>
           <AuthProvider>
-            <AuctionProvider>{children}</AuctionProvider>
+            <TournamentProvider>
+              <AuctionProvider>{children}</AuctionProvider>
+            </TournamentProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

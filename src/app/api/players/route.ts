@@ -27,7 +27,18 @@ export async function GET(request: NextRequest) {
       await connectToDatabase();
 
       // Check if user has access to this tournament
-      const hasAccess = user.role === 'Admin' || user.assignedTournaments.includes(tournamentId);
+      // Admin: access to all tournaments
+      // Tournament role: access to tournaments they created
+      // Other roles: access to assigned tournaments
+      let hasAccess = user.role === 'Admin' || user.assignedTournaments.includes(tournamentId);
+
+      // Also check if user created this tournament (for Tournament role)
+      if (!hasAccess && user.role === 'Tournament') {
+        const { TournamentModel } = await import('@/models/Tournament');
+        const tournament = await TournamentModel.findById(tournamentId).select('createdBy').lean() as { createdBy: string } | null;
+        hasAccess = tournament?.createdBy === user.userId;
+      }
+
       if (!hasAccess) {
         return NextResponse.json({ error: 'Access denied to this tournament' }, { status: 403 });
       }
