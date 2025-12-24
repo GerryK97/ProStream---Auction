@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       // Also check if user created this tournament (for Tournament role)
       if (!hasAccess && user.role === 'Tournament') {
         const { TournamentModel } = await import('@/models/Tournament');
-        const tournament = await TournamentModel.findById(tournamentId).select('createdBy').lean();
+        const tournament = await TournamentModel.findById(tournamentId).select('createdBy').lean() as { createdBy: string } | null;
         hasAccess = tournament?.createdBy === user.userId;
       }
 
