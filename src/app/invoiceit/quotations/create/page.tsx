@@ -8,7 +8,7 @@ import QuotationForm from '@/components/invoiceit/QuotationForm';
 export default function CreateQuotationPage() {
   return (
     <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'MasterManager']}>
-      <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--surface-primary)' }}>
+      <div className="p-6">
         <div className="mx-auto max-w-5xl">
           <div className="mb-6">
             <Link

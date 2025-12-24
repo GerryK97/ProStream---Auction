@@ -8,7 +8,7 @@ import InvoiceForm from '@/components/invoiceit/InvoiceForm';
 export default function CreateInvoicePage() {
   return (
     <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'MasterManager']}>
-      <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--surface-primary)' }}>
+      <div className="p-6">
         <div className="mx-auto max-w-5xl">
           <div className="mb-6">
             <Link

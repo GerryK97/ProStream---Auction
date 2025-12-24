@@ -6,7 +6,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 export default function ReportsPage() {
   return (
     <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'MasterManager']}>
-      <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--surface-primary)' }}>
+      <div className="p-6">
         <div className="mx-auto max-w-7xl">
           <div className="mb-6">
             <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>

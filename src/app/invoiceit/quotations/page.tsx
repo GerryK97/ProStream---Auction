@@ -7,7 +7,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 export default function QuotationsListPage() {
   return (
     <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'MasterManager']}>
-      <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--surface-primary)' }}>
+      <div className="p-6">
         <div className="mx-auto max-w-7xl">
           <div className="flex items-center justify-between mb-6">
             <div>
