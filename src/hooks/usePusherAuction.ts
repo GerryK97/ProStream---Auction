@@ -50,6 +50,7 @@ type AuctionAction =
   | { type: 'AUCTION_RESET'; data: AuctionResetEvent }
   | { type: 'AUCTION_UNDO'; data: AuctionUndoEvent }
   | { type: 'STATE_UPDATE'; data: AuctionStateUpdateEvent }
+  | { type: 'SET_ERROR'; error: string }
   | { type: 'CLEAR_ERROR' };
 import { EMPTY_AUCTION_STATE } from '@/lib/auctionDefaults';
 
@@ -163,6 +164,12 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         players: action.data.players,
         teams: action.data.teams,
         error: null,
+      };
+
+    case 'SET_ERROR':
+      return {
+        ...state,
+        error: action.error,
       };
 
     case 'CLEAR_ERROR':
