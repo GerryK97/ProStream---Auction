@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import InvoiceForm from '@/components/invoiceit/InvoiceForm';
 
 export default function CreateInvoicePage() {
   return (
@@ -32,9 +33,7 @@ export default function CreateInvoicePage() {
               borderColor: 'var(--border-primary)'
             }}
           >
-            <p className="text-center py-12" style={{ color: 'var(--text-secondary)' }}>
-              Invoice creation form will be implemented in Phase 4
-            </p>
+            <InvoiceForm mode="create" />
           </div>
         </div>
       </div>
