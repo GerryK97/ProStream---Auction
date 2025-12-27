@@ -9,9 +9,10 @@ import { canPerformAction } from '@/lib/permissions';
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -22,7 +23,7 @@ export async function POST(
     }
 
     // Check ownership
-    const existing = await quotationDB.getById(params.id);
+    const existing = await quotationDB.getById(id);
     if (!existing) {
       return NextResponse.json({ error: 'Quotation not found' }, { status: 404 });
     }
@@ -45,7 +46,7 @@ export async function POST(
       );
     }
 
-    const invoice = await quotationDB.convertToInvoice(params.id, user.userId);
+    const invoice = await quotationDB.convertToInvoice(id, user.userId);
 
     return NextResponse.json({
       invoice,

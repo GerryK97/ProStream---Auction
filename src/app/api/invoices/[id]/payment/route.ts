@@ -9,9 +9,10 @@ import { canPerformAction } from '@/lib/permissions';
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -22,7 +23,7 @@ export async function POST(
     }
 
     // Check ownership
-    const existing = await invoiceDB.getById(params.id);
+    const existing = await invoiceDB.getById(id);
     if (!existing) {
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
     }
@@ -47,7 +48,7 @@ export async function POST(
       );
     }
 
-    const invoice = await invoiceDB.markAsPaid(params.id, body.amount);
+    const invoice = await invoiceDB.markAsPaid(id, body.amount);
 
     if (!invoice) {
       return NextResponse.json({ error: 'Failed to record payment' }, { status: 500 });

@@ -9,9 +9,10 @@ import { canPerformAction } from '@/lib/permissions';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -21,7 +22,7 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const quotation = await quotationDB.getById(params.id);
+    const quotation = await quotationDB.getById(id);
 
     if (!quotation) {
       return NextResponse.json({ error: 'Quotation not found' }, { status: 404 });
@@ -48,9 +49,10 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -61,7 +63,7 @@ export async function PUT(
     }
 
     // Check ownership
-    const existing = await quotationDB.getById(params.id);
+    const existing = await quotationDB.getById(id);
     if (!existing) {
       return NextResponse.json({ error: 'Quotation not found' }, { status: 404 });
     }
@@ -86,7 +88,7 @@ export async function PUT(
       body.total = total;
     }
 
-    const quotation = await quotationDB.update(params.id, body);
+    const quotation = await quotationDB.update(id, body);
 
     if (!quotation) {
       return NextResponse.json({ error: 'Quotation not found' }, { status: 404 });
@@ -108,9 +110,10 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -121,7 +124,7 @@ export async function DELETE(
     }
 
     // Check ownership
-    const existing = await quotationDB.getById(params.id);
+    const existing = await quotationDB.getById(id);
     if (!existing) {
       return NextResponse.json({ error: 'Quotation not found' }, { status: 404 });
     }
@@ -130,7 +133,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const success = await quotationDB.delete(params.id);
+    const success = await quotationDB.delete(id);
 
     if (!success) {
       return NextResponse.json({ error: 'Failed to delete quotation' }, { status: 500 });

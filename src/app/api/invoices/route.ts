@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { invoiceDB } from '@/lib/db-invoicing';
+import { invoiceDB, customerDB } from '@/lib/db-invoicing';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
 
@@ -35,7 +35,18 @@ export async function GET(request: NextRequest) {
       toDate,
     });
 
-    return NextResponse.json({ invoices });
+    // Populate customer names
+    const invoicesWithCustomers = await Promise.all(
+      invoices.map(async (invoice) => {
+        const customer = await customerDB.getById(invoice.customerId);
+        return {
+          ...invoice,
+          customerName: customer?.name || 'Unknown Customer',
+        };
+      })
+    );
+
+    return NextResponse.json({ invoices: invoicesWithCustomers });
   } catch (error: any) {
     console.error('Get invoices error:', error);
     return NextResponse.json(

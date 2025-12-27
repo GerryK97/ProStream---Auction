@@ -1,10 +1,151 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import StatusBadge from '@/components/invoiceit/StatusBadge';
+import { getAuthHeaders } from '@/lib/api-client';
+
+interface Invoice {
+  _id: string;
+  invoiceNumber: string;
+  customerId: string;
+  customerName?: string;
+  issueDate: Date;
+  dueDate: Date;
+  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+  total: number;
+  amountPaid: number;
+  balance: number;
+}
+
+interface Quotation {
+  _id: string;
+  quotationNumber: string;
+  customerId: string;
+  customerName?: string;
+  issueDate: Date;
+  validUntil: Date;
+  status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired';
+  total: number;
+}
+
+interface DashboardStats {
+  totalInvoices: number;
+  totalPaid: number;
+  totalOutstanding: number;
+  totalQuotations: number;
+  recentInvoices: Invoice[];
+  recentQuotations: Quotation[];
+}
 
 export default function InvoiceItPage() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch invoices and quotations in parallel
+      const [invoicesResponse, quotationsResponse] = await Promise.all([
+        fetch('/api/invoices', { headers: getAuthHeaders() }),
+        fetch('/api/quotations', { headers: getAuthHeaders() }).catch(() => null),
+      ]);
+
+      if (!invoicesResponse.ok) {
+        throw new Error('Failed to fetch invoices');
+      }
+
+      const invoicesData = await invoicesResponse.json();
+      const invoices: Invoice[] = invoicesData.invoices || [];
+
+      // Quotations might not be implemented yet, so handle gracefully
+      let quotations: Quotation[] = [];
+      if (quotationsResponse && quotationsResponse.ok) {
+        const quotationsData = await quotationsResponse.json();
+        quotations = quotationsData.quotations || [];
+      }
+
+      // Calculate statistics
+      const totalInvoices = invoices.length;
+      const totalPaid = invoices.reduce((sum, inv) => sum + inv.amountPaid, 0);
+      const totalOutstanding = invoices.reduce((sum, inv) => sum + inv.balance, 0);
+      const totalQuotations = quotations.length;
+
+      // Get recent invoices (last 5)
+      const recentInvoices = [...invoices]
+        .sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime())
+        .slice(0, 5);
+
+      // Get recent quotations (last 5)
+      const recentQuotations = [...quotations]
+        .sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime())
+        .slice(0, 5);
+
+      setStats({
+        totalInvoices,
+        totalPaid,
+        totalOutstanding,
+        totalQuotations,
+        recentInvoices,
+        recentQuotations,
+      });
+    } catch (err: any) {
+      setError(err.message || 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return `LKR ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const formatDate = (date: Date | string) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  if (loading) {
+    return (
+      <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'MasterManager']}>
+        <div className="p-6">
+          <div className="mx-auto max-w-7xl">
+            <div className="rounded-2xl p-12 border text-center" style={{ backgroundColor: 'var(--surface-card)', borderColor: 'var(--border-primary)' }}>
+              <p className="text-lg" style={{ color: 'var(--text-secondary)' }}>Loading dashboard...</p>
+            </div>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
+  if (error || !stats) {
+    return (
+      <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'MasterManager']}>
+        <div className="p-6">
+          <div className="mx-auto max-w-7xl">
+            <div className="rounded-2xl p-12 border text-center" style={{ backgroundColor: 'var(--surface-card)', borderColor: 'var(--border-primary)' }}>
+              <p className="text-lg mb-4" style={{ color: 'var(--status-error)' }}>{error || 'Failed to load dashboard'}</p>
+              <button onClick={fetchDashboardData} className="px-6 py-2 rounded-xl font-medium text-white" style={{ backgroundColor: 'var(--brand-primary)' }}>
+                Try Again
+              </button>
+            </div>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
   return (
     <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'MasterManager']}>
       <div className="p-6">
@@ -33,7 +174,7 @@ export default function InvoiceItPage() {
               <div className="flex items-center gap-4 mb-3">
                 <div
                   className="h-12 w-12 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: 'rgba(79, 70, 229, 0.1)' }}
+                  style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}
                 >
                   <svg
                     className="h-6 w-6"
@@ -55,7 +196,7 @@ export default function InvoiceItPage() {
                 </h3>
               </div>
               <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                Generate a new invoice with automatic calculations and PDF export
+                Generate a new invoice for your customers with line items and taxes
               </p>
             </Link>
 
@@ -147,10 +288,10 @@ export default function InvoiceItPage() {
                 Total Invoices
               </p>
               <p className="text-3xl font-bold mb-1" style={{ color: 'var(--brand-primary)' }}>
-                0
+                {stats.totalInvoices}
               </p>
               <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                No invoices yet
+                {stats.totalInvoices === 0 ? 'No invoices yet' : 'Invoices created'}
               </p>
             </div>
 
@@ -165,7 +306,7 @@ export default function InvoiceItPage() {
                 Outstanding
               </p>
               <p className="text-3xl font-bold mb-1" style={{ color: 'var(--status-warning)' }}>
-                LKR 0
+                {formatCurrency(stats.totalOutstanding)}
               </p>
               <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                 Awaiting payment
@@ -183,7 +324,7 @@ export default function InvoiceItPage() {
                 Paid
               </p>
               <p className="text-3xl font-bold mb-1" style={{ color: 'var(--brand-secondary)' }}>
-                LKR 0
+                {formatCurrency(stats.totalPaid)}
               </p>
               <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                 Total received
@@ -201,10 +342,10 @@ export default function InvoiceItPage() {
                 Quotations
               </p>
               <p className="text-3xl font-bold mb-1" style={{ color: 'var(--accent-color)' }}>
-                0
+                {stats.totalQuotations}
               </p>
               <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                Pending acceptance
+                {stats.totalQuotations === 0 ? 'No quotations yet' : 'Pending acceptance'}
               </p>
             </div>
           </div>
@@ -230,9 +371,40 @@ export default function InvoiceItPage() {
                   View All
                 </Link>
               </div>
-              <p className="text-center py-8" style={{ color: 'var(--text-tertiary)' }}>
-                No invoices created yet. Create your first invoice to get started.
-              </p>
+              {stats.recentInvoices.length === 0 ? (
+                <p className="text-center py-8" style={{ color: 'var(--text-tertiary)' }}>
+                  No invoices created yet. Create your first invoice to get started.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {stats.recentInvoices.map((invoice) => (
+                    <div
+                      key={invoice._id}
+                      className="flex items-center justify-between p-3 rounded-lg"
+                      style={{ backgroundColor: 'var(--surface-secondary)' }}
+                    >
+                      <div>
+                        <Link
+                          href={`/invoiceit/invoices/${invoice._id}`}
+                          className="font-medium hover:underline"
+                          style={{ color: 'var(--brand-primary)' }}
+                        >
+                          {invoice.invoiceNumber}
+                        </Link>
+                        <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                          {invoice.customerName || 'Unknown'} • {formatDate(invoice.issueDate)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                          {formatCurrency(invoice.total)}
+                        </p>
+                        <StatusBadge status={invoice.status} type="invoice" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div
@@ -249,14 +421,45 @@ export default function InvoiceItPage() {
                 <Link
                   href="/invoiceit/quotations"
                   className="text-sm font-medium hover:underline"
-                  style={{ color: 'var(--brand-secondary)' }}
+                  style={{ color: 'var(--brand-primary)' }}
                 >
                   View All
                 </Link>
               </div>
-              <p className="text-center py-8" style={{ color: 'var(--text-tertiary)' }}>
-                No quotations created yet. Create your first quotation to get started.
-              </p>
+              {stats.recentQuotations.length === 0 ? (
+                <p className="text-center py-8" style={{ color: 'var(--text-tertiary)' }}>
+                  No quotations created yet. Create your first quotation to get started.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {stats.recentQuotations.map((quotation) => (
+                    <div
+                      key={quotation._id}
+                      className="flex items-center justify-between p-3 rounded-lg"
+                      style={{ backgroundColor: 'var(--surface-secondary)' }}
+                    >
+                      <div>
+                        <Link
+                          href={`/invoiceit/quotations/${quotation._id}`}
+                          className="font-medium hover:underline"
+                          style={{ color: 'var(--brand-primary)' }}
+                        >
+                          {quotation.quotationNumber}
+                        </Link>
+                        <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                          {quotation.customerName || 'Unknown'} • {formatDate(quotation.issueDate)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                          {formatCurrency(quotation.total)}
+                        </p>
+                        <StatusBadge status={quotation.status} type="quotation" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

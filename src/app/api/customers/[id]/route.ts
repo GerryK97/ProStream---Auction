@@ -9,9 +9,10 @@ import { canPerformAction } from '@/lib/permissions';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -21,8 +22,7 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const customer = await customerDB.getById(params.id);
-
+    const customer = await customerDB.getById(id);
     if (!customer) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
     }
@@ -48,9 +48,10 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -60,24 +61,22 @@ export async function PUT(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Check ownership
-    const existing = await customerDB.getById(params.id);
-    if (!existing) {
-      return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
-    }
-
-    if (existing.createdBy !== user.userId && user.role !== 'Admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    const body = await request.json();
-    const customer = await customerDB.update(params.id, body);
-
+    const customer = await customerDB.getById(id);
     if (!customer) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ customer });
+    // Check ownership
+    if (customer.createdBy !== user.userId && user.role !== 'Admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const body = await request.json();
+
+    // Update customer
+    const updatedCustomer = await customerDB.update(id, body);
+
+    return NextResponse.json({ customer: updatedCustomer });
   } catch (error: any) {
     console.error('Update customer error:', error);
     return NextResponse.json(
@@ -93,9 +92,10 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -105,23 +105,19 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Check ownership
-    const existing = await customerDB.getById(params.id);
-    if (!existing) {
+    const customer = await customerDB.getById(id);
+    if (!customer) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
     }
 
-    if (existing.createdBy !== user.userId && user.role !== 'Admin') {
+    // Check ownership
+    if (customer.createdBy !== user.userId && user.role !== 'Admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const success = await customerDB.delete(params.id);
+    await customerDB.delete(id);
 
-    if (!success) {
-      return NextResponse.json({ error: 'Failed to delete customer' }, { status: 500 });
-    }
-
-    return NextResponse.json({ message: 'Customer deleted successfully' });
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Delete customer error:', error);
     return NextResponse.json(

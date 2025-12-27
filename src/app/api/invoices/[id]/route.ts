@@ -9,9 +9,10 @@ import { canPerformAction } from '@/lib/permissions';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -21,8 +22,7 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const invoice = await invoiceDB.getById(params.id);
-
+    const invoice = await invoiceDB.getById(id);
     if (!invoice) {
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
     }
@@ -48,9 +48,10 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -60,41 +61,22 @@ export async function PUT(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Check ownership
-    const existing = await invoiceDB.getById(params.id);
-    if (!existing) {
+    const invoice = await invoiceDB.getById(id);
+    if (!invoice) {
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
     }
 
-    if (existing.createdBy !== user.userId && user.role !== 'Admin') {
+    // Check ownership
+    if (invoice.createdBy !== user.userId && user.role !== 'Admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const body = await request.json();
 
-    // Recalculate totals if items changed
-    if (body.items) {
-      const subtotal = body.items.reduce(
-        (sum: number, item: any) => sum + item.total,
-        0
-      );
-      const tax = subtotal * (body.taxRate || existing.taxRate) / 100;
-      const total = subtotal + tax - (body.discount || existing.discount);
-      const balance = total - (body.amountPaid || existing.amountPaid);
+    // Update invoice
+    const updatedInvoice = await invoiceDB.update(id, body);
 
-      body.subtotal = subtotal;
-      body.tax = tax;
-      body.total = total;
-      body.balance = balance;
-    }
-
-    const invoice = await invoiceDB.update(params.id, body);
-
-    if (!invoice) {
-      return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
-    }
-
-    return NextResponse.json({ invoice });
+    return NextResponse.json({ invoice: updatedInvoice });
   } catch (error: any) {
     console.error('Update invoice error:', error);
     return NextResponse.json(
@@ -110,9 +92,10 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -122,23 +105,19 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Check ownership
-    const existing = await invoiceDB.getById(params.id);
-    if (!existing) {
+    const invoice = await invoiceDB.getById(id);
+    if (!invoice) {
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
     }
 
-    if (existing.createdBy !== user.userId && user.role !== 'Admin') {
+    // Check ownership
+    if (invoice.createdBy !== user.userId && user.role !== 'Admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const success = await invoiceDB.delete(params.id);
+    await invoiceDB.delete(id);
 
-    if (!success) {
-      return NextResponse.json({ error: 'Failed to delete invoice' }, { status: 500 });
-    }
-
-    return NextResponse.json({ message: 'Invoice deleted successfully' });
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Delete invoice error:', error);
     return NextResponse.json(
