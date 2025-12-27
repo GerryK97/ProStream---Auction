@@ -118,7 +118,7 @@ export default function ReportsPage() {
     });
   };
 
-  const getStatusCount = (status: keyof typeof stats.statusBreakdown) => {
+  const getStatusCount = (status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled') => {
     return stats?.statusBreakdown[status] || 0;
   };
 
