@@ -49,18 +49,18 @@ export async function GET(request: NextRequest) {
     const query: any = { status: { $in: ['Live', 'Stopped'] } };
 
     // Admin sees ANY active tournament
-    if (user.role === 'Admin') {
+    if (user!.role === 'Admin') {
       // Query already set to find any active tournament
     }
     // Tournament role sees ONLY active tournaments they created
-    else if (user.role === 'Tournament') {
-      query.createdBy = user.userId;
+    else if (user!.role === 'Tournament') {
+      query.createdBy = user!.userId;
     }
     // Other roles see active tournaments they created OR assigned to them
     else {
       query.$or = [
-        { createdBy: user.userId },
-        { _id: { $in: user.assignedTournaments || [] } },
+        { createdBy: user!.userId },
+        { _id: { $in: user!.assignedTournaments || [] } },
       ];
     }
 
