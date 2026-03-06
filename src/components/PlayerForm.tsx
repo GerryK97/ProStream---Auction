@@ -26,6 +26,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
     const [currentClub, setCurrentClub] = useState(editPlayer?.currentClub ?? '');
     const [photoURL, setPhotoURL] = useState(editPlayer?.photoURL ?? '');
     const [playerClass, setPlayerClass] = useState(editPlayer?.playerClass ?? '');
+    const [age, setAge] = useState<string>(editPlayer?.age !== undefined ? String(editPlayer.age) : '');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
 
@@ -48,13 +49,13 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                 res = await fetch(`/api/players/${editPlayer._id}`, {
                     method: 'PUT',
                     headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, position, currentClub, photoURL: photoURL || undefined, playerClass: playerClass || undefined }),
+                    body: JSON.stringify({ name, position, currentClub, photoURL: photoURL || undefined, playerClass: playerClass || undefined, age: age ? Number(age) : undefined }),
                 });
             } else {
                 res = await fetch('/api/players', {
                     method: 'POST',
                     headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, position, currentClub, photoURL: photoURL || undefined, playerClass: playerClass || undefined, tournamentId }),
+                    body: JSON.stringify({ name, position, currentClub, photoURL: photoURL || undefined, playerClass: playerClass || undefined, age: age ? Number(age) : undefined, tournamentId }),
                 });
             }
             if (!res.ok) {
@@ -112,6 +113,11 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
             <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Current Club</label>
                 <input type="text" value={currentClub} onChange={(e) => setCurrentClub(e.target.value)} required placeholder="e.g., Mumbai Indians" className="w-full rounded-md p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Age</label>
+                <input type="number" min="1" max="99" value={age} onChange={(e) => setAge(e.target.value)} placeholder="e.g., 25" className="w-full rounded-md p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
             </div>
 
             {useClasses && selectedTournament && (

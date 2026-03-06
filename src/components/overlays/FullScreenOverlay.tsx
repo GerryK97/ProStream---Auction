@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import OverlayWrapper from './OverlayWrapper';
-import PremiumPlayerCardOverlay from './PremiumPlayerCardOverlay';
 import SoldPlayersSummaryOverlay from './SoldPlayersSummaryOverlay';
 import TeamSummaryOverlay from './TeamSummaryOverlay';
 import RestingTimeOverlay from './RestingTimeOverlay';
@@ -96,7 +95,7 @@ function TickerStrip({
         }}
       />
 
-      {/* Scrolling text clip zone — starts after the pill */}
+      {/* Scrolling text clip zone */}
       <div
         style={{
           position: 'absolute',
@@ -174,227 +173,272 @@ function TickerStrip({
   );
 }
 
-// ─── Base Price & Current Bid panel ───────────────────────────────────────────
+// ─── Player Auction Panel (new standard mode) ──────────────────────────────────
 
-function BidInfoPanel({
-  tournament,
+function PlayerAuctionPanel({
   currentPlayer,
+  tournament,
   auctionState,
 }: {
-  tournament: Tournament | null;
   currentPlayer: Player | undefined;
+  tournament: Tournament | null;
   auctionState: AuctionState;
 }) {
-  if (!currentPlayer || tournament?.status !== 'Live') return null;
+  const hasPlayer = !!currentPlayer;
+  const basePrice = hasPlayer ? getClassBasePrice(tournament, currentPlayer!) : 0;
+  const currentBid = auctionState.currentBid > 0 ? auctionState.currentBid : (hasPlayer ? basePrice : 0);
+  const isSold = auctionState.currentAuctionStatus === 'Sold';
+  const isBidding = auctionState.currentAuctionStatus === 'Bidding';
 
-  const basePrice = getClassBasePrice(tournament, currentPlayer);
-  const currentBid = auctionState.currentBid > 0 ? auctionState.currentBid : basePrice;
-
-  const pillStyle: React.CSSProperties = {
-    position: 'absolute',
-    width:        444,
-    height:       119,
-    top:          864,
-    borderRadius: 16,
-    gap:          2,
-    background: 'linear-gradient(135deg, #0f0c29, #302b63)',
-    border: '1.5px solid rgba(255,255,255,0.15)',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-  };
+  const classConfig = tournament?.playerClasses?.find(c => c.name === currentPlayer?.playerClass);
+  const classColor = classConfig?.color ?? '#6B7280';
 
   const labelStyle: React.CSSProperties = {
-    color: '#FFC919',
-    fontSize: 18,
+    position: 'absolute',
+    fontSize: 26,
+    color: 'rgba(255,255,255,0.38)',
     fontFamily: '"Graduate", cursive',
-    letterSpacing: 5,
+    letterSpacing: 6,
     textTransform: 'uppercase',
     lineHeight: 1,
   };
 
   const valueStyle: React.CSSProperties = {
-    color: '#ffffff',
-    fontSize:      62,
     fontFamily: '"Inconsolata", monospace',
-    fontWeight: 700,
-    lineHeight: 1,
+    fontSize: 50,
+    color: '#e2e8f0',
+    fontWeight: 400,
+    lineHeight: '70px',
     letterSpacing: 4,
   };
 
   return (
     <>
-      {/* Base Price */}
-      <div style={{ ...pillStyle, left: 448 }}>
-        <div style={labelStyle}>BASE PRICE</div>
-        <div style={valueStyle}>{basePrice.toLocaleString('en-IN')}</div>
-      </div>
-
-      {/* Current Bid */}
-      <div style={{ ...pillStyle, left: 1068 }}>
-        <div style={labelStyle}>CURRENT BID</div>
-        <div style={valueStyle}>{currentBid.toLocaleString('en-IN')}</div>
-      </div>
-    </>
-  );
-}
-
-// ─── Team Card ────────────────────────────────────────────────────────────────
-
-function TeamCard({ team, tournament }: { team: Team; tournament: Tournament | null }) {
-  const spent = (team.initialBudget ?? 0) - (team.currentBalance ?? 0);
-  const balance = team.currentBalance ?? 0;
-  const initial = team.initialBudget ?? 1;
-  const barPct = Math.min(100, Math.max(0, (spent / initial) * 100));
-  const playersBought = team.playersPurchased?.length ?? 0;
-  const squadSize = tournament?.squadSize ?? '—';
-  const initials = (team.shortCode || team.name).slice(0, 2).toUpperCase();
-
-  return (
-    <div style={{
-      position: 'relative',
-      width: 362,
-      height: 136,
-      background: 'linear-gradient(135deg, #0f0c29, #302b63)',
-      borderRadius: 20,
-      border: '1.5px solid rgba(255,255,255,0.15)',
-      flexShrink: 0,
-    }}>
-      {/* Logo circle */}
-      <div style={{
-        position: 'absolute',
-        left: 16,
-        top: 6,
-        width: 124,
-        height: 124,
-        borderRadius: '50%',
-        border: '1.5px solid rgba(255,255,255,0.2)',
-        background: 'rgba(255,255,255,0.08)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-      }}>
-        {team.logoURL ? (
-          <img src={team.logoURL} alt={team.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      {/* ── Left photo panel ── */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 72,
+          top: 73,
+          width: 717,
+          height: 929,
+          borderRadius: 16,
+          overflow: 'hidden',
+          background: '#1a1f2e',
+        }}
+      >
+        {hasPlayer && currentPlayer!.photoURL ? (
+          <img
+            src={currentPlayer!.photoURL}
+            alt={currentPlayer!.name}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
+          />
         ) : (
-          <span style={{ color: '#FFC919', fontSize: 36, fontFamily: '"Graduate", cursive', fontWeight: 700 }}>
-            {initials}
-          </span>
+          /* No-player placeholder */
+          <div style={{
+            width: '100%', height: '100%',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            gap: 24,
+          }}>
+            <svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+            </svg>
+            <span style={{ color: 'rgba(255,255,255,0.18)', fontSize: 22, fontFamily: '"Inconsolata", monospace', letterSpacing: 3, textTransform: 'uppercase' }}>
+              Waiting for player…
+            </span>
+          </div>
+        )}
+
+        {/* Bottom gradient overlay */}
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, height: 250,
+          background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, transparent 100%)',
+          pointerEvents: 'none',
+        }} />
+
+        {/* Player class badge — bottom left */}
+        {hasPlayer && currentPlayer!.playerClass && (
+          <div style={{
+            position: 'absolute',
+            bottom: 32,
+            left: 28,
+            background: classColor,
+            color: '#fff',
+            fontSize: 22,
+            fontFamily: '"Graduate", cursive',
+            letterSpacing: 3,
+            padding: '8px 20px',
+            borderRadius: 8,
+            fontWeight: 700,
+            boxShadow: `0 0 24px ${classColor}88`,
+            textTransform: 'uppercase',
+          }}>
+            {currentPlayer!.playerClass}
+          </div>
+        )}
+
+        {/* SOLD stamp */}
+        {isSold && (
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.35)',
+            pointerEvents: 'none',
+          }}>
+            <div
+              className="animate-stamp-seal"
+              style={{
+                border: '7px solid #DC2626',
+                borderRadius: 14,
+                padding: '10px 30px',
+                background: 'rgba(220, 38, 38, 0.08)',
+                boxShadow: '0 0 0 3px rgba(220,38,38,0.25), inset 0 0 24px rgba(220,38,38,0.1)',
+              }}
+            >
+              <span style={{
+                fontFamily: "'Bebas Neue', cursive",
+                fontSize: 120,
+                color: '#DC2626',
+                letterSpacing: 14,
+                lineHeight: 1,
+                display: 'block',
+                textShadow: '0 0 30px rgba(220,38,38,0.6)',
+              }}>
+                SOLD
+              </span>
+            </div>
+          </div>
         )}
       </div>
 
-      {/* Team name */}
+      {/* ── Gold vertical accent bar ── */}
       <div style={{
         position: 'absolute',
-        left: 152,
-        top: 8,
-        right: 8,
-        color: '#FFC919',
-        fontSize: 20,
-        fontFamily: '"Graduate", cursive',
-        letterSpacing: 2,
-        whiteSpace: 'nowrap',
+        left: 855,
+        top: 73,
+        width: 5,
+        height: 929,
+        background: 'linear-gradient(180deg, #FFC919 0%, rgba(255,201,25,0.08) 100%)',
+        borderRadius: 3,
+      }} />
+
+      {/* ── Right info panel ── */}
+
+      {/* CURRENT BID label */}
+      <div style={{ ...labelStyle, left: 880, top: 98, color: '#FFC919', fontSize: 22, letterSpacing: 8 }}>
+        Current Bid
+      </div>
+
+      {/* Bid amount */}
+      <div
+        className={isBidding ? 'fs-bid-active' : ''}
+        style={{
+          position: 'absolute',
+          left: 880,
+          top: 132,
+          fontFamily: '"Inconsolata", monospace',
+          fontSize: 88,
+          color: '#ffffff',
+          fontWeight: 700,
+          lineHeight: 1,
+          letterSpacing: 4,
+        }}
+      >
+        {hasPlayer ? currentBid.toLocaleString('en-IN') : '—'}
+      </div>
+
+      {/* Gold separator */}
+      <div style={{
+        position: 'absolute',
+        left: 880,
+        top: 238,
+        width: 960,
+        height: 3,
+        background: 'linear-gradient(90deg, #FFC919 0%, rgba(255,201,25,0.08) 100%)',
+        borderRadius: 2,
+      }} />
+
+      {/* Player Name */}
+      <div style={{
+        position: 'absolute',
+        left: 880,
+        top: 258,
+        width: 960,
+        fontFamily: '"Inconsolata", monospace',
+        fontSize: 64,
+        color: '#ffffff',
+        fontWeight: 700,
+        lineHeight: '80px',
+        letterSpacing: 4,
         overflow: 'hidden',
         textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
       }}>
-        {team.name}
+        {hasPlayer ? currentPlayer!.name : '—'}
       </div>
 
-      {/* Budget bar track */}
-      <div style={{
-        position: 'absolute',
-        left: 152,
-        top: 38,
-        width: 192,
-        height: 9,
-        background: 'rgba(255,255,255,0.12)',
-        borderRadius: 4.5,
-      }}>
+      {/* AGE row */}
+      <div style={{ ...labelStyle, left: 880, top: 362 }}>Age</div>
+      <div style={{ position: 'absolute', left: 880, top: 396, ...valueStyle }}>
+        {hasPlayer ? (currentPlayer!.age ?? '—') : '—'}
+      </div>
+
+      {/* Thin divider */}
+      <div style={{ position: 'absolute', left: 880, top: 476, width: 960, height: 1, background: 'rgba(255,255,255,0.07)' }} />
+
+      {/* POSITION row */}
+      <div style={{ ...labelStyle, left: 880, top: 498 }}>Position</div>
+      <div style={{ position: 'absolute', left: 880, top: 532, ...valueStyle }}>
+        {hasPlayer ? (currentPlayer!.position || '—') : '—'}
+      </div>
+
+      {/* Thin divider */}
+      <div style={{ position: 'absolute', left: 880, top: 622, width: 960, height: 1, background: 'rgba(255,255,255,0.07)' }} />
+
+      {/* CLASS row */}
+      <div style={{ ...labelStyle, left: 880, top: 644 }}>Class</div>
+      {hasPlayer && currentPlayer!.playerClass ? (
         <div style={{
-          width: `${barPct}%`,
-          height: '100%',
-          background: barPct > 80 ? '#ff4444' : '#00C54C',
-          borderRadius: 4.5,
-          transition: 'width 0.4s ease',
-        }} />
+          position: 'absolute',
+          left: 880,
+          top: 678,
+          background: classColor,
+          color: '#fff',
+          fontSize: 34,
+          fontFamily: '"Inconsolata", monospace',
+          fontWeight: 700,
+          padding: '6px 24px',
+          borderRadius: 10,
+          letterSpacing: 4,
+          boxShadow: `0 0 20px ${classColor}66`,
+          textTransform: 'uppercase',
+        }}>
+          {currentPlayer!.playerClass}
+        </div>
+      ) : (
+        <div style={{ position: 'absolute', left: 880, top: 678, ...valueStyle }}>—</div>
+      )}
+
+      {/* Thin divider */}
+      <div style={{ position: 'absolute', left: 880, top: 778, width: 960, height: 1, background: 'rgba(255,255,255,0.07)' }} />
+
+      {/* BASE PRICE row */}
+      <div style={{ ...labelStyle, left: 880, top: 840 }}>Base Price</div>
+      <div style={{ position: 'absolute', left: 880, top: 874, ...valueStyle, color: '#FFC919' }}>
+        {hasPlayer ? basePrice.toLocaleString('en-IN') : '—'}
       </div>
 
-      {/* Players label */}
-      <div style={{ position: 'absolute', left: 152, top: 54, color: 'rgba(255,255,255,0.45)', fontSize: 9, fontFamily: '"Inconsolata", monospace', letterSpacing: 1 }}>
-        Players
+      {/* Decorative corner bracket — top right */}
+      <div style={{ position: 'absolute', right: 72, top: 73, width: 60, height: 60, opacity: 0.25, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', top: 0, right: 0, width: 60, height: 2, background: '#fff' }} />
+        <div style={{ position: 'absolute', top: 0, right: 0, width: 2, height: 60, background: '#fff' }} />
       </div>
-      <div style={{ position: 'absolute', left: 152, top: 63, color: '#ffffff', fontSize: 16, fontFamily: '"Inconsolata", monospace', letterSpacing: 1.5 }}>
-        {playersBought}/{squadSize}
+      <div style={{ position: 'absolute', right: 72, bottom: 73, width: 60, height: 60, opacity: 0.25, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', bottom: 0, right: 0, width: 60, height: 2, background: '#fff' }} />
+        <div style={{ position: 'absolute', bottom: 0, right: 0, width: 2, height: 60, background: '#fff' }} />
       </div>
-
-      {/* Total Spent */}
-      <div style={{ position: 'absolute', left: 270, top: 54, color: 'rgba(255,255,255,0.45)', fontSize: 9, fontFamily: '"Inconsolata", monospace', letterSpacing: 1 }}>
-        Spent
-      </div>
-      <div style={{ position: 'absolute', left: 255, top: 63, color: '#ffffff', fontSize: 14, fontFamily: '"Inconsolata", monospace', letterSpacing: 1 }}>
-        {spent.toLocaleString('en-IN')}
-      </div>
-
-      {/* Budget Balance */}
-      <div style={{ position: 'absolute', left: 152, top: 106, color: 'rgba(255,255,255,0.45)', fontSize: 9, fontFamily: '"Inconsolata", monospace', letterSpacing: 1 }}>
-        Budget Balance
-      </div>
-      <div style={{ position: 'absolute', left: 152, top: 82, color: '#ffffff', fontSize: 24, fontFamily: '"Inconsolata", monospace', fontWeight: 700, letterSpacing: 2 }}>
-        {balance.toLocaleString('en-IN')}
-      </div>
-    </div>
-  );
-}
-
-// ─── Team Cards Panel (with auto-rotation) ────────────────────────────────────
-
-function TeamCardsPanel({ teams, tournament }: { teams: Team[]; tournament: Tournament | null }) {
-  const PAGE_SIZE = 4;
-  const pages = Math.ceil(teams.length / PAGE_SIZE);
-  const [pageIndex, setPageIndex] = useState(0);
-  const [animClass, setAnimClass] = useState('');
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (teams.length <= PAGE_SIZE) return;
-
-    const interval = setInterval(() => {
-      setAnimClass('fs-team-flip-out');
-      timerRef.current = setTimeout(() => {
-        setPageIndex(p => (p + 1) % pages);
-        setAnimClass('fs-team-flip-in');
-        timerRef.current = setTimeout(() => setAnimClass(''), 400);
-      }, 400);
-    }, 5000);
-
-    return () => {
-      clearInterval(interval);
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [teams.length, pages]);
-
-  const currentPage = teams.slice(pageIndex * PAGE_SIZE, pageIndex * PAGE_SIZE + PAGE_SIZE);
-
-  return (
-    <div
-      className={animClass}
-      style={{
-        position: 'absolute',
-        left: 1490,
-        top: 280,
-        width: 400,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 10,
-        alignItems: 'center',
-      }}
-    >
-      {currentPage.map(team => (
-        <TeamCard key={team._id} team={team} tournament={tournament} />
-      ))}
-    </div>
+    </>
   );
 }
 
@@ -432,23 +476,18 @@ function FullScreenOverlayContent({
   }, []);
 
   return (
-    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)' }}>
+    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative', background: 'linear-gradient(160deg, #0a0a14 0%, #111827 60%, #0d1117 100%)' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Concert+One&family=Coda+Caption:wght@800&family=Graduate&family=Inconsolata:wght@400;700&display=swap');
         @keyframes fullscreenTickerScroll {
           0%   { transform: translateY(-50%) translateX(0); }
           100% { transform: translateY(-50%) translateX(-50%); }
         }
-        @keyframes fsTeamFlipOut {
-          0%   { transform: perspective(600px) rotateY(0deg); opacity: 1; }
-          100% { transform: perspective(600px) rotateY(90deg); opacity: 0; }
+        @keyframes bidActivePulse {
+          0%, 100% { text-shadow: 0 0 0px #FFC919; }
+          50%      { text-shadow: 0 0 40px #FFC919, 0 0 80px rgba(255,201,25,0.5), 0 0 120px rgba(255,201,25,0.2); }
         }
-        @keyframes fsTeamFlipIn {
-          0%   { transform: perspective(600px) rotateY(-90deg); opacity: 0; }
-          100% { transform: perspective(600px) rotateY(0deg); opacity: 1; }
-        }
-        .fs-team-flip-out { animation: fsTeamFlipOut 0.4s ease-in forwards; }
-        .fs-team-flip-in  { animation: fsTeamFlipIn  0.4s ease-out forwards; }
+        .fs-bid-active { animation: bidActivePulse 1.5s ease-in-out infinite; }
       `}</style>
 
       {/* 1920×1080 canvas scaled to fit viewport */}
@@ -461,7 +500,7 @@ function FullScreenOverlayContent({
           left: 0,
           transformOrigin: 'top left',
           transform: `scale(${scale})`,
-          background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)',
+          background: 'linear-gradient(160deg, #0a0a14 0%, #111827 60%, #0d1117 100%)',
         }}
       >
         {/* ── Resting Time mode ── */}
@@ -492,69 +531,13 @@ function FullScreenOverlayContent({
           </div>
         )}
 
-        {/* ── Premium Player Card ── (standard mode, always large) */}
+        {/* ── New Player Auction Panel ── (standard mode) */}
         {effectiveSettings.displayMode === 'standard' && (
-          <div style={{
-            position: 'absolute',
-            left: 713,
-            top: 237,
-            width: 494,
-            height: 605,
-          }}>
-            <PremiumPlayerCardOverlay
-              currentPlayer={currentPlayer}
-              tournament={tournament}
-              teams={teams}
-              cardSize="large"
-              showStatsSection={false}
-            />
-
-            {/* ── SOLD stamp ── */}
-            {auctionState.currentAuctionStatus === 'Sold' && (
-              <div style={{
-                position: 'absolute', inset: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                pointerEvents: 'none',
-              }}>
-                <div
-                  className="animate-stamp-seal"
-                  style={{
-                    border: '7px solid #DC2626',
-                    borderRadius: 14,
-                    padding: '10px 30px',
-                    background: 'rgba(220, 38, 38, 0.08)',
-                    boxShadow: '0 0 0 3px rgba(220,38,38,0.25), inset 0 0 24px rgba(220,38,38,0.1)',
-                  }}
-                >
-                  <span style={{
-                    fontFamily: "'Bebas Neue', cursive",
-                    fontSize: 100,
-                    color: '#DC2626',
-                    letterSpacing: 14,
-                    lineHeight: 1,
-                    display: 'block',
-                    textShadow: '0 0 30px rgba(220,38,38,0.6)',
-                  }}>
-                    SOLD
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Bid Info Panel ── (standard mode only, always large) */}
-        {effectiveSettings.displayMode === 'standard' && (
-          <BidInfoPanel
-            tournament={tournament}
+          <PlayerAuctionPanel
             currentPlayer={currentPlayer}
+            tournament={tournament}
             auctionState={auctionState}
           />
-        )}
-
-        {/* ── Team Cards Panel ── (standard mode only) */}
-        {effectiveSettings.displayMode === 'standard' && (
-          <TeamCardsPanel teams={teams} tournament={tournament} />
         )}
 
         {/* ── Ticker strip ── (always shown) */}
@@ -574,7 +557,7 @@ function FullScreenOverlayContent({
 
 export default function FullScreenOverlay({ tournamentId }: { tournamentId: string }) {
   return (
-    <div className="w-screen h-screen overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)' }}>
+    <div className="w-screen h-screen overflow-hidden" style={{ background: 'linear-gradient(160deg, #0a0a14 0%, #111827 60%, #0d1117 100%)' }}>
       <OverlayWrapper tournamentId={tournamentId}>
         {({ soldPlayers, teams, players, currentPlayer, tournament, auctionState, overlaySettings }) => (
           <FullScreenOverlayContent

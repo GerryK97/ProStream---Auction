@@ -12,6 +12,7 @@ interface ExcelRow {
   'Name'?: string;
   'Position'?: string;
   'Current Club'?: string;
+  'Age'?: string | number;
   'Add (Yes/No)'?: string;
   'Player Class'?: string;
 }
@@ -109,6 +110,7 @@ export async function POST(request: NextRequest) {
       const playerName = row['Name']?.toString().trim();
       const position = row['Position']?.toString().trim();
       const currentClub = row['Current Club']?.toString().trim();
+      const age = row['Age'] !== undefined && row['Age'] !== '' ? Number(row['Age']) : undefined;
 
       if (!playerName) {
         result.errors.push({ row: rowNumber, error: 'Missing player Name', player: 'Unknown' });
@@ -155,7 +157,7 @@ export async function POST(request: NextRequest) {
 
       try {
         await playerDB.create(
-          { name: playerName, position, currentClub, playerClass: playerClass || undefined, tournamentId },
+          { name: playerName, position, currentClub, age, playerClass: playerClass || undefined, tournamentId },
           user.userId
         );
         result.imported++;
