@@ -418,7 +418,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
 
     const sendOverlaySettings = async (
         size: 'large' | 'small',
-        mode: 'all' | 'sold',
+        mode: 'all' | 'sold' | 'available',
         dm: 'standard' | 'sold-summary' | 'team-summary' | 'resting' = displayModeRef.current
     ) => {
         const tournamentId = liveTournament?._id;
