@@ -101,7 +101,7 @@ const PlayerShowcase: React.FC<PlayerShowcaseProps> = ({ player, tournament, siz
                         <ClassBadge tournament={tournament || null} player={player} variant="inline" />
                     </div>
                     <div className="grid grid-cols-3 gap-4">
-                        {[{ label: 'Matches', value: player.stats.matchesPlayed }, { label: 'Runs', value: player.stats.totalScore }, { label: 'Wickets', value: player.stats.totalWickets }].map((stat, index) => (
+                        {[{ label: 'Matches', value: (player as any).stats?.matchesPlayed }, { label: 'Runs', value: (player as any).stats?.totalScore }, { label: 'Wickets', value: (player as any).stats?.totalWickets }].map((stat, index) => (
                             <div key={stat.label} className="text-center animate-stats-counter" style={{ animationDelay: `${(index + 1) * 100}ms` }}>
                                 <div className={`${config.statsSize} font-bold text-cyan-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>
                                     {stat.value}

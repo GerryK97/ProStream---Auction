@@ -300,9 +300,9 @@ const PremiumSpotlightOverlay: React.FC<{
 
       <div className="grid w-full grid-cols-3 gap-6">
         {[
-          { label: 'Matches', value: player.stats.matchesPlayed },
-          { label: 'Runs', value: player.stats.totalScore },
-          { label: 'Wickets', value: player.stats.totalWickets },
+          { label: 'Matches', value: (player as any).stats?.matchesPlayed },
+          { label: 'Runs', value: (player as any).stats?.totalScore },
+          { label: 'Wickets', value: (player as any).stats?.totalWickets },
         ].map((stat, idx) => (
           <div key={stat.label} className="rounded-2xl border p-6 backdrop-blur-lg shadow-xl" style={{
             borderColor: `${accentColor}50`,
