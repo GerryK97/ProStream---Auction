@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
-import { Tournament, Team, Player, AuctionState, Bid, OverlayTemplate, OverlayStyles, PlayerStats, OverlayInstance } from '@/types';
+import { Tournament, Team, Player, AuctionState, Bid, OverlayTemplate, OverlayStyles, OverlayInstance } from '@/types';
 
 // --- MOCK DATA ---
 const MOCK_TOURNAMENTS: Tournament[] = [
