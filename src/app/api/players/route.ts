@@ -46,11 +46,11 @@ export async function GET(request: NextRequest) {
       // Admin: access to all tournaments
       // Tournament role: access to tournaments they created
       // Other roles: access to assigned tournaments
-      let hasAccess = user.role === 'Admin' || user.assignedTournaments.includes(tournamentId);
+      let hasAccess = user!.role === 'Admin' || user!.assignedTournaments.includes(tournamentId);
 
-      if (!hasAccess && user.role === 'Tournament') {
+      if (!hasAccess && user!.role === 'Tournament') {
         const tournament = await TournamentModel.findById(tournamentId).select('createdBy').lean() as { createdBy: string } | null;
-        hasAccess = tournament?.createdBy === user.userId;
+        hasAccess = tournament?.createdBy === user!.userId;
       }
 
       if (!hasAccess) {
