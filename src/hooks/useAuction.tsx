@@ -21,12 +21,12 @@ const MOCK_TEAMS: Team[] = [
     { _id: 'team8', tournamentId: 't1', name: 'Puttalam', shortCode: 'PCC', ownerName: 'Nimal', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/8B5CF6/111827/png?text=P' },
 ];
 
-const MOCK_PLAYERS: Player[] = [
+const MOCK_PLAYERS: Player[] = (([
   { _id: 'p1', tournamentId: 't1', name: 'Shadow', stats: { matchesPlayed: 50, totalScore: 1200, totalWickets: 5 }, photoURL: 'https://picsum.photos/seed/shadow/200', isSold: false },
   { _id: 'p2', tournamentId: 't1', name: 'Vortex', stats: { matchesPlayed: 65, totalScore: 850, totalWickets: 75 }, photoURL: 'https://picsum.photos/seed/vortex/200', isSold: false },
   { _id: 'p3', tournamentId: 't1', name: 'Blitz', stats: { matchesPlayed: 45, totalScore: 1500, totalWickets: 10 }, photoURL: 'https://picsum.photos/seed/blitz/200', isSold: false },
   { _id: 'p4', tournamentId: 't1', name: 'Rogue', stats: { matchesPlayed: 55, totalScore: 980, totalWickets: 30 }, photoURL: 'https://picsum.photos/seed/rogue/200', isSold: false }
-];
+]) as any[]);
 
 const MOCK_AUCTION_STATE: AuctionState = {
   tournamentId: 't1',
