@@ -63,9 +63,9 @@ export async function GET(request: NextRequest) {
 
     // Otherwise, return players accessible to the user
     const players = await playerDB.getAllForUser(
-      user.userId,
-      user.role,
-      user.assignedTournaments // Pass user's assigned tournaments
+      user!.userId,
+      user!.role,
+      user!.assignedTournaments
     );
     return NextResponse.json(players);
   } catch (error) {
