@@ -62,6 +62,7 @@ export async function GET(request: NextRequest) {
         'Name': player.name,
         'Position': player.position || '',
         'Current Club': player.currentClub || '',
+      'Age': player.age || '',
       };
 
       // Include player class column only if tournament uses classes
@@ -92,6 +93,7 @@ export async function GET(request: NextRequest) {
       { wch: 25 },  // Name
       { wch: 15 },  // Position
       { wch: 25 },  // Current Club
+      { wch: 8 },   // Age
     ];
 
     if (tournament.usePlayerClasses) {

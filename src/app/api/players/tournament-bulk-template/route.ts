@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
         'Name': 'John Smith',
         'Position': 'Batsman',
         'Current Club': 'Mumbai FC',
+        'Age': 25,
         'Add (Yes/No)': 'Yes',
         ...(playerClasses.length > 0 ? { 'Player Class': playerClasses[0] || '' } : {}),
       },
@@ -43,6 +44,7 @@ export async function GET(request: NextRequest) {
         'Name': 'Alex Johnson',
         'Position': 'Bowler',
         'Current Club': 'Delhi Tigers',
+        'Age': 28,
         'Add (Yes/No)': 'No',
         ...(playerClasses.length > 0 ? { 'Player Class': playerClasses[1] || playerClasses[0] || '' } : {}),
       },
@@ -55,6 +57,7 @@ export async function GET(request: NextRequest) {
         'Name': '',
         'Position': '',
         'Current Club': '',
+        'Age': '' as any,
         'Add (Yes/No)': 'Yes',
         ...(playerClasses.length > 0 ? { 'Player Class': '' } : {}),
       });
