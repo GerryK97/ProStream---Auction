@@ -1,6 +1,6 @@
 import { JWTPayload } from './auth';
 
-export type UserRole = 'Admin' | 'Tournament' | 'Team' | 'Player' | 'Audience';
+export type UserRole = 'Admin' | 'Tournament' | 'MasterManager' | 'Team' | 'Player' | 'Audience';
 export type Action = 'create' | 'read' | 'update' | 'delete' | 'manage';
 
 export interface RoutePermission {
