@@ -122,7 +122,7 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
     const playerNumber = currentPlayer.playerNo || currentPlayer._id;
 
     // Calculate visible stats count for grid
-    const stats = currentPlayer.stats;
+    const stats = (currentPlayer as any).stats;
     const visibleStats = [
         showMatches && stats && { value: stats.matchesPlayed, label: 'Matches' },
         showScore && stats && { value: stats.totalScore, label: 'Score' },
