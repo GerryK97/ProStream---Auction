@@ -366,10 +366,10 @@ function PlayerAuctionPanel({
         top: 258,
         width: 960,
         fontFamily: '"Inconsolata", monospace',
-        fontSize: 64,
-        color: '#ffffff',
+        fontSize: 76,
+        color: '#FFC919',
         fontWeight: 700,
-        lineHeight: '80px',
+        lineHeight: '90px',
         letterSpacing: 4,
         overflow: 'hidden',
         textOverflow: 'ellipsis',
@@ -425,7 +425,7 @@ function PlayerAuctionPanel({
 
       {/* BASE PRICE row */}
       <div style={{ ...labelStyle, left: 880, top: 840 }}>Base Price</div>
-      <div style={{ position: 'absolute', left: 880, top: 874, ...valueStyle, color: '#FFC919' }}>
+      <div style={{ position: 'absolute', left: 880, top: 874, ...valueStyle, color: '#FFD700', fontSize: 60, fontWeight: 700 }}>
         {hasPlayer ? basePrice.toLocaleString('en-IN') : '—'}
       </div>
 
