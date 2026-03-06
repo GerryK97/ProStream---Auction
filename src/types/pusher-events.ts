@@ -19,6 +19,7 @@ export type PusherEventName =
   | 'auction:player-sold'
   | 'auction:reset'
   | 'auction:undo'
+  | 'auction:player-unsold'
   | 'auction:state-update';
 
 /**
@@ -37,6 +38,7 @@ export interface AuctionStartedEvent extends BasePusherEvent {
   tournament: Tournament;
   teams: Team[];
   players: Player[];
+  auctionState: AuctionState;
   message: string;
 }
 
@@ -113,8 +115,18 @@ export interface AuctionResetEvent extends BasePusherEvent {
  */
 export interface AuctionUndoEvent extends BasePusherEvent {
   restoredPlayer: Player;
-  updatedTeam: Team;
+  updatedTeam: Team | null;
   refundedAmount: number;
+  auctionState: AuctionState | null;
+  message: string;
+}
+
+/**
+ * Event: auction:player-unsold
+ * Triggered when the host marks the current player as explicitly unsold
+ */
+export interface PlayerMarkedUnsoldEvent extends BasePusherEvent {
+  unsoldPlayer: Player;
   auctionState: AuctionState | null;
   message: string;
 }
@@ -132,6 +144,16 @@ export interface AuctionStateUpdateEvent extends BasePusherEvent {
 }
 
 /**
+ * Event: overlay:settings
+ * Triggered when the host changes overlay display settings from the control panel
+ */
+export interface OverlaySettingsEvent extends BasePusherEvent {
+  size: 'large' | 'small';
+  tickerMode: 'all' | 'sold' | 'available';
+  displayMode: 'standard' | 'sold-summary' | 'team-summary' | 'resting';
+}
+
+/**
  * Union type of all possible event payloads
  */
 export type PusherEventPayload =
@@ -143,7 +165,9 @@ export type PusherEventPayload =
   | PlayerSoldEvent
   | AuctionResetEvent
   | AuctionUndoEvent
-  | AuctionStateUpdateEvent;
+  | PlayerMarkedUnsoldEvent
+  | AuctionStateUpdateEvent
+  | OverlaySettingsEvent;
 
 /**
  * Helper function to get channel name for a tournament

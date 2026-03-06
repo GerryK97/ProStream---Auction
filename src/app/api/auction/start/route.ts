@@ -4,7 +4,7 @@ import { TournamentModel } from '@/models/Tournament';
 import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
 import { AuctionStateModel } from '@/models/AuctionState';
-import { triggerAuctionStarted } from '@/lib/pusher-server';
+import { triggerAuctionStarted, triggerWake } from '@/lib/pusher-server';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
 
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     ).lean();
 
     // Initialize or reset auction state
-    await AuctionStateModel.findOneAndUpdate(
+    const resetAuctionState = await AuctionStateModel.findOneAndUpdate(
       { tournamentId },
       {
         $set: {
@@ -116,12 +116,15 @@ export async function POST(request: NextRequest) {
     const teams = await TeamModel.find({ tournamentId }).lean();
     const players = await PlayerModel.find({ tournamentId }).lean();
 
-    // Trigger Pusher event
+    // Trigger Pusher events
     try {
+      // Wake overlays first so they connect before the full event arrives
+      await triggerWake(tournamentId);
       await triggerAuctionStarted({
         tournament: updatedTournament as any,
         teams: teams as any,
         players: players as any,
+        auctionState: resetAuctionState as any,
         message: 'Auction started successfully',
       });
     } catch (pusherError) {

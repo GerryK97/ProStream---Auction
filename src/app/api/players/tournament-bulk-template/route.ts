@@ -1,229 +1,169 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
-import { MasterPlayerModel } from '@/models/MasterPlayer';
-import { PlayerModel } from '@/models/Player';
 import { TournamentModel } from '@/models/Tournament';
 import { Tournament } from '@/types';
 import { connectToDatabase } from '@/lib/mongodb';
+import { getUserFromRequest } from '@/lib/request-helpers';
 
 export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
 
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const tournamentId = searchParams.get('tournamentId');
 
     if (!tournamentId) {
-      return NextResponse.json(
-        { error: 'tournamentId is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'tournamentId is required' }, { status: 400 });
     }
 
-    // Fetch tournament to get player classes
     const tournament = await TournamentModel.findById(tournamentId).lean() as Tournament | null;
     if (!tournament) {
-      return NextResponse.json(
-        { error: 'Tournament not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
     }
 
-    // Get all master players
-    const allMasterPlayers = await MasterPlayerModel.find({})
-      .select('_id name position currentClub suggestedClass careerStats')
-      .sort({ name: 1 })
-      .lean();
-
-    // Get players already added to this tournament
-    const existingPlayers = await PlayerModel.find({ tournamentId })
-      .select('masterPlayerId')
-      .lean();
-
-    const existingMasterPlayerIds = new Set(
-      existingPlayers.map(p => p.masterPlayerId).filter(Boolean)
-    );
-
-    // Filter out players already in tournament
-    const availablePlayers = allMasterPlayers.filter(
-      player => !existingMasterPlayerIds.has(player._id)
-    );
-
-    if (availablePlayers.length === 0) {
-      return NextResponse.json(
-        { error: 'No available players to add. All master players are already in this tournament.' },
-        { status: 400 }
-      );
-    }
-
-    // Get tournament-specific player classes
     const playerClasses = tournament.usePlayerClasses && tournament.playerClasses
       ? tournament.playerClasses.map((c: any) => c.name)
       : [];
 
-    // Create template data
-    const templateData = availablePlayers.map(player => {
-      // Find default class for this player
-      let defaultClass = '';
-      if (playerClasses.length > 0 && player.suggestedClass) {
-        // Check if suggested class exists in tournament classes
-        if (playerClasses.includes(player.suggestedClass)) {
-          defaultClass = player.suggestedClass;
-        } else {
-          // Use first tournament class as default
-          defaultClass = playerClasses[0] || '';
-        }
-      }
-
-      const row: any = {
-        'Master Player ID': player._id,
-        'Name': player.name,
-        'Position': player.position,
-        'Current Club': player.currentClub,
-        'Matches': player.careerStats?.matchesPlayed || 0,
-        'Score': player.careerStats?.totalScore || 0,
-        'Wickets': player.careerStats?.totalWickets || 0,
+    // Build sample rows to illustrate the expected format
+    const sampleRows = [
+      {
+        'Name': 'John Smith',
+        'Position': 'Batsman',
+        'Current Club': 'Mumbai FC',
+        'Add (Yes/No)': 'Yes',
+        ...(playerClasses.length > 0 ? { 'Player Class': playerClasses[0] || '' } : {}),
+      },
+      {
+        'Name': 'Alex Johnson',
+        'Position': 'Bowler',
+        'Current Club': 'Delhi Tigers',
         'Add (Yes/No)': 'No',
-      };
-
-      // Only add Player Class column if tournament uses player classes
-      if (playerClasses.length > 0) {
-        row['Player Class'] = defaultClass;
-      }
-
-      return row;
-    });
-
-    // Create workbook
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.json_to_sheet(templateData);
-
-    // Set column widths
-    const columnWidths = [
-      { wch: 18 }, // Master Player ID
-      { wch: 25 }, // Name
-      { wch: 15 }, // Position
-      { wch: 30 }, // Current Club
-      { wch: 10 }, // Matches
-      { wch: 10 }, // Score
-      { wch: 10 }, // Wickets
-      { wch: 15 }, // Add (Yes/No)
+        ...(playerClasses.length > 0 ? { 'Player Class': playerClasses[1] || playerClasses[0] || '' } : {}),
+      },
     ];
 
+    // Add empty rows for data entry
+    const emptyRowCount = 20;
+    for (let i = 0; i < emptyRowCount; i++) {
+      sampleRows.push({
+        'Name': '',
+        'Position': '',
+        'Current Club': '',
+        'Add (Yes/No)': 'Yes',
+        ...(playerClasses.length > 0 ? { 'Player Class': '' } : {}),
+      });
+    }
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(sampleRows);
+
+    // Column widths
+    const columnWidths: Array<{ wch: number }> = [
+      { wch: 25 }, // Name
+      { wch: 18 }, // Position
+      { wch: 30 }, // Current Club
+      { wch: 15 }, // Add (Yes/No)
+    ];
     if (playerClasses.length > 0) {
       columnWidths.push({ wch: 20 }); // Player Class
     }
-
     worksheet['!cols'] = columnWidths;
 
-    // Add data validation for "Add (Yes/No)" column
-    const addColumnIndex = playerClasses.length > 0 ? 'H' : 'H'; // Column H
-    const playerClassColumnIndex = 'I'; // Column I
+    // Determine column letters
+    const addColLetter = 'D';
+    const classColLetter = 'E';
+    const totalRows = sampleRows.length + 1;
 
     if (!worksheet['!dataValidation']) {
-      worksheet['!dataValidation'] = [];
+      (worksheet as any)['!dataValidation'] = [];
     }
 
-    // Add Yes/No dropdown validation for "Add" column (rows 2 to end)
-    for (let i = 2; i <= templateData.length + 1; i++) {
-      worksheet['!dataValidation'].push({
-        sqref: `${addColumnIndex}${i}`,
+    // Yes/No dropdown for "Add" column
+    for (let i = 2; i <= totalRows; i++) {
+      (worksheet as any)['!dataValidation'].push({
+        sqref: `${addColLetter}${i}`,
         type: 'list',
         formula1: '"Yes,No"',
         showErrorMessage: true,
         error: 'Please select Yes or No',
-        errorTitle: 'Invalid Value'
+        errorTitle: 'Invalid Value',
       });
     }
 
-    // Add player class dropdown validation if tournament uses classes
+    // Player class dropdown
     if (playerClasses.length > 0) {
       const classListFormula = `"${playerClasses.join(',')}"`;
-      for (let i = 2; i <= templateData.length + 1; i++) {
-        worksheet['!dataValidation'].push({
-          sqref: `${playerClassColumnIndex}${i}`,
+      for (let i = 2; i <= totalRows; i++) {
+        (worksheet as any)['!dataValidation'].push({
+          sqref: `${classColLetter}${i}`,
           type: 'list',
           formula1: classListFormula,
           showErrorMessage: true,
           error: `Please select from: ${playerClasses.join(', ')}`,
-          errorTitle: 'Invalid Player Class'
+          errorTitle: 'Invalid Player Class',
         });
       }
     }
 
-    // Add main sheet
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Available Players');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Players');
 
-    // Create instructions sheet
-    const instructions: Array<{ 'Step': number | string; 'Instruction': string }> = [
-      { 'Step': 1, 'Instruction': 'Review the list of available players' },
-      { 'Step': 2, 'Instruction': 'Set "Add (Yes/No)" to "Yes" for players you want to add to the tournament' },
+    // Instructions sheet
+    const instructions: Array<{ Step: number | string; Instruction: string }> = [
+      { Step: 1, Instruction: 'Fill in player details in the "Players" sheet. The first two rows are examples — replace them with real data.' },
+      { Step: 2, Instruction: 'Required columns: Name, Position, Current Club, Add (Yes/No)' },
+      { Step: 3, Instruction: 'Set "Add (Yes/No)" to "Yes" for rows you want to import. Rows set to "No" will be skipped.' },
     ];
 
     if (playerClasses.length > 0) {
       instructions.push(
-        { 'Step': 3, 'Instruction': `Select Player Class from dropdown: ${playerClasses.join(', ')}` }
-      );
-      instructions.push(
-        { 'Step': 4, 'Instruction': 'TIP: You can use SHORT CODES to reduce typos! (e.g., P=Platinum, G=Gold, S=Silver, B=Bronze, E=Elite, Pr=Premium, St=Standard)' }
-      );
-      instructions.push(
-        { 'Step': 5, 'Instruction': 'Short codes are case-insensitive and automatically resolve to full class names' }
-      );
-      instructions.push(
-        { 'Step': 6, 'Instruction': 'Examples: "P" or "p" or "Plat" -> Platinum, "G" or "g" -> Gold, "S" or "Sil" -> Silver' }
-      );
-      instructions.push(
-        { 'Step': 7, 'Instruction': 'Save the file and upload it back to the application' }
+        { Step: 4, Instruction: `Select a Player Class from the dropdown: ${playerClasses.join(', ')}` },
+        { Step: 5, Instruction: 'TIP: You can use short codes to reduce typos! (e.g., P=Platinum, G=Gold, S=Silver, B=Bronze, E=Elite, Pr=Premium, St=Standard)' },
+        { Step: 6, Instruction: 'Short codes are case-insensitive. Examples: "P" or "p" → Platinum, "G" → Gold, "S" → Silver' },
+        { Step: 7, Instruction: 'Save the file and upload it back to the application.' },
       );
     } else {
       instructions.push(
-        { 'Step': 3, 'Instruction': 'This tournament does not use player classes' }
-      );
-      instructions.push(
-        { 'Step': 4, 'Instruction': 'Save the file and upload it back to the application' }
+        { Step: 4, Instruction: 'This tournament does not use player classes — no class column needed.' },
+        { Step: 5, Instruction: 'Save the file and upload it back to the application.' },
       );
     }
 
     instructions.push(
-      { 'Step': '', 'Instruction': '' },
-      { 'Step': 'Note', 'Instruction': `Tournament: ${tournament.name}` },
-      { 'Step': 'Note', 'Instruction': `Available Players: ${availablePlayers.length}` },
-      { 'Step': 'Note', 'Instruction': `Already Added: ${existingPlayers.length}` }
+      { Step: '', Instruction: '' },
+      { Step: 'Tournament', Instruction: tournament.name },
+      { Step: 'Positions', Instruction: 'Batsman, Bowler, All-rounder, Wicket-keeper' },
     );
 
     if (playerClasses.length > 0) {
+      const classCodesInfo = tournament.playerClasses
+        ?.map((c: any) => `${c.code} (${c.name})`)
+        .join(', ') || '';
       instructions.push(
-        { 'Step': 'Classes', 'Instruction': `Configured Classes: ${playerClasses.join(', ')}` }
-      );
-      instructions.push(
-        { 'Step': 'Short Codes', 'Instruction': 'Available: P/Plat (Platinum), Pr/Prem (Premium), G (Gold), S/Sil (Silver), St/Std (Standard), B/Bro (Bronze), D/Dia (Diamond), E (Elite)' }
-      );
-      instructions.push(
-        { 'Step': 'Tip', 'Instruction': 'Using short codes like "P" instead of "Platinum" reduces typing errors and speeds up data entry!' }
+        { Step: 'Classes', Instruction: `Configured: ${playerClasses.join(', ')}` },
+        { Step: 'Short Codes', Instruction: `Use these codes in the Player Class column: ${classCodesInfo}` },
       );
     }
 
     const instructionsSheet = XLSX.utils.json_to_sheet(instructions);
-    instructionsSheet['!cols'] = [{ wch: 10 }, { wch: 80 }];
+    instructionsSheet['!cols'] = [{ wch: 12 }, { wch: 80 }];
     XLSX.utils.book_append_sheet(workbook, instructionsSheet, 'Instructions');
 
-    // Generate Excel file
     const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 
-    // Return file
     return new NextResponse(excelBuffer, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="tournament_players_${tournament.name.replace(/\s+/g, '_')}_${Date.now()}.xlsx"`
-      }
+        'Content-Disposition': `attachment; filename="players_import_${tournament.name.replace(/\s+/g, '_')}_${Date.now()}.xlsx"`,
+      },
     });
-
   } catch (error: any) {
     console.error('Template generation error:', error);
-    return NextResponse.json(
-      { error: `Failed to generate template: ${error.message}` },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: `Failed to generate template: ${error.message}` }, { status: 500 });
   }
 }

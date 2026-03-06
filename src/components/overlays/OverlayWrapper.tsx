@@ -4,7 +4,21 @@ import React, { useState, useEffect, ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { Tournament, AuctionState, Player, Team } from '@/types';
+import { getPusherClient } from '@/lib/pusher-client';
+import type { OverlaySettingsEvent } from '@/types/pusher-events';
 import '../../styles/animations.css';
+
+export interface OverlaySettings {
+    size: 'large' | 'small';
+    tickerMode: 'all' | 'sold' | 'available';
+    displayMode: 'standard' | 'sold-summary' | 'team-summary' | 'resting';
+}
+
+const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
+    size: 'large',
+    tickerMode: 'all',
+    displayMode: 'standard',
+};
 
 interface OverlayWrapperProps {
     tournamentId?: string;
@@ -16,6 +30,7 @@ interface OverlayWrapperProps {
         isConnected: boolean;
         currentPlayer: Player | undefined;
         soldPlayers: Player[];
+        overlaySettings: OverlaySettings;
     }) => ReactNode;
 }
 
@@ -84,10 +99,30 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
         players,
         teams,
         isConnected,
-    } = usePusherAuction(liveTournamentId);
+    } = usePusherAuction(liveTournamentId, undefined, urlToken ?? undefined);
 
     const currentPlayer = players.find(p => p._id === auctionState.currentPlayerId);
     const soldPlayers = players.filter(p => p.isSold);
+
+    // Overlay settings — updated via overlay:settings Pusher event
+    const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>(DEFAULT_OVERLAY_SETTINGS);
+
+    useEffect(() => {
+        if (!liveTournamentId) return;
+        // Only subscribe when the tournament channel is active (Live/Paused/Stopped)
+        const status = tournament?.status;
+        if (!status || !['Live', 'Paused', 'Stopped'].includes(status)) return;
+
+        const pusher = getPusherClient();
+        const channel = pusher.subscribe(`tournament-${liveTournamentId}`);
+        channel.bind('overlay:settings', (data: OverlaySettingsEvent) => {
+            setOverlaySettings({ size: data.size, tickerMode: data.tickerMode ?? 'sold', displayMode: data.displayMode ?? 'standard' });
+        });
+        return () => {
+            channel.unbind('overlay:settings');
+            // Don't unsubscribe the channel here — usePusherAuction owns it
+        };
+    }, [liveTournamentId, tournament?.status]);
 
     // Error state - visible on transparent background
     if (error) {
@@ -156,6 +191,7 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
                 isConnected,
                 currentPlayer,
                 soldPlayers,
+                overlaySettings,
             })}
         </div>
     );

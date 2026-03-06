@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
     const { currentPlayerId, currentBid } = auctionState;
 
     // Update player to sold
+    // Explicit updatedAt ensures reliable timestamp comparison in the undo route
     const updatedPlayer = await PlayerModel.findOneAndUpdate(
       { _id: currentPlayerId },
       {
@@ -72,6 +73,7 @@ export async function POST(request: NextRequest) {
           isSold: true,
           finalPrice: currentBid,
           winningTeamId: teamId,
+          updatedAt: new Date(),
         },
       },
       { new: true }

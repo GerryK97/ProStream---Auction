@@ -7,74 +7,12 @@
  */
 
 import { connectToDatabase } from '../lib/mongodb';
-import { MasterPlayerModel } from '../models/MasterPlayer';
 import { PlayerModel } from '../models/Player';
 
 interface Migration {
   oldId: string;
   newId: string;
   name: string;
-}
-
-async function migrateMasterPlayerIds(): Promise<Migration[]> {
-  console.log('\n📋 Migrating Master Player IDs...');
-
-  const masterPlayers = await MasterPlayerModel.find().sort({ createdAt: 1 });
-  const migrations: Migration[] = [];
-
-  for (let i = 0; i < masterPlayers.length; i++) {
-    const player = masterPlayers[i];
-    const oldId = player._id;
-    const newId = `PS${(i + 1).toString().padStart(3, '0')}`;
-
-    // Skip if already in correct format
-    if (oldId === newId) {
-      console.log(`✓ ${oldId} - ${player.name} (already correct)`);
-      continue;
-    }
-
-    // Check if new ID already exists
-    const existingWithNewId = await MasterPlayerModel.findOne({ _id: newId });
-    if (existingWithNewId && existingWithNewId._id !== oldId) {
-      console.warn(`⚠️  Skipping ${oldId} - ${newId} already exists`);
-      continue;
-    }
-
-    try {
-      // Get player data
-      const playerData = player.toObject();
-      delete (playerData as any).__v;
-      delete (playerData as any).createdAt;
-      delete (playerData as any).updatedAt;
-
-      // Create new document with new ID
-      await MasterPlayerModel.create({
-        ...playerData,
-        _id: newId,
-      });
-
-      // Update all tournament players that reference this master player
-      const updateResult = await PlayerModel.updateMany(
-        { masterPlayerId: oldId },
-        { $set: { masterPlayerId: newId } }
-      );
-
-      // Delete old document
-      await MasterPlayerModel.deleteOne({ _id: oldId });
-
-      migrations.push({
-        oldId,
-        newId,
-        name: player.name,
-      });
-
-      console.log(`✓ Migrated: ${oldId} → ${newId} (${player.name}) [Updated ${updateResult.modifiedCount} tournament references]`);
-    } catch (error) {
-      console.error(`✗ Failed to migrate ${oldId}:`, error);
-    }
-  }
-
-  return migrations;
 }
 
 async function migrateTournamentPlayerIds(): Promise<{ [tournamentId: string]: Migration[] }> {
@@ -154,15 +92,10 @@ async function main() {
 
     await connectToDatabase();
 
-    // Migrate master players first
-    const masterMigrations = await migrateMasterPlayerIds();
-
-    // Then migrate tournament players
     const tournamentMigrations = await migrateTournamentPlayerIds();
 
     console.log('\n✅ Migration Complete!\n');
     console.log('Summary:');
-    console.log(`  Master Players: ${masterMigrations.length} migrated`);
 
     let totalTournamentMigrations = 0;
     for (const tournamentId in tournamentMigrations) {
@@ -184,4 +117,4 @@ if (require.main === module) {
   main();
 }
 
-export { migrateMasterPlayerIds, migrateTournamentPlayerIds };
+export { migrateTournamentPlayerIds };

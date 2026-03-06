@@ -4,6 +4,8 @@ import { AuctionProvider } from '@/hooks/useAuction';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { TournamentProvider } from '@/contexts/TournamentContext';
+import { SidebarProvider } from '@/contexts/SidebarContext';
+import AppShell from '@/components/AppShell';
 
 export const metadata: Metadata = {
   title: 'ProStream Auction',
@@ -28,7 +30,9 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthProvider>
             <TournamentProvider>
-              <AuctionProvider>{children}</AuctionProvider>
+              <AuctionProvider>
+                  <SidebarProvider><AppShell>{children}</AppShell></SidebarProvider>
+                </AuctionProvider>
             </TournamentProvider>
           </AuthProvider>
         </ThemeProvider>

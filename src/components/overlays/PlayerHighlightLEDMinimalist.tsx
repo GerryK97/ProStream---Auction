@@ -267,9 +267,9 @@ const MinimalistSpotlightOverlay: React.FC<{
 
       <div className="grid w-full grid-cols-3 gap-4">
         {[
-          { label: 'Matches', value: player.stats.matchesPlayed },
-          { label: 'Runs', value: player.stats.totalScore },
-          { label: 'Wickets', value: player.stats.totalWickets },
+          { label: 'Matches', value: (player as any).stats?.matchesPlayed },
+          { label: 'Runs', value: (player as any).stats?.totalScore },
+          { label: 'Wickets', value: (player as any).stats?.totalWickets },
         ].map((stat) => (
           <div key={stat.label} className="rounded-lg border p-4 backdrop-blur-lg" style={{
             borderColor: borderColor,

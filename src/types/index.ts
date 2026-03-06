@@ -22,69 +22,34 @@ export interface Tournament {
   usePlayerClasses?: boolean;           // Toggle to enable/disable player classes
   playerClasses?: PlayerClassConfig[];  // Custom player classes for this tournament
   basePriceStrategy?: BasePriceStrategy; // Strategy for determining base prices (default: 'tournament-level')
+  overlayTheme?: 'standard'; // Overlay theme for OBS browser source
 }
 
-// Master Team (Global Registry - never changes across tournaments)
-export interface MasterTeam {
-  _id: string;
-  name: string;
-  shortCode: string;
-  ownerName: string;
-  logoURL?: string;
-  createdBy?: string; // User ID who created the master team
-}
-
-// Master Player (Global Registry - never changes across tournaments)
-export interface MasterPlayer {
-  _id: string;
-  name: string;
-  position: string;        // e.g., "Batsman", "Bowler", "All-rounder", "Wicket-keeper"
-  currentClub: string;     // e.g., "Mumbai Indians"
-  photoURL?: string;
-  careerStats?: PlayerStats; // Career-wide stats
-  suggestedClass?: string; // Suggested player class (used as default when adding to tournament)
-  createdBy?: string;      // User ID who created the master player
-}
-
-export interface PlayerStats {
-  matchesPlayed: number;
-  totalScore: number;
-  totalWickets: number;
-}
-
-// Tournament Team (Tournament-specific instance - READ ONLY after creation)
 export interface Team {
   _id: string;
-  masterTeamId?: string;    // Reference to MasterTeam (optional for backward compatibility)
-  tournamentId?: string | null;
-  createdBy?: string;       // User ID who created the team
-  // Copied from master (read-only - edit master to update)
+  tournamentId: string;
+  createdBy?: string;
   name: string;
   shortCode: string;
   ownerName: string;
   logoURL?: string;
-  // Tournament-specific data
   initialBudget?: number;
   currentBalance?: number;
-  playersPurchased?: string[]; // Array of Player IDs
+  playersPurchased?: string[];
 }
 
-// Tournament Player (Tournament-specific instance - READ ONLY after creation)
 export interface Player {
-  _id: string;                  // Globally unique timestamp-based ID (e.g., "p1736723456789abc")
-  playerNo?: string;            // Sequential number within tournament (e.g., "001", "002", "003")
-  masterPlayerId?: string;      // Reference to MasterPlayer (optional for backward compatibility)
-  tournamentId?: string | null;
-  createdBy?: string;           // User ID who created the player
-  // Copied from master (read-only - edit master to update)
+  _id: string;
+  playerNo?: string;
+  tournamentId: string;
+  createdBy?: string;
   name: string;
   position?: string;
   currentClub?: string;
-  photoURL?: string;            // Player photo (same field name as MasterPlayer)
-  // Tournament-specific data
-  stats: PlayerStats;           // Tournament stats (separate from career)
-  playerClass?: string;         // Player class for this tournament (e.g., "Platinum", "Gold")
+  photoURL?: string;
+  playerClass?: string;
   isSold?: boolean;
+  isUnsold?: boolean;
   finalPrice?: number;
   winningTeamId?: string;
 }

@@ -42,6 +42,11 @@ const tournamentSchema = new Schema<Tournament>(
       enum: ['tournament-level', 'player-class-based'],
       default: 'tournament-level',
     },
+    overlayTheme: {
+      type: String,
+      enum: ['standard'],
+      default: 'standard',
+    },
   },
   {
     timestamps: true,

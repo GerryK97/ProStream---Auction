@@ -16,11 +16,10 @@ interface StepsProgressProps {
 
 const DEFAULT_STEPS: Step[] = [
   { label: 'Setup Tournament', href: '/manage/tournaments' },
-  { label: 'Setup Team', href: '/manage/teams' },
-  { label: 'Setup Players', href: '/manage/players' },
-  { label: 'Setup Auction', href: '/auction/setup' },
+  { label: 'Teams', href: '/manage/teams' },
+  { label: 'Players', href: '/manage/players' },
   { label: 'Add Overlays to OBS', href: '/overlays' },
-  { label: 'Start Auction', href: '/auction' },
+  { label: 'Auction', href: '/auction' },
 ];
 
 const getStepStatus = (index: number, currentIndex: number) => {

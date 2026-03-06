@@ -117,15 +117,15 @@ const PlayerCardOverlay: React.FC<PlayerCardOverlayProps> = ({
                         <div className="flex gap-6 mt-2">
                             <div>
                                 <p className={`${config.stat} text-neutral-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>Matches</p>
-                                <p className={`${config.statValue} font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>{currentPlayer.stats.matchesPlayed}</p>
+                                <p className={`${config.statValue} font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>{(currentPlayer as any).stats?.matchesPlayed}</p>
                             </div>
                             <div>
                                 <p className={`${config.stat} text-neutral-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>Score</p>
-                                <p className={`${config.statValue} font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>{currentPlayer.stats.totalScore.toLocaleString()}</p>
+                                <p className={`${config.statValue} font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>{(currentPlayer as any).stats?.totalScore?.toLocaleString()}</p>
                             </div>
                             <div>
                                 <p className={`${config.stat} text-neutral-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>Wickets</p>
-                                <p className={`${config.statValue} font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>{currentPlayer.stats.totalWickets}</p>
+                                <p className={`${config.statValue} font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>{(currentPlayer as any).stats?.totalWickets}</p>
                             </div>
                         </div>
                     </div>

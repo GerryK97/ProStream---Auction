@@ -7,182 +7,300 @@ interface SoldPlayersSummaryOverlayProps {
     players: Player[];
     teams: Team[];
     tournament: Tournament | null;
-    position?: 'center' | 'top' | 'bottom';
 }
 
-const formatCurrency = (amount: number) => amount.toLocaleString();
+const formatCurrency = (amount: number) => amount.toLocaleString('en-IN');
+
+// Layout constants (1920×1080 canvas)
+const CANVAS_W = 1920;
+const CANVAS_H = 1080;
+const PANEL_LEFT = 230;
+const PANEL_WIDTH = 1460;
+const HEADING_H = 110;       // heading block height
+const SEPARATOR_H = 2;
+const ROW_AREA_TOP_PAD = 24; // gap between separator and first row
+const ROW_BOTTOM_PAD = 24;   // gap after last row
+const PILL_LEFT = PANEL_LEFT + 44;    // 274
+const PILL_WIDTH = PANEL_WIDTH - 88;  // 1372 ≈ reference 1363
+const PILL_H = 53;
+const AVATAR_SIZE = 70;
+const AVATAR_OVERLAP = (AVATAR_SIZE - PILL_H) / 2; // 8.5
+const ROW_SPACING = 80;
+const PLAYERS_PER_PAGE = 10;
+const PAGE_DURATION = 10000;
+
+const FONT_HEADING = "'Bebas Neue', cursive";
+const FONT_ROW = "'Rajdhani', sans-serif";
 
 const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
     players,
     teams,
     tournament,
-    position = 'center'
 }) => {
-    const PLAYERS_PER_PAGE = 20;
-    const PAGE_DURATION = 10000; // 10 seconds
-
     const [currentPage, setCurrentPage] = useState(0);
 
-    // Get all sold players
-    const soldPlayers = players.filter(p => p.isSold);
+    const soldPlayers = players
+        .filter(p => p.isSold)
+        .sort((a, b) => (b._id > a._id ? 1 : -1));
 
-    // Check if all players are sold
-    const totalPlayers = players.length;
-    const allPlayersSold = soldPlayers.length === totalPlayers && totalPlayers > 0;
+    const explicitlyUnsoldPlayers = players
+        .filter(p => !p.isSold && p.isUnsold)
+        .sort((a, b) => a.name.localeCompare(b.name));
 
-    // Sort by highest sold value
-    const sortedPlayers = [...soldPlayers].sort((a, b) => (b.finalPrice || 0) - (a.finalPrice || 0));
+    const availablePlayers = players
+        .filter(p => !p.isSold && !p.isUnsold)
+        .sort((a, b) => a.name.localeCompare(b.name));
 
-    // Calculate pagination
-    const totalPages = Math.ceil(sortedPlayers.length / PLAYERS_PER_PAGE);
+    const allPlayers = [...soldPlayers, ...explicitlyUnsoldPlayers, ...availablePlayers];
+    const totalPages = Math.ceil(allPlayers.length / PLAYERS_PER_PAGE);
     const startIndex = currentPage * PLAYERS_PER_PAGE;
-    const endIndex = startIndex + PLAYERS_PER_PAGE;
-    const currentPagePlayers = sortedPlayers.slice(startIndex, endIndex);
+    const currentPagePlayers = allPlayers.slice(startIndex, startIndex + PLAYERS_PER_PAGE);
 
-    // Auto-flip pages every 10 seconds
+    const totalSoldValue = soldPlayers.reduce((sum, p) => sum + (p.finalPrice || 0), 0);
+
     useEffect(() => {
-        if (totalPages <= 1) return; // No pagination needed
-
+        if (totalPages <= 1) return;
         const timer = setInterval(() => {
             setCurrentPage(prev => (prev + 1) % totalPages);
         }, PAGE_DURATION);
-
         return () => clearInterval(timer);
     }, [totalPages]);
 
-    // Hide if no players are sold or no tournament
-    if (!tournament || soldPlayers.length === 0) {
-        return null;
-    }
+    useEffect(() => {
+        setCurrentPage(0);
+    }, [soldPlayers.length, explicitlyUnsoldPlayers.length, availablePlayers.length]);
 
-    // Player ID is already in correct format (001, 002, 003...)
+    if (!tournament || allPlayers.length === 0) return null;
+
+    const rowCount = currentPagePlayers.length;
+    const contentH = HEADING_H + SEPARATOR_H + ROW_AREA_TOP_PAD + rowCount * ROW_SPACING + ROW_BOTTOM_PAD;
+    const panelTop = Math.round((CANVAS_H - contentH) / 2);
+
+    // First pill's top within canvas
+    const firstPillTop = panelTop + HEADING_H + SEPARATOR_H + ROW_AREA_TOP_PAD;
 
     return (
-        <div className="w-full h-full flex justify-center items-center animate-fade-in">
-            <div className="w-[900px] flex flex-col">
-                {/* Header */}
-                <div className="border-2 border-cyan-500 rounded-t-lg p-6 text-center">
-                    <h1 className="text-4xl font-bold text-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)] mb-2">
-                        {allPlayersSold
-                            ? `All ${totalPlayers} Players Sold - Final Summary`
-                            : `${soldPlayers.length} of ${totalPlayers} Players Sold`
-                        }
-                    </h1>
-                    {totalPages > 1 && (
-                        <p className="text-sm text-neutral-300 mt-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                            Page {currentPage + 1} of {totalPages}
-                        </p>
-                    )}
-                </div>
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
+        <div style={{ width: CANVAS_W, height: CANVAS_H, position: 'relative', background: 'transparent', overflow: 'hidden', flexShrink: 0 }}>
 
-                {/* List Container */}
-                <div className="border-2 border-t-0 border-cyan-500 rounded-b-lg overflow-hidden">
-                    {/* List Header */}
-                    <div className="grid grid-cols-12 gap-4 p-3 border-b-2 border-cyan-500">
-                        <div className="col-span-1 text-center">
-                            <span className="text-xs font-bold text-cyan-400 uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Rank</span>
-                        </div>
-                        <div className="col-span-1 text-center">
-                            <span className="text-xs font-bold text-cyan-400 uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">No.</span>
-                        </div>
-                        <div className="col-span-4">
-                            <span className="text-xs font-bold text-cyan-400 uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Player Name</span>
-                        </div>
-                        <div className="col-span-3">
-                            <span className="text-xs font-bold text-cyan-400 uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Team</span>
-                        </div>
-                        <div className="col-span-3 text-right">
-                            <span className="text-xs font-bold text-cyan-400 uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Sold Price</span>
-                        </div>
+            {/* ── Background panel ── */}
+            <div style={{
+                position: 'absolute',
+                left: PANEL_LEFT,
+                top: panelTop,
+                width: PANEL_WIDTH,
+                height: contentH,
+                background: '#0D1B2A',
+                borderRadius: 20,
+                border: '1px solid #1E3A5F',
+            }} />
+
+            {/* Left gold accent bar */}
+            <div style={{
+                position: 'absolute',
+                left: PANEL_LEFT,
+                top: panelTop + 20,
+                width: 5,
+                height: contentH - 40,
+                background: '#F59E0B',
+                borderRadius: '0 0 4px 4px',
+            }} />
+
+            {/* ── Heading area ── */}
+            <div style={{
+                position: 'absolute',
+                left: PANEL_LEFT,
+                top: panelTop,
+                width: PANEL_WIDTH,
+                height: HEADING_H,
+                display: 'flex',
+                alignItems: 'center',
+                paddingLeft: 40,
+                paddingRight: 40,
+                justifyContent: 'space-between',
+            }}>
+                {/* Title + subtext */}
+                <div>
+                    <div style={{
+                        fontFamily: FONT_HEADING,
+                        fontSize: 64,
+                        color: '#F59E0B',
+                        letterSpacing: 8,
+                        lineHeight: 1,
+                    }}>
+                        PLAYER SUMMARY
                     </div>
-
-                    {/* List Body */}
-                    <div>
-                        {currentPagePlayers.map((player, pageIndex) => {
-                            const globalIndex = startIndex + pageIndex;
-                            const playerTeam = teams.find(t => t._id === player.winningTeamId);
-                            const playerNumber = player.playerNo || player._id;
-                            const isTopThree = globalIndex < 3;
-
-                            return (
-                                <div
-                                    key={player._id}
-                                    className={`grid grid-cols-12 gap-4 p-3 border-b border-cyan-500/30 transition-all ${
-                                        isTopThree ? 'bg-gradient-to-r from-yellow-900/20 to-transparent' : ''
-                                    }`}
-                                >
-                                    {/* Rank */}
-                                    <div className="col-span-1 flex items-center justify-center">
-                                        <span className={`text-xl font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] ${
-                                            globalIndex === 0 ? 'text-yellow-400' :
-                                            globalIndex === 1 ? 'text-gray-300' :
-                                            globalIndex === 2 ? 'text-orange-400' :
-                                            'text-white'
-                                        }`}>
-                                            {globalIndex === 0 ? '🥇' : globalIndex === 1 ? '🥈' : globalIndex === 2 ? '🥉' : `${globalIndex + 1}`}
-                                        </span>
-                                    </div>
-
-                                    {/* Player Number */}
-                                    <div className="col-span-1 flex items-center justify-center">
-                                        <div className="w-8 h-8 rounded-full bg-gradient-to-b from-custom-orange to-custom-yellow flex items-center justify-center">
-                                            <span className="text-xs font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                                                {playerNumber}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Player Name */}
-                                    <div className="col-span-4 flex items-center">
-                                        <p className="font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                                            {player.name}
-                                        </p>
-                                    </div>
-
-                                    {/* Team */}
-                                    <div className="col-span-3 flex items-center gap-2">
-                                        {playerTeam && (
-                                            <>
-                                                <img
-                                                    src={playerTeam.logoURL}
-                                                    alt={playerTeam.name}
-                                                    className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-lg"
-                                                />
-                                                <span className="font-semibold text-white text-sm drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] truncate">
-                                                    {playerTeam.name}
-                                                </span>
-                                            </>
-                                        )}
-                                    </div>
-
-                                    {/* Sold Price */}
-                                    <div className="col-span-3 flex items-center justify-end">
-                                        <span className={`text-xl font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] ${
-                                            isTopThree ? 'text-green-400' : 'text-white'
-                                        }`}>
-                                            {formatCurrency(player.finalPrice || 0)}
-                                        </span>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {/* Summary Footer */}
-                    <div className="grid grid-cols-12 gap-4 p-4 border-t-2 border-cyan-500">
-                        <div className="col-span-9 flex items-center justify-end">
-                            <span className="text-lg font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                                Total Auction Value:
-                            </span>
-                        </div>
-                        <div className="col-span-3 flex items-center justify-end">
-                            <span className="text-2xl font-bold text-green-400 drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)]">
-                                {formatCurrency(sortedPlayers.reduce((sum, p) => sum + (p.finalPrice || 0), 0))}
-                            </span>
-                        </div>
+                    <div style={{
+                        fontFamily: FONT_ROW,
+                        fontSize: 22,
+                        fontWeight: 500,
+                        color: '#64748B',
+                        letterSpacing: 2,
+                        marginTop: 4,
+                    }}>
+                        {soldPlayers.length} SOLD &nbsp;·&nbsp; {explicitlyUnsoldPlayers.length} UNSOLD &nbsp;·&nbsp; {availablePlayers.length} AVAILABLE &nbsp;·&nbsp; TOTAL {formatCurrency(totalSoldValue)}
                     </div>
                 </div>
+
+                {/* Pagination dots */}
+                {totalPages > 1 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {Array.from({ length: totalPages }).map((_, i) => (
+                            <div key={i} style={{
+                                width: i === currentPage ? 24 : 8,
+                                height: 8,
+                                borderRadius: 4,
+                                background: i === currentPage ? '#F59E0B' : '#1E3A5F',
+                                transition: 'all 0.3s ease',
+                            }} />
+                        ))}
+                    </div>
+                )}
             </div>
+
+            {/* Gold separator */}
+            <div style={{
+                position: 'absolute',
+                left: PANEL_LEFT + 20,
+                top: panelTop + HEADING_H,
+                width: PANEL_WIDTH - 40,
+                height: SEPARATOR_H,
+                background: 'linear-gradient(90deg, #F59E0B 0%, rgba(245,158,11,0.15) 100%)',
+            }} />
+
+            {/* ── Player rows ── */}
+            {currentPagePlayers.map((player, i) => {
+                const isSold      = !!player.isSold;
+                const isUnsold    = !isSold && !!player.isUnsold;
+                const pillTop = firstPillTop + i * ROW_SPACING;
+                const elemTop = pillTop - AVATAR_OVERLAP;
+                const team = isSold ? teams.find(t => t._id === player.winningTeamId) : null;
+                const initials = player.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+
+                return (
+                    <React.Fragment key={player._id}>
+                        {/* Row pill */}
+                        <div style={{
+                            position: 'absolute',
+                            left: PILL_LEFT,
+                            top: pillTop,
+                            width: PILL_WIDTH,
+                            height: PILL_H,
+                            background: isSold ? '#0A1628' : isUnsold ? '#0A0F1A' : '#07111A',
+                            borderRadius: 26.5,
+                            border: `1px solid ${isSold ? '#1E3A5F' : isUnsold ? '#2D1B1B' : '#0F1D2E'}`,
+                        }} />
+
+                        {/* Avatar circle — player photo */}
+                        <div style={{
+                            position: 'absolute',
+                            left: PILL_LEFT - 5,
+                            top: elemTop,
+                            width: AVATAR_SIZE,
+                            height: AVATAR_SIZE,
+                            borderRadius: '50%',
+                            background: '#071020',
+                            border: `2px solid ${isSold ? '#F59E0B' : isUnsold ? '#7F1D1D' : '#1E293B'}`,
+                            overflow: 'hidden',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            filter: isSold ? 'none' : 'grayscale(80%)',
+                        }}>
+                            {player.photoURL ? (
+                                <img
+                                    src={player.photoURL}
+                                    alt={player.name}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
+                            ) : (
+                                <span style={{
+                                    fontFamily: FONT_ROW,
+                                    fontSize: 24,
+                                    fontWeight: 700,
+                                    color: isSold ? '#F59E0B' : isUnsold ? '#EF4444' : '#475569',
+                                    letterSpacing: 1,
+                                }}>
+                                    {initials}
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Player name */}
+                        <div style={{
+                            position: 'absolute',
+                            left: PILL_LEFT + 78,
+                            top: elemTop,
+                            height: AVATAR_SIZE,
+                            display: 'flex',
+                            alignItems: 'center',
+                            fontFamily: FONT_ROW,
+                            fontSize: 46,
+                            fontWeight: 600,
+                            letterSpacing: 2,
+                            color: isSold ? '#FFFFFF' : isUnsold ? '#6B7280' : '#374151',
+                            whiteSpace: 'nowrap',
+                            maxWidth: 380,
+                            overflow: 'hidden',
+                        }}>
+                            {player.name}
+                        </div>
+
+                        {/* Team name / UNSOLD */}
+                        <div style={{
+                            position: 'absolute',
+                            left: PILL_LEFT + 490,
+                            top: elemTop,
+                            height: AVATAR_SIZE,
+                            display: 'flex',
+                            alignItems: 'center',
+                            fontFamily: FONT_ROW,
+                            fontSize: 46,
+                            fontWeight: isSold ? 500 : 700,
+                            letterSpacing: 2,
+                            color: isSold ? '#CBD5E1' : isUnsold ? '#EF4444' : '#3B82F6',
+                            whiteSpace: 'nowrap',
+                            maxWidth: 540,
+                            overflow: 'hidden',
+                        }}>
+                            {isSold ? (team?.name ?? '—') : isUnsold ? 'UNSOLD' : 'AVAILABLE'}
+                        </div>
+
+                        {/* Amount — sold only */}
+                        {isSold && (
+                            <div style={{
+                                position: 'absolute',
+                                left: PILL_LEFT + 1070,
+                                top: elemTop,
+                                height: AVATAR_SIZE,
+                                display: 'flex',
+                                alignItems: 'center',
+                                fontFamily: FONT_ROW,
+                                fontSize: 46,
+                                fontWeight: 700,
+                                letterSpacing: 2,
+                                color: '#F59E0B',
+                                whiteSpace: 'nowrap',
+                            }}>
+                                {formatCurrency(player.finalPrice || 0)}
+                            </div>
+                        )}
+
+                        {/* Subtle row divider */}
+                        {i < rowCount - 1 && (
+                            <div style={{
+                                position: 'absolute',
+                                left: PILL_LEFT + 10,
+                                top: pillTop + PILL_H + 13,
+                                width: PILL_WIDTH - 20,
+                                height: 1,
+                                background: 'rgba(30,58,95,0.5)',
+                            }} />
+                        )}
+                    </React.Fragment>
+                );
+            })}
+        </div>
         </div>
     );
 };

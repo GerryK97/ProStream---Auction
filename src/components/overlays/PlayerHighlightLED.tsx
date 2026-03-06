@@ -164,9 +164,9 @@ const SpotlightOverlay: React.FC<{ player: Player; tournament: Tournament | null
       </div>
       <div className="grid w-full grid-cols-3 gap-4">
         {[
-          { label: 'Matches', value: player.stats.matchesPlayed },
-          { label: 'Runs', value: player.stats.totalScore },
-          { label: 'Wickets', value: player.stats.totalWickets },
+          { label: 'Matches', value: (player as any).stats?.matchesPlayed },
+          { label: 'Runs', value: (player as any).stats?.totalScore },
+          { label: 'Wickets', value: (player as any).stats?.totalWickets },
         ].map((stat) => (
           <div key={stat.label} className="rounded-2xl border border-white/10 bg-white/10 p-4">
             <p className="text-sm uppercase tracking-[0.4em] text-neutral-300">{stat.label}</p>

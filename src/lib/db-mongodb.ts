@@ -3,29 +3,16 @@ import { connectToDatabase } from './mongodb';
 import { TournamentModel } from '@/models/Tournament';
 import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
-import { MasterTeamModel } from '@/models/MasterTeam';
-import { MasterPlayerModel } from '@/models/MasterPlayer';
 import { OverlayConfigModel, OverlaySceneModel, OverlayHistoryModel, OverlayAnalyticsModel } from '@/models/OverlayConfig';
-import { Tournament, Team, Player, MasterTeam, MasterPlayer, OverlayConfig, OverlayScene, OverlayHistory } from '@/types';
-import { canAccessTournament, canAccessTeam, canAccessPlayer, canAccessMasterTeam, canAccessMasterPlayer } from './permissions';
+import { Tournament, Team, Player, OverlayConfig, OverlayScene, OverlayHistory } from '@/types';
+import { canAccessTournament, canAccessTeam, canAccessPlayer } from './permissions';
 
 // Helper function to generate IDs
 const generateId = (prefix: string) =>
   `${prefix}${Date.now()}${Math.random().toString(36).substr(2, 9)}`;
 
-// Helper function to generate sequential master player ID with PS prefix
-const generateSequentialPlayerId = async (): Promise<string> => {
-  await connectToDatabase();
-  const count = await MasterPlayerModel.countDocuments();
-  const playerNumber = (count + 1).toString().padStart(3, '0');
-  return `PS${playerNumber}`;
-};
-
 // Helper function to generate tournament player ID (globally unique)
-// Uses timestamp + random string to guarantee uniqueness and avoid collisions
-const generateTournamentPlayerId = async (tournamentId: string): Promise<string> => {
-  // Use the same approach as other entities (teams, tournaments, etc.)
-  // This guarantees uniqueness without database queries or race conditions
+const generateTournamentPlayerId = async (): Promise<string> => {
   return generateId('p');
 };
 
@@ -143,334 +130,6 @@ export const tournamentDB = {
   },
 };
 
-// Master Team operations (Global Registry)
-export const masterTeamDB = {
-  getAll: async (): Promise<MasterTeam[]> => {
-    await connectToDatabase();
-    return await MasterTeamModel.find().sort({ name: 1 }).lean() as any;
-  },
-
-  /**
-   * Get master teams accessible to a user
-   * Admin: sees all master teams
-   * MasterManager/Tournament: sees only teams they created
-   * Others: no access (empty array)
-   */
-  getAllForUser: async (userId: string, userRole: string): Promise<MasterTeam[]> => {
-    await connectToDatabase();
-
-    // Admin sees all master teams
-    if (userRole === 'Admin') {
-      return await MasterTeamModel.find().sort({ name: 1 }).lean() as any;
-    }
-
-    // MasterManager and Tournament see only teams they created
-    if (userRole === 'MasterManager' || userRole === 'Tournament') {
-      return await MasterTeamModel.find({ createdBy: userId }).sort({ name: 1 }).lean() as any;
-    }
-
-    // Other roles have no access to master teams
-    return [];
-  },
-
-  getPaginated: async (skip: number, limit: number): Promise<MasterTeam[]> => {
-    await connectToDatabase();
-    return await MasterTeamModel.find()
-      .sort({ name: 1 })
-      .skip(skip)
-      .limit(limit)
-      .select('_id name ownerName shortCode logoURL')
-      .lean() as any;
-  },
-
-  /**
-   * Get paginated master teams for a specific user
-   */
-  getPaginatedForUser: async (
-    userId: string,
-    userRole: string,
-    skip: number,
-    limit: number
-  ): Promise<MasterTeam[]> => {
-    await connectToDatabase();
-
-    if (userRole === 'Admin') {
-      return await MasterTeamModel.find()
-        .sort({ name: 1 })
-        .skip(skip)
-        .limit(limit)
-        .select('_id name ownerName shortCode logoURL')
-        .lean() as any;
-    }
-
-    if (userRole === 'MasterManager' || userRole === 'Tournament') {
-      return await MasterTeamModel.find({ createdBy: userId })
-        .sort({ name: 1 })
-        .skip(skip)
-        .limit(limit)
-        .select('_id name ownerName shortCode logoURL')
-        .lean() as any;
-    }
-
-    return [];
-  },
-
-  count: async (): Promise<number> => {
-    await connectToDatabase();
-    return await MasterTeamModel.countDocuments();
-  },
-
-  /**
-   * Get count of master teams for a specific user
-   */
-  countForUser: async (userId: string, userRole: string): Promise<number> => {
-    await connectToDatabase();
-
-    if (userRole === 'Admin') {
-      return await MasterTeamModel.countDocuments();
-    }
-
-    if (userRole === 'MasterManager' || userRole === 'Tournament') {
-      return await MasterTeamModel.countDocuments({ createdBy: userId });
-    }
-
-    return 0;
-  },
-
-  getById: async (id: string): Promise<MasterTeam | null> => {
-    await connectToDatabase();
-    return await MasterTeamModel.findOne({ _id: id }).lean() as any;
-  },
-
-  create: async (data: Omit<MasterTeam, '_id'>, createdBy?: string): Promise<MasterTeam> => {
-    await connectToDatabase();
-
-    // Check for duplicate shortCode
-    const existing = await MasterTeamModel.findOne({ shortCode: data.shortCode }).select('_id').lean();
-    if (existing) {
-      throw new Error(`Team with shortCode "${data.shortCode}" already exists`);
-    }
-
-    const newMasterTeam: MasterTeam = {
-      _id: generateId('mt'),
-      ...data,
-      ...(createdBy && { createdBy }),
-      logoURL: data.logoURL || `https://placehold.co/100x100/374151/F3F4F6/png?text=${encodeURIComponent(data.name.charAt(0))}`,
-    };
-    const doc = await MasterTeamModel.create(newMasterTeam);
-    return doc.toObject();
-  },
-
-  update: async (id: string, data: Partial<Omit<MasterTeam, '_id'>>): Promise<MasterTeam | null> => {
-    await connectToDatabase();
-
-    // Update master
-    const updated = await MasterTeamModel.findOneAndUpdate(
-      { _id: id },
-      { $set: data },
-      { new: true }
-    ).lean();
-
-    if (!updated) return null;
-
-    // Propagate changes to all tournament instances
-    const updateFields: any = {};
-    if (data.name) updateFields.name = data.name;
-    if (data.shortCode) updateFields.shortCode = data.shortCode;
-    if (data.ownerName) updateFields.ownerName = data.ownerName;
-    if (data.logoURL !== undefined) updateFields.logoURL = data.logoURL;
-
-    if (Object.keys(updateFields).length > 0) {
-      await TeamModel.updateMany(
-        { masterTeamId: id },
-        { $set: updateFields }
-      );
-    }
-
-    return updated as any;
-  },
-
-  delete: async (id: string): Promise<boolean> => {
-    await connectToDatabase();
-
-    // CASCADE DELETE - Delete all tournament instances first
-    await TeamModel.deleteMany({ masterTeamId: id });
-
-    // Delete master
-    const result = await MasterTeamModel.deleteOne({ _id: id });
-    return result.deletedCount > 0;
-  },
-
-  // Get all tournaments where this master team is used
-  getUsageInTournaments: async (id: string): Promise<string[]> => {
-    await connectToDatabase();
-    const teams = await TeamModel.find({ masterTeamId: id }).distinct('tournamentId');
-    return teams;
-  },
-};
-
-// Master Player operations (Global Registry)
-export const masterPlayerDB = {
-  getAll: async (): Promise<MasterPlayer[]> => {
-    await connectToDatabase();
-    return await MasterPlayerModel.find().sort({ name: 1 }).lean() as any;
-  },
-
-  /**
-   * Get master players accessible to a user
-   * Admin: sees all master players
-   * MasterManager/Tournament: sees only players they created
-   * Others: no access (empty array)
-   */
-  getAllForUser: async (userId: string, userRole: string): Promise<MasterPlayer[]> => {
-    await connectToDatabase();
-
-    // Admin sees all master players
-    if (userRole === 'Admin') {
-      return await MasterPlayerModel.find().sort({ name: 1 }).lean() as any;
-    }
-
-    // MasterManager and Tournament see only players they created
-    if (userRole === 'MasterManager' || userRole === 'Tournament') {
-      return await MasterPlayerModel.find({ createdBy: userId }).sort({ name: 1 }).lean() as any;
-    }
-
-    // Other roles have no access to master players
-    return [];
-  },
-
-  getPaginated: async (skip: number, limit: number): Promise<MasterPlayer[]> => {
-    await connectToDatabase();
-    return await MasterPlayerModel.find()
-      .sort({ name: 1 })
-      .skip(skip)
-      .limit(limit)
-      .select('_id name position currentClub photoURL careerStats suggestedClass')
-      .lean() as any;
-  },
-
-  /**
-   * Get paginated master players for a specific user
-   */
-  getPaginatedForUser: async (
-    userId: string,
-    userRole: string,
-    skip: number,
-    limit: number
-  ): Promise<MasterPlayer[]> => {
-    await connectToDatabase();
-
-    if (userRole === 'Admin') {
-      return await MasterPlayerModel.find()
-        .sort({ name: 1 })
-        .skip(skip)
-        .limit(limit)
-        .select('_id name position currentClub photoURL careerStats suggestedClass')
-        .lean() as any;
-    }
-
-    if (userRole === 'MasterManager' || userRole === 'Tournament') {
-      return await MasterPlayerModel.find({ createdBy: userId })
-        .sort({ name: 1 })
-        .skip(skip)
-        .limit(limit)
-        .select('_id name position currentClub photoURL careerStats suggestedClass')
-        .lean() as any;
-    }
-
-    return [];
-  },
-
-  count: async (): Promise<number> => {
-    await connectToDatabase();
-    return await MasterPlayerModel.countDocuments();
-  },
-
-  /**
-   * Get count of master players for a specific user
-   */
-  countForUser: async (userId: string, userRole: string): Promise<number> => {
-    await connectToDatabase();
-
-    if (userRole === 'Admin') {
-      return await MasterPlayerModel.countDocuments();
-    }
-
-    if (userRole === 'MasterManager' || userRole === 'Tournament') {
-      return await MasterPlayerModel.countDocuments({ createdBy: userId });
-    }
-
-    return 0;
-  },
-
-  getById: async (id: string): Promise<MasterPlayer | null> => {
-    await connectToDatabase();
-    return await MasterPlayerModel.findOne({ _id: id }).lean() as any;
-  },
-
-  create: async (data: Omit<MasterPlayer, '_id'>, createdBy?: string): Promise<MasterPlayer> => {
-    await connectToDatabase();
-    const playerId = await generateSequentialPlayerId();
-    const newMasterPlayer: MasterPlayer = {
-      _id: playerId,
-      ...data,
-      ...(createdBy && { createdBy }),
-      photoURL: data.photoURL || `https://placehold.co/100x100/374151/F3F4F6/png?text=No+Image`,
-      careerStats: data.careerStats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 },
-    };
-    const doc = await MasterPlayerModel.create(newMasterPlayer);
-    return doc.toObject();
-  },
-
-  update: async (id: string, data: Partial<Omit<MasterPlayer, '_id'>>): Promise<MasterPlayer | null> => {
-    await connectToDatabase();
-
-    // Update master
-    const updated = await MasterPlayerModel.findOneAndUpdate(
-      { _id: id },
-      { $set: data },
-      { new: true }
-    ).lean();
-
-    if (!updated) return null;
-
-    // Propagate changes to all tournament instances
-    const updateFields: any = {};
-    if (data.name) updateFields.name = data.name;
-    if (data.position) updateFields.position = data.position;
-    if (data.currentClub) updateFields.currentClub = data.currentClub;
-    if (data.photoURL !== undefined) {
-      updateFields.photoURL = data.photoURL; // Same field name in both schemas
-    }
-
-    if (Object.keys(updateFields).length > 0) {
-      await PlayerModel.updateMany(
-        { masterPlayerId: id },
-        { $set: updateFields }
-      );
-    }
-
-    return updated as any;
-  },
-
-  delete: async (id: string): Promise<boolean> => {
-    await connectToDatabase();
-
-    // CASCADE DELETE - Delete all tournament instances first
-    await PlayerModel.deleteMany({ masterPlayerId: id });
-
-    // Delete master
-    const result = await MasterPlayerModel.deleteOne({ _id: id });
-    return result.deletedCount > 0;
-  },
-
-  // Get all tournaments where this master player is used
-  getUsageInTournaments: async (id: string): Promise<string[]> => {
-    await connectToDatabase();
-    const players = await PlayerModel.find({ masterPlayerId: id }).distinct('tournamentId');
-    return players;
-  },
-};
 
 // Team operations
 export const teamDB = {
@@ -513,21 +172,26 @@ export const teamDB = {
   },
 
   create: async (
-    data: Omit<Team, '_id' | 'tournamentId' | 'initialBudget' | 'currentBalance' | 'playersPurchased'>,
+    data: { name: string; shortCode: string; ownerName: string; logoURL?: string; tournamentId: string },
     createdBy?: string
   ): Promise<Team> => {
     await connectToDatabase();
+
+    // Fetch tournament to get budget
+    const tournament = await TournamentModel.findOne({ _id: data.tournamentId }).lean() as Tournament | null;
+    if (!tournament) throw new Error('Tournament not found');
+
     const newTeam: Team = {
       _id: generateId('team'),
+      tournamentId: data.tournamentId,
       name: data.name,
       shortCode: data.shortCode,
       ownerName: data.ownerName,
-      // No tournamentId - team is unassigned
-      // No budget fields - only set when assigned to tournament
+      logoURL: data.logoURL || `https://placehold.co/100x100/374151/F3F4F6/png?text=${encodeURIComponent(data.name.charAt(0))}`,
+      initialBudget: tournament.budgetPerTeam,
+      currentBalance: tournament.budgetPerTeam,
       playersPurchased: [],
       ...(createdBy && { createdBy }),
-      // Provide default logo if not provided
-      logoURL: data.logoURL || `https://placehold.co/100x100/374151/F3F4F6/png?text=${encodeURIComponent(data.name.charAt(0))}`,
     };
     const doc = await TeamModel.create(newTeam);
     return doc.toObject();
@@ -541,48 +205,6 @@ export const teamDB = {
       { new: true }
     ).lean();
     return updated as any;
-  },
-
-  // Create tournament team from master team
-  createFromMaster: async (
-    masterTeamId: string,
-    tournamentId: string,
-    createdBy?: string
-  ): Promise<Team> => {
-    await connectToDatabase();
-
-    // Get master team data
-    const masterTeam = await MasterTeamModel.findOne({ _id: masterTeamId }).lean() as MasterTeam | null;
-    if (!masterTeam) throw new Error('Master team not found');
-
-    // Get tournament data for budget
-    const tournament = await TournamentModel.findOne({ _id: tournamentId }).lean() as Tournament | null;
-    if (!tournament) throw new Error('Tournament not found');
-
-    // Check if team already exists in tournament
-    const existing = await TeamModel.findOne({ masterTeamId, tournamentId });
-    if (existing) {
-      throw new Error('Team already added to this tournament');
-    }
-
-    const newTeam: Team = {
-      _id: generateId('team'),
-      masterTeamId,
-      tournamentId,
-      // Copy from master (read-only)
-      name: masterTeam.name,
-      shortCode: masterTeam.shortCode,
-      ownerName: masterTeam.ownerName,
-      logoURL: masterTeam.logoURL,
-      // Tournament-specific
-      initialBudget: tournament.budgetPerTeam,
-      currentBalance: tournament.budgetPerTeam,
-      playersPurchased: [],
-      ...(createdBy && { createdBy }),
-    };
-
-    const doc = await TeamModel.create(newTeam);
-    return doc.toObject();
   },
 
   delete: async (id: string): Promise<boolean> => {
@@ -633,19 +255,23 @@ export const playerDB = {
   },
 
   create: async (
-    data: Omit<Player, '_id' | 'tournamentId' | 'isSold' | 'finalPrice' | 'winningTeamId'>,
+    data: { name: string; position?: string; currentClub?: string; photoURL?: string; playerClass?: string; tournamentId: string },
     createdBy?: string
   ): Promise<Player> => {
     await connectToDatabase();
+    const playerId = await generateTournamentPlayerId();
+    const playerNo = await generatePlayerNo(data.tournamentId);
     const newPlayer: Player = {
-      _id: generateId('p'),
+      _id: playerId,
+      playerNo,
+      tournamentId: data.tournamentId,
       name: data.name,
-      stats: data.stats,
-      // No tournamentId - player is unassigned
+      position: data.position,
+      currentClub: data.currentClub,
+      photoURL: data.photoURL || `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23374151'/><text x='50' y='55' font-family='sans-serif' font-size='12' fill='%23F3F4F6' text-anchor='middle'>No Image</text></svg>`,
+      playerClass: data.playerClass,
       isSold: false,
       ...(createdBy && { createdBy }),
-      // Provide default photo if not provided
-      photoURL: data.photoURL || `https://placehold.co/100x100/374151/F3F4F6/png?text=No+Image`,
     };
     const doc = await PlayerModel.create(newPlayer);
     return doc.toObject();
@@ -659,80 +285,6 @@ export const playerDB = {
       { new: true }
     ).lean();
     return updated as any;
-  },
-
-  // Create tournament player from master player
-  createFromMaster: async (
-    masterPlayerId: string,
-    tournamentId: string,
-    playerClass?: string,
-    createdBy?: string
-  ): Promise<Player> => {
-    try {
-      await connectToDatabase();
-
-      console.log(`[playerDB.createFromMaster] Starting: masterPlayerId=${masterPlayerId}, tournamentId=${tournamentId}`);
-
-      // Batch fetch master player and duplicate check in parallel for better performance
-      const startTime = Date.now();
-      const [masterPlayer, existing] = await Promise.all([
-        MasterPlayerModel.findOne({ _id: masterPlayerId }).lean() as Promise<MasterPlayer | null>,
-        PlayerModel.findOne({ masterPlayerId, tournamentId }).select('_id').lean() as Promise<any>,
-      ]);
-      console.log(`[playerDB.createFromMaster] Batch fetch took ${Date.now() - startTime}ms`);
-
-      if (!masterPlayer) {
-        console.error(`[playerDB.createFromMaster] Master player not found: ${masterPlayerId}`);
-        throw new Error('Master player not found');
-      }
-
-      if (existing) {
-        console.warn(`[playerDB.createFromMaster] Player already exists: ${existing._id}`);
-        console.warn(`[playerDB.createFromMaster] Duplicate details - masterPlayerId: ${masterPlayerId}, tournamentId: ${tournamentId}, existingPlayerId: ${existing._id}`);
-
-        // Get full player details for debugging
-        const fullExisting = await PlayerModel.findById(existing._id).lean();
-        console.warn(`[playerDB.createFromMaster] Full duplicate player:`, fullExisting);
-
-        throw new Error(`Player "${masterPlayer.name}" is already added to this tournament (Player ID: ${existing._id})`);
-      }
-
-      // Generate globally unique ID (timestamp-based)
-      const idGenStart = Date.now();
-      const tournamentPlayerId = await generateTournamentPlayerId(tournamentId);
-
-      // Generate sequential player number within tournament (001, 002, 003)
-      const playerNo = await generatePlayerNo(tournamentId);
-      console.log(`[playerDB.createFromMaster] ID generation took ${Date.now() - idGenStart}ms, generated: ${tournamentPlayerId}, playerNo: ${playerNo}`);
-
-      const newPlayer: Player = {
-        _id: tournamentPlayerId,
-        playerNo: playerNo,
-        masterPlayerId,
-        tournamentId,
-        // Copy from master (read-only)
-        name: masterPlayer.name,
-        position: masterPlayer.position,
-        currentClub: masterPlayer.currentClub,
-        photoURL: masterPlayer.photoURL, // Same field name as master
-        // Copy career stats from master player
-        stats: masterPlayer.careerStats || { matchesPlayed: 0, totalScore: 0, totalWickets: 0 },
-        // Use provided playerClass or fall back to master's suggestedClass
-        playerClass: playerClass || masterPlayer.suggestedClass,
-        isSold: false,
-        ...(createdBy && { createdBy }),
-      };
-
-      const createStart = Date.now();
-      const doc = await PlayerModel.create(newPlayer);
-      console.log(`[playerDB.createFromMaster] Player creation took ${Date.now() - createStart}ms`);
-      console.log(`[playerDB.createFromMaster] Successfully created player: ${tournamentPlayerId} (${masterPlayer.name})`);
-
-      return doc.toObject();
-    } catch (error) {
-      console.error('[playerDB.createFromMaster] Error:', error);
-      throw error;
-    }
   },
 
   delete: async (id: string): Promise<boolean> => {
@@ -879,40 +431,12 @@ export const seedDatabase = async () => {
       },
     ]);
 
-    // Seed Players (using new sequential format: 001, 002, 003...)
+    // Seed Players
     await PlayerModel.insertMany([
-      {
-        _id: '001',
-        tournamentId: 't1',
-        name: 'Shadow',
-        stats: { matchesPlayed: 50, totalScore: 1200, totalWickets: 5 },
-        imageURL: 'https://picsum.photos/seed/shadow/200',
-        isSold: false,
-      },
-      {
-        _id: '002',
-        tournamentId: 't1',
-        name: 'Vortex',
-        stats: { matchesPlayed: 65, totalScore: 850, totalWickets: 75 },
-        imageURL: 'https://picsum.photos/seed/vortex/200',
-        isSold: false,
-      },
-      {
-        _id: '003',
-        tournamentId: 't1',
-        name: 'Blitz',
-        stats: { matchesPlayed: 45, totalScore: 1500, totalWickets: 10 },
-        imageURL: 'https://picsum.photos/seed/blitz/200',
-        isSold: false,
-      },
-      {
-        _id: '004',
-        tournamentId: 't1',
-        name: 'Rogue',
-        stats: { matchesPlayed: 55, totalScore: 980, totalWickets: 30 },
-        imageURL: 'https://picsum.photos/seed/rogue/200',
-        isSold: false,
-      },
+      { _id: '001', playerNo: '001', tournamentId: 't1', name: 'Shadow', position: 'Batsman', currentClub: 'Wariyapola CC', isSold: false },
+      { _id: '002', playerNo: '002', tournamentId: 't1', name: 'Vortex', position: 'Bowler', currentClub: 'Chilaw CC', isSold: false },
+      { _id: '003', playerNo: '003', tournamentId: 't1', name: 'Blitz', position: 'All-rounder', currentClub: 'Matara CC', isSold: false },
+      { _id: '004', playerNo: '004', tournamentId: 't1', name: 'Rogue', position: 'Wicket-keeper', currentClub: 'Galle CC', isSold: false },
     ]);
 
     console.log('✅ Database seeded successfully!');

@@ -1,45 +1,30 @@
 import mongoose, { Schema, model, models } from 'mongoose';
 import { Player } from '@/types';
 
-const playerStatsSchema = new Schema(
-  {
-    matchesPlayed: { type: Number, required: true },
-    totalScore: { type: Number, required: true },
-    totalWickets: { type: Number, required: true },
-  },
-  { _id: false }
-);
-
 const playerSchema = new Schema<Player>(
   {
-    _id: { type: String, required: true },                    // Globally unique (timestamp-based)
-    playerNo: { type: String, required: false },              // Sequential per tournament (001, 002, 003)
-    masterPlayerId: { type: String, required: false },        // Reference to MasterPlayer (optional for backward compatibility)
-    tournamentId: { type: String, required: false, default: null },
-    createdBy: { type: String, required: false },             // User ID who created the player
-    // Copied from master (read-only)
+    _id: { type: String, required: true },               // Globally unique (timestamp-based)
+    playerNo: { type: String, required: false },          // Sequential per tournament (001, 002, 003)
+    tournamentId: { type: String, required: true },
+    createdBy: { type: String, required: false },
     name: { type: String, required: true },
     position: { type: String, required: false },
     currentClub: { type: String, required: false },
-    photoURL: { type: String, required: false },              // Player photo (same field as MasterPlayer)
-    // Tournament-specific data
-    stats: { type: playerStatsSchema, required: true },       // Tournament stats (separate from career)
-    playerClass: { type: String, required: false },           // Player class for this tournament
+    photoURL: { type: String, required: false },
+    playerClass: { type: String, required: false },
     isSold: { type: Boolean, default: false },
+    isUnsold: { type: Boolean, default: false },
     finalPrice: { type: Number },
     winningTeamId: { type: String },
   },
   {
     timestamps: true,
-    _id: false, // Use custom _id
+    _id: false,
   }
 );
 
-// Indexes for efficient queries
-playerSchema.index({ masterPlayerId: 1 });
 playerSchema.index({ tournamentId: 1 });
-playerSchema.index({ tournamentId: 1, masterPlayerId: 1 });  // Prevent duplicate player in same tournament
-playerSchema.index({ tournamentId: 1, playerNo: 1 }, { unique: true, sparse: true }); // Ensure unique playerNo per tournament
+playerSchema.index({ tournamentId: 1, playerNo: 1 }, { unique: true, sparse: true });
 playerSchema.index({ createdBy: 1 });
 
 export const PlayerModel = models.Player || model<Player>('Player', playerSchema);

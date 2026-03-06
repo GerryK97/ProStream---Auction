@@ -4,11 +4,19 @@ import { PlayerModel } from '@/models/Player';
 import { TournamentModel } from '@/models/Tournament';
 import { TeamModel } from '@/models/Team';
 import { connectToDatabase } from '@/lib/mongodb';
+import { getUserFromRequest } from '@/lib/request-helpers';
+import { canPerformAction } from '@/lib/permissions';
 import { Tournament, Player } from '@/types';
 
 export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
+
+    const user = await getUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!canPerformAction(user.role, 'read', 'player')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const { searchParams } = new URL(request.url);
     const tournamentId = searchParams.get('tournamentId');
@@ -67,7 +75,7 @@ export async function GET(request: NextRequest) {
       row['Total Wickets'] = player.stats?.totalWickets || 0;
 
       // Add auction data
-      row['Status'] = player.isSold ? 'SOLD' : 'AVAILABLE';
+      row['Status'] = player.isSold ? 'SOLD' : player.isUnsold ? 'UNSOLD' : 'AVAILABLE';
       row['Final Price'] = player.finalPrice || '';
       row['Winning Team'] = player.winningTeamId ? (teamMap.get(player.winningTeamId) || 'Unknown') : '';
 
