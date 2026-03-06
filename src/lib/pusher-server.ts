@@ -18,7 +18,9 @@ import type {
   PlayerSoldEvent,
   AuctionResetEvent,
   AuctionUndoEvent,
+  PlayerMarkedUnsoldEvent,
   AuctionStateUpdateEvent,
+  OverlaySettingsEvent,
 } from '@/types/pusher-events';
 
 // Validate environment variables
@@ -188,6 +190,16 @@ export async function triggerAuctionUndo(
 }
 
 /**
+ * Helper: Trigger auction:player-unsold event
+ */
+export async function triggerPlayerMarkedUnsold(
+  tournamentId: string,
+  data: Omit<PlayerMarkedUnsoldEvent, 'tournamentId' | 'timestamp'>
+): Promise<void> {
+  return triggerAuctionEvent(tournamentId, 'auction:player-unsold', data);
+}
+
+/**
  * Helper: Trigger auction:state-update event
  */
 export async function triggerStateUpdate(
@@ -195,6 +207,43 @@ export async function triggerStateUpdate(
 ): Promise<void> {
   const tournamentId = data.tournament._id?.toString() || '';
   return triggerAuctionEvent(tournamentId, 'auction:state-update', data);
+}
+
+/**
+ * Helper: Trigger overlay:settings event
+ */
+export async function triggerOverlaySettings(
+  tournamentId: string,
+  data: Omit<OverlaySettingsEvent, 'tournamentId' | 'timestamp'>
+): Promise<void> {
+  return triggerAuctionEvent(tournamentId, 'overlay:settings' as PusherEventName, data);
+}
+
+/**
+ * Global wake/sleep channel — overlays always subscribe here.
+ * Sending 'auction:wake' activates the full tournament channel subscription.
+ * Sending 'auction:sleep' deactivates it (manual override).
+ */
+export const WAKE_CHANNEL = 'prostream-control';
+
+export async function triggerWake(tournamentId: string): Promise<void> {
+  try {
+    const pusher = getPusherInstance();
+    await pusher.trigger(WAKE_CHANNEL, 'auction:wake', { tournamentId, timestamp: Date.now() });
+    console.log(`[Pusher] Wake signal sent for tournament ${tournamentId}`);
+  } catch (error) {
+    console.error('[Pusher] Error sending wake signal:', error);
+  }
+}
+
+export async function triggerSleep(tournamentId: string): Promise<void> {
+  try {
+    const pusher = getPusherInstance();
+    await pusher.trigger(WAKE_CHANNEL, 'auction:sleep', { tournamentId, timestamp: Date.now() });
+    console.log(`[Pusher] Sleep signal sent for tournament ${tournamentId}`);
+  } catch (error) {
+    console.error('[Pusher] Error sending sleep signal:', error);
+  }
 }
 
 /**

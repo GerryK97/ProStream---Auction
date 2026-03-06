@@ -87,8 +87,12 @@ export async function PUT(
       );
     }
 
-    // Check if user can modify this player
-    if (!canModifyResource(user.userId, user.role, player)) {
+    // Check if user has access to this player's tournament (mirrors GET logic)
+    const tournament = player.tournamentId ? await tournamentDB.getById(player.tournamentId) : null;
+    const hasTournamentAccess =
+      user.role === 'Admin' ||
+      (tournament && (tournament.createdBy === user.userId || user.assignedTournaments.includes(player.tournamentId!)));
+    if (!hasTournamentAccess && player.createdBy !== user.userId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

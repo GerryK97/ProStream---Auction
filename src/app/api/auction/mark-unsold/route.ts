@@ -1,0 +1,84 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { connectToDatabase } from '@/lib/mongodb';
+import { AuctionStateModel } from '@/models/AuctionState';
+import { PlayerModel } from '@/models/Player';
+import { triggerPlayerMarkedUnsold } from '@/lib/pusher-server';
+
+// POST /api/auction/mark-unsold - Mark the current player as explicitly unsold and reset auction state
+export async function POST(request: NextRequest) {
+  try {
+    await connectToDatabase();
+    const { tournamentId } = await request.json();
+
+    if (!tournamentId) {
+      return NextResponse.json(
+        { error: 'Missing required field: tournamentId' },
+        { status: 400 }
+      );
+    }
+
+    // Find the current auction state to get which player is up for auction
+    const auctionState = await AuctionStateModel.findOne({ tournamentId }).lean();
+    const currentPlayerId = (auctionState as any)?.currentPlayerId;
+
+    if (!currentPlayerId) {
+      return NextResponse.json(
+        { error: 'No player currently up for auction' },
+        { status: 400 }
+      );
+    }
+
+    // Mark that player as explicitly unsold and return the updated document
+    // Explicit updatedAt ensures reliable timestamp comparison in the undo route
+    const updatedPlayer = await PlayerModel.findOneAndUpdate(
+      { _id: currentPlayerId },
+      { $set: { isUnsold: true, isSold: false, updatedAt: new Date() } },
+      { new: true }
+    ).lean();
+
+    if (!updatedPlayer) {
+      return NextResponse.json(
+        { error: 'Player not found' },
+        { status: 404 }
+      );
+    }
+
+    // Reset the auction state
+    const updatedState = await AuctionStateModel.findOneAndUpdate(
+      { tournamentId },
+      {
+        $set: {
+          currentPlayerId: null,
+          currentBid: 0,
+          winningTeamId: null,
+          currentAuctionStatus: 'Pending',
+          history: [],
+        },
+      },
+      { new: true }
+    ).lean();
+
+    // Broadcast a targeted event — just the updated player + auction state
+    // (avoids full-state payload that can exceed Pusher's message size limit)
+    try {
+      await triggerPlayerMarkedUnsold(tournamentId, {
+        unsoldPlayer: updatedPlayer as any,
+        auctionState: updatedState as any,
+        message: 'Player marked as unsold',
+      });
+    } catch (pusherError) {
+      console.error('Failed to trigger Pusher event:', pusherError);
+    }
+
+    return NextResponse.json({
+      message: 'Player marked as unsold',
+      auctionState: updatedState,
+    });
+  } catch (error) {
+    console.error('Error marking player as unsold:', error);
+    return NextResponse.json(
+      { error: 'Failed to mark player as unsold' },
+      { status: 500 }
+    );
+  }
+}

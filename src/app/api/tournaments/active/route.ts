@@ -17,28 +17,32 @@ export async function GET(request: NextRequest) {
     // JWT tokens start with "eyJ", overlay tokens don't
     const isJWT = overlayToken?.startsWith('eyJ');
 
+    let isValidOverlayAccess = false;
     if (overlayToken && !isJWT) {
-      const isValidOverlayToken = validateOverlayToken(overlayToken);
-
       // If overlay token is provided but invalid, return 401
-      if (!isValidOverlayToken) {
+      if (!validateOverlayToken(overlayToken)) {
         return NextResponse.json(
           { error: 'Invalid overlay token' },
           { status: 401 }
         );
       }
+      isValidOverlayAccess = true;
     }
-
-    // JWT tokens and Authorization headers are handled by middleware
-    // For now, we allow access with valid overlay token OR JWT token OR no authentication
-    // (the OverlayWrapper will handle authentication states)
 
     // Get authenticated user (if any)
     const user = await getUserFromRequest(request);
 
-    // If NO user is authenticated, return null (no active tournament for unauthenticated requests)
-    if (!user) {
+    // No user and no valid overlay token → deny
+    if (!user && !isValidOverlayAccess) {
       return NextResponse.json(null);
+    }
+
+    // Valid overlay token but no user → return most recent Live/Stopped tournament (unscoped)
+    if (!user && isValidOverlayAccess) {
+      const activeTournament = await TournamentModel.findOne(
+        { status: { $in: ['Live', 'Stopped'] } }
+      ).sort({ _id: -1 }).lean();
+      return NextResponse.json(activeTournament);
     }
 
     // Build query based on user role

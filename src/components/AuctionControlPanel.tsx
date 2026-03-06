@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ClearAllButton from './shared/ClearAllButton';
 import { Player, Team, Tournament, AuctionState } from '@/types';
 import { usePusherAuction } from '@/hooks/usePusherAuction';
@@ -9,7 +9,9 @@ import ClassBadge from '@/components/shared/ClassBadge';
 import { getFormattedBasePrice, getClassBasePrice } from '@/lib/playerClassUtils';
 import { getAuthHeaders } from '@/lib/api-client';
 import { useTournamentContext } from '@/contexts/TournamentContext';
+import { useAuth } from '@/contexts/AuthContext';
 import TournamentSelector from './TournamentSelector';
+import Modal from './Modal';
 
 const formatCurrency = (amount: number) => amount.toLocaleString();
 
@@ -18,15 +20,16 @@ const AvailablePlayersPanel: React.FC<{
     tournament: Tournament | null;
     onSelectPlayer: (id: string) => void;
     isAuctioning: boolean;
-}> = ({ players, tournament, onSelectPlayer, isAuctioning }) => {
+    currentPlayerId?: string;
+}> = ({ players, tournament, onSelectPlayer, isAuctioning, currentPlayerId }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const availablePlayers = players
-        .filter(p => !p.isSold)
+        .filter(p => !p.isSold && !p.isUnsold && p._id !== currentPlayerId)
         .sort((a, b) => a.name.localeCompare(b.name))
         .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
     return (
-        <div className="rounded-lg p-4 flex flex-col min-h-[calc(100vh-15rem)] border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-secondary)' }}>
+        <div className="rounded-lg p-4 flex flex-col h-full border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-secondary)' }}>
             <h3 className="font-bold text-lg mb-2">Available Players</h3>
             {isAuctioning && (
                 <div className="bg-yellow-900/50 border border-yellow-700 text-yellow-200 text-xs rounded-md p-2 mb-3">
@@ -77,7 +80,8 @@ const CurrentAuctionPanel: React.FC<{
     onBid: (amount: number) => void;
     onSell: () => void;
     onReset: () => void;
-}> = ({ currentPlayer, tournament, teams, biddingTeamId, setBiddingTeamId, auctionState, onBid, onSell, onReset }) => {
+    onMarkUnsold: () => void;
+}> = ({ currentPlayer, tournament, teams, biddingTeamId, setBiddingTeamId, auctionState, onBid, onSell, onReset, onMarkUnsold }) => {
     const [bidAmount, setBidAmount] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -103,7 +107,7 @@ const CurrentAuctionPanel: React.FC<{
 
     if (!currentPlayer || !tournament) {
         return (
-            <div className="rounded-lg p-4 flex items-center justify-center min-h-[calc(100vh-15rem)] border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-secondary)' }}>
+            <div className="rounded-lg p-4 flex items-center justify-center min-h-[80px] border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-secondary)' }}>
                 <p className="text-[var(--text-tertiary)] text-lg">{!tournament ? "No tournament data" : "Select a player to start the auction"}</p>
             </div>
         );
@@ -112,92 +116,115 @@ const CurrentAuctionPanel: React.FC<{
     const { currentBid, currentAuctionStatus } = auctionState;
     const isSold = currentAuctionStatus === 'Sold';
     const bidIncrements = [1000, 5000, 10000, 25000, 50000];
+    const statusText = currentAuctionStatus === 'Bidding' ? 'BIDDING ACTIVE' : (isSold ? 'PLAYER SOLD' : 'BIDDING PENDING');
+    const statusColor = currentAuctionStatus === 'Bidding' ? 'text-yellow-400' : (isSold ? 'text-green-400' : 'text-[var(--text-tertiary)]');
 
     return (
-        <div className="rounded-lg p-6 border border-[var(--border-primary)] min-h-[calc(100vh-15rem)] flex flex-col justify-between" style={{ backgroundColor: 'var(--surface-secondary)' }}>
-            <div>
-                <div className="text-center mb-4">
-                    <div className="flex items-center justify-center gap-2">
-                        <p className="text-4xl font-bold text-[var(--brand-primary)]">#{currentPlayer.playerNo || currentPlayer._id} {currentPlayer.name}</p>
+        <div className="rounded-lg p-4 border border-[var(--border-primary)] flex flex-col gap-3 shrink-0" style={{ backgroundColor: 'var(--surface-secondary)' }}>
+            {/* Player info bar */}
+            <div className="flex items-center gap-3 p-3 rounded-lg shrink-0" style={{ backgroundColor: 'var(--surface-elevated)' }}>
+                <img
+                    src={imageOptimizers.playerCard(currentPlayer.photoURL)}
+                    alt={currentPlayer.name}
+                    className="w-12 h-12 rounded-lg object-cover shrink-0"
+                    loading="lazy"
+                />
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-bold text-[var(--brand-primary)] truncate">#{currentPlayer.playerNo || ''} {currentPlayer.name}</p>
                         <ClassBadge tournament={tournament} player={currentPlayer} variant="inline" />
                     </div>
-                    <p className="text-[var(--text-tertiary)]">{currentPlayer.position || 'Player'}</p>
+                    <p className="text-xs text-[var(--text-tertiary)]">{currentPlayer.position || 'Player'} · Base: {getFormattedBasePrice(tournament, currentPlayer)}</p>
                 </div>
-                <div className="flex justify-center items-center gap-6 mb-4">
-                    <img
-                        src={imageOptimizers.playerCard(currentPlayer.photoURL)}
-                        alt={currentPlayer.name}
-                        className="w-40 h-40 rounded-lg object-cover border-4 shadow-lg"
-                        style={{ borderColor: 'var(--border-primary)' }}
-                        loading="lazy"
-                    />
-                    <div>
-                        <p className="text-[var(--text-tertiary)] text-sm">Current Bid</p>
-                        <p className="text-6xl font-bold text-[var(--brand-secondary)]">{formatCurrency(currentBid)}</p>
-                    </div>
-                </div>
-                 <div className="text-center mb-6">
-                    <p>Base Price: <span className="font-semibold">{getFormattedBasePrice(tournament, currentPlayer)}</span></p>
-                </div>
-                <div className="p-4 rounded-lg max-w-lg mx-auto bg-[var(--brand-primary)]/5">
-                    <p className="text-center mb-3 font-semibold text-[var(--text-secondary)]">Quick Bid (Auto Submit)</p>
-                     <div className="flex justify-center gap-1 sm:gap-2 mb-3">
-                        {bidIncrements.map(inc => (
-                            <button
-                                key={inc}
-                                onClick={() => handleQuickBid(inc)}
-                                disabled={isSold || isSubmitting}
-                                className="btn-secondary text-xs px-2 sm:px-3 py-1.5 flex-1 disabled:opacity-50 hover:bg-green-600 transition-colors">
-                                + {inc.toLocaleString()}
-                            </button>
-                        ))}
-                    </div>
-                    <div className="border-t border-[var(--border-primary)] pt-3 mt-3">
-                        <p className="text-center mb-3 text-sm text-[var(--text-tertiary)]">Or Set Custom Amount</p>
-                        <input
-                            type="number"
-                            value={bidAmount}
-                            onChange={(e) => setBidAmount(parseInt(e.target.value, 10) || 0)}
-                            disabled={isSold || isSubmitting}
-                            className="input-field text-center text-lg w-full disabled:opacity-50"
-                            placeholder="Enter bid amount"
-                        />
-                         <button
-                            onClick={() => onBid(bidAmount)}
-                            disabled={isSold || isSubmitting}
-                            className="btn-primary w-full mt-3 disabled:opacity-50">
-                            {isSubmitting ? 'Submitting...' : 'Set Custom Bid'}
-                        </button>
-                    </div>
+                <div className="text-right shrink-0">
+                    <p className="text-xs text-[var(--text-tertiary)]">Current Bid</p>
+                    <p className="text-3xl font-bold text-[var(--brand-secondary)]">{formatCurrency(currentBid)}</p>
                 </div>
             </div>
-            <div className="mt-6 border-t border-[var(--border-primary)] pt-4 text-center">
-                 <p className="mb-3 text-sm text-[var(--text-muted)]">Finalize Sale</p>
-                 <div className="mb-3 max-w-md mx-auto">
-                     <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">Select Winning Team</label>
-                     <select
-                         value={biddingTeamId}
-                         onChange={e => setBiddingTeamId(e.target.value)}
-                         disabled={isSold || currentBid === 0}
-                         className="w-full border-2 border-[var(--border-primary)] rounded-md px-4 py-3 text-lg font-semibold focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                         style={{ backgroundColor: 'var(--surface-card)', color: 'var(--text-primary)' }}>
-                         {teams.map(t => (
-                             <option key={t._id} value={t._id} style={{ backgroundColor: 'var(--surface-secondary)', color: 'var(--text-primary)' }}>
-                                 {t.name}
-                             </option>
-                         ))}
-                     </select>
-                 </div>
-                 <div className="flex justify-center gap-4 mb-3">
-                     <button
-                         onClick={onSell}
-                         disabled={isSold || currentBid === 0 || !biddingTeamId}
-                         className="btn-primary py-3 px-8 disabled:opacity-50">
-                         Sell Player
-                     </button>
-                     <button onClick={onReset} disabled={isSold} className="btn-danger py-3 px-8 disabled:opacity-50">Reset</button>
-                 </div>
-                 <p className="font-bold text-xl tracking-widest text-yellow-400">{currentAuctionStatus === 'Bidding' ? 'BIDDING ACTIVE' : (isSold ? 'PLAYER SOLD' : 'BIDDING PENDING')}</p>
+
+            {/* Quick Bid buttons — primary action */}
+            <div className="shrink-0">
+                <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--text-tertiary)' }}>Quick Bid</p>
+                <div className="grid grid-cols-5 gap-1.5">
+                    {bidIncrements.map(inc => (
+                        <button
+                            key={inc}
+                            onClick={() => handleQuickBid(inc)}
+                            disabled={isSold || isSubmitting}
+                            className="py-3 rounded-md text-sm font-bold transition-colors disabled:opacity-40"
+                            style={{
+                                border: '1.5px solid var(--brand-primary)',
+                                color: 'var(--brand-primary)',
+                                backgroundColor: 'transparent',
+                            }}
+                            onMouseEnter={e => { if (!isSold && !isSubmitting) { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--brand-primary)'; (e.currentTarget as HTMLButtonElement).style.color = '#fff'; } }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--brand-primary)'; }}
+                        >
+                            +{inc >= 1000 ? `${inc / 1000}K` : inc}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Custom bid row */}
+            <div className="flex gap-2 shrink-0">
+                <input
+                    type="number"
+                    value={bidAmount}
+                    onChange={e => setBidAmount(parseInt(e.target.value, 10) || 0)}
+                    disabled={isSold || isSubmitting}
+                    className="input-field flex-1 text-sm py-1.5 disabled:opacity-50"
+                    placeholder="Custom amount"
+                />
+                <button
+                    onClick={() => onBid(bidAmount)}
+                    disabled={isSold || isSubmitting}
+                    className="btn-secondary text-sm px-4 py-1.5 shrink-0 disabled:opacity-50">
+                    {isSubmitting ? '...' : 'Set'}
+                </button>
+            </div>
+
+            {/* Finalize row */}
+            <div className="border-t border-[var(--border-primary)] pt-3 shrink-0">
+                <div className="flex gap-2 items-center">
+                    <select
+                        value={biddingTeamId}
+                        onChange={e => setBiddingTeamId(e.target.value)}
+                        disabled={isSold || currentBid === 0}
+                        className="flex-1 border rounded-md px-2 py-2 text-sm font-semibold focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ backgroundColor: 'var(--surface-card)', color: 'var(--text-primary)', borderColor: 'var(--border-primary)' }}>
+                        {teams.map(t => (
+                            <option key={t._id} value={t._id} style={{ backgroundColor: 'var(--surface-secondary)', color: 'var(--text-primary)' }}>
+                                {t.name}
+                            </option>
+                        ))}
+                    </select>
+                    <button
+                        onClick={onSell}
+                        disabled={isSold || currentBid === 0 || !biddingTeamId}
+                        className="btn-primary text-sm px-4 py-2 shrink-0 disabled:opacity-50">
+                        Sell
+                    </button>
+                    <button
+                        onClick={onReset}
+                        disabled={isSold}
+                        className="btn-danger text-sm px-3 py-2 shrink-0 disabled:opacity-50">
+                        Reset
+                    </button>
+                    <button
+                        onClick={onMarkUnsold}
+                        disabled={isSold}
+                        className="text-sm px-3 py-2 shrink-0 rounded-md font-semibold transition-all disabled:opacity-50"
+                        style={{ backgroundColor: 'rgba(251,146,60,0.15)', color: '#FB923C', border: '1px solid rgba(251,146,60,0.4)' }}>
+                        Mark Unsold
+                    </button>
+                </div>
+                <div className="flex items-center justify-between mt-2">
+                    <p className={`text-xs font-bold tracking-widest ${statusColor}`}>{statusText}</p>
+                    {!isSold && currentBid === 0 && (
+                        <p className="text-xs text-yellow-400">Place a bid above to enable Sell</p>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -206,11 +233,12 @@ const CurrentAuctionPanel: React.FC<{
 const TeamsAndSoldPlayersPanel: React.FC<{
     teams: Team[];
     soldPlayers: Player[];
+    unsoldPlayers: Player[];
     tournament: Tournament | null;
     winningTeamId: string | null;
     onUndo: () => void;
     onCleanup: () => void;
-}> = ({ teams, soldPlayers, tournament, winningTeamId, onUndo, onCleanup }) => {
+}> = ({ teams, soldPlayers, unsoldPlayers, tournament, winningTeamId, onUndo, onCleanup }) => {
     const calculateMaxBid = (team: Team) => {
         if (!tournament || !team.currentBalance) return 0;
 
@@ -233,10 +261,10 @@ const TeamsAndSoldPlayersPanel: React.FC<{
     };
 
     return (
-        <div className="space-y-6 flex flex-col">
-            <div className="rounded-lg p-4 border border-[var(--border-primary)] flex flex-col" style={{ backgroundColor: 'var(--surface-secondary)' }}>
-                 <h3 className="font-bold text-lg mb-3">Teams</h3>
-                 <ul className="space-y-2 overflow-y-auto pr-2 max-h-[400px]">
+        <div className="h-full flex flex-col gap-3">
+            <div className="rounded-lg p-4 border border-[var(--border-primary)] flex flex-col flex-1 min-h-0" style={{ backgroundColor: 'var(--surface-secondary)' }}>
+                 <h3 className="font-bold text-base mb-2 shrink-0">Teams</h3>
+                 <ul className="space-y-2 overflow-y-auto pr-1 flex-1 min-h-0">
                      {teams.map((team, index) => {
                          const maxBid = calculateMaxBid(team);
                          const playersPurchased = team.playersPurchased?.length || 0;
@@ -271,21 +299,23 @@ const TeamsAndSoldPlayersPanel: React.FC<{
                      })}
                  </ul>
             </div>
-             <div className="rounded-lg p-4 border border-[var(--border-primary)] flex flex-col" style={{ backgroundColor: 'var(--surface-secondary)' }}>
-                <h3 className="font-bold text-lg mb-3">Sold Players ({soldPlayers.length})</h3>
-                <div className="flex gap-2 mb-3">
-                    <button onClick={onUndo} className="btn-secondary w-full text-sm py-1.5">Undo Last Sale</button>
-                    <ClearAllButton onClick={onCleanup} label="Clear All" size="sm" className="w-full" />
+             <div className="rounded-lg p-4 border border-[var(--border-primary)] flex flex-col flex-1 min-h-0" style={{ backgroundColor: 'var(--surface-secondary)' }}>
+                <div className="flex items-center justify-between mb-2 shrink-0">
+                    <h3 className="font-bold text-base">Sold/Unsold Player List ({soldPlayers.length + unsoldPlayers.length})</h3>
+                    <div className="flex gap-1.5">
+                        <button onClick={onUndo} disabled={soldPlayers.length === 0 && unsoldPlayers.length === 0} className="btn-secondary text-xs py-1 px-2 disabled:opacity-50">Undo</button>
+                        <ClearAllButton onClick={onCleanup} disabled={soldPlayers.length === 0 && unsoldPlayers.length === 0} label="Clear" size="sm" />
+                    </div>
                 </div>
-                <div className="overflow-y-auto pr-2 max-h-[400px]">
-                    {soldPlayers.length === 0 ? (
-                        <p className="text-center text-[var(--text-tertiary)] py-8 text-sm">No players sold yet</p>
+                <div className="overflow-y-auto pr-1 flex-1 min-h-0">
+                    {soldPlayers.length === 0 && unsoldPlayers.length === 0 ? (
+                        <p className="text-center text-[var(--text-tertiary)] py-8 text-sm">No sold or unsold players yet</p>
                     ) : (
                         <ul className="space-y-2">
-                            {soldPlayers.map((player, index) => {
+                            {soldPlayers.map((player) => {
                                 const playerTeam = teams.find(t => t._id === player.winningTeamId);
                                 return (
-                                      <li key={player._id} className="p-2 rounded-md transition-colors hover:opacity-90 border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-card)' }}>
+                                    <li key={player._id} className="p-2 rounded-md transition-colors hover:opacity-90 border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-card)' }}>
                                         <div className="flex items-center gap-2">
                                             <img
                                                 src={imageOptimizers.playerThumbnail(player.photoURL)}
@@ -307,6 +337,25 @@ const TeamsAndSoldPlayersPanel: React.FC<{
                                     </li>
                                 );
                             })}
+                            {unsoldPlayers.map((player) => (
+                                <li key={player._id} className="p-2 rounded-md transition-colors hover:opacity-90 border border-red-900/40" style={{ backgroundColor: 'var(--surface-card)' }}>
+                                    <div className="flex items-center gap-2">
+                                        <img
+                                            src={imageOptimizers.playerThumbnail(player.photoURL)}
+                                            alt={player.name}
+                                            className="w-10 h-10 rounded-full object-cover opacity-60 grayscale"
+                                            loading="lazy"
+                                        />
+                                        <div className="flex-grow min-w-0">
+                                            <div className="flex items-center gap-1.5">
+                                                <ClassBadge tournament={tournament} player={player} variant="dot" />
+                                                <p className="font-semibold text-sm truncate text-[var(--text-secondary)]">{player.name}</p>
+                                            </div>
+                                            <p className="text-xs font-bold text-red-400">UNSOLD</p>
+                                        </div>
+                                    </div>
+                                </li>
+                            ))}
                         </ul>
                     )}
                 </div>
@@ -336,13 +385,55 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const initialTournamentId = initialData?.tournament?._id ?? null;
     const [liveTournamentId, setLiveTournamentId] = useState<string | null>(initialTournamentId);
 
+    const { user } = useAuth();
     const {
         selectedTournamentId,
         setSelectedTournamentId,
         selectedTournament,
         tournaments,
-        loading: tournamentsLoading
+        loading: tournamentsLoading,
+        refreshTournaments,
     } = useTournamentContext();
+
+    const [preAuctionStats, setPreAuctionStats] = useState({ players: 0, teams: 0, sold: 0 });
+    const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
+    const [completingTournament, setCompletingTournament] = useState(false);
+    const [reactivatingTournament, setReactivatingTournament] = useState(false);
+
+    // Overlay control panel settings
+    const [overlaySize, setOverlaySize] = useState<'large' | 'small'>('large');
+    const [tickerMode, setTickerMode] = useState<'all' | 'sold' | 'available'>('all');
+    const [displayMode, setDisplayMode] = useState<'standard' | 'sold-summary' | 'team-summary' | 'resting'>('standard');
+    const [autoSwitch, setAutoSwitch] = useState(false);
+    const [autoSwitchDuration, setAutoSwitchDuration] = useState(5);
+    const autoSwitchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Refs to always read latest values inside the auto-switch effect without re-triggering it
+    const tickerModeRef = useRef(tickerMode);
+    const autoSwitchDurationRef = useRef(autoSwitchDuration);
+    const displayModeRef = useRef(displayMode);
+    tickerModeRef.current = tickerMode;
+    autoSwitchDurationRef.current = autoSwitchDuration;
+    displayModeRef.current = displayMode;
+
+    const sendOverlaySettings = async (
+        size: 'large' | 'small',
+        mode: 'all' | 'sold',
+        dm: 'standard' | 'sold-summary' | 'team-summary' | 'resting' = displayModeRef.current
+    ) => {
+        const tournamentId = liveTournament?._id;
+        if (!tournamentId) return;
+        try {
+            await fetch('/api/overlay/settings', {
+                method: 'POST',
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tournamentId, size, tickerMode: mode, displayMode: dm }),
+            });
+        } catch { /* non-critical */ }
+    };
+
+    const sendOverlaySettingsRef = useRef(sendOverlaySettings);
+    sendOverlaySettingsRef.current = sendOverlaySettings;
 
     // Handle tournament selection - sync liveTournamentId with selectedTournamentId from context
     // Real-time updates are handled by Pusher, no need to refresh after every action
@@ -387,10 +478,36 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         teams,
         isConnected,
         error: pusherError,
+        setPlayerUnsold,
+        setPlayerAvailable,
     } = usePusherAuction(liveTournamentId, initialData || undefined);
 
     // Detect loading state: tournamentId is set but tournament data hasn't loaded yet
     const isLoading = liveTournamentId && !liveTournament && !pusherError;
+
+    // Auto-switch: when a new player is selected, show Large then shrink to Small after N seconds
+    useEffect(() => {
+        if (autoSwitchTimerRef.current) {
+            clearTimeout(autoSwitchTimerRef.current);
+            autoSwitchTimerRef.current = null;
+        }
+        if (!autoSwitch || !auctionState.currentPlayerId) return;
+
+        setOverlaySize('large');
+        sendOverlaySettingsRef.current('large', tickerModeRef.current);
+
+        autoSwitchTimerRef.current = setTimeout(() => {
+            setOverlaySize('small');
+            sendOverlaySettingsRef.current('small', tickerModeRef.current);
+            autoSwitchTimerRef.current = null;
+        }, autoSwitchDurationRef.current * 1000);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [auctionState.currentPlayerId, autoSwitch]);
+
+    // Cleanup timer on unmount
+    useEffect(() => {
+        return () => { if (autoSwitchTimerRef.current) clearTimeout(autoSwitchTimerRef.current); };
+    }, []);
 
     // Display Pusher errors
     useEffect(() => {
@@ -423,56 +540,230 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         [players]
     );
 
+    const unsoldPlayers = useMemo(
+        () => players.filter(p => !p.isSold && p.isUnsold),
+        [players]
+    );
+
     const isAuctioning = useMemo(
         () => !!currentPlayer && auctionState.currentAuctionStatus !== 'Sold',
         [currentPlayer, auctionState.currentAuctionStatus]
     );
 
+    // Fetch stats when auction is not live (pre/post-auction state)
+    useEffect(() => {
+        if (!selectedTournamentId || liveTournament) return;
+        let cancelled = false;
+        const headers = getAuthHeaders();
+        Promise.all([
+            fetch(`/api/players?tournamentId=${selectedTournamentId}`, { headers }),
+            fetch(`/api/teams?tournamentId=${selectedTournamentId}`, { headers }),
+        ]).then(async ([pRes, tRes]) => {
+            if (cancelled) return;
+            const pl = pRes.ok ? await pRes.json() : [];
+            const tm = tRes.ok ? await tRes.json() : [];
+            setPreAuctionStats({ players: pl.length, teams: tm.length, sold: pl.filter((p: any) => p.isSold).length });
+        }).catch(() => {});
+        return () => { cancelled = true; };
+    }, [selectedTournamentId, liveTournament]);
+
+    const handleStartAuction = async () => {
+        if (!selectedTournament) return;
+        if (preAuctionStats.teams < 2 || preAuctionStats.players < 1) { setError('Need at least 2 teams and 1 player to start.'); return; }
+        try {
+            const res = await fetch('/api/auction/start', { method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ tournamentId: selectedTournament._id }) });
+            const data = await res.json();
+            if (!res.ok) { setError(data.error || 'Failed to start auction'); return; }
+            refreshTournaments();
+        } catch { setError('Failed to start auction.'); }
+    };
+
+    const handleStopAuction = async () => {
+        if (!liveTournament) return;
+        try {
+            const res = await fetch('/api/auction/stop', { method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ tournamentId: liveTournament._id }) });
+            const data = await res.json();
+            if (!res.ok) { setError(data.error || 'Failed to stop auction'); return; }
+            refreshTournaments();
+        } catch { setError('Failed to stop auction.'); }
+    };
+
+    const handleCompleteTournament = async () => {
+        const t = liveTournament || selectedTournament;
+        if (!t) return;
+        setCompletingTournament(true);
+        try {
+            const res = await fetch(`/api/tournaments/${t._id}/complete`, { method: 'POST', headers: getAuthHeaders() });
+            if (res.ok) { refreshTournaments(); }
+            else { const e = await res.json(); setError(e.error || 'Failed to complete'); }
+        } catch { setError('Failed to complete tournament.'); }
+        finally { setCompletingTournament(false); setShowCompleteConfirm(false); }
+    };
+
+    const handleReactivateTournament = async () => {
+        if (!selectedTournament || user?.role !== 'Admin') return;
+        setReactivatingTournament(true);
+        try {
+            const res = await fetch(`/api/tournaments/${selectedTournament._id}/reactivate`, { method: 'POST', headers: getAuthHeaders() });
+            if (res.ok) { refreshTournaments(); }
+            else { const e = await res.json(); setError(e.error || 'Failed to reactivate'); }
+        } catch { setError('Failed to reactivate.'); }
+        finally { setReactivatingTournament(false); }
+    };
+
+    const handleArchiveTournament = async () => {
+        if (!selectedTournament) return;
+        try {
+            const res = await fetch(`/api/tournaments/${selectedTournament._id}/archive`, { method: 'POST', headers: getAuthHeaders() });
+            if (res.ok) { refreshTournaments(); }
+            else { const e = await res.json(); setError(e.error || 'Failed to archive'); }
+        } catch { setError('Failed to archive.'); }
+    };
+
     // Check if tournament is live
-    if (!liveTournament) {
+    if (!liveTournament || (liveTournament.status !== 'Live' && liveTournament.status !== 'Stopped')) {
+        const status = selectedTournament?.status;
+        const canStart = ['Draft', 'Setup', 'Pending'].includes(status ?? '');
+        const isStopped = status === 'Stopped';
+        const isCompleted = status === 'Completed';
+        const isArchived = status === 'Archived';
+        const allSold = preAuctionStats.players > 0 && preAuctionStats.sold === preAuctionStats.players;
+
         return (
             <div className="animate-fade-in space-y-6">
                 {/* Tournament Selector */}
-                <div className="mb-6">
-                    <TournamentSelector
-                        label="Select Tournament"
-                        className="max-w-2xl"
-                    />
+                <div className="mb-2">
+                    <TournamentSelector label="Select Tournament" className="max-w-2xl" />
                 </div>
 
-                <div className="flex items-center justify-center h-[calc(100vh-15rem)]">
-                    <div className="border border-[var(--border-primary)] rounded-lg p-12 max-w-2xl text-center" style={{ backgroundColor: 'var(--surface-secondary)' }}>
-                        <div className="mb-6">
-                            <svg className="w-24 h-24 mx-auto text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                            </svg>
-                        </div>
-                        <h2 className="text-3xl font-bold mb-4 text-[var(--text-primary)]">
-                            {isLoading ? 'Loading Tournament...' : 'Auction Not Started'}
-                        </h2>
-                        <p className="text-[var(--text-tertiary)] mb-6 text-lg">
-                            {isLoading
-                                ? 'Please wait while we load the tournament data...'
-                                : tournamentsLoading
-                                    ? 'Loading tournaments...'
-                                    : 'No active tournament selected. Please select a tournament above or start one from the Auction Setup page.'
-                            }
-                        </p>
-                        {pusherError && (
-                            <div className="mb-4 p-3 rounded-lg border border-red-500 bg-red-900/20 text-red-400">
-                                {pusherError}
-                            </div>
-                        )}
-                        {!isLoading && (
-                            <a
-                                href="/auction/setup"
-                                className="inline-block bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-8 rounded-lg transition-colors"
-                            >
-                                Go to Auction Setup
-                            </a>
-                        )}
+                {error && (
+                    <div className="p-3 rounded-lg border border-red-500 bg-red-900/20 text-red-400">{error}</div>
+                )}
+                {pusherError && (
+                    <div className="p-3 rounded-lg border border-red-500 bg-red-900/20 text-red-400">{pusherError}</div>
+                )}
+
+                {isLoading || tournamentsLoading ? (
+                    <div className="flex items-center justify-center h-64">
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2" style={{ borderColor: 'var(--brand-primary)' }} />
                     </div>
-                </div>
+                ) : !selectedTournament ? (
+                    <div className="flex items-center justify-center h-64 rounded-lg border border-dashed" style={{ borderColor: 'var(--border-primary)' }}>
+                        <p style={{ color: 'var(--text-tertiary)' }}>Select a tournament above to manage the auction.</p>
+                    </div>
+                ) : (
+                    <div className="space-y-6">
+                        {/* Tournament info + status */}
+                        <div className="rounded-lg p-5 border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-secondary)' }}>
+                            <div className="flex items-center justify-between mb-3">
+                                <div>
+                                    <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{selectedTournament.name}</p>
+                                    <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Budget: {selectedTournament.budgetPerTeam.toLocaleString()} | Squad: {selectedTournament.squadSize}</p>
+                                </div>
+                                <span className="px-3 py-1 rounded-full text-sm font-semibold" style={{ backgroundColor: 'var(--surface-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}>
+                                    {status}
+                                </span>
+                            </div>
+
+                            {/* Stats bar */}
+                            <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-[var(--border-primary)]">
+                                <div className="text-center">
+                                    <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{preAuctionStats.players}</p>
+                                    <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Players</p>
+                                </div>
+                                <div className="text-center">
+                                    <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{preAuctionStats.teams}</p>
+                                    <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Teams</p>
+                                </div>
+                                <div className="text-center">
+                                    <p className="text-2xl font-bold" style={{ color: 'var(--status-success)' }}>{preAuctionStats.players - preAuctionStats.sold}</p>
+                                    <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Available</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Lifecycle controls */}
+                        <div className="rounded-lg p-5 border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-secondary)' }}>
+                            <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-secondary)' }}>Auction Controls</h3>
+                            <div className="flex flex-wrap gap-3">
+                                {canStart && (
+                                    <button onClick={handleStartAuction} className="text-white font-bold py-2 px-6 rounded-lg transition-colors hover:opacity-80" style={{ backgroundColor: 'var(--brand-primary)' }}>
+                                        ▶ Start Auction
+                                    </button>
+                                )}
+                                {isCompleted && allSold && (
+                                    <button onClick={handleArchiveTournament} className="text-white font-bold py-2 px-6 rounded-lg transition-colors hover:opacity-80" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}>
+                                        Archive Tournament
+                                    </button>
+                                )}
+                                {isCompleted && user?.role === 'Admin' && (
+                                    <button onClick={handleReactivateTournament} disabled={reactivatingTournament} className="text-white font-bold py-2 px-6 rounded-lg transition-colors hover:opacity-80 disabled:opacity-60" style={{ backgroundColor: 'var(--status-warning)' }}>
+                                        {reactivatingTournament ? 'Reactivating...' : '↺ Reactivate (Admin)'}
+                                    </button>
+                                )}
+                                {isStopped && (
+                                    <button onClick={async () => {
+                                        try {
+                                            const res = await fetch('/api/auction/restart', { method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ tournamentId: selectedTournament._id }) });
+                                            const data = await res.json();
+                                            if (res.ok) { refreshTournaments(); }
+                                            else setError(data.error || 'Failed to restart auction');
+                                        } catch { setError('Failed to restart auction.'); }
+                                    }} className="text-white font-bold py-2 px-6 rounded-lg transition-colors hover:opacity-80" style={{ backgroundColor: 'var(--brand-primary)' }}>
+                                        ↺ Restart Auction
+                                    </button>
+                                )}
+                                {isArchived && (
+                                    <p className="italic" style={{ color: 'var(--text-secondary)' }}>This tournament is archived (read-only).</p>
+                                )}
+                                {!canStart && !isStopped && !isCompleted && !isArchived && (
+                                    <p style={{ color: 'var(--text-secondary)' }}>No actions available for status: <span className="font-semibold">{status}</span></p>
+                                )}
+                            </div>
+                            {canStart && (preAuctionStats.teams < 2 || preAuctionStats.players < 1) && (
+                                <p className="mt-3 text-sm" style={{ color: 'var(--status-warning)' }}>
+                                    ⚠ Need at least 2 teams and 1 player to start.{' '}
+                                    <a href="/manage/teams" style={{ color: 'var(--brand-primary)' }}>Add teams</a> or <a href="/manage/players" style={{ color: 'var(--brand-primary)' }}>add players</a>.
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Quick nav */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <a href="/manage/teams" className="flex items-center justify-between p-4 rounded-lg transition-colors hover:opacity-80" style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)' }}>
+                                <div>
+                                    <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>Manage Teams</p>
+                                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{preAuctionStats.teams} registered</p>
+                                </div>
+                                <svg className="w-4 h-4" style={{ color: 'var(--text-tertiary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                            </a>
+                            <a href="/manage/players" className="flex items-center justify-between p-4 rounded-lg transition-colors hover:opacity-80" style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)' }}>
+                                <div>
+                                    <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>Manage Players</p>
+                                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{preAuctionStats.players} registered</p>
+                                </div>
+                                <svg className="w-4 h-4" style={{ color: 'var(--text-tertiary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                            </a>
+                        </div>
+                    </div>
+                )}
+
+                {/* Complete Confirmation Modal */}
+                <Modal isOpen={showCompleteConfirm} onClose={() => setShowCompleteConfirm(false)} title="Complete Tournament?" size="sm">
+                    <div className="space-y-4">
+                        <div className="rounded-lg p-4" style={{ color: 'var(--status-warning)', border: '1px solid color-mix(in oklab, var(--status-warning) 40%, transparent)', background: 'color-mix(in oklab, var(--status-warning) 12%, transparent)' }}>
+                            <p className="font-semibold mb-1">Completing the Tournament</p>
+                            <p className="text-sm">This will deactivate the tournament and prevent further auction operations.</p>
+                        </div>
+                        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Only admins can reactivate a completed tournament.</p>
+                        <div className="flex gap-3 justify-end pt-2">
+                            <button onClick={() => setShowCompleteConfirm(false)} className="font-bold py-2 px-4 rounded-lg hover:opacity-80" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}>Cancel</button>
+                            <button onClick={handleCompleteTournament} disabled={completingTournament} className="text-white font-bold py-2 px-4 rounded-lg hover:opacity-80 disabled:opacity-60" style={{ backgroundColor: 'var(--status-info)' }}>
+                                {completingTournament ? 'Completing...' : 'Yes, Complete'}
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
             </div>
         );
     }
@@ -582,11 +873,34 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             if (!response.ok) {
                 const data = await response.json();
                 setError(data.error || 'Failed to reset auction');
+                return;
             }
             // Pusher will handle real-time updates, no need to refresh
         } catch (error) {
             console.error('Failed to reset auction:', error);
             setError('An error occurred while resetting the auction');
+        }
+    };
+
+    const handleMarkUnsold = async () => {
+        if (!liveTournament) return;
+        const currentPlayerId = auctionState.currentPlayerId;
+        try {
+            const response = await fetch('/api/auction/mark-unsold', {
+                method: 'POST',
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tournamentId: liveTournament._id }),
+            });
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                setError(data.error || 'Failed to mark player as unsold');
+            } else if (currentPlayerId) {
+                // Immediately update local state — don't rely solely on Pusher delivery
+                setPlayerUnsold(currentPlayerId);
+            }
+        } catch (error) {
+            console.error('Failed to mark player as unsold:', error);
+            setError('An error occurred while marking player as unsold');
         }
     };
 
@@ -601,8 +915,14 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             if (!response.ok) {
                 const data = await response.json();
                 setError(data.error || 'Failed to undo sale');
+                return;
             }
-            // Pusher will handle real-time updates, no need to refresh
+            const data = await response.json();
+            // Unsold undo: no refundedAmount — restore player to available immediately
+            if (data.player && data.refundedAmount === undefined) {
+                setPlayerAvailable(data.player._id);
+            }
+            // Sale undo is handled by the Pusher AUCTION_UNDO event (includes team refund)
         } catch (error) {
             console.error('Failed to undo sale:', error);
             setError('An error occurred while undoing the sale');
@@ -623,6 +943,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             if (!response.ok) {
                 const data = await response.json();
                 setError(data.error || 'Failed to reset all sales');
+                return;
             }
             // Pusher will handle real-time updates, no need to refresh
         } catch (error) {
@@ -701,17 +1022,24 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                             </p>
                         </div>
                     </div>
-                    {isAuctionStopped && (
-                        <button
-                            onClick={handleRestartAuction}
-                            className="bg-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/80 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                            Restart Auction
+                    <div className="flex items-center gap-2 flex-wrap">
+                        {!isAuctionStopped && (
+                            <button onClick={handleStopAuction} className="text-white font-bold py-2 px-4 rounded-lg transition-colors hover:opacity-80 text-sm" style={{ backgroundColor: 'var(--status-danger)' }}>
+                                ⏹ Stop
+                            </button>
+                        )}
+                        {isAuctionStopped && (
+                            <button onClick={handleRestartAuction} className="bg-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/80 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center gap-2 text-sm">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                Restart
+                            </button>
+                        )}
+                        <button onClick={() => setShowCompleteConfirm(true)} className="text-white font-bold py-2 px-4 rounded-lg transition-colors hover:opacity-80 text-sm" style={{ backgroundColor: 'var(--status-info)' }}>
+                            ✓ Complete
                         </button>
-                    )}
+                    </div>
                 </div>
                 {isAuctionStopped && (
                     <div className="mt-3 bg-yellow-900/30 border border-yellow-700/50 rounded-md p-3 text-yellow-200 text-sm">
@@ -721,19 +1049,21 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                         </p>
                     </div>
                 )}
+
             </div>
 
             {/* Auction Control Grid */}
-            <div className="grid grid-cols-1 xl:grid-cols-7 gap-6 relative">
-                <div className="xl:col-span-2">
+            <div className="grid grid-cols-1 xl:grid-cols-9 gap-3 relative" style={{ height: 'calc(100vh - 18rem)' }}>
+                <div className="xl:col-span-2 h-full">
                     <AvailablePlayersPanel
                         players={players}
                         tournament={liveTournament}
                         onSelectPlayer={handleSelectPlayer}
                         isAuctioning={isAuctioning}
+                        currentPlayerId={currentPlayer?._id}
                     />
                 </div>
-                <div className="xl:col-span-3">
+                <div className="xl:col-span-5 h-full flex flex-col gap-3">
                     <CurrentAuctionPanel
                         currentPlayer={currentPlayer}
                         tournament={liveTournament}
@@ -744,12 +1074,165 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                         onBid={handleBid}
                         onSell={handleSell}
                         onReset={handleReset}
+                        onMarkUnsold={handleMarkUnsold}
                     />
+                    {/* Overlay Controls — spacious panel with room for future features */}
+                    <div className="rounded-lg p-5 border border-[var(--border-primary)] flex-1 min-h-0" style={{ backgroundColor: 'var(--surface-secondary)' }}>
+                        <h3 className="font-bold text-sm uppercase tracking-widest mb-4" style={{ color: 'var(--text-tertiary)' }}>Overlay Controls</h3>
+                        <div className="flex items-center gap-3 mb-4 flex-wrap">
+                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Player Card & Bid:</span>
+                            {(['large', 'small'] as const).map(s => (
+                                <button
+                                    key={s}
+                                    onClick={() => {
+                                        if (autoSwitchTimerRef.current) { clearTimeout(autoSwitchTimerRef.current); autoSwitchTimerRef.current = null; }
+                                        setOverlaySize(s);
+                                        sendOverlaySettings(s, tickerMode);
+                                    }}
+                                    className="px-4 py-1.5 rounded-md text-sm font-semibold capitalize transition-all"
+                                    style={{
+                                        backgroundColor: overlaySize === s ? 'var(--brand-primary)' : 'var(--surface-elevated)',
+                                        color: overlaySize === s ? '#fff' : 'var(--text-secondary)',
+                                        border: '1px solid var(--border-primary)',
+                                    }}>{s}</button>
+                            ))}
+                            {/* Divider */}
+                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
+                            {/* Auto Switch toggle */}
+                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Auto:</span>
+                            <button
+                                onClick={() => {
+                                    const next = !autoSwitch;
+                                    setAutoSwitch(next);
+                                    if (!next && autoSwitchTimerRef.current) {
+                                        clearTimeout(autoSwitchTimerRef.current);
+                                        autoSwitchTimerRef.current = null;
+                                    }
+                                }}
+                                className="text-xs px-3 py-1.5 rounded-md font-semibold transition-all"
+                                style={{
+                                    backgroundColor: autoSwitch ? 'var(--brand-primary)' : 'var(--surface-elevated)',
+                                    color: autoSwitch ? '#fff' : 'var(--text-muted)',
+                                    border: `1px solid ${autoSwitch ? 'var(--brand-primary)' : 'var(--border-primary)'}`,
+                                }}
+                            >{autoSwitch ? 'ON' : 'OFF'}</button>
+                            {/* Duration — only shown when Auto Switch is ON */}
+                            {autoSwitch && (
+                                <>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        max={60}
+                                        value={autoSwitchDuration}
+                                        onChange={e => setAutoSwitchDuration(Math.max(1, Math.min(60, Number(e.target.value))))}
+                                        className="w-14 text-center text-xs px-2 py-1.5 rounded-md border"
+                                        style={{
+                                            backgroundColor: 'var(--surface-elevated)',
+                                            borderColor: 'var(--border-primary)',
+                                            color: 'var(--text-primary)',
+                                        }}
+                                    />
+                                    <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>sec</span>
+                                </>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Ticker Option:</span>
+                            {([
+                                { value: 'all',       label: 'All Players'       },
+                                { value: 'sold',      label: 'Sold Players'      },
+                                { value: 'available', label: 'Available Players' },
+                            ] as const).map(({ value, label }) => (
+                                <button
+                                    key={value}
+                                    onClick={() => { setTickerMode(value); sendOverlaySettings(overlaySize, value); }}
+                                    className="px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
+                                    style={{
+                                        backgroundColor: tickerMode === value ? 'var(--brand-primary)' : 'var(--surface-elevated)',
+                                        color: tickerMode === value ? '#fff' : 'var(--text-secondary)',
+                                        border: '1px solid var(--border-primary)',
+                                    }}>{label}</button>
+                            ))}
+                        </div>
+                        {/* Player Summary + Team Summary toggles */}
+                        <div className="flex items-center gap-3 mt-4 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border-primary)' }}>
+                            {/* Player Summary */}
+                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Player Summary:</span>
+                            <button
+                                onClick={() => {
+                                    const next = displayMode === 'sold-summary' ? 'standard' : 'sold-summary';
+                                    setDisplayMode(next);
+                                    sendOverlaySettings(overlaySize, tickerMode, next);
+                                }}
+                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
+                                style={{
+                                    backgroundColor: displayMode === 'sold-summary' ? 'var(--brand-primary)' : 'var(--surface-elevated)',
+                                    color: displayMode === 'sold-summary' ? '#fff' : 'var(--text-secondary)',
+                                    border: '1px solid var(--border-primary)',
+                                }}
+                            >
+                                <span>Show/Hide</span>
+                                {displayMode === 'sold-summary' && (
+                                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                                )}
+                            </button>
+                            {/* Divider */}
+                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
+                            {/* Team Summary */}
+                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Team Summary:</span>
+                            <button
+                                onClick={() => {
+                                    const next = displayMode === 'team-summary' ? 'standard' : 'team-summary';
+                                    setDisplayMode(next);
+                                    sendOverlaySettings(overlaySize, tickerMode, next);
+                                }}
+                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
+                                style={{
+                                    backgroundColor: displayMode === 'team-summary' ? 'var(--brand-primary)' : 'var(--surface-elevated)',
+                                    color: displayMode === 'team-summary' ? '#fff' : 'var(--text-secondary)',
+                                    border: '1px solid var(--border-primary)',
+                                }}
+                            >
+                                <span>Show/Hide</span>
+                                {displayMode === 'team-summary' && (
+                                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                                )}
+                            </button>
+                            {/* Divider */}
+                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
+                            {/* Resting Time */}
+                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Resting Time:</span>
+                            <button
+                                onClick={() => {
+                                    const next = displayMode === 'resting' ? 'standard' : 'resting';
+                                    setDisplayMode(next);
+                                    sendOverlaySettings(overlaySize, tickerMode, next);
+                                }}
+                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
+                                style={{
+                                    backgroundColor: displayMode === 'resting' ? '#8B5CF6' : 'var(--surface-elevated)',
+                                    color: displayMode === 'resting' ? '#fff' : 'var(--text-secondary)',
+                                    border: '1px solid var(--border-primary)',
+                                }}
+                            >
+                                <span>Show/Hide</span>
+                                {displayMode === 'resting' && (
+                                    <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+                                )}
+                            </button>
+                            {(displayMode === 'sold-summary' || displayMode === 'team-summary' || displayMode === 'resting') && (
+                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                                    Player Card &amp; Teams hidden
+                                </span>
+                            )}
+                        </div>
+                    </div>
                 </div>
-                <div className="xl:col-span-2">
+                <div className="xl:col-span-2 h-full">
                     <TeamsAndSoldPlayersPanel
                         teams={teams}
                         soldPlayers={soldPlayers}
+                        unsoldPlayers={unsoldPlayers}
                         tournament={liveTournament}
                         winningTeamId={auctionState.winningTeamId}
                         onUndo={handleUndo}
@@ -758,6 +1241,22 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                 </div>
                 {error && <div className="absolute bottom-4 right-4 text-center text-red-400 bg-red-900/80 backdrop-blur-sm p-3 rounded-lg shadow-lg border border-red-700 animate-fade-in">{error}</div>}
             </div>
+            {/* Complete Confirmation Modal */}
+            <Modal isOpen={showCompleteConfirm} onClose={() => setShowCompleteConfirm(false)} title="Complete Tournament?" size="sm">
+                <div className="space-y-4">
+                    <div className="rounded-lg p-4" style={{ color: 'var(--status-warning)', border: '1px solid color-mix(in oklab, var(--status-warning) 40%, transparent)', background: 'color-mix(in oklab, var(--status-warning) 12%, transparent)' }}>
+                        <p className="font-semibold mb-1">Completing the Tournament</p>
+                        <p className="text-sm">This will deactivate the tournament and prevent further auction operations.</p>
+                    </div>
+                    <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Only admins can reactivate a completed tournament.</p>
+                    <div className="flex gap-3 justify-end pt-2">
+                        <button onClick={() => setShowCompleteConfirm(false)} className="font-bold py-2 px-4 rounded-lg hover:opacity-80" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}>Cancel</button>
+                        <button onClick={handleCompleteTournament} disabled={completingTournament} className="text-white font-bold py-2 px-4 rounded-lg hover:opacity-80 disabled:opacity-60" style={{ backgroundColor: 'var(--status-info)' }}>
+                            {completingTournament ? 'Completing...' : 'Yes, Complete'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
              <style jsx>{`
                 .btn-primary { @apply text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed; background-color: var(--brand-primary); }
                 .btn-primary:hover:not(:disabled) { background-color: var(--brand-primary); opacity: 0.8; }

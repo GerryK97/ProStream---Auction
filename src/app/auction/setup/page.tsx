@@ -1,12 +1,5 @@
-'use client';
-
-import AuctionSetupPanel from '@/components/AuctionSetupPanel';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { redirect } from 'next/navigation';
 
 export default function AuctionSetupPage() {
-  return (
-    <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
-      <AuctionSetupPanel />
-    </ProtectedRoute>
-  );
+  redirect('/auction');
 }

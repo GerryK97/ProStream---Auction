@@ -3,6 +3,8 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { PlayerModel } from '@/models/Player';
 import { TeamModel } from '@/models/Team';
+import { TournamentModel } from '@/models/Tournament';
+import { triggerStateUpdate } from '@/lib/pusher-server';
 
 // POST /api/auction/reset-all - Reset all sales and restart the auction
 export async function POST(request: NextRequest) {
@@ -23,6 +25,7 @@ export async function POST(request: NextRequest) {
       {
         $set: {
           isSold: false,
+          isUnsold: false,
         },
         $unset: {
           finalPrice: '',
@@ -59,6 +62,24 @@ export async function POST(request: NextRequest) {
       },
       { new: true, upsert: true }
     ).lean();
+
+    // Trigger Pusher event so all connected clients (overlays, other browsers) update in real-time
+    try {
+      const [tournament, freshPlayers, freshTeams] = await Promise.all([
+        TournamentModel.findById(tournamentId).lean(),
+        PlayerModel.find({ tournamentId }).lean(),
+        TeamModel.find({ tournamentId }).lean(),
+      ]);
+      await triggerStateUpdate({
+        tournament: tournament as any,
+        auctionState: updatedState as any,
+        players: freshPlayers as any,
+        teams: freshTeams as any,
+        message: 'All sales have been reset',
+      });
+    } catch (pusherError) {
+      console.error('Failed to trigger Pusher event:', pusherError);
+    }
 
     return NextResponse.json({
       message: 'All sales reset successfully',

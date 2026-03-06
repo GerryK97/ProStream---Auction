@@ -1,8 +1,15 @@
 /**
- * Custom hook to manage Pusher real-time connection for auction updates
+ * Custom hook to manage Pusher real-time connection for auction updates.
  *
- * This hook replaces useAuctionSSE with Pusher-based real-time communication
- * for significantly reduced latency (~100ms vs 2-4 seconds).
+ * Uses a two-tier channel strategy to minimise Pusher connection load:
+ *
+ *  1. Wake channel ("prostream-control") — always subscribed while the overlay
+ *     is open. Receives 'auction:wake' / 'auction:sleep' control signals.
+ *     Zero messages during idle periods.
+ *
+ *  2. Tournament channel ("tournament-{id}") — only subscribed when the
+ *     auction is active (Live / Paused / Stopped). Automatically connects on
+ *     wake signal and disconnects when tournament status goes inactive.
  */
 
 import { useEffect, useRef, useState, useCallback, useReducer } from 'react';
@@ -19,8 +26,19 @@ import type {
   PlayerSoldEvent,
   AuctionResetEvent,
   AuctionUndoEvent,
+  PlayerMarkedUnsoldEvent,
   AuctionStateUpdateEvent,
 } from '@/types/pusher-events';
+
+/** Channel that overlays always subscribe to for wake/sleep signals */
+const WAKE_CHANNEL = 'prostream-control';
+
+/** Tournament-channel subscriptions are only active in these states */
+const ACTIVE_STATUSES = ['Live', 'Paused', 'Stopped'] as const;
+
+function isActiveStatus(status: string | undefined): boolean {
+  return ACTIVE_STATUSES.includes(status as any);
+}
 
 interface UsePusherAuctionReturn {
   tournament: Tournament | null;
@@ -29,6 +47,8 @@ interface UsePusherAuctionReturn {
   teams: Team[];
   isConnected: boolean;
   error: string | null;
+  setPlayerUnsold: (playerId: string) => void;
+  setPlayerAvailable: (playerId: string) => void;
 }
 
 interface AuctionStateType {
@@ -49,9 +69,12 @@ type AuctionAction =
   | { type: 'PLAYER_SOLD'; data: PlayerSoldEvent }
   | { type: 'AUCTION_RESET'; data: AuctionResetEvent }
   | { type: 'AUCTION_UNDO'; data: AuctionUndoEvent }
+  | { type: 'PLAYER_MARKED_UNSOLD'; data: PlayerMarkedUnsoldEvent }
   | { type: 'STATE_UPDATE'; data: AuctionStateUpdateEvent }
   | { type: 'SET_ERROR'; error: string }
-  | { type: 'CLEAR_ERROR' };
+  | { type: 'CLEAR_ERROR' }
+  | { type: 'SET_PLAYER_UNSOLD'; playerId: string }
+  | { type: 'SET_PLAYER_AVAILABLE'; playerId: string };
 import { EMPTY_AUCTION_STATE } from '@/lib/auctionDefaults';
 
 const auctionReducer = (state: AuctionStateType, action: AuctionAction): AuctionStateType => {
@@ -70,6 +93,7 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
       return {
         ...state,
         tournament: action.data.tournament,
+        auctionState: action.data.auctionState || EMPTY_AUCTION_STATE,
         teams: action.data.teams,
         players: action.data.players,
         error: null,
@@ -143,14 +167,28 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         player._id === action.data.restoredPlayer._id ? action.data.restoredPlayer : player
       );
 
-      const updatedTeams = state.teams.map((team) =>
-        team._id === action.data.updatedTeam._id ? action.data.updatedTeam : team
-      );
+      const updatedTeams = action.data.updatedTeam
+        ? state.teams.map((team) =>
+            team._id === action.data.updatedTeam!._id ? action.data.updatedTeam! : team
+          )
+        : state.teams;
 
       return {
         ...state,
         players: updatedPlayers,
         teams: updatedTeams,
+        auctionState: action.data.auctionState || EMPTY_AUCTION_STATE,
+        error: null,
+      };
+    }
+
+    case 'PLAYER_MARKED_UNSOLD': {
+      const updatedPlayers = state.players.map((player) =>
+        player._id === action.data.unsoldPlayer._id ? action.data.unsoldPlayer : player
+      );
+      return {
+        ...state,
+        players: updatedPlayers,
         auctionState: action.data.auctionState || EMPTY_AUCTION_STATE,
         error: null,
       };
@@ -166,30 +204,35 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         error: null,
       };
 
-    case 'SET_ERROR':
+    case 'SET_PLAYER_UNSOLD':
       return {
         ...state,
-        error: action.error,
-      };
-
-    case 'CLEAR_ERROR':
-      return {
-        ...state,
+        players: state.players.map((p) =>
+          p._id === action.playerId ? { ...p, isUnsold: true, isSold: false } : p
+        ),
         error: null,
       };
+
+    case 'SET_PLAYER_AVAILABLE':
+      return {
+        ...state,
+        players: state.players.map((p) =>
+          p._id === action.playerId ? { ...p, isUnsold: false, isSold: false } : p
+        ),
+        error: null,
+      };
+
+    case 'SET_ERROR':
+      return { ...state, error: action.error };
+
+    case 'CLEAR_ERROR':
+      return { ...state, error: null };
 
     default:
       return state;
   }
 };
 
-/**
- * Custom hook to manage Pusher connection for auction updates
- *
- * @param tournamentId - The ID of the tournament to subscribe to
- * @param initialData - Optional initial data to populate state (from server-side props)
- * @returns Object containing tournament, auction state, players, teams, connection status, and errors
- */
 export function usePusherAuction(
   tournamentId: string | null,
   initialData?: {
@@ -197,9 +240,17 @@ export function usePusherAuction(
     auctionState?: AuctionState;
     players?: Player[];
     teams?: Team[];
-  }
+  },
+  overlayToken?: string
 ): UsePusherAuctionReturn {
+  // Overlay mode = OBS browser source with a token in the URL.
+  // In overlay mode we use the wake channel strategy (lazy connect).
+  // Without a token (control panel, auction page) we connect immediately — old behaviour.
+  const isOverlayMode = !!overlayToken;
+
   const [isConnected, setIsConnected] = useState(false);
+  // In non-overlay mode start as true so Effect 4 fires immediately on mount.
+  const [connectTournamentChannel, setConnectTournamentChannel] = useState(!isOverlayMode);
 
   const [state, dispatch] = useReducer(auctionReducer, {
     tournament: initialData?.tournament || null,
@@ -212,25 +263,30 @@ export function usePusherAuction(
   const channelRef = useRef<Channel | null>(null);
   const pusherRef = useRef<ReturnType<typeof getPusherClient> | null>(null);
 
-  // Fetch initial data if not provided
-  const fetchInitialData = useCallback(async () => {
-    // Don't fetch if no tournament ID
-    if (!tournamentId) return;
+  // Build auth headers helper (handles overlay token fallback for OBS)
+  const buildHeaders = useCallback(() => {
+    const headers = getAuthHeaders();
+    const needsToken = !headers['Authorization'] && overlayToken;
+    const tkQ = needsToken ? `?token=${encodeURIComponent(overlayToken!)}` : '';
+    const tk  = needsToken ? `&token=${encodeURIComponent(overlayToken!)}` : '';
+    return { headers, tkQ, tk };
+  }, [overlayToken]);
 
-    // Don't fetch if we already have valid initial data with a tournament
-    if (initialData && initialData.tournament) return;
+  // Fetch full auction data (tournament + state + players + teams in parallel)
+  const fetchInitialData = useCallback(async () => {
+    if (!tournamentId) return;
+    if (initialData?.tournament) return; // already provided from server props
 
     try {
-      console.log(`[usePusherAuction] Fetching initial data for tournament: ${tournamentId}`);
-
-      // Fetch all data in parallel for 75% faster load time
+      console.log(`[usePusherAuction] Fetching data for tournament: ${tournamentId}`);
+      const { headers, tkQ, tk } = buildHeaders();
       const startTime = Date.now();
-      const headers = getAuthHeaders();
+
       const [tournamentRes, stateRes, playersRes, teamsRes] = await Promise.all([
-        fetch(`/api/tournaments/${tournamentId}`, { headers }),
+        fetch(`/api/tournaments/${tournamentId}${tkQ}`, { headers }),
         fetch(`/api/auction/state/${tournamentId}`, { headers }),
-        fetch(`/api/players?tournamentId=${tournamentId}`, { headers }),
-        fetch(`/api/teams?tournamentId=${tournamentId}`, { headers }),
+        fetch(`/api/players?tournamentId=${tournamentId}${tk}`, { headers }),
+        fetch(`/api/teams?tournamentId=${tournamentId}${tk}`, { headers }),
       ]);
 
       const [tournamentData, stateData, playersData, teamsData] = await Promise.all([
@@ -240,14 +296,8 @@ export function usePusherAuction(
         teamsRes.ok ? teamsRes.json() : null,
       ]);
 
-      console.log(`[usePusherAuction] Parallel data fetch completed in ${Date.now() - startTime}ms`);
+      console.log(`[usePusherAuction] Data fetch completed in ${Date.now() - startTime}ms`);
 
-      // Add validation logging
-      if (!tournamentData) {
-        console.error(`[usePusherAuction] Failed to fetch tournament data for ${tournamentId}`);
-      }
-
-      // Batch all initial data updates into a single state change
       dispatch({
         type: 'SET_INITIAL_DATA',
         data: {
@@ -258,25 +308,82 @@ export function usePusherAuction(
         },
       });
     } catch (err) {
-      console.error('Error fetching initial auction data:', err);
-      dispatch({
-        type: 'SET_ERROR',
-        error: 'Failed to load tournament data. Please try again.'
-      });
+      console.error('[usePusherAuction] Error fetching data:', err);
+      dispatch({ type: 'SET_ERROR', error: 'Failed to load tournament data. Please try again.' });
     }
-  }, [tournamentId]);
+  }, [tournamentId, overlayToken, buildHeaders]);
 
+  // ─── Effect 1: Initial status check (overlay mode only) ─────────────────────
+  // Lightweight fetch to determine whether to connect immediately.
+  // Skipped in non-overlay mode — connectTournamentChannel is already true.
   useEffect(() => {
-    // Don't connect if no tournament ID
-    if (!tournamentId) {
+    if (!isOverlayMode || !tournamentId) return;
+
+    const { headers, tkQ } = buildHeaders();
+    fetch(`/api/tournaments/${tournamentId}${tkQ}`, { headers })
+      .then(r => r.ok ? r.json() : null)
+      .then((t: Tournament | null) => {
+        if (t && isActiveStatus(t.status)) {
+          console.log(`[usePusherAuction] Tournament already active (${t.status}), connecting immediately`);
+          setConnectTournamentChannel(true);
+        }
+      })
+      .catch(() => {});
+  }, [tournamentId, isOverlayMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ─── Effect 2: Wake channel subscription (overlay mode only) ────────────────
+  // Always on while overlay is open. Receives wake/sleep signals from the
+  // control panel. Near-zero Pusher messages between auction sessions.
+  useEffect(() => {
+    if (!isOverlayMode || !tournamentId) return;
+
+    const pusher = getPusherClient();
+    const wakeChannel = pusher.subscribe(WAKE_CHANNEL);
+
+    wakeChannel.bind('auction:wake', (data: { tournamentId: string }) => {
+      if (data.tournamentId === tournamentId) {
+        console.log('[usePusherAuction] Wake signal received — connecting tournament channel');
+        setConnectTournamentChannel(true);
+      }
+    });
+
+    wakeChannel.bind('auction:sleep', (data: { tournamentId: string }) => {
+      if (data.tournamentId === tournamentId) {
+        console.log('[usePusherAuction] Sleep signal received — disconnecting tournament channel');
+        setConnectTournamentChannel(false);
+      }
+    });
+
+    return () => {
+      wakeChannel.unbind('auction:wake');
+      wakeChannel.unbind('auction:sleep');
+      pusher.unsubscribe(WAKE_CHANNEL);
+    };
+  }, [tournamentId, isOverlayMode]);
+
+  // ─── Effect 3: Auto-disconnect when status goes inactive (overlay mode only) ─
+  // Watches tournament.status updates that arrive through Pusher events.
+  // When an event carries a non-active status, disconnect the tournament channel.
+  useEffect(() => {
+    if (!isOverlayMode || !state.tournament) return;
+    if (!isActiveStatus(state.tournament.status)) {
+      console.log(`[usePusherAuction] Tournament status "${state.tournament.status}" is inactive — disconnecting`);
+      setConnectTournamentChannel(false);
+    }
+  }, [state.tournament?.status, isOverlayMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ─── Effect 4: Tournament channel subscription ────────────────────────────────
+  // Only active when connectTournamentChannel is true.
+  // Fetches full data and binds all auction event handlers.
+  useEffect(() => {
+    if (!tournamentId || !connectTournamentChannel) {
       setIsConnected(false);
       return;
     }
 
-    // Fetch initial data
+    // Fetch full data now that the tournament is active
     fetchInitialData();
 
-    // Initialize Pusher and subscribe to channel
     try {
       const pusher = getPusherClient();
       pusherRef.current = pusher;
@@ -287,107 +394,88 @@ export function usePusherAuction(
 
       console.log(`[Pusher] Subscribing to channel: ${channelName}`);
 
-      // Handle subscription success
       channel.bind('pusher:subscription_succeeded', () => {
-        console.log(`[Pusher] Successfully subscribed to ${channelName}`);
+        console.log(`[Pusher] Subscribed to ${channelName}`);
         setIsConnected(true);
       });
 
-      // Handle subscription error
       channel.bind('pusher:subscription_error', (status: any) => {
         console.error(`[Pusher] Subscription error:`, status);
         setIsConnected(false);
       });
 
-      // Event: auction:started
       channel.bind('auction:started', (data: AuctionStartedEvent) => {
-        console.log('[Pusher] Auction started:', data);
         dispatch({ type: 'AUCTION_STARTED', data });
       });
 
-      // Event: auction:stopped
       channel.bind('auction:stopped', (data: AuctionStoppedEvent) => {
-        console.log('[Pusher] Auction stopped:', data);
         dispatch({ type: 'AUCTION_STOPPED', data });
       });
 
-      // Event: auction:restarted
       channel.bind('auction:restarted', (data: AuctionRestartedEvent) => {
-        console.log('[Pusher] Auction restarted:', data);
         dispatch({ type: 'AUCTION_RESTARTED', data });
       });
 
-      // Event: auction:player-selected
       channel.bind('auction:player-selected', (data: PlayerSelectedEvent) => {
-        console.log('[Pusher] Player selected:', data);
         dispatch({ type: 'PLAYER_SELECTED', data });
       });
 
-      // Event: auction:bid-placed
       channel.bind('auction:bid-placed', (data: BidPlacedEvent) => {
-        console.log('[Pusher] Bid placed:', data);
         dispatch({ type: 'BID_PLACED', data });
       });
 
-      // Event: auction:player-sold
       channel.bind('auction:player-sold', (data: PlayerSoldEvent) => {
-        console.log('[Pusher] Player sold:', data);
         dispatch({ type: 'PLAYER_SOLD', data });
       });
 
-      // Event: auction:reset
       channel.bind('auction:reset', (data: AuctionResetEvent) => {
-        console.log('[Pusher] Auction reset:', data);
         dispatch({ type: 'AUCTION_RESET', data });
       });
 
-      // Event: auction:undo
       channel.bind('auction:undo', (data: AuctionUndoEvent) => {
-        console.log('[Pusher] Sale undone:', data);
         dispatch({ type: 'AUCTION_UNDO', data });
       });
 
-      // Event: auction:state-update (generic fallback)
+      channel.bind('auction:player-unsold', (data: PlayerMarkedUnsoldEvent) => {
+        dispatch({ type: 'PLAYER_MARKED_UNSOLD', data });
+      });
+
       channel.bind('auction:state-update', (data: AuctionStateUpdateEvent) => {
-        console.log('[Pusher] State update:', data);
         dispatch({ type: 'STATE_UPDATE', data });
       });
 
-      // Monitor Pusher connection state
       const handleConnectionStateChange = (states: { current: string }) => {
-        console.log(`[Pusher] Connection state changed to: ${states.current}`);
         setIsConnected(states.current === 'connected');
-
-        if (states.current === 'unavailable' || states.current === 'failed') {
-          dispatch({ type: 'CLEAR_ERROR' }); // Could dispatch error here if needed
-        } else if (states.current === 'connected') {
+        if (states.current === 'connected' || states.current === 'unavailable' || states.current === 'failed') {
           dispatch({ type: 'CLEAR_ERROR' });
         }
       };
 
       pusher.connection.bind('state_change', handleConnectionStateChange);
 
-      // Cleanup function
       return () => {
         console.log(`[Pusher] Unsubscribing from ${channelName}`);
-
-        // Unbind all event handlers
         if (channelRef.current) {
           channelRef.current.unbind_all();
           pusher.unsubscribe(channelName);
+          channelRef.current = null;
         }
-
-        // Unbind connection state handler
         pusher.connection.unbind('state_change', handleConnectionStateChange);
-
         setIsConnected(false);
       };
     } catch (err) {
       console.error('[Pusher] Error setting up connection:', err);
       setIsConnected(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tournamentId]);
+  }, [tournamentId, connectTournamentChannel]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const setPlayerUnsold = useCallback((playerId: string) => {
+    dispatch({ type: 'SET_PLAYER_UNSOLD', playerId });
+  }, []);
+
+  const setPlayerAvailable = useCallback((playerId: string) => {
+    dispatch({ type: 'SET_PLAYER_AVAILABLE', playerId });
+  }, []);
 
   return {
     tournament: state.tournament,
@@ -396,5 +484,7 @@ export function usePusherAuction(
     teams: state.teams,
     isConnected,
     error: state.error,
+    setPlayerUnsold,
+    setPlayerAvailable,
   };
 }

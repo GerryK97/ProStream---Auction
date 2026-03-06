@@ -1,11 +1,10 @@
-'use client';
+import FullScreenOverlay from '@/components/overlays/FullScreenOverlay';
 
-import LiveOverlayPreview from '@/components/LiveOverlayPreview';
-
-export default function OverlayPreviewPage() {
-  return (
-    <div className="w-screen h-screen">
-      <LiveOverlayPreview />
-    </div>
-  );
+export default async function FullScreenOverlayPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  return <FullScreenOverlay tournamentId={id} />;
 }

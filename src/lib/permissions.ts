@@ -1,6 +1,6 @@
 import { JWTPayload } from './auth';
 
-export type UserRole = 'Admin' | 'Tournament' | 'MasterManager' | 'Team' | 'Player' | 'Audience';
+export type UserRole = 'Admin' | 'Tournament' | 'Team' | 'Player' | 'Audience';
 export type Action = 'create' | 'read' | 'update' | 'delete' | 'manage';
 
 export interface RoutePermission {
@@ -23,10 +23,10 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
   { path: '/auction/setup', allowedRoles: ['Admin', 'Tournament'] },
 
   // Management routes
-  { path: '/manage', allowedRoles: ['Admin', 'Tournament', 'MasterManager'] },
+  { path: '/manage', allowedRoles: ['Admin', 'Tournament'] },
   { path: '/manage/tournaments', allowedRoles: ['Admin', 'Tournament'] },
-  { path: '/manage/teams', allowedRoles: ['Admin', 'Tournament', 'MasterManager'] },
-  { path: '/manage/players', allowedRoles: ['Admin', 'Tournament', 'MasterManager'] },
+  { path: '/manage/teams', allowedRoles: ['Admin', 'Tournament'] },
+  { path: '/manage/players', allowedRoles: ['Admin', 'Tournament'] },
 
   // Overlay routes (accessible to all registered users)
   { path: '/overlays', allowedRoles: ['Admin', 'Tournament', 'MasterManager', 'Team', 'Player', 'Audience'] },
@@ -72,8 +72,6 @@ export function canPerformAction(
       tournament: ['create', 'read', 'update', 'delete', 'manage'],
       team: ['create', 'read', 'update', 'delete', 'manage'],
       player: ['create', 'read', 'update', 'delete', 'manage'],
-      masterPlayer: ['create', 'read', 'update', 'delete', 'manage'],
-      masterTeam: ['create', 'read', 'update', 'delete', 'manage'],
       auction: ['create', 'read', 'update', 'delete', 'manage'],
       user: ['create', 'read', 'update', 'delete', 'manage'],
       overlayConfig: ['create', 'read', 'update', 'delete', 'manage'],
@@ -84,20 +82,7 @@ export function canPerformAction(
       team: ['create', 'read', 'update', 'delete', 'manage'],
       player: ['create', 'read', 'update', 'delete', 'manage'],
       auction: ['read', 'update', 'manage'],
-      masterPlayer: ['create', 'read', 'update', 'delete'],
-      masterTeam: ['create', 'read', 'update', 'delete'],
       overlayConfig: ['create', 'read', 'update', 'delete'],
-      invoice: ['create', 'read', 'update', 'delete'],
-      user: [],
-    },
-    MasterManager: {
-      masterPlayer: ['create', 'read', 'update', 'delete', 'manage'],
-      masterTeam: ['create', 'read', 'update', 'delete', 'manage'],
-      tournament: ['read'],
-      team: ['read'],
-      player: ['read'],
-      auction: ['read'],
-      overlayConfig: ['read'],
       invoice: ['create', 'read', 'update', 'delete'],
       user: [],
     },
@@ -105,8 +90,6 @@ export function canPerformAction(
       tournament: ['read'],
       team: ['read'],
       player: ['read'],
-      masterPlayer: ['read'],
-      masterTeam: ['read'],
       auction: ['read'],
       overlayConfig: ['read'],
       user: [],
@@ -114,11 +97,9 @@ export function canPerformAction(
     Player: {
       tournament: ['read'],
       player: ['read'],
-      masterPlayer: ['read'],
       auction: ['read'],
       overlayConfig: ['read'],
       team: [],
-      masterTeam: [],
       user: [],
     },
     Audience: {
@@ -127,8 +108,6 @@ export function canPerformAction(
       player: ['read'],
       team: ['read'],
       overlayConfig: ['read'],
-      masterPlayer: [],
-      masterTeam: [],
       user: [],
     },
   };
@@ -150,7 +129,7 @@ export function isAdmin(userRole: UserRole | string): boolean {
  * Check if user can manage resources
  */
 export function canManageResources(userRole: UserRole | string): boolean {
-  return ['Admin', 'Tournament', 'MasterManager'].includes(userRole);
+  return ['Admin', 'Tournament'].includes(userRole);
 }
 
 /**
@@ -270,46 +249,6 @@ export function canAccessPlayer(
 
   // User can access if they created the player
   if (player.createdBy === userId) return true;
-
-  return false;
-}
-
-/**
- * Check if user can access master team
- * User can access if:
- * - User is Admin (can access all)
- * - User is MasterManager or Tournament and created it
- */
-export function canAccessMasterTeam(
-  userId: string,
-  userRole: UserRole | string,
-  masterTeam: { _id: string; createdBy?: string }
-): boolean {
-  // Admin can access all
-  if (userRole === 'Admin') return true;
-
-  // MasterManager and Tournament can only see their own
-  if ((userRole === 'MasterManager' || userRole === 'Tournament') && masterTeam.createdBy === userId) return true;
-
-  return false;
-}
-
-/**
- * Check if user can access master player
- * User can access if:
- * - User is Admin (can access all)
- * - User is MasterManager or Tournament and created it
- */
-export function canAccessMasterPlayer(
-  userId: string,
-  userRole: UserRole | string,
-  masterPlayer: { _id: string; createdBy?: string }
-): boolean {
-  // Admin can access all
-  if (userRole === 'Admin') return true;
-
-  // MasterManager and Tournament can only see their own
-  if ((userRole === 'MasterManager' || userRole === 'Tournament') && masterPlayer.createdBy === userId) return true;
 
   return false;
 }

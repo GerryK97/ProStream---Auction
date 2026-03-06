@@ -122,10 +122,11 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
     const playerNumber = currentPlayer.playerNo || currentPlayer._id;
 
     // Calculate visible stats count for grid
+    const stats = currentPlayer.stats;
     const visibleStats = [
-        showMatches && { value: currentPlayer.stats.matchesPlayed, label: 'Matches' },
-        showScore && { value: currentPlayer.stats.totalScore, label: 'Score' },
-        showWickets && { value: currentPlayer.stats.totalWickets, label: 'Wickets' }
+        showMatches && stats && { value: stats.matchesPlayed, label: 'Matches' },
+        showScore && stats && { value: stats.totalScore, label: 'Score' },
+        showWickets && stats && { value: stats.totalWickets, label: 'Wickets' }
     ].filter(Boolean);
 
     // Use custom background text for watermark
