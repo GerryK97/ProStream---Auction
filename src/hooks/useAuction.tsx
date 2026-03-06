@@ -11,21 +11,21 @@ const MOCK_TOURNAMENTS: Tournament[] = [
 ];
 
 const MOCK_TEAMS: Team[] = [
-    { _id: 'team1', tournamentId: 't1', name: 'Wariyapola', shortCode: 'WCC', ownerName: 'Masan', initialBudget: 10000000, currentBalance: 8500000, playersPurchased: ['p1'], logoURL: 'https://placehold.co/64/E879F9/111827/png?text=W' },
-    { _id: 'team2', tournamentId: 't1', name: 'Chilaw', shortCode: 'CCC', ownerName: 'Sandun', initialBudget: 10000000, currentBalance: 7500000, playersPurchased: ['p2'], logoURL: 'https://placehold.co/64/F472B6/111827/png?text=C' },
-    { _id: 'team3', tournamentId: 't1', name: 'Matara', shortCode: 'MCC', ownerName: 'Kumar', initialBudget: 10000000, currentBalance: 9200000, playersPurchased: ['p3'], logoURL: 'https://placehold.co/64/A78BFA/111827/png?text=M' },
-    { _id: 'team4', tournamentId: 't1', name: 'Galle', shortCode: 'GCC', ownerName: 'Madu', initialBudget: 10000000, currentBalance: 6800000, playersPurchased: ['p4'], logoURL: 'https://placehold.co/64/FBBF24/111827/png?text=G' },
-    { _id: 'team5', tournamentId: 't1', name: 'Colombo', shortCode: 'COL', ownerName: 'Kumara', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/34D399/111827/png?text=CO' },
-    { _id: 'team6', tournamentId: 't1', name: 'Mannar', shortCode: 'MAN', ownerName: 'Kuyil', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/60A5FA/111827/png?text=MA' },
-    { _id: 'team7', tournamentId: 't1', name: 'Jaffna', shortCode: 'JCC', ownerName: 'Kili', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/F43F5E/111827/png?text=J' },
-    { _id: 'team8', tournamentId: 't1', name: 'Puttalam', shortCode: 'PCC', ownerName: 'Nimal', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/8B5CF6/111827/png?text=P' },
+  { _id: 'team1', tournamentId: 't1', name: 'Wariyapola', shortCode: 'WCC', ownerName: 'Masan', initialBudget: 10000000, currentBalance: 8500000, playersPurchased: ['p1'], logoURL: 'https://placehold.co/64/E879F9/111827/png?text=W' },
+  { _id: 'team2', tournamentId: 't1', name: 'Chilaw', shortCode: 'CCC', ownerName: 'Sandun', initialBudget: 10000000, currentBalance: 7500000, playersPurchased: ['p2'], logoURL: 'https://placehold.co/64/F472B6/111827/png?text=C' },
+  { _id: 'team3', tournamentId: 't1', name: 'Matara', shortCode: 'MCC', ownerName: 'Kumar', initialBudget: 10000000, currentBalance: 9200000, playersPurchased: ['p3'], logoURL: 'https://placehold.co/64/A78BFA/111827/png?text=M' },
+  { _id: 'team4', tournamentId: 't1', name: 'Galle', shortCode: 'GCC', ownerName: 'Madu', initialBudget: 10000000, currentBalance: 6800000, playersPurchased: ['p4'], logoURL: 'https://placehold.co/64/FBBF24/111827/png?text=G' },
+  { _id: 'team5', tournamentId: 't1', name: 'Colombo', shortCode: 'COL', ownerName: 'Kumara', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/34D399/111827/png?text=CO' },
+  { _id: 'team6', tournamentId: 't1', name: 'Mannar', shortCode: 'MAN', ownerName: 'Kuyil', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/60A5FA/111827/png?text=MA' },
+  { _id: 'team7', tournamentId: 't1', name: 'Jaffna', shortCode: 'JCC', ownerName: 'Kili', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/F43F5E/111827/png?text=J' },
+  { _id: 'team8', tournamentId: 't1', name: 'Puttalam', shortCode: 'PCC', ownerName: 'Nimal', initialBudget: 10000000, currentBalance: 10000000, playersPurchased: [], logoURL: 'https://placehold.co/64/8B5CF6/111827/png?text=P' },
 ];
 
 const MOCK_PLAYERS: Player[] = (([
-  { _id: 'p1', tournamentId: 't1', name: 'Shadow', stats: { matchesPlayed: 50, totalScore: 1200, totalWickets: 5 }, photoURL: 'https://picsum.photos/seed/shadow/200', isSold: false },
-  { _id: 'p2', tournamentId: 't1', name: 'Vortex', stats: { matchesPlayed: 65, totalScore: 850, totalWickets: 75 }, photoURL: 'https://picsum.photos/seed/vortex/200', isSold: false },
-  { _id: 'p3', tournamentId: 't1', name: 'Blitz', stats: { matchesPlayed: 45, totalScore: 1500, totalWickets: 10 }, photoURL: 'https://picsum.photos/seed/blitz/200', isSold: false },
-  { _id: 'p4', tournamentId: 't1', name: 'Rogue', stats: { matchesPlayed: 55, totalScore: 980, totalWickets: 30 }, photoURL: 'https://picsum.photos/seed/rogue/200', isSold: false }
+  { _id: 'p1', tournamentId: 't1', name: 'Shadow', photoURL: 'https://picsum.photos/seed/shadow/200', isSold: false },
+  { _id: 'p2', tournamentId: 't1', name: 'Vortex', photoURL: 'https://picsum.photos/seed/vortex/200', isSold: false },
+  { _id: 'p3', tournamentId: 't1', name: 'Blitz', photoURL: 'https://picsum.photos/seed/blitz/200', isSold: false },
+  { _id: 'p4', tournamentId: 't1', name: 'Rogue', photoURL: 'https://picsum.photos/seed/rogue/200', isSold: false }
 ]) as any[]);
 
 const MOCK_AUCTION_STATE: AuctionState = {
@@ -38,60 +38,60 @@ const MOCK_AUCTION_STATE: AuctionState = {
 };
 
 const MOCK_OVERLAY_TEMPLATES: any[] = [
-    {
-        _id: 'template1',
-        name: 'Classic',
-        description: 'Traditional auction overlay with player photo, bid details, and team footer. Perfect for standard broadcasts.',
-        imageURL: 'https://picsum.photos/seed/classic/400/225',
-        tags: ['Traditional', 'Standard', 'Clean'],
-        isPremium: false,
-        styles: {
-            playerCard: { backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: '#4F46E5', textColor: '#FFFFFF', statLabelColor: '#E5E7EB' },
-            teamCard: { backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: '#374151', textColor: '#FFFFFF', balanceColor: '#10B981' },
-            bidInfo: { textColor: '#E5E7EB', bidAmountColor: '#10B981' },
-            fontFamily: 'sans-serif'
-        }
-    },
-    {
-        _id: 'template2',
-        name: 'Modern Glass',
-        description: 'Sleek modern design with glassmorphism effects, gradient backgrounds, and smooth animations.',
-        imageURL: 'https://picsum.photos/seed/modernglass/400/225',
-        tags: ['Modern', 'Glassmorphism', 'Premium', 'Animated'],
-        isPremium: true,
-        styles: {
-            playerCard: { backgroundColor: 'rgba(20, 10, 40, 0.7)', borderColor: '#EC4899', textColor: '#F3F4F6', statLabelColor: '#A5B4FC' },
-            teamCard: { backgroundColor: 'rgba(20, 10, 40, 0.7)', borderColor: '#6366F1', textColor: '#F3F4F6', balanceColor: '#34D399' },
-            bidInfo: { textColor: '#D1D5DB', bidAmountColor: '#F472B6' },
-            fontFamily: 'monospace'
-        }
-    },
-     {
-        _id: 'template3',
-        name: 'Minimal Clean',
-        description: 'Clean, distraction-free design with large typography and lots of whitespace. Ideal for chromakey.',
-        imageURL: 'https://picsum.photos/seed/minimalclean/400/225',
-        tags: ['Minimal', 'Clean', 'Chromakey', 'Simple'],
-        isPremium: false,
-        styles: {
-            playerCard: { backgroundColor: 'rgba(255, 255, 255, 0.1)', borderColor: '#10B981', textColor: '#111827', statLabelColor: '#4B5563' },
-            teamCard: { backgroundColor: 'rgba(255, 255, 255, 0)', borderColor: '#E5E7EB', textColor: '#1F2937', balanceColor: '#111827' },
-            bidInfo: { textColor: '#374151', bidAmountColor: '#10B981' },
-            fontFamily: 'system-ui'
-        }
-    },
+  {
+    _id: 'template1',
+    name: 'Classic',
+    description: 'Traditional auction overlay with player photo, bid details, and team footer. Perfect for standard broadcasts.',
+    imageURL: 'https://picsum.photos/seed/classic/400/225',
+    tags: ['Traditional', 'Standard', 'Clean'],
+    isPremium: false,
+    styles: {
+      playerCard: { backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: '#4F46E5', textColor: '#FFFFFF', statLabelColor: '#E5E7EB' },
+      teamCard: { backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: '#374151', textColor: '#FFFFFF', balanceColor: '#10B981' },
+      bidInfo: { textColor: '#E5E7EB', bidAmountColor: '#10B981' },
+      fontFamily: 'sans-serif'
+    }
+  },
+  {
+    _id: 'template2',
+    name: 'Modern Glass',
+    description: 'Sleek modern design with glassmorphism effects, gradient backgrounds, and smooth animations.',
+    imageURL: 'https://picsum.photos/seed/modernglass/400/225',
+    tags: ['Modern', 'Glassmorphism', 'Premium', 'Animated'],
+    isPremium: true,
+    styles: {
+      playerCard: { backgroundColor: 'rgba(20, 10, 40, 0.7)', borderColor: '#EC4899', textColor: '#F3F4F6', statLabelColor: '#A5B4FC' },
+      teamCard: { backgroundColor: 'rgba(20, 10, 40, 0.7)', borderColor: '#6366F1', textColor: '#F3F4F6', balanceColor: '#34D399' },
+      bidInfo: { textColor: '#D1D5DB', bidAmountColor: '#F472B6' },
+      fontFamily: 'monospace'
+    }
+  },
+  {
+    _id: 'template3',
+    name: 'Minimal Clean',
+    description: 'Clean, distraction-free design with large typography and lots of whitespace. Ideal for chromakey.',
+    imageURL: 'https://picsum.photos/seed/minimalclean/400/225',
+    tags: ['Minimal', 'Clean', 'Chromakey', 'Simple'],
+    isPremium: false,
+    styles: {
+      playerCard: { backgroundColor: 'rgba(255, 255, 255, 0.1)', borderColor: '#10B981', textColor: '#111827', statLabelColor: '#4B5563' },
+      teamCard: { backgroundColor: 'rgba(255, 255, 255, 0)', borderColor: '#E5E7EB', textColor: '#1F2937', balanceColor: '#111827' },
+      bidInfo: { textColor: '#374151', bidAmountColor: '#10B981' },
+      fontFamily: 'system-ui'
+    }
+  },
 ];
 
 const MOCK_OVERLAY_INSTANCES: OverlayInstance[] = [
-    {
-        _id: 'instance_master_1',
-        name: 'Master Auction Overlay',
-        templateName: 'Master Auction Overlay',
-        status: 'Active',
-        url: typeof window !== 'undefined'
-            ? `http://${window.location.host}/overlays/a01c1fce7fbbf343a6c343c27c497328`
-            : 'http://localhost:3000/overlays/a01c1fce7fbbf343a6c343c27c497328'
-    }
+  {
+    _id: 'instance_master_1',
+    name: 'Master Auction Overlay',
+    templateName: 'Master Auction Overlay',
+    status: 'Active',
+    url: typeof window !== 'undefined'
+      ? `http://${window.location.host}/overlays/a01c1fce7fbbf343a6c343c27c497328`
+      : 'http://localhost:3000/overlays/a01c1fce7fbbf343a6c343c27c497328'
+  }
 ];
 
 // --- CONTEXT & PROVIDER ---
@@ -152,7 +152,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [activeTemplateId, setActiveTemplateId] = useState<string>(MOCK_OVERLAY_TEMPLATES[0]?._id || '');
 
   const activeTemplate = useMemo(() => overlayTemplates.find(t => t._id === activeTemplateId), [overlayTemplates, activeTemplateId]);
-  
+
   // For backwards compatibility, expose the first tournament as `tournament`
   const tournament = useMemo(() => tournaments.length > 0 ? tournaments[0] : null, [tournaments]);
 
@@ -176,31 +176,31 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const setTournamentStatus = useCallback((status: Tournament['status']) => {
     // This function might need adjustment if it should target a specific tournament
     if (tournaments.length > 0) {
-        setTournaments(prev => {
-            const newTournaments = [...prev];
-            newTournaments[0] = { ...newTournaments[0], status };
-            return newTournaments;
-        });
-        if(status !== 'Live'){
-            setAuctionState(prev => ({ ...prev, currentAuctionStatus: 'Pending', currentPlayerId: null, currentBid: 0, winningTeamId: null, history: [] }));
-        }
+      setTournaments(prev => {
+        const newTournaments = [...prev];
+        newTournaments[0] = { ...newTournaments[0], status };
+        return newTournaments;
+      });
+      if (status !== 'Live') {
+        setAuctionState(prev => ({ ...prev, currentAuctionStatus: 'Pending', currentPlayerId: null, currentBid: 0, winningTeamId: null, history: [] }));
+      }
     }
   }, [tournaments]);
 
   const addPlayer = useCallback((playerData: Omit<Player, '_id' | 'tournamentId' | 'isSold'>) => {
     if (!tournament) return;
     const newPlayer: Player = {
-        ...playerData,
-        _id: `p${Date.now()}`,
-        tournamentId: tournament._id,
-        isSold: false,
+      ...playerData,
+      _id: `p${Date.now()}`,
+      tournamentId: tournament._id,
+      isSold: false,
     };
     setPlayers(prev => [...prev, newPlayer]);
   }, [tournament]);
 
   const updatePlayer = useCallback((playerId: string, playerData: Partial<Omit<Player, '_id' | 'tournamentId' | 'isSold'>>) => {
-    setPlayers(prevPlayers => prevPlayers.map(player => 
-        player._id === playerId ? { ...player, ...playerData } : player
+    setPlayers(prevPlayers => prevPlayers.map(player =>
+      player._id === playerId ? { ...player, ...playerData } : player
     ));
   }, []);
 
@@ -211,20 +211,20 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addTeam = useCallback((teamData: Omit<Team, '_id' | 'tournamentId' | 'initialBudget' | 'currentBalance' | 'playersPurchased'>) => {
     if (!tournament) return;
     const newTeam: Team = {
-        ...teamData,
-        _id: `team${Date.now()}`,
-        tournamentId: tournament._id,
-        initialBudget: tournament.budgetPerTeam,
-        currentBalance: tournament.budgetPerTeam,
-        playersPurchased: [],
-        logoURL: teamData.logoURL || `https://placehold.co/64/4B5563/FFFFFF/png?text=${teamData.shortCode || teamData.name.charAt(0)}`,
+      ...teamData,
+      _id: `team${Date.now()}`,
+      tournamentId: tournament._id,
+      initialBudget: tournament.budgetPerTeam,
+      currentBalance: tournament.budgetPerTeam,
+      playersPurchased: [],
+      logoURL: teamData.logoURL || `https://placehold.co/64/4B5563/FFFFFF/png?text=${teamData.shortCode || teamData.name.charAt(0)}`,
     };
     setTeams(prev => [newTeam, ...prev]);
   }, [tournament]);
 
   const updateTeam = useCallback((teamId: string, teamData: Partial<Omit<Team, '_id' | 'tournamentId'>>) => {
     setTeams(prevTeams => prevTeams.map(team =>
-        team._id === teamId ? { ...team, ...teamData } : team
+      team._id === teamId ? { ...team, ...teamData } : team
     ));
   }, []);
 
@@ -235,7 +235,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const placeBid = useCallback((teamId: string, amount: number): string | null => {
     const { currentPlayerId } = auctionState;
     if (tournament?.status !== 'Live' || auctionState.currentAuctionStatus === 'Sold') return "Auction is not live or player is already sold.";
-    
+
     const team = teams.find(t => t._id === teamId);
     const player = players.find(p => p._id === currentPlayerId);
 
@@ -256,7 +256,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }));
     return null;
   }, [auctionState, teams, players, tournament]);
-  
+
   const selectNextPlayer = useCallback(() => {
     if (tournament?.status !== 'Live') return;
     const unsoldPlayer = players.find(p => !p.isSold);
@@ -271,56 +271,56 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }));
     } else {
       // No more unsold players
-      setAuctionState(prev => ({...prev, currentPlayerId: null}));
+      setAuctionState(prev => ({ ...prev, currentPlayerId: null }));
       setTournamentStatus('Completed');
     }
   }, [players, tournament, setTournamentStatus]);
-  
+
   const selectSpecificPlayer = useCallback((playerId: string) => {
     if (auctionState.currentAuctionStatus === 'Bidding') return;
     const playerToAuction = players.find(p => p._id === playerId && !p.isSold);
     if (playerToAuction) {
-        setAuctionState(prev => ({
-            ...prev,
-            currentPlayerId: playerToAuction._id,
-            currentBid: 0,
-            winningTeamId: null,
-            currentAuctionStatus: 'Pending',
-            history: [],
-        }));
-    }
-  }, [players, auctionState.currentAuctionStatus]);
-  
-  const resetCurrentAuction = useCallback(() => {
-    if (!auctionState.currentPlayerId) return;
-    setAuctionState(prev => ({
+      setAuctionState(prev => ({
         ...prev,
+        currentPlayerId: playerToAuction._id,
         currentBid: 0,
         winningTeamId: null,
         currentAuctionStatus: 'Pending',
         history: [],
+      }));
+    }
+  }, [players, auctionState.currentAuctionStatus]);
+
+  const resetCurrentAuction = useCallback(() => {
+    if (!auctionState.currentPlayerId) return;
+    setAuctionState(prev => ({
+      ...prev,
+      currentBid: 0,
+      winningTeamId: null,
+      currentAuctionStatus: 'Pending',
+      history: [],
     }));
   }, [auctionState.currentPlayerId]);
 
   const resetAllSales = useCallback(() => {
     setPlayers(prev => prev.map(p => ({
-        ...p,
-        isSold: false,
-        finalPrice: undefined,
-        winningTeamId: undefined,
+      ...p,
+      isSold: false,
+      finalPrice: undefined,
+      winningTeamId: undefined,
     })));
     setTeams(prev => prev.map(t => ({
-        ...t,
-        currentBalance: t.initialBudget,
-        playersPurchased: [],
+      ...t,
+      currentBalance: t.initialBudget,
+      playersPurchased: [],
     })));
     setAuctionState(prev => ({
-        ...prev,
-        currentPlayerId: null,
-        currentBid: 0,
-        winningTeamId: null,
-        currentAuctionStatus: 'Pending',
-        history: [],
+      ...prev,
+      currentPlayerId: null,
+      currentBid: 0,
+      winningTeamId: null,
+      currentAuctionStatus: 'Pending',
+      history: [],
     }));
   }, []);
 
@@ -329,7 +329,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!currentPlayerId || !winningTeamId || currentBid === 0) return "No valid bid to sell.";
     if (tournament?.status !== 'Live') return "Auction is not live.";
 
-    setPlayers(prevPlayers => prevPlayers.map(p => 
+    setPlayers(prevPlayers => prevPlayers.map(p =>
       p._id === currentPlayerId ? { ...p, isSold: true, finalPrice: currentBid, winningTeamId } : p
     ));
 
@@ -340,14 +340,14 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setAuctionState(prev => ({ ...prev, currentAuctionStatus: 'Sold' }));
     return null;
   }, [auctionState, tournament]);
-  
+
   const undoLastAction = useCallback(() => {
     const lastSoldPlayer = players.find(p => p._id === auctionState.currentPlayerId && p.isSold);
     if (!lastSoldPlayer || !lastSoldPlayer.winningTeamId || lastSoldPlayer.finalPrice === undefined) return;
-    
+
     const { _id: playerId, winningTeamId, finalPrice } = lastSoldPlayer;
 
-    setPlayers(prev => prev.map(p => 
+    setPlayers(prev => prev.map(p =>
       p._id === playerId ? { ...p, isSold: false, finalPrice: undefined, winningTeamId: undefined } : p
     ));
 
@@ -355,13 +355,13 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       t._id === winningTeamId ? { ...t, currentBalance: (t.currentBalance || 0) + finalPrice, playersPurchased: (t.playersPurchased || []).filter(pId => pId !== playerId) } : t
     ));
 
-     setAuctionState(prev => ({
-        ...prev,
-        currentBid: 0,
-        winningTeamId: null,
-        currentAuctionStatus: 'Pending',
-        history: [],
-      }));
+    setAuctionState(prev => ({
+      ...prev,
+      currentBid: 0,
+      winningTeamId: null,
+      currentAuctionStatus: 'Pending',
+      history: [],
+    }));
 
   }, [players, auctionState.currentPlayerId]);
 
@@ -384,18 +384,18 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
 
   const createOverlayInstance = useCallback((template: OverlayTemplate, name: string) => {
-      const newInstance: OverlayInstance = {
-          _id: `instance_${Date.now()}`,
-          name,
-          templateName: template.name,
-          status: 'Active',
-          url: `http://${window.location.host}/#/overlay/${Math.random().toString(36).substring(2)}`
-      };
-      setOverlayInstances(prev => [newInstance, ...prev]);
+    const newInstance: OverlayInstance = {
+      _id: `instance_${Date.now()}`,
+      name,
+      templateName: template.name,
+      status: 'Active',
+      url: `http://${window.location.host}/#/overlay/${Math.random().toString(36).substring(2)}`
+    };
+    setOverlayInstances(prev => [newInstance, ...prev]);
   }, []);
 
   const deleteOverlayInstance = useCallback((instanceId: string) => {
-      setOverlayInstances(prev => prev.filter(instance => instance._id !== instanceId));
+    setOverlayInstances(prev => prev.filter(instance => instance._id !== instanceId));
   }, []);
 
   const value = useMemo(() => ({
