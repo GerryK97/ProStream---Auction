@@ -9,6 +9,7 @@ import { useTournamentContext } from '@/contexts/TournamentContext';
 import Modal from '@/components/Modal';
 import TeamForm from '@/components/TeamForm';
 import DeleteButton from '@/components/shared/DeleteButton';
+import EditButton from '@/components/shared/EditButton';
 import { imageOptimizers } from '@/lib/imageOptimization';
 
 function TeamsManagePage() {
@@ -18,6 +19,7 @@ function TeamsManagePage() {
     const [teams, setTeams] = useState<Team[]>([]);
     const [loadingTeams, setLoadingTeams] = useState(false);
     const [isAddModalOpen, setAddModalOpen] = useState(false);
+    const [editingTeam, setEditingTeam] = useState<Team | null>(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const fetchTeams = useCallback(async () => {
@@ -123,6 +125,7 @@ function TeamsManagePage() {
                                             </p>
                                         </div>
                                     </div>
+                                    <EditButton ariaLabel={`Edit ${team.name}`} onClick={() => setEditingTeam(team)} className="shrink-0" />
                                     <DeleteButton ariaLabel={`Remove ${team.name}`} onClick={() => handleDelete(team._id)} className="shrink-0" />
                                 </li>
                             ))}
@@ -150,6 +153,18 @@ function TeamsManagePage() {
                     onSuccess={() => { setRefreshTrigger(p => p + 1); setAddModalOpen(false); }}
                     onCancel={() => setAddModalOpen(false)}
                 />
+            </Modal>
+
+            {/* Edit Team Modal */}
+            <Modal isOpen={!!editingTeam} onClose={() => setEditingTeam(null)} title="Edit Team" size="md">
+                {editingTeam && (
+                    <TeamForm
+                        tournaments={tournaments}
+                        editTeam={editingTeam}
+                        onSuccess={() => { setRefreshTrigger(p => p + 1); setEditingTeam(null); }}
+                        onCancel={() => setEditingTeam(null)}
+                    />
+                )}
             </Modal>
         </div>
     );

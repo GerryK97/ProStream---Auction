@@ -180,16 +180,17 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
                                     )}
 
                                     {/* Player Image - Circular */}
-                                    {showPlayerImage && currentPlayer.photoURL && (
+                                    {showPlayerImage && (currentPlayer.photoURL || tournament?.logoURL) && (
                                         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center rounded-full border-4 overflow-hidden" style={{
                                             width: `${size.circleSize}px`,
                                             height: `${size.circleSize}px`,
-                                            borderColor: 'rgba(255, 255, 255, 0.3)'
+                                            borderColor: 'rgba(255, 255, 255, 0.3)',
+                                            background: !currentPlayer.photoURL ? '#0d1220' : undefined,
                                         }}>
                                             <img
-                                                src={currentPlayer.photoURL}
+                                                src={currentPlayer.photoURL || tournament?.logoURL || ''}
                                                 alt={currentPlayer.name}
-                                                className="w-full h-full object-cover"
+                                                className={`w-full h-full ${!currentPlayer.photoURL ? 'object-contain p-4' : 'object-cover'}`}
                                             />
                                         </div>
                                     )}

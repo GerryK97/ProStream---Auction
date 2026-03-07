@@ -116,8 +116,8 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
             </div>
 
             <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Age</label>
-                <input type="number" min="1" max="99" value={age} onChange={(e) => setAge(e.target.value)} placeholder="e.g., 25" className="w-full rounded-md p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
+                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Age <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(optional)</span></label>
+                <input type="number" min="1" max="99" value={age} onChange={(e) => setAge(e.target.value)} placeholder="Leave blank if not applicable" className="w-full rounded-md p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
             </div>
 
             {useClasses && selectedTournament && (
