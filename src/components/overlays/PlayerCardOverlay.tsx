@@ -107,9 +107,10 @@ const PlayerCardOverlay: React.FC<PlayerCardOverlayProps> = ({
                     )}
 
                     <img
-                        src={currentPlayer.photoURL}
+                        src={currentPlayer.photoURL || tournament?.logoURL || ''}
                         alt={currentPlayer.name}
-                        className={`${config.image} rounded-md object-cover border-4 border-cyan-500 shadow-lg`}
+                        className={`${config.image} rounded-md border-4 border-cyan-500 shadow-lg ${!currentPlayer.photoURL && tournament?.logoURL ? 'object-contain' : 'object-cover'}`}
+                        style={!currentPlayer.photoURL && tournament?.logoURL ? { background: '#0d1220', padding: 4 } : undefined}
                     />
                     <div>
                         <p className={`${config.title} text-cyan-400 font-semibold tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>ON THE BLOCK</p>

@@ -234,8 +234,21 @@ function PlayerAuctionPanel({
             alt={currentPlayer!.name}
             style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
           />
+        ) : hasPlayer && tournament?.logoURL ? (
+          /* Player exists but no photo — show tournament logo */
+          <div style={{
+            width: '100%', height: '100%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: '#0d1220',
+          }}>
+            <img
+              src={tournament.logoURL}
+              alt={tournament.name}
+              style={{ width: 320, height: 320, objectFit: 'contain', opacity: 0.85 }}
+            />
+          </div>
         ) : (
-          /* No-player placeholder */
+          /* No player at all */
           <div style={{
             width: '100%', height: '100%',
             display: 'flex', flexDirection: 'column',
