@@ -96,7 +96,7 @@ function TournamentsManagePage() {
       playerClasses: (t.playerClasses ?? []).map(cls => ({
         name: cls.name,
         color: cls.color,
-        basePrice: cls.basePrice,
+        basePrice: cls.basePrice ?? 0,
         code: cls.code,
       })),
     });
