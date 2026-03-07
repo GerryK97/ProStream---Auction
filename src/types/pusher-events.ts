@@ -150,7 +150,7 @@ export interface AuctionStateUpdateEvent extends BasePusherEvent {
 export interface OverlaySettingsEvent extends BasePusherEvent {
   size: 'large' | 'small';
   tickerMode: 'all' | 'sold' | 'available';
-  displayMode: 'standard' | 'sold-summary' | 'team-summary' | 'resting';
+  displayMode: 'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary';
 }
 
 /**

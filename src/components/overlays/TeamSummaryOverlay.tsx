@@ -6,6 +6,7 @@ import { Team, Tournament } from '@/types';
 interface TeamSummaryOverlayProps {
     teams: Team[];
     tournament: Tournament | null;
+    isExiting?: boolean;
 }
 
 const formatCurrency = (amount: number) => amount.toLocaleString('en-IN');
@@ -29,7 +30,7 @@ const ROW_SPACING = 80;
 const FONT_HEADING = "'Bebas Neue', cursive";
 const FONT_ROW = "'Rajdhani', sans-serif";
 
-const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tournament }) => {
+const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tournament, isExiting = false }) => {
     if (!tournament || teams.length === 0) return null;
 
     const sorted = [...teams].sort((a, b) => (b.currentBalance ?? 0) - (a.currentBalance ?? 0));
@@ -42,8 +43,16 @@ const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tourname
     const panelTop = Math.round((CANVAS_H - contentH) / 2);
     const firstPillTop = panelTop + HEADING_H + SEPARATOR_H + ROW_AREA_TOP_PAD;
 
+    const dashAnim = isExiting ? 'summaryDashOut 0.35s ease 1.25s both' : 'summaryDashIn 0.30s ease 0s both';
+
     return (
         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
+        <style>{`
+            @keyframes summaryDashIn  { 0% { transform: translateY(-28px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+            @keyframes summaryDashOut { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-28px); opacity: 0; } }
+            @keyframes summaryRowIn   { 0% { transform: translateX(-55px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
+            @keyframes summaryRowOut  { 0% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(55px); opacity: 0; } }
+        `}</style>
         <div style={{ width: CANVAS_W, height: CANVAS_H, position: 'relative', background: 'transparent', overflow: 'hidden', flexShrink: 0 }}>
 
             {/* ── Background panel ── */}
@@ -56,6 +65,7 @@ const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tourname
                 background: '#0D1B2A',
                 borderRadius: 20,
                 border: '1px solid #1E3A5F',
+                animation: dashAnim,
             }} />
 
             {/* Left gold accent bar */}
@@ -67,6 +77,7 @@ const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tourname
                 height: contentH - 40,
                 background: '#F59E0B',
                 borderRadius: '0 0 4px 4px',
+                animation: dashAnim,
             }} />
 
             {/* ── Heading area ── */}
@@ -81,6 +92,7 @@ const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tourname
                 paddingLeft: 40,
                 paddingRight: 40,
                 justifyContent: 'space-between',
+                animation: dashAnim,
             }}>
                 <div>
                     <div style={{
@@ -113,6 +125,7 @@ const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tourname
                 width: PANEL_WIDTH - 40,
                 height: SEPARATOR_H,
                 background: 'linear-gradient(90deg, #F59E0B 0%, rgba(245,158,11,0.15) 100%)',
+                animation: dashAnim,
             }} />
 
             {/* ── Team rows ── */}
@@ -127,178 +140,190 @@ const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tourname
 
                 return (
                     <React.Fragment key={team._id}>
-                        {/* Row pill */}
-                        <div style={{
-                            position: 'absolute',
-                            left: PILL_LEFT,
-                            top: pillTop,
-                            width: PILL_WIDTH,
-                            height: PILL_H,
-                            background: '#0A1628',
-                            borderRadius: 26.5,
-                            border: '1px solid #1E3A5F',
-                        }} />
-
-                        {/* Avatar — team logo or initials */}
+                        {/* Animated row wrapper */}
                         <div style={{
                             position: 'absolute',
                             left: PILL_LEFT - 5,
                             top: elemTop,
-                            width: AVATAR_SIZE,
+                            width: PILL_WIDTH + 5,
                             height: AVATAR_SIZE,
-                            borderRadius: '50%',
-                            background: '#071020',
-                            border: '2px solid #F59E0B',
-                            overflow: 'hidden',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
+                            animation: isExiting
+                                ? `summaryRowOut 0.30s ease ${(rowCount - 1 - i) * 0.12}s both`
+                                : `summaryRowIn  0.35s ease ${0.25 + i * 0.13}s both`,
                         }}>
-                            {team.logoURL ? (
-                                <img
-                                    src={team.logoURL}
-                                    alt={team.name}
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                />
-                            ) : (
-                                <span style={{
+                            {/* Row pill */}
+                            <div style={{
+                                position: 'absolute',
+                                left: 5,
+                                top: AVATAR_OVERLAP,
+                                width: PILL_WIDTH,
+                                height: PILL_H,
+                                background: '#0A1628',
+                                borderRadius: 26.5,
+                                border: '1px solid #1E3A5F',
+                            }} />
+
+                            {/* Avatar — team logo or initials */}
+                            <div style={{
+                                position: 'absolute',
+                                left: 0,
+                                top: 0,
+                                width: AVATAR_SIZE,
+                                height: AVATAR_SIZE,
+                                borderRadius: '50%',
+                                background: '#071020',
+                                border: '2px solid #F59E0B',
+                                overflow: 'hidden',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}>
+                                {team.logoURL ? (
+                                    <img
+                                        src={team.logoURL}
+                                        alt={team.name}
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                ) : (
+                                    <span style={{
+                                        fontFamily: FONT_ROW,
+                                        fontSize: 24,
+                                        fontWeight: 700,
+                                        color: '#F59E0B',
+                                        letterSpacing: 1,
+                                    }}>
+                                        {initials}
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Team name */}
+                            <div style={{
+                                position: 'absolute',
+                                left: 83,
+                                top: 0,
+                                height: AVATAR_SIZE,
+                                display: 'flex',
+                                alignItems: 'center',
+                                fontFamily: FONT_ROW,
+                                fontSize: 46,
+                                fontWeight: 600,
+                                letterSpacing: 2,
+                                color: '#FFFFFF',
+                                whiteSpace: 'nowrap',
+                                maxWidth: 380,
+                                overflow: 'hidden',
+                            }}>
+                                {team.name}
+                            </div>
+
+                            {/* Budget (col 2) */}
+                            <div style={{
+                                position: 'absolute',
+                                left: 495,
+                                top: 0,
+                                height: AVATAR_SIZE,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                gap: 0,
+                            }}>
+                                <div style={{
                                     fontFamily: FONT_ROW,
-                                    fontSize: 24,
-                                    fontWeight: 700,
-                                    color: '#F59E0B',
-                                    letterSpacing: 1,
+                                    fontSize: 14,
+                                    fontWeight: 500,
+                                    color: '#475569',
+                                    letterSpacing: 3,
+                                    textTransform: 'uppercase',
+                                    lineHeight: 1,
                                 }}>
-                                    {initials}
-                                </span>
-                            )}
-                        </div>
-
-                        {/* Team name */}
-                        <div style={{
-                            position: 'absolute',
-                            left: PILL_LEFT + 78,
-                            top: elemTop,
-                            height: AVATAR_SIZE,
-                            display: 'flex',
-                            alignItems: 'center',
-                            fontFamily: FONT_ROW,
-                            fontSize: 46,
-                            fontWeight: 600,
-                            letterSpacing: 2,
-                            color: '#FFFFFF',
-                            whiteSpace: 'nowrap',
-                            maxWidth: 380,
-                            overflow: 'hidden',
-                        }}>
-                            {team.name}
-                        </div>
-
-                        {/* Budget (col 2) */}
-                        <div style={{
-                            position: 'absolute',
-                            left: PILL_LEFT + 490,
-                            top: elemTop,
-                            height: AVATAR_SIZE,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center',
-                            gap: 0,
-                        }}>
-                            <div style={{
-                                fontFamily: FONT_ROW,
-                                fontSize: 14,
-                                fontWeight: 500,
-                                color: '#475569',
-                                letterSpacing: 3,
-                                textTransform: 'uppercase',
-                                lineHeight: 1,
-                            }}>
-                                BUDGET
+                                    BUDGET
+                                </div>
+                                <div style={{
+                                    fontFamily: FONT_ROW,
+                                    fontSize: 40,
+                                    fontWeight: 500,
+                                    letterSpacing: 2,
+                                    color: '#94A3B8',
+                                    lineHeight: 1.1,
+                                    whiteSpace: 'nowrap',
+                                }}>
+                                    {formatCurrency(budget)}
+                                </div>
                             </div>
-                            <div style={{
-                                fontFamily: FONT_ROW,
-                                fontSize: 40,
-                                fontWeight: 500,
-                                letterSpacing: 2,
-                                color: '#94A3B8',
-                                lineHeight: 1.1,
-                                whiteSpace: 'nowrap',
-                            }}>
-                                {formatCurrency(budget)}
-                            </div>
-                        </div>
 
-                        {/* Spent (col 3) */}
-                        <div style={{
-                            position: 'absolute',
-                            left: PILL_LEFT + 770,
-                            top: elemTop,
-                            height: AVATAR_SIZE,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center',
-                            gap: 0,
-                        }}>
+                            {/* Spent (col 3) */}
                             <div style={{
-                                fontFamily: FONT_ROW,
-                                fontSize: 14,
-                                fontWeight: 500,
-                                color: '#475569',
-                                letterSpacing: 3,
-                                textTransform: 'uppercase',
-                                lineHeight: 1,
+                                position: 'absolute',
+                                left: 775,
+                                top: 0,
+                                height: AVATAR_SIZE,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                gap: 0,
                             }}>
-                                SPENT
+                                <div style={{
+                                    fontFamily: FONT_ROW,
+                                    fontSize: 14,
+                                    fontWeight: 500,
+                                    color: '#475569',
+                                    letterSpacing: 3,
+                                    textTransform: 'uppercase',
+                                    lineHeight: 1,
+                                }}>
+                                    SPENT
+                                </div>
+                                <div style={{
+                                    fontFamily: FONT_ROW,
+                                    fontSize: 40,
+                                    fontWeight: 500,
+                                    letterSpacing: 2,
+                                    color: '#94A3B8',
+                                    lineHeight: 1.1,
+                                    whiteSpace: 'nowrap',
+                                }}>
+                                    {formatCurrency(spent)}
+                                </div>
                             </div>
+
+                            {/* Balance (col 4) */}
                             <div style={{
-                                fontFamily: FONT_ROW,
-                                fontSize: 40,
-                                fontWeight: 500,
-                                letterSpacing: 2,
-                                color: '#94A3B8',
-                                lineHeight: 1.1,
-                                whiteSpace: 'nowrap',
+                                position: 'absolute',
+                                left: 1065,
+                                top: 0,
+                                height: AVATAR_SIZE,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                gap: 0,
                             }}>
-                                {formatCurrency(spent)}
+                                <div style={{
+                                    fontFamily: FONT_ROW,
+                                    fontSize: 14,
+                                    fontWeight: 500,
+                                    color: '#475569',
+                                    letterSpacing: 3,
+                                    textTransform: 'uppercase',
+                                    lineHeight: 1,
+                                }}>
+                                    BALANCE
+                                </div>
+                                <div style={{
+                                    fontFamily: FONT_ROW,
+                                    fontSize: 40,
+                                    fontWeight: 700,
+                                    letterSpacing: 2,
+                                    color: balanceColor,
+                                    lineHeight: 1.1,
+                                    whiteSpace: 'nowrap',
+                                }}>
+                                    {formatCurrency(balance)}
+                                </div>
                             </div>
                         </div>
 
-                        {/* Balance (col 4) */}
-                        <div style={{
-                            position: 'absolute',
-                            left: PILL_LEFT + 1060,
-                            top: elemTop,
-                            height: AVATAR_SIZE,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center',
-                            gap: 0,
-                        }}>
-                            <div style={{
-                                fontFamily: FONT_ROW,
-                                fontSize: 14,
-                                fontWeight: 500,
-                                color: '#475569',
-                                letterSpacing: 3,
-                                textTransform: 'uppercase',
-                                lineHeight: 1,
-                            }}>
-                                BALANCE
-                            </div>
-                            <div style={{
-                                fontFamily: FONT_ROW,
-                                fontSize: 40,
-                                fontWeight: 700,
-                                letterSpacing: 2,
-                                color: balanceColor,
-                                lineHeight: 1.1,
-                                whiteSpace: 'nowrap',
-                            }}>
-                                {formatCurrency(balance)}
-                            </div>
-                        </div>
-
-                        {/* Row divider */}
+                        {/* Row divider — canvas-absolute, no animation */}
                         {i < rowCount - 1 && (
                             <div style={{
                                 position: 'absolute',
