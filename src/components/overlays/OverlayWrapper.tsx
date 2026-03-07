@@ -11,7 +11,7 @@ import '../../styles/animations.css';
 export interface OverlaySettings {
     size: 'large' | 'small';
     tickerMode: 'all' | 'sold' | 'available';
-    displayMode: 'standard' | 'sold-summary' | 'team-summary' | 'resting';
+    displayMode: 'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary';
 }
 
 const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {

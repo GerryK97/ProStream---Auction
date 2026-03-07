@@ -78,10 +78,11 @@ const CurrentAuctionPanel: React.FC<{
     setBiddingTeamId: (id: string) => void;
     auctionState: any;
     onBid: (amount: number) => void;
+    onCorrectBid: (amount: number) => void;
     onSell: () => void;
     onReset: () => void;
     onMarkUnsold: () => void;
-}> = ({ currentPlayer, tournament, teams, biddingTeamId, setBiddingTeamId, auctionState, onBid, onSell, onReset, onMarkUnsold }) => {
+}> = ({ currentPlayer, tournament, teams, biddingTeamId, setBiddingTeamId, auctionState, onBid, onCorrectBid, onSell, onReset, onMarkUnsold }) => {
     const [bidAmount, setBidAmount] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -116,6 +117,7 @@ const CurrentAuctionPanel: React.FC<{
     const { currentBid, currentAuctionStatus } = auctionState;
     const isSold = currentAuctionStatus === 'Sold';
     const bidIncrements = [1000, 5000, 10000, 25000, 50000];
+    const isCorrection = currentBid > 0 && bidAmount > 0 && bidAmount < currentBid;
     const statusText = currentAuctionStatus === 'Bidding' ? 'BIDDING ACTIVE' : (isSold ? 'PLAYER SOLD' : 'BIDDING PENDING');
     const statusColor = currentAuctionStatus === 'Bidding' ? 'text-yellow-400' : (isSold ? 'text-green-400' : 'text-[var(--text-tertiary)]');
 
@@ -166,64 +168,110 @@ const CurrentAuctionPanel: React.FC<{
                 </div>
             </div>
 
-            {/* Custom bid row */}
-            <div className="flex gap-2 shrink-0">
-                <input
-                    type="number"
-                    value={bidAmount}
-                    onChange={e => setBidAmount(parseInt(e.target.value, 10) || 0)}
-                    disabled={isSold || isSubmitting}
-                    className="input-field flex-1 text-sm py-1.5 disabled:opacity-50"
-                    placeholder="Custom amount"
-                />
-                <button
-                    onClick={() => onBid(bidAmount)}
-                    disabled={isSold || isSubmitting}
-                    className="btn-secondary text-sm px-4 py-1.5 shrink-0 disabled:opacity-50">
-                    {isSubmitting ? '...' : 'Set'}
-                </button>
+            {/* Custom bid row — accepts any amount; auto-routes to correction if lower than current */}
+            <div className="shrink-0">
+                <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: isCorrection ? '#FB923C' : 'var(--text-tertiary)' }}>
+                        {isCorrection ? 'Correct Bid' : 'Custom Bid'}
+                    </p>
+                    {isCorrection && (
+                        <p className="text-xs font-semibold" style={{ color: '#FB923C' }}>
+                            ↓ Lower than current bid
+                        </p>
+                    )}
+                </div>
+                <div className="flex gap-2">
+                    <input
+                        type="number"
+                        value={bidAmount}
+                        onChange={e => setBidAmount(parseInt(e.target.value, 10) || 0)}
+                        disabled={isSold || isSubmitting}
+                        className="input-field flex-1 text-sm py-1.5 disabled:opacity-50"
+                        placeholder="Enter any amount"
+                        style={isCorrection ? { borderColor: '#FB923C', color: '#000000' } : { color: '#000000' }}
+                    />
+                    <button
+                        onClick={() => isCorrection ? onCorrectBid(bidAmount) : onBid(bidAmount)}
+                        disabled={isSold || isSubmitting || bidAmount <= 0}
+                        className="text-sm px-4 py-1.5 shrink-0 rounded-md font-bold transition-colors disabled:opacity-50"
+                        style={{
+                            backgroundColor: isCorrection ? 'rgba(251,146,60,0.15)' : 'var(--surface-elevated)',
+                            color: isCorrection ? '#FB923C' : 'var(--brand-primary)',
+                            border: `1.5px solid ${isCorrection ? '#FB923C' : 'var(--brand-primary)'}`,
+                        }}>
+                        {isSubmitting ? '...' : isCorrection ? 'Correct' : 'Set'}
+                    </button>
+                </div>
             </div>
 
-            {/* Finalize row */}
-            <div className="border-t border-[var(--border-primary)] pt-3 shrink-0">
-                <div className="flex gap-2 items-center">
-                    <select
-                        value={biddingTeamId}
-                        onChange={e => setBiddingTeamId(e.target.value)}
-                        disabled={isSold || currentBid === 0}
-                        className="flex-1 border rounded-md px-2 py-2 text-sm font-semibold focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                        style={{ backgroundColor: 'var(--surface-card)', color: 'var(--text-primary)', borderColor: 'var(--border-primary)' }}>
-                        {teams.map(t => (
-                            <option key={t._id} value={t._id} style={{ backgroundColor: 'var(--surface-secondary)', color: 'var(--text-primary)' }}>
-                                {t.name}
-                            </option>
-                        ))}
-                    </select>
+            {/* Finalize section */}
+            <div className="border-t border-[var(--border-primary)] pt-3 flex flex-col gap-2 shrink-0">
+
+                {/* Status */}
+                <div className="flex items-center justify-between">
+                    <p className={`text-xs font-bold tracking-widest uppercase ${statusColor}`}>{statusText}</p>
+                    {!isSold && currentBid === 0 && (
+                        <p className="text-xs text-yellow-400">Place a bid to enable Sell</p>
+                    )}
+                </div>
+
+                {/* Team selector */}
+                <select
+                    value={biddingTeamId}
+                    onChange={e => setBiddingTeamId(e.target.value)}
+                    disabled={isSold || currentBid === 0}
+                    className="w-full border rounded-md px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-blue-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ backgroundColor: 'var(--surface-card)', color: 'var(--text-primary)', borderColor: 'var(--border-primary)' }}>
+                    {teams.map(t => (
+                        <option key={t._id} value={t._id} style={{ backgroundColor: 'var(--surface-secondary)', color: 'var(--text-primary)' }}>
+                            {t.name}
+                        </option>
+                    ))}
+                </select>
+
+                {/* Action buttons — one row */}
+                <div className="grid grid-cols-3 gap-2">
                     <button
                         onClick={onSell}
                         disabled={isSold || currentBid === 0 || !biddingTeamId}
-                        className="btn-primary text-sm px-4 py-2 shrink-0 disabled:opacity-50">
-                        Sell
+                        className="py-3 rounded-lg text-sm font-black tracking-widest uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        style={{
+                            background: isSold || currentBid === 0 || !biddingTeamId
+                                ? 'rgba(34,197,94,0.15)'
+                                : 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                            color: '#ffffff',
+                            border: '2px solid #16a34a',
+                            boxShadow: isSold || currentBid === 0 || !biddingTeamId ? 'none' : '0 0 16px rgba(22,163,74,0.35)',
+                            letterSpacing: 2,
+                        }}>
+                        {isSold ? '✓ Sold' : 'Sell'}
                     </button>
                     <button
                         onClick={onReset}
                         disabled={isSold}
-                        className="btn-danger text-sm px-3 py-2 shrink-0 disabled:opacity-50">
+                        className="py-3 rounded-lg text-sm font-bold tracking-wide uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        style={{
+                            background: 'rgba(220,38,38,0.1)',
+                            color: '#f87171',
+                            border: '1.5px solid rgba(220,38,38,0.4)',
+                        }}
+                        onMouseEnter={e => { if (!isSold) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(220,38,38,0.25)'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(220,38,38,0.1)'; }}>
                         Reset
                     </button>
                     <button
                         onClick={onMarkUnsold}
                         disabled={isSold}
-                        className="text-sm px-3 py-2 shrink-0 rounded-md font-semibold transition-all disabled:opacity-50"
-                        style={{ backgroundColor: 'rgba(251,146,60,0.15)', color: '#FB923C', border: '1px solid rgba(251,146,60,0.4)' }}>
-                        Mark Unsold
+                        className="py-3 rounded-lg text-sm font-bold tracking-wide uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        style={{
+                            background: 'rgba(251,146,60,0.1)',
+                            color: '#fb923c',
+                            border: '1.5px solid rgba(251,146,60,0.35)',
+                        }}
+                        onMouseEnter={e => { if (!isSold) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(251,146,60,0.25)'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(251,146,60,0.1)'; }}>
+                        Unsold
                     </button>
-                </div>
-                <div className="flex items-center justify-between mt-2">
-                    <p className={`text-xs font-bold tracking-widest ${statusColor}`}>{statusText}</p>
-                    {!isSold && currentBid === 0 && (
-                        <p className="text-xs text-yellow-400">Place a bid above to enable Sell</p>
-                    )}
                 </div>
             </div>
         </div>
@@ -303,7 +351,19 @@ const TeamsAndSoldPlayersPanel: React.FC<{
                 <div className="flex items-center justify-between mb-2 shrink-0">
                     <h3 className="font-bold text-base">Sold/Unsold Player List ({soldPlayers.length + unsoldPlayers.length})</h3>
                     <div className="flex gap-1.5">
-                        <button onClick={onUndo} disabled={soldPlayers.length === 0 && unsoldPlayers.length === 0} className="btn-secondary text-xs py-1 px-2 disabled:opacity-50">Undo</button>
+                        <button
+                            onClick={onUndo}
+                            disabled={soldPlayers.length === 0 && unsoldPlayers.length === 0}
+                            className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide px-3 py-1.5 rounded-md transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                            style={{
+                                background: 'rgba(99,102,241,0.12)',
+                                color: '#a5b4fc',
+                                border: '1.5px solid rgba(99,102,241,0.35)',
+                            }}
+                            onMouseEnter={e => { if (soldPlayers.length > 0 || unsoldPlayers.length > 0) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(99,102,241,0.25)'; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(99,102,241,0.12)'; }}>
+                            Undo
+                        </button>
                         <ClearAllButton onClick={onCleanup} disabled={soldPlayers.length === 0 && unsoldPlayers.length === 0} label="Clear" size="sm" />
                     </div>
                 </div>
@@ -403,7 +463,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     // Overlay control panel settings
     const [overlaySize, setOverlaySize] = useState<'large' | 'small'>('large');
     const [tickerMode, setTickerMode] = useState<'all' | 'sold' | 'available'>('all');
-    const [displayMode, setDisplayMode] = useState<'standard' | 'sold-summary' | 'team-summary' | 'resting'>('standard');
+    const [displayMode, setDisplayMode] = useState<'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary'>('standard');
     const [autoSwitch, setAutoSwitch] = useState(false);
     const [autoSwitchDuration, setAutoSwitchDuration] = useState(5);
     const autoSwitchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -419,7 +479,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const sendOverlaySettings = async (
         size: 'large' | 'small',
         mode: 'all' | 'sold' | 'available',
-        dm: 'standard' | 'sold-summary' | 'team-summary' | 'resting' = displayModeRef.current
+        dm: 'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary' = displayModeRef.current
     ) => {
         const tournamentId = liveTournament?._id;
         if (!tournamentId) return;
@@ -829,6 +889,24 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         }
     };
 
+    const handleCorrectBid = async (amount: number) => {
+        if (!liveTournament) return;
+        try {
+            const response = await fetch('/api/auction/bid/correct', {
+                method: 'POST',
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tournamentId: liveTournament._id, amount }),
+            });
+            if (!response.ok) {
+                const data = await response.json();
+                setError(data.error || 'Failed to correct bid');
+            }
+        } catch (error) {
+            console.error('Failed to correct bid:', error);
+            setError('An error occurred while correcting the bid');
+        }
+    };
+
     const handleSell = async () => {
         console.log('handleSell called with team:', biddingTeamId);
         if (!liveTournament) {
@@ -1072,6 +1150,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                         setBiddingTeamId={setBiddingTeamId}
                         auctionState={auctionState}
                         onBid={handleBid}
+                        onCorrectBid={handleCorrectBid}
                         onSell={handleSell}
                         onReset={handleReset}
                         onMarkUnsold={handleMarkUnsold}
@@ -1200,6 +1279,28 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                             </button>
                             {/* Divider */}
                             <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
+                            {/* Top 10 Summary */}
+                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Top 10 Sold:</span>
+                            <button
+                                onClick={() => {
+                                    const next = displayMode === 'top10-summary' ? 'standard' : 'top10-summary';
+                                    setDisplayMode(next);
+                                    sendOverlaySettings(overlaySize, tickerMode, next);
+                                }}
+                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
+                                style={{
+                                    backgroundColor: displayMode === 'top10-summary' ? '#D97706' : 'var(--surface-elevated)',
+                                    color: displayMode === 'top10-summary' ? '#fff' : 'var(--text-secondary)',
+                                    border: '1px solid var(--border-primary)',
+                                }}
+                            >
+                                <span>Show/Hide</span>
+                                {displayMode === 'top10-summary' && (
+                                    <span className="w-2 h-2 rounded-full bg-yellow-300 animate-pulse" />
+                                )}
+                            </button>
+                            {/* Divider */}
+                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
                             {/* Resting Time */}
                             <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Resting Time:</span>
                             <button
@@ -1220,7 +1321,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                                     <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
                                 )}
                             </button>
-                            {(displayMode === 'sold-summary' || displayMode === 'team-summary' || displayMode === 'resting') && (
+                            {(displayMode === 'sold-summary' || displayMode === 'team-summary' || displayMode === 'resting' || displayMode === 'top10-summary') && (
                                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                                     Player Card &amp; Teams hidden
                                 </span>

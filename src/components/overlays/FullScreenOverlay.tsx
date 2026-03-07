@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import OverlayWrapper from './OverlayWrapper';
 import SoldPlayersSummaryOverlay from './SoldPlayersSummaryOverlay';
 import TeamSummaryOverlay from './TeamSummaryOverlay';
 import RestingTimeOverlay from './RestingTimeOverlay';
+import Top10SummaryOverlay from './Top10SummaryOverlay';
 import { AuctionState, Player, Team, Tournament } from '@/types';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
 import type { OverlaySettings } from './OverlayWrapper';
@@ -325,48 +326,14 @@ function PlayerAuctionPanel({
 
       {/* ── Right info panel ── */}
 
-      {/* CURRENT BID label */}
-      <div style={{ ...labelStyle, left: 880, top: 98, color: '#FFC919', fontSize: 22, letterSpacing: 8 }}>
-        Current Bid
-      </div>
-
-      {/* Bid amount */}
-      <div
-        className={isBidding ? 'fs-bid-active' : ''}
-        style={{
-          position: 'absolute',
-          left: 880,
-          top: 132,
-          fontFamily: '"Inconsolata", monospace',
-          fontSize: 88,
-          color: '#ffffff',
-          fontWeight: 700,
-          lineHeight: 1,
-          letterSpacing: 4,
-        }}
-      >
-        {hasPlayer ? currentBid.toLocaleString('en-IN') : '—'}
-      </div>
-
-      {/* Gold separator */}
+      {/* Player Name — hero identity, top of right panel */}
       <div style={{
         position: 'absolute',
         left: 880,
-        top: 238,
-        width: 960,
-        height: 3,
-        background: 'linear-gradient(90deg, #FFC919 0%, rgba(255,201,25,0.08) 100%)',
-        borderRadius: 2,
-      }} />
-
-      {/* Player Name */}
-      <div style={{
-        position: 'absolute',
-        left: 880,
-        top: 258,
-        width: 960,
+        top: 98,
+        width: 700,
         fontFamily: '"Inconsolata", monospace',
-        fontSize: 76,
+        fontSize: 80,
         color: '#FFC919',
         fontWeight: 700,
         lineHeight: '90px',
@@ -374,8 +341,95 @@ function PlayerAuctionPanel({
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
+        textShadow: '0 0 40px rgba(255,201,25,0.55), 0 0 80px rgba(255,201,25,0.2)',
       }}>
         {hasPlayer ? currentPlayer!.name : '—'}
+      </div>
+
+      {/* Base Price — compact reference, right side of name row */}
+      <div style={{ ...labelStyle, left: 1620, top: 98, fontSize: 18, letterSpacing: 5, width: 220, textAlign: 'right' }}>
+        Base Price
+      </div>
+      <div style={{
+        position: 'absolute',
+        left: 1620,
+        top: 120,
+        width: 220,
+        textAlign: 'right',
+        fontFamily: '"Inconsolata", monospace',
+        fontSize: 38,
+        color: '#FFD700',
+        fontWeight: 700,
+        letterSpacing: 2,
+        lineHeight: 1,
+      }}>
+        {hasPlayer ? basePrice.toLocaleString('en-IN') : '—'}
+      </div>
+
+      {/* Gold separator (below name) */}
+      <div style={{
+        position: 'absolute',
+        left: 880,
+        top: 200,
+        width: 960,
+        height: 3,
+        background: 'linear-gradient(90deg, #FFC919 0%, rgba(255,201,25,0.08) 100%)',
+        borderRadius: 2,
+      }} />
+
+      {/* Current Bid — hero card */}
+      <div style={{
+        position: 'absolute',
+        left: 880,
+        top: 215,
+        width: 920,
+        height: 135,
+        background: 'rgba(255,201,25,0.05)',
+        border: '1px solid rgba(255,201,25,0.22)',
+        borderRadius: 12,
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+      }}>
+        <div style={{
+          fontFamily: '"Graduate", cursive',
+          fontSize: 20,
+          color: '#FFC919',
+          letterSpacing: 8,
+          textTransform: 'uppercase',
+          lineHeight: 1,
+        }}>
+          Current Bid
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div
+            className={isBidding ? 'fs-bid-active' : ''}
+            style={{
+              fontFamily: '"Inconsolata", monospace',
+              fontSize: 88,
+              color: '#ffffff',
+              fontWeight: 700,
+              lineHeight: 1,
+              letterSpacing: 4,
+            }}
+          >
+            {hasPlayer ? currentBid.toLocaleString('en-IN') : '—'}
+          </div>
+          {isBidding && (
+            <div className="fs-live-dot" style={{
+              width: 16,
+              height: 16,
+              borderRadius: '50%',
+              background: '#FFC919',
+              flexShrink: 0,
+              alignSelf: 'center',
+              marginTop: 4,
+            }} />
+          )}
+        </div>
       </div>
 
       {/* AGE row */}
@@ -420,14 +474,6 @@ function PlayerAuctionPanel({
         <div style={{ position: 'absolute', left: 880, top: 678, ...valueStyle }}>—</div>
       )}
 
-      {/* Thin divider */}
-      <div style={{ position: 'absolute', left: 880, top: 778, width: 960, height: 1, background: 'rgba(255,255,255,0.07)' }} />
-
-      {/* BASE PRICE row */}
-      <div style={{ ...labelStyle, left: 880, top: 840 }}>Base Price</div>
-      <div style={{ position: 'absolute', left: 880, top: 874, ...valueStyle, color: '#FFD700', fontSize: 60, fontWeight: 700 }}>
-        {hasPlayer ? basePrice.toLocaleString('en-IN') : '—'}
-      </div>
 
       {/* Decorative corner bracket — top right */}
       <div style={{ position: 'absolute', right: 72, top: 73, width: 60, height: 60, opacity: 0.25, pointerEvents: 'none' }}>
@@ -466,6 +512,39 @@ function FullScreenOverlayContent({
   // Always large — size control in AuctionControlPanel has no effect here
   const effectiveSettings: OverlaySettings = { ...overlaySettings, size: 'large' };
 
+  // ScaleY animation state
+  const [activeMode, setActiveMode] = useState(effectiveSettings.displayMode);
+  const [panelExiting, setPanelExiting] = useState(false);
+  const [summaryExiting, setSummaryExiting] = useState(false);
+  const prevDisplayModeRef = useRef(effectiveSettings.displayMode);
+
+  useEffect(() => {
+    const incoming = effectiveSettings.displayMode;
+    const prev = prevDisplayModeRef.current;
+    prevDisplayModeRef.current = incoming;
+
+    if (prev === incoming) return;
+
+    if (prev === 'standard') {
+      setPanelExiting(true);
+      const t = setTimeout(() => {
+        setActiveMode(incoming);
+        setPanelExiting(false);
+      }, 1500);
+      return () => clearTimeout(t);
+    } else if (prev === 'sold-summary' || prev === 'team-summary' || prev === 'top10-summary') {
+      setSummaryExiting(true);
+      const t = setTimeout(() => {
+        setActiveMode(incoming);
+        setSummaryExiting(false);
+      }, 1800);
+      return () => clearTimeout(t);
+    } else {
+      setActiveMode(incoming);
+      setPanelExiting(false);
+    }
+  }, [effectiveSettings.displayMode]);
+
   useEffect(() => {
     const updateScale = () => {
       setScale(Math.min(window.innerWidth / 1920, window.innerHeight / 1080));
@@ -488,6 +567,29 @@ function FullScreenOverlayContent({
           50%      { text-shadow: 0 0 40px #FFC919, 0 0 80px rgba(255,201,25,0.5), 0 0 120px rgba(255,201,25,0.2); }
         }
         .fs-bid-active { animation: bidActivePulse 1.5s ease-in-out infinite; }
+        @keyframes liveDotPulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50%      { opacity: 0.35; transform: scale(0.65); }
+        }
+        .fs-live-dot { animation: liveDotPulse 1.2s ease-in-out infinite; }
+        @keyframes playerPanelEnter {
+          0%   { transform: scaleX(0)   scaleY(0.004); }
+          28%  { transform: scaleX(1)   scaleY(0.004); }
+          100% { transform: scaleX(1)   scaleY(1);     }
+        }
+        @keyframes playerPanelExit {
+          0%   { transform: scaleX(1)   scaleY(1);     }
+          65%  { transform: scaleX(1)   scaleY(0.004); }
+          100% { transform: scaleX(0)   scaleY(0.004); }
+        }
+        .fs-panel-enter {
+          animation: playerPanelEnter 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+          transform-origin: center center;
+        }
+        .fs-panel-exit {
+          animation: playerPanelExit 1.5s ease-in forwards;
+          transform-origin: center center;
+        }
       `}</style>
 
       {/* 1920×1080 canvas scaled to fit viewport */}
@@ -504,40 +606,60 @@ function FullScreenOverlayContent({
         }}
       >
         {/* ── Resting Time mode ── */}
-        {effectiveSettings.displayMode === 'resting' && (
+        {activeMode === 'resting' && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
             <RestingTimeOverlay tournament={tournament} />
           </div>
         )}
 
         {/* ── Sold Player Summary mode ── */}
-        {effectiveSettings.displayMode === 'sold-summary' && (
+        {activeMode === 'sold-summary' && (
           <div style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
             <SoldPlayersSummaryOverlay
               players={players}
               teams={teams}
               tournament={tournament}
+              isExiting={summaryExiting}
             />
           </div>
         )}
 
         {/* ── Team Summary mode ── */}
-        {effectiveSettings.displayMode === 'team-summary' && (
+        {activeMode === 'team-summary' && (
           <div style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
             <TeamSummaryOverlay
               teams={teams}
               tournament={tournament}
+              isExiting={summaryExiting}
             />
           </div>
         )}
 
-        {/* ── New Player Auction Panel ── (standard mode) */}
-        {effectiveSettings.displayMode === 'standard' && (
-          <PlayerAuctionPanel
-            currentPlayer={currentPlayer}
-            tournament={tournament}
-            auctionState={auctionState}
-          />
+        {/* ── Top 10 Sold Summary mode ── */}
+        {activeMode === 'top10-summary' && (
+          <div style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
+            <Top10SummaryOverlay
+              players={players}
+              teams={teams}
+              tournament={tournament}
+              isExiting={summaryExiting}
+            />
+          </div>
+        )}
+
+        {/* ── New Player Auction Panel ── (standard mode, with ScaleY enter/exit) */}
+        {activeMode === 'standard' && (
+          <div
+            key={currentPlayer?._id ?? 'no-player'}
+            className={panelExiting ? 'fs-panel-exit' : 'fs-panel-enter'}
+            style={{ position: 'absolute', inset: 0, transformOrigin: 'center center' }}
+          >
+            <PlayerAuctionPanel
+              currentPlayer={currentPlayer}
+              tournament={tournament}
+              auctionState={auctionState}
+            />
+          </div>
         )}
 
         {/* ── Ticker strip ── (always shown) */}

@@ -7,6 +7,7 @@ interface SoldPlayersSummaryOverlayProps {
     players: Player[];
     teams: Team[];
     tournament: Tournament | null;
+    isExiting?: boolean;
 }
 
 const formatCurrency = (amount: number) => amount.toLocaleString('en-IN');
@@ -36,6 +37,7 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
     players,
     teams,
     tournament,
+    isExiting = false,
 }) => {
     const [currentPage, setCurrentPage] = useState(0);
 
@@ -79,8 +81,16 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
     // First pill's top within canvas
     const firstPillTop = panelTop + HEADING_H + SEPARATOR_H + ROW_AREA_TOP_PAD;
 
+    const dashAnim = isExiting ? 'summaryDashOut 0.35s ease 1.25s both' : 'summaryDashIn 0.30s ease 0s both';
+
     return (
         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
+        <style>{`
+            @keyframes summaryDashIn  { 0% { transform: translateY(-28px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+            @keyframes summaryDashOut { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-28px); opacity: 0; } }
+            @keyframes summaryRowIn   { 0% { transform: translateX(-55px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
+            @keyframes summaryRowOut  { 0% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(55px); opacity: 0; } }
+        `}</style>
         <div style={{ width: CANVAS_W, height: CANVAS_H, position: 'relative', background: 'transparent', overflow: 'hidden', flexShrink: 0 }}>
 
             {/* ── Background panel ── */}
@@ -93,6 +103,7 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                 background: '#0D1B2A',
                 borderRadius: 20,
                 border: '1px solid #1E3A5F',
+                animation: dashAnim,
             }} />
 
             {/* Left gold accent bar */}
@@ -104,6 +115,7 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                 height: contentH - 40,
                 background: '#F59E0B',
                 borderRadius: '0 0 4px 4px',
+                animation: dashAnim,
             }} />
 
             {/* ── Heading area ── */}
@@ -118,6 +130,7 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                 paddingLeft: 40,
                 paddingRight: 40,
                 justifyContent: 'space-between',
+                animation: dashAnim,
             }}>
                 {/* Title + subtext */}
                 <div>
@@ -166,6 +179,7 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                 width: PANEL_WIDTH - 40,
                 height: SEPARATOR_H,
                 background: 'linear-gradient(90deg, #F59E0B 0%, rgba(245,158,11,0.15) 100%)',
+                animation: dashAnim,
             }} />
 
             {/* ── Player rows ── */}
@@ -178,115 +192,127 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                 const initials = player.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
                 return (
-                    <React.Fragment key={player._id}>
-                        {/* Row pill */}
-                        <div style={{
-                            position: 'absolute',
-                            left: PILL_LEFT,
-                            top: pillTop,
-                            width: PILL_WIDTH,
-                            height: PILL_H,
-                            background: isSold ? '#0A1628' : isUnsold ? '#0A0F1A' : '#07111A',
-                            borderRadius: 26.5,
-                            border: `1px solid ${isSold ? '#1E3A5F' : isUnsold ? '#2D1B1B' : '#0F1D2E'}`,
-                        }} />
-
-                        {/* Avatar circle — player photo */}
+                    <React.Fragment key={`${currentPage}-${player._id}`}>
+                        {/* Animated row wrapper */}
                         <div style={{
                             position: 'absolute',
                             left: PILL_LEFT - 5,
                             top: elemTop,
-                            width: AVATAR_SIZE,
+                            width: PILL_WIDTH + 5,
                             height: AVATAR_SIZE,
-                            borderRadius: '50%',
-                            background: '#071020',
-                            border: `2px solid ${isSold ? '#F59E0B' : isUnsold ? '#7F1D1D' : '#1E293B'}`,
-                            overflow: 'hidden',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            filter: isSold ? 'none' : 'grayscale(80%)',
+                            animation: isExiting
+                                ? `summaryRowOut 0.30s ease ${(rowCount - 1 - i) * 0.12}s both`
+                                : `summaryRowIn  0.35s ease ${0.25 + i * 0.13}s both`,
                         }}>
-                            {player.photoURL ? (
-                                <img
-                                    src={player.photoURL}
-                                    alt={player.name}
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                />
-                            ) : (
-                                <span style={{
-                                    fontFamily: FONT_ROW,
-                                    fontSize: 24,
-                                    fontWeight: 700,
-                                    color: isSold ? '#F59E0B' : isUnsold ? '#EF4444' : '#475569',
-                                    letterSpacing: 1,
-                                }}>
-                                    {initials}
-                                </span>
-                            )}
-                        </div>
-
-                        {/* Player name */}
-                        <div style={{
-                            position: 'absolute',
-                            left: PILL_LEFT + 78,
-                            top: elemTop,
-                            height: AVATAR_SIZE,
-                            display: 'flex',
-                            alignItems: 'center',
-                            fontFamily: FONT_ROW,
-                            fontSize: 46,
-                            fontWeight: 600,
-                            letterSpacing: 2,
-                            color: isSold ? '#FFFFFF' : isUnsold ? '#6B7280' : '#374151',
-                            whiteSpace: 'nowrap',
-                            maxWidth: 380,
-                            overflow: 'hidden',
-                        }}>
-                            {player.name}
-                        </div>
-
-                        {/* Team name / UNSOLD */}
-                        <div style={{
-                            position: 'absolute',
-                            left: PILL_LEFT + 490,
-                            top: elemTop,
-                            height: AVATAR_SIZE,
-                            display: 'flex',
-                            alignItems: 'center',
-                            fontFamily: FONT_ROW,
-                            fontSize: 46,
-                            fontWeight: isSold ? 500 : 700,
-                            letterSpacing: 2,
-                            color: isSold ? '#CBD5E1' : isUnsold ? '#EF4444' : '#3B82F6',
-                            whiteSpace: 'nowrap',
-                            maxWidth: 540,
-                            overflow: 'hidden',
-                        }}>
-                            {isSold ? (team?.name ?? '—') : isUnsold ? 'UNSOLD' : 'AVAILABLE'}
-                        </div>
-
-                        {/* Amount — sold only */}
-                        {isSold && (
+                            {/* Row pill */}
                             <div style={{
                                 position: 'absolute',
-                                left: PILL_LEFT + 1070,
-                                top: elemTop,
+                                left: 5,
+                                top: AVATAR_OVERLAP,
+                                width: PILL_WIDTH,
+                                height: PILL_H,
+                                background: isSold ? '#0A1628' : isUnsold ? '#0A0F1A' : '#07111A',
+                                borderRadius: 26.5,
+                                border: `1px solid ${isSold ? '#1E3A5F' : isUnsold ? '#2D1B1B' : '#0F1D2E'}`,
+                            }} />
+
+                            {/* Avatar circle — player photo */}
+                            <div style={{
+                                position: 'absolute',
+                                left: 0,
+                                top: 0,
+                                width: AVATAR_SIZE,
+                                height: AVATAR_SIZE,
+                                borderRadius: '50%',
+                                background: '#071020',
+                                border: `2px solid ${isSold ? '#F59E0B' : isUnsold ? '#7F1D1D' : '#1E293B'}`,
+                                overflow: 'hidden',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                filter: isSold ? 'none' : 'grayscale(80%)',
+                            }}>
+                                {player.photoURL ? (
+                                    <img
+                                        src={player.photoURL}
+                                        alt={player.name}
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                ) : (
+                                    <span style={{
+                                        fontFamily: FONT_ROW,
+                                        fontSize: 24,
+                                        fontWeight: 700,
+                                        color: isSold ? '#F59E0B' : isUnsold ? '#EF4444' : '#475569',
+                                        letterSpacing: 1,
+                                    }}>
+                                        {initials}
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Player name */}
+                            <div style={{
+                                position: 'absolute',
+                                left: 83,
+                                top: 0,
                                 height: AVATAR_SIZE,
                                 display: 'flex',
                                 alignItems: 'center',
                                 fontFamily: FONT_ROW,
                                 fontSize: 46,
-                                fontWeight: 700,
+                                fontWeight: 600,
                                 letterSpacing: 2,
-                                color: '#F59E0B',
+                                color: isSold ? '#FFFFFF' : isUnsold ? '#6B7280' : '#374151',
                                 whiteSpace: 'nowrap',
+                                maxWidth: 380,
+                                overflow: 'hidden',
                             }}>
-                                {formatCurrency(player.finalPrice || 0)}
+                                {player.name}
                             </div>
-                        )}
 
-                        {/* Subtle row divider */}
+                            {/* Team name / UNSOLD */}
+                            <div style={{
+                                position: 'absolute',
+                                left: 495,
+                                top: 0,
+                                height: AVATAR_SIZE,
+                                display: 'flex',
+                                alignItems: 'center',
+                                fontFamily: FONT_ROW,
+                                fontSize: 46,
+                                fontWeight: isSold ? 500 : 700,
+                                letterSpacing: 2,
+                                color: isSold ? '#CBD5E1' : isUnsold ? '#EF4444' : '#3B82F6',
+                                whiteSpace: 'nowrap',
+                                maxWidth: 540,
+                                overflow: 'hidden',
+                            }}>
+                                {isSold ? (team?.name ?? '—') : isUnsold ? 'UNSOLD' : 'AVAILABLE'}
+                            </div>
+
+                            {/* Amount — sold only */}
+                            {isSold && (
+                                <div style={{
+                                    position: 'absolute',
+                                    left: 1075,
+                                    top: 0,
+                                    height: AVATAR_SIZE,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    fontFamily: FONT_ROW,
+                                    fontSize: 46,
+                                    fontWeight: 700,
+                                    letterSpacing: 2,
+                                    color: '#F59E0B',
+                                    whiteSpace: 'nowrap',
+                                }}>
+                                    {formatCurrency(player.finalPrice || 0)}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Subtle row divider — canvas-absolute, no animation */}
                         {i < rowCount - 1 && (
                             <div style={{
                                 position: 'absolute',
