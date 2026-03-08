@@ -60,18 +60,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if another tournament is already live
-    const liveTournament = await TournamentModel.findOne({
-      status: 'Live',
-      _id: { $ne: tournamentId }
-    }).lean();
-
-    if (liveTournament) {
-      return NextResponse.json(
-        { error: `Another tournament "${(liveTournament as any).name}" is already live. Stop it before restarting this auction.` },
-        { status: 400 }
-      );
-    }
+    // Auto-stop any other live tournament before restarting this one
+    await TournamentModel.updateMany(
+      { status: 'Live', _id: { $ne: tournamentId } },
+      { $set: { status: 'Stopped' } }
+    );
 
     // Check if there are unsold players
     const unsoldPlayers = await PlayerModel.countDocuments({
