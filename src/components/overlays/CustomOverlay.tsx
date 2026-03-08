@@ -547,16 +547,17 @@ function CustomOverlayContent({
           </div>
         )}
 
-        {/* ── Premium Player Card ── (standard mode only) */}
+        {/* ── Premium Player Card ── (standard mode only, unless hidden by control panel) */}
         {/* Small: 45% scale, centered at x=960, just above bid panel */}
         {/* Large: original Figma slot left=713, top=237 */}
-        {overlaySettings.displayMode === 'standard' && (
+        {overlaySettings.displayMode === 'standard' && !overlaySettings.hidePremiumCard && (
           <div style={{
             position: 'absolute',
             left:            overlaySettings.size === 'small' ? 849 : 713,
             top:             overlaySettings.size === 'small' ? 637 : 237,
             width: 494,
             height: 605,
+            overflow: 'hidden',
             transform:       overlaySettings.size === 'small' ? 'scale(0.45)' : undefined,
             transformOrigin: overlaySettings.size === 'small' ? 'top left'    : undefined,
           }}>

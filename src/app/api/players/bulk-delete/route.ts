@@ -9,7 +9,7 @@ export async function DELETE(request: NextRequest) {
     await connectToDatabase();
 
     const body = await request.json();
-    const { tournamentId } = body;
+    const { tournamentId, playerIds } = body;
 
     if (!tournamentId) {
       return NextResponse.json(
@@ -35,7 +35,30 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Safety check: Cannot delete sold players
+    // Selective delete: specific playerIds provided
+    if (Array.isArray(playerIds) && playerIds.length > 0) {
+      const soldCount = await PlayerModel.countDocuments({
+        _id: { $in: playerIds },
+        tournamentId,
+        isSold: true,
+      });
+
+      if (soldCount > 0) {
+        return NextResponse.json(
+          { error: `Cannot delete: ${soldCount} selected player(s) are already sold.` },
+          { status: 400 }
+        );
+      }
+
+      const result = await PlayerModel.deleteMany({ _id: { $in: playerIds }, tournamentId });
+      return NextResponse.json({
+        success: true,
+        message: `Deleted ${result.deletedCount} player(s)`,
+        deletedCount: result.deletedCount,
+      });
+    }
+
+    // Delete all players in tournament (existing behaviour)
     const soldCount = await PlayerModel.countDocuments({
       tournamentId,
       isSold: true,
@@ -50,7 +73,6 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Delete all players in tournament
     const result = await PlayerModel.deleteMany({ tournamentId });
 
     return NextResponse.json({

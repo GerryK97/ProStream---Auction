@@ -464,6 +464,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const [overlaySize, setOverlaySize] = useState<'large' | 'small'>('large');
     const [tickerMode, setTickerMode] = useState<'all' | 'sold' | 'available'>('all');
     const [displayMode, setDisplayMode] = useState<'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary'>('standard');
+    const [hidePremiumCard, setHidePremiumCard] = useState(false);
     const [autoSwitch, setAutoSwitch] = useState(false);
     const [autoSwitchDuration, setAutoSwitchDuration] = useState(5);
     const autoSwitchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -472,14 +473,17 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const tickerModeRef = useRef(tickerMode);
     const autoSwitchDurationRef = useRef(autoSwitchDuration);
     const displayModeRef = useRef(displayMode);
+    const hidePremiumCardRef = useRef(hidePremiumCard);
     tickerModeRef.current = tickerMode;
     autoSwitchDurationRef.current = autoSwitchDuration;
     displayModeRef.current = displayMode;
+    hidePremiumCardRef.current = hidePremiumCard;
 
     const sendOverlaySettings = async (
         size: 'large' | 'small',
         mode: 'all' | 'sold' | 'available',
-        dm: 'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary' = displayModeRef.current
+        dm: 'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary' = displayModeRef.current,
+        hideCard: boolean = hidePremiumCardRef.current
     ) => {
         const tournamentId = liveTournament?._id;
         if (!tournamentId) return;
@@ -487,7 +491,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             await fetch('/api/overlay/settings', {
                 method: 'POST',
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tournamentId, size, tickerMode: mode, displayMode: dm }),
+                body: JSON.stringify({ tournamentId, size, tickerMode: mode, displayMode: dm, hidePremiumCard: hideCard }),
             });
         } catch { /* non-critical */ }
     };
@@ -1324,6 +1328,33 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                             {(displayMode === 'sold-summary' || displayMode === 'team-summary' || displayMode === 'resting' || displayMode === 'top10-summary') && (
                                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                                     Player Card &amp; Teams hidden
+                                </span>
+                            )}
+                        </div>
+                        {/* Premium Player Card visibility toggle */}
+                        <div className="flex items-center gap-3 mt-4 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border-primary)' }}>
+                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Player Card:</span>
+                            <button
+                                onClick={() => {
+                                    const next = !hidePremiumCard;
+                                    setHidePremiumCard(next);
+                                    sendOverlaySettings(overlaySize, tickerMode, displayMode, next);
+                                }}
+                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
+                                style={{
+                                    backgroundColor: hidePremiumCard ? 'var(--status-danger)' : 'var(--surface-elevated)',
+                                    color: hidePremiumCard ? '#fff' : 'var(--text-secondary)',
+                                    border: `1px solid ${hidePremiumCard ? 'var(--status-danger)' : 'var(--border-primary)'}`,
+                                }}
+                            >
+                                <span>{hidePremiumCard ? 'Hidden' : 'Visible'}</span>
+                                {hidePremiumCard && (
+                                    <span className="w-2 h-2 rounded-full bg-red-300 animate-pulse" />
+                                )}
+                            </button>
+                            {hidePremiumCard && (
+                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                                    Premium Player Card is hidden on OBS overlay
                                 </span>
                             )}
                         </div>

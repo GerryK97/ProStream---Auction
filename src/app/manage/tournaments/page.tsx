@@ -8,7 +8,7 @@ import { getAuthHeaders } from '@/lib/api-client';
 import DeleteButton from '@/components/shared/DeleteButton';
 import ImageUpload from '@/components/ImageUpload';
 
-type ClassRow = { name: string; color: string; basePrice: number };
+type ClassRow = { name: string; color: string; basePrice: number; code?: string };
 
 const DEFAULT_CLASS_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32', '#E5E4E2', '#4ade80', '#60a5fa', '#f472b6', '#a78bfa'];
 
@@ -24,8 +24,9 @@ const EMPTY_FORM = {
 };
 
 function generateCodes(classes: ClassRow[]): string[] {
-  const used = new Set<string>();
+  const used = new Set(classes.filter(c => c.code).map(c => c.code!));
   return classes.map(cls => {
+    if (cls.code) return cls.code;
     const base = (cls.name.slice(0, 2).toUpperCase().replace(/[^A-Z]/g, 'X') || 'CL');
     let code = base;
     let n = 2;
@@ -41,8 +42,9 @@ function TournamentsManagePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Create modal state
+  // Create/Edit modal state
   const [showCreate, setShowCreate] = useState(false);
+  const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -80,6 +82,34 @@ function TournamentsManagePage() {
     fetchTournaments();
   }, [fetchTournaments]);
 
+  const openEdit = (t: Tournament) => {
+    setEditingTournament(t);
+    setCreateError(null);
+    setForm({
+      name: t.name,
+      year: t.year,
+      budgetPerTeam: t.budgetPerTeam,
+      squadSize: t.squadSize,
+      basePricePerPlayer: t.basePricePerPlayer,
+      logoURL: t.logoURL ?? '',
+      basePriceStrategy: t.basePriceStrategy ?? 'tournament-level',
+      playerClasses: (t.playerClasses ?? []).map(cls => ({
+        name: cls.name,
+        color: cls.color,
+        basePrice: cls.basePrice ?? 0,
+        code: cls.code,
+      })),
+    });
+    setShowCreate(true);
+  };
+
+  const closeModal = () => {
+    setShowCreate(false);
+    setEditingTournament(null);
+    setForm(EMPTY_FORM);
+    setCreateError(null);
+  };
+
   const addClass = () => {
     if (form.playerClasses.length >= 20) return;
     const color = DEFAULT_CLASS_COLORS[form.playerClasses.length % DEFAULT_CLASS_COLORS.length];
@@ -97,60 +127,79 @@ function TournamentsManagePage() {
     setForm(f => ({ ...f, playerClasses: f.playerClasses.filter((_, i) => i !== index) }));
   };
 
+  const validateForm = (): string | null => {
+    if (form.basePriceStrategy === 'player-class-based') {
+      if (form.playerClasses.length === 0) return 'Add at least one player class for class-wise pricing.';
+      const invalid = form.playerClasses.find(cls => !cls.name.trim() || cls.basePrice <= 0);
+      if (invalid) return 'Each class must have a name and a base price greater than 0.';
+    }
+    return null;
+  };
+
+  const buildPayload = () => {
+    const useClasses = form.basePriceStrategy === 'player-class-based' && form.playerClasses.length > 0;
+    const codes = useClasses ? generateCodes(form.playerClasses) : [];
+    return {
+      name: form.name,
+      year: form.year,
+      budgetPerTeam: form.budgetPerTeam,
+      squadSize: form.squadSize,
+      basePricePerPlayer: form.basePricePerPlayer,
+      logoURL: form.logoURL.trim() || undefined,
+      basePriceStrategy: form.basePriceStrategy,
+      usePlayerClasses: useClasses,
+      playerClasses: useClasses
+        ? form.playerClasses.map((cls, i) => ({
+            code: codes[i],
+            name: cls.name.trim(),
+            color: cls.color,
+            basePrice: cls.basePrice,
+            order: i + 1,
+          }))
+        : [],
+    };
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setCreateError(null);
-
-    if (form.basePriceStrategy === 'player-class-based') {
-      if (form.playerClasses.length === 0) {
-        setCreateError('Add at least one player class for class-wise pricing.');
-        return;
-      }
-      const invalid = form.playerClasses.find(cls => !cls.name.trim() || cls.basePrice <= 0);
-      if (invalid) {
-        setCreateError('Each class must have a name and a base price greater than 0.');
-        return;
-      }
-    }
-
+    const validationError = validateForm();
+    if (validationError) { setCreateError(validationError); return; }
     setCreating(true);
     try {
-      const useClasses = form.basePriceStrategy === 'player-class-based' && form.playerClasses.length > 0;
-      const codes = useClasses ? generateCodes(form.playerClasses) : [];
-
       const res = await fetch('/api/tournaments', {
         method: 'POST',
         headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: form.name,
-          year: form.year,
-          budgetPerTeam: form.budgetPerTeam,
-          squadSize: form.squadSize,
-          basePricePerPlayer: form.basePricePerPlayer,
-          logoURL: form.logoURL.trim() || undefined,
-          basePriceStrategy: form.basePriceStrategy,
-          usePlayerClasses: useClasses,
-          playerClasses: useClasses
-            ? form.playerClasses.map((cls, i) => ({
-                code: codes[i],
-                name: cls.name.trim(),
-                color: cls.color,
-                basePrice: cls.basePrice,
-                order: i + 1,
-              }))
-            : [],
-        }),
+        body: JSON.stringify(buildPayload()),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setCreateError(data.error || 'Failed to create tournament');
-        return;
-      }
+      if (!res.ok) { setCreateError(data.error || 'Failed to create tournament'); return; }
       setTournaments(prev => [data, ...prev]);
-      setShowCreate(false);
-      setForm(EMPTY_FORM);
+      closeModal();
     } catch {
       setCreateError('An error occurred while creating the tournament');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTournament) return;
+    const validationError = validateForm();
+    if (validationError) { setCreateError(validationError); return; }
+    setCreating(true);
+    try {
+      const res = await fetch(`/api/tournaments/${editingTournament._id}`, {
+        method: 'PUT',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildPayload()),
+      });
+      const data = await res.json();
+      if (!res.ok) { setCreateError(data.error || 'Failed to update tournament'); return; }
+      setTournaments(prev => prev.map(t => t._id === data._id ? data : t));
+      closeModal();
+    } catch {
+      setCreateError('An error occurred while updating the tournament');
     } finally {
       setCreating(false);
     }
@@ -171,6 +220,7 @@ function TournamentsManagePage() {
   };
 
   const isClassWise = form.basePriceStrategy === 'player-class-based';
+  const isEditing = !!editingTournament;
 
   return (
     <div className="min-h-screen bg-gray-900 p-6">
@@ -182,7 +232,7 @@ function TournamentsManagePage() {
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => { setShowCreate(true); setCreateError(null); setForm(EMPTY_FORM); }}
+              onClick={() => { setShowCreate(true); setCreateError(null); setEditingTournament(null); setForm(EMPTY_FORM); }}
               className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-medium"
             >
               + Create Tournament
@@ -254,6 +304,12 @@ function TournamentsManagePage() {
                   >
                     {['Live', 'Stopped'].includes(t.status) ? 'Control Room' : 'Setup →'}
                   </button>
+                  <button
+                    onClick={() => openEdit(t)}
+                    className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm"
+                  >
+                    Edit
+                  </button>
                   <DeleteButton
                     ariaLabel={`Delete ${t.name}`}
                     onClick={() => handleDelete(t._id, t.name)}
@@ -266,16 +322,16 @@ function TournamentsManagePage() {
         )}
       </div>
 
-      {/* Create Tournament Modal */}
+      {/* Create / Edit Tournament Modal */}
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-5 border-b border-gray-700 shrink-0">
-              <h2 className="text-lg font-semibold text-white">Create Tournament</h2>
-              <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-white text-xl leading-none">&times;</button>
+              <h2 className="text-lg font-semibold text-white">{isEditing ? 'Edit Tournament' : 'Create Tournament'}</h2>
+              <button onClick={closeModal} className="text-gray-400 hover:text-white text-xl leading-none">&times;</button>
             </div>
 
-            <form onSubmit={handleCreate} className="overflow-y-auto">
+            <form onSubmit={isEditing ? handleUpdate : handleCreate} className="overflow-y-auto">
               <div className="p-5 space-y-5">
                 {createError && (
                   <div className="bg-red-900/30 border border-red-700 rounded p-3 text-red-300 text-sm">{createError}</div>
@@ -462,7 +518,7 @@ function TournamentsManagePage() {
               <div className="flex justify-end gap-3 p-5 border-t border-gray-700">
                 <button
                   type="button"
-                  onClick={() => setShowCreate(false)}
+                  onClick={closeModal}
                   className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm"
                 >
                   Cancel
@@ -472,7 +528,9 @@ function TournamentsManagePage() {
                   disabled={creating}
                   className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white rounded text-sm font-medium"
                 >
-                  {creating ? 'Creating...' : 'Create Tournament'}
+                  {creating
+                    ? (isEditing ? 'Saving...' : 'Creating...')
+                    : (isEditing ? 'Save Changes' : 'Create Tournament')}
                 </button>
               </div>
             </form>

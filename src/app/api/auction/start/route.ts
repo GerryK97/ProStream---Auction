@@ -55,20 +55,21 @@ export async function POST(request: NextRequest) {
       }, { status: 403 });
     }
 
-    // Check if this user has another tournament already live
-    // Only restrict the same user from running multiple tournaments simultaneously
-    // Different users can run their own tournaments at the same time
-    const userLiveTournament = await TournamentModel.findOne({
-      status: 'Live',
-      _id: { $ne: tournamentId },
-      createdBy: user.userId  // Only check tournaments created by this user
-    }).lean();
+    // Admin users may run multiple tournaments concurrently.
+    // Non-Admin users are restricted to one live tournament at a time.
+    if (user.role !== 'Admin') {
+      const userLiveTournament = await TournamentModel.findOne({
+        status: 'Live',
+        _id: { $ne: tournamentId },
+        createdBy: user.userId
+      }).lean();
 
-    if (userLiveTournament) {
-      return NextResponse.json(
-        { error: `Your tournament "${(userLiveTournament as any).name}" is already live. Stop it before starting this auction.` },
-        { status: 400 }
-      );
+      if (userLiveTournament) {
+        return NextResponse.json(
+          { error: `Your tournament "${(userLiveTournament as any).name}" is already live. Stop it before starting this auction.` },
+          { status: 400 }
+        );
+      }
     }
 
     // Validate: At least 2 teams
