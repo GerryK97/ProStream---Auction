@@ -38,6 +38,19 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
         setPlayerClass('');
     };
 
+    const handlePhotoUploaded = async (url: string) => {
+        if (!isEditMode) return;
+        try {
+            await fetch(`/api/players/${editPlayer!._id}`, {
+                method: 'PUT',
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, position, currentClub, photoURL: url, playerClass: playerClass || undefined, age: age ? Number(age) : undefined }),
+            });
+        } catch (err) {
+            console.error('Failed to auto-save player photo:', err);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name || !position || !currentClub || !tournamentId) return;
@@ -143,6 +156,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                 previewClassName="w-16 h-16"
                 previewShape="circle"
                 id="player-photo-form"
+                onUploadComplete={handlePhotoUploaded}
             />
 
             <div className="pt-2 flex justify-end gap-3">

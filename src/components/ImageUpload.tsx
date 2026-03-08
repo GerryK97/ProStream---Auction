@@ -13,6 +13,7 @@ interface ImageUploadProps {
   previewClassName?: string;
   previewShape?: 'circle' | 'square';
   id?: string;
+  onUploadComplete?: (url: string) => void;
 }
 
 const MAX_DIMENSION = 1024;
@@ -79,6 +80,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   previewClassName = 'w-16 h-16',
   previewShape = 'circle',
   id = 'image-upload',
+  onUploadComplete,
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [fileName, setFileName] = useState<string>('');
@@ -133,6 +135,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       if (response.ok) {
         const data = await response.json();
         onChange(data.url);
+        onUploadComplete?.(data.url);
       } else {
         const errorData = await response.json();
         console.error('Upload failed:', errorData);
