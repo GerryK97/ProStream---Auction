@@ -34,6 +34,7 @@ export interface PlayerStats {
 export interface Player {
   _id:string;
   tournamentId: string;
+  playerNo?: string;
   name: string;
   stats: PlayerStats;
   imageURL: string;

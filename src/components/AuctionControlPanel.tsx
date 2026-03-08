@@ -25,7 +25,7 @@ const AvailablePlayersPanel: React.FC<{
     const [searchTerm, setSearchTerm] = useState('');
     const availablePlayers = players
         .filter(p => !p.isSold && !p.isUnsold && p._id !== currentPlayerId)
-        .sort((a, b) => a.name.localeCompare(b.name))
+        .sort((a, b) => a._id.localeCompare(b._id))
         .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
     return (
@@ -50,7 +50,7 @@ const AvailablePlayersPanel: React.FC<{
                           <li key={player._id} className="flex items-center justify-between p-2 rounded-md transition-colors hover:opacity-90 border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-card)' }}>
                             <div className="flex-1">
                                 <div className="flex items-center gap-2">
-                                    <p className="font-semibold text-[var(--brand-primary)]">#{player.playerNo || player._id} {player.name}</p>
+                                    <p className="font-semibold text-[var(--brand-primary)]">{player.name}</p>
                                     <ClassBadge tournament={tournament} player={player} variant="inline" />
                                 </div>
                                 <p className="text-xs text-[var(--text-tertiary)]">{player.position || 'Player'}</p>
