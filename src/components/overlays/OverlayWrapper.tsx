@@ -12,12 +12,14 @@ export interface OverlaySettings {
     size: 'large' | 'small';
     tickerMode: 'all' | 'sold' | 'available';
     displayMode: 'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary';
+    hidePremiumCard: boolean;
 }
 
 const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
     size: 'large',
     tickerMode: 'all',
     displayMode: 'standard',
+    hidePremiumCard: false,
 };
 
 interface OverlayWrapperProps {
@@ -116,7 +118,7 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
         const pusher = getPusherClient();
         const channel = pusher.subscribe(`tournament-${liveTournamentId}`);
         channel.bind('overlay:settings', (data: OverlaySettingsEvent) => {
-            setOverlaySettings({ size: data.size, tickerMode: data.tickerMode ?? 'sold', displayMode: data.displayMode ?? 'standard' });
+            setOverlaySettings({ size: data.size, tickerMode: data.tickerMode ?? 'sold', displayMode: data.displayMode ?? 'standard', hidePremiumCard: data.hidePremiumCard ?? false });
         });
         return () => {
             channel.unbind('overlay:settings');
