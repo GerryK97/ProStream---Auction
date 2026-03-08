@@ -147,14 +147,6 @@ export async function POST(request: NextRequest) {
         playerClass = resolvedClass;
       }
 
-      // Duplicate check by name within tournament
-      const existing = await PlayerModel.findOne({ tournamentId, name: playerName }).lean() as { _id: string } | null;
-      if (existing) {
-        result.duplicates.push({ row: rowNumber, player: playerName, reason: `Player already exists in tournament (ID: ${existing._id})` });
-        result.failed++;
-        continue;
-      }
-
       try {
         await playerDB.create(
           { name: playerName, position, currentClub, age, playerClass: playerClass || undefined, tournamentId },
