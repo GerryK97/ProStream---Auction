@@ -557,6 +557,7 @@ function CustomOverlayContent({
             top:             overlaySettings.size === 'small' ? 637 : 237,
             width: 494,
             height: 605,
+            overflow: 'hidden',
             transform:       overlaySettings.size === 'small' ? 'scale(0.45)' : undefined,
             transformOrigin: overlaySettings.size === 'small' ? 'top left'    : undefined,
           }}>
