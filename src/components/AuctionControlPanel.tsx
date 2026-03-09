@@ -88,15 +88,14 @@ const CurrentAuctionPanel: React.FC<{
 
     useEffect(() => {
         const base = getClassBasePrice(tournament, currentPlayer ?? null);
-        const nextBid = auctionState.currentBid > 0 ? auctionState.currentBid + 1000 : base;
+        const nextBid = auctionState.currentBid > 0 ? auctionState.currentBid + 1000 : 0;
         setBidAmount(nextBid);
     }, [auctionState.currentBid, currentPlayer, tournament]);
 
     const handleQuickBid = async (increment: number) => {
         // If no bid yet, start from base price, otherwise add to current bid
         const basePrice = getClassBasePrice(tournament, currentPlayer ?? null);
-        const startingPoint = auctionState.currentBid > 0 ? auctionState.currentBid : basePrice;
-        const newAmount = startingPoint + increment;
+        const newAmount = auctionState.currentBid > 0 ? auctionState.currentBid + increment : basePrice;
 
         setIsSubmitting(true);
         try {
@@ -116,7 +115,7 @@ const CurrentAuctionPanel: React.FC<{
 
     const { currentBid, currentAuctionStatus } = auctionState;
     const isSold = currentAuctionStatus === 'Sold';
-    const bidIncrements = [1000, 5000, 10000, 25000, 50000];
+    const bidIncrements = [1000, 5000, 10000, 20000, 25000, 50000];
     const isCorrection = currentBid > 0 && bidAmount > 0 && bidAmount < currentBid;
     const statusText = currentAuctionStatus === 'Bidding' ? 'BIDDING ACTIVE' : (isSold ? 'PLAYER SOLD' : 'BIDDING PENDING');
     const statusColor = currentAuctionStatus === 'Bidding' ? 'text-yellow-400' : (isSold ? 'text-green-400' : 'text-[var(--text-tertiary)]');
@@ -147,7 +146,7 @@ const CurrentAuctionPanel: React.FC<{
             {/* Quick Bid buttons — primary action */}
             <div className="shrink-0">
                 <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--text-tertiary)' }}>Quick Bid</p>
-                <div className="grid grid-cols-5 gap-1.5">
+                <div className="grid grid-cols-6 gap-1.5">
                     {bidIncrements.map(inc => (
                         <button
                             key={inc}

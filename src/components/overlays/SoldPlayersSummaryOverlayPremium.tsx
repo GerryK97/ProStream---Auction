@@ -172,9 +172,7 @@ const SoldPlayersSummaryOverlayPremium: React.FC<SoldPlayersSummaryOverlayPremiu
                             return (
                                 <div
                                     key={player._id}
-                                    className={`grid grid-cols-12 gap-4 p-3 border-b transition-all ${
-                                        globalIndex % 2 === 0 ? 'bg-white/5' : ''
-                                    } ${isTopThree ? 'relative' : ''}`}
+                                    className={`grid grid-cols-12 gap-4 p-3 border-b transition-all ${isTopThree ? 'relative' : ''}`}
                                     style={{
                                         borderColor: `${accentColor}30`,
                                         ...(isTopThree && {
