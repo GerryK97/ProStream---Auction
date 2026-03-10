@@ -26,7 +26,10 @@ const AvailablePlayersPanel: React.FC<{
     const availablePlayers = players
         .filter(p => !p.isSold && !p.isUnsold && p._id !== currentPlayerId)
         .sort((a, b) => a._id.localeCompare(b._id))
-        .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+        .filter(p =>
+            p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (p.playerNo && p.playerNo.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
 
     return (
         <div className="rounded-lg p-4 flex flex-col h-full border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-secondary)' }}>
@@ -50,7 +53,12 @@ const AvailablePlayersPanel: React.FC<{
                           <li key={player._id} className="flex items-center justify-between p-2 rounded-md transition-colors hover:opacity-90 border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-card)' }}>
                             <div className="flex-1">
                                 <div className="flex items-center gap-2">
-                                    <p className="font-semibold text-[var(--brand-primary)]">{player.name}</p>
+                                    <p className="font-semibold text-[var(--brand-primary)]">
+                                        {player.playerNo && (
+                                            <span className="text-xs font-mono text-[var(--text-tertiary)] mr-1">#{player.playerNo}</span>
+                                        )}
+                                        {player.name}
+                                    </p>
                                     <ClassBadge tournament={tournament} player={player} variant="inline" />
                                 </div>
                                 <p className="text-xs text-[var(--text-tertiary)]">{player.position || 'Player'}</p>
@@ -462,27 +470,36 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     // Overlay control panel settings
     const [overlaySize, setOverlaySize] = useState<'large' | 'small'>('large');
     const [tickerMode, setTickerMode] = useState<'all' | 'sold' | 'available'>('all');
-    const [displayMode, setDisplayMode] = useState<'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary'>('standard');
+    const [displayMode, setDisplayMode] = useState<'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary' | 'custom-ticker'>('standard');
     const [hidePremiumCard, setHidePremiumCard] = useState(false);
     const [autoSwitch, setAutoSwitch] = useState(false);
     const [autoSwitchDuration, setAutoSwitchDuration] = useState(5);
     const autoSwitchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [customTickerLine1, setCustomTickerLine1] = useState('');
+    const [customTickerLine2, setCustomTickerLine2] = useState('');
+    const [showTickerModal, setShowTickerModal] = useState(false);
 
     // Refs to always read latest values inside the auto-switch effect without re-triggering it
     const tickerModeRef = useRef(tickerMode);
     const autoSwitchDurationRef = useRef(autoSwitchDuration);
     const displayModeRef = useRef(displayMode);
     const hidePremiumCardRef = useRef(hidePremiumCard);
+    const customTickerLine1Ref = useRef(customTickerLine1);
+    const customTickerLine2Ref = useRef(customTickerLine2);
     tickerModeRef.current = tickerMode;
     autoSwitchDurationRef.current = autoSwitchDuration;
     displayModeRef.current = displayMode;
     hidePremiumCardRef.current = hidePremiumCard;
+    customTickerLine1Ref.current = customTickerLine1;
+    customTickerLine2Ref.current = customTickerLine2;
 
     const sendOverlaySettings = async (
         size: 'large' | 'small',
         mode: 'all' | 'sold' | 'available',
-        dm: 'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary' = displayModeRef.current,
-        hideCard: boolean = hidePremiumCardRef.current
+        dm: 'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary' | 'custom-ticker' = displayModeRef.current,
+        hideCard: boolean = hidePremiumCardRef.current,
+        line1: string = customTickerLine1Ref.current,
+        line2: string = customTickerLine2Ref.current
     ) => {
         const tournamentId = liveTournament?._id;
         if (!tournamentId) return;
@@ -490,7 +507,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             await fetch('/api/overlay/settings', {
                 method: 'POST',
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tournamentId, size, tickerMode: mode, displayMode: dm, hidePremiumCard: hideCard }),
+                body: JSON.stringify({ tournamentId, size, tickerMode: mode, displayMode: dm, hidePremiumCard: hideCard, customTickerLine1: line1, customTickerLine2: line2 }),
             });
         } catch { /* non-critical */ }
     };
@@ -1218,6 +1235,33 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                                 </>
                             )}
                         </div>
+                        {/* Premium Player Card visibility toggle */}
+                        <div className="flex items-center gap-3 mt-4 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border-primary)' }}>
+                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Player Card:</span>
+                            <button
+                                onClick={() => {
+                                    const next = !hidePremiumCard;
+                                    setHidePremiumCard(next);
+                                    sendOverlaySettings(overlaySize, tickerMode, displayMode, next);
+                                }}
+                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
+                                style={{
+                                    backgroundColor: hidePremiumCard ? 'var(--status-danger)' : 'var(--surface-elevated)',
+                                    color: hidePremiumCard ? '#fff' : 'var(--text-secondary)',
+                                    border: `1px solid ${hidePremiumCard ? 'var(--status-danger)' : 'var(--border-primary)'}`,
+                                }}
+                            >
+                                <span>{hidePremiumCard ? 'Hidden' : 'Visible'}</span>
+                                {hidePremiumCard && (
+                                    <span className="w-2 h-2 rounded-full bg-red-300 animate-pulse" />
+                                )}
+                            </button>
+                            {hidePremiumCard && (
+                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                                    Premium Player Card is hidden on OBS overlay
+                                </span>
+                            )}
+                        </div>
                         <div className="flex items-center gap-3">
                             <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Ticker Option:</span>
                             {([
@@ -1329,36 +1373,133 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                                     Player Card &amp; Teams hidden
                                 </span>
                             )}
-                        </div>
-                        {/* Premium Player Card visibility toggle */}
-                        <div className="flex items-center gap-3 mt-4 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border-primary)' }}>
-                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Player Card:</span>
+                            {/* Divider */}
+                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
+                            {/* Custom Ticker */}
+                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Custom Ticker:</span>
                             <button
                                 onClick={() => {
-                                    const next = !hidePremiumCard;
-                                    setHidePremiumCard(next);
-                                    sendOverlaySettings(overlaySize, tickerMode, displayMode, next);
+                                    const next = displayMode === 'custom-ticker' ? 'standard' : 'custom-ticker';
+                                    setDisplayMode(next);
+                                    sendOverlaySettings(overlaySize, tickerMode, next);
                                 }}
                                 className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
                                 style={{
-                                    backgroundColor: hidePremiumCard ? 'var(--status-danger)' : 'var(--surface-elevated)',
-                                    color: hidePremiumCard ? '#fff' : 'var(--text-secondary)',
-                                    border: `1px solid ${hidePremiumCard ? 'var(--status-danger)' : 'var(--border-primary)'}`,
+                                    backgroundColor: displayMode === 'custom-ticker' ? '#0891B2' : 'var(--surface-elevated)',
+                                    color: displayMode === 'custom-ticker' ? '#fff' : 'var(--text-secondary)',
+                                    border: '1px solid var(--border-primary)',
                                 }}
                             >
-                                <span>{hidePremiumCard ? 'Hidden' : 'Visible'}</span>
-                                {hidePremiumCard && (
-                                    <span className="w-2 h-2 rounded-full bg-red-300 animate-pulse" />
+                                <span>{displayMode === 'custom-ticker' ? 'Hide' : 'Show'}</span>
+                                {displayMode === 'custom-ticker' && (
+                                    <span className="w-2 h-2 rounded-full bg-cyan-300 animate-pulse" />
                                 )}
                             </button>
-                            {hidePremiumCard && (
-                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                                    Premium Player Card is hidden on OBS overlay
-                                </span>
-                            )}
+                            <button
+                                onClick={() => setShowTickerModal(true)}
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-semibold transition-all"
+                                style={{
+                                    backgroundColor: 'var(--surface-elevated)',
+                                    color: 'var(--text-secondary)',
+                                    border: '1px solid var(--border-primary)',
+                                }}
+                                title="Edit Custom Ticker lines"
+                            >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                </svg>
+                                Edit
+                            </button>
                         </div>
                     </div>
                 </div>
+
+                {/* Custom Ticker Modal */}
+                {showTickerModal && (
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center"
+                        style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
+                        onClick={() => setShowTickerModal(false)}
+                    >
+                        <div
+                            className="rounded-xl p-6 w-full max-w-md shadow-2xl"
+                            style={{
+                                backgroundColor: 'var(--surface-secondary)',
+                                border: '1px solid var(--border-primary)',
+                            }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <h3 className="text-lg font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
+                                Custom Ticker Lines
+                            </h3>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>
+                                        Line 1
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={customTickerLine1}
+                                        onChange={e => setCustomTickerLine1(e.target.value)}
+                                        placeholder="Enter line 1..."
+                                        className="w-full px-3 py-2 rounded-lg text-sm"
+                                        style={{
+                                            backgroundColor: 'var(--surface-elevated)',
+                                            border: '1px solid var(--border-primary)',
+                                            color: 'var(--text-primary)',
+                                            outline: 'none',
+                                        }}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>
+                                        Line 2
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={customTickerLine2}
+                                        onChange={e => setCustomTickerLine2(e.target.value)}
+                                        placeholder="Enter line 2..."
+                                        className="w-full px-3 py-2 rounded-lg text-sm"
+                                        style={{
+                                            backgroundColor: 'var(--surface-elevated)',
+                                            border: '1px solid var(--border-primary)',
+                                            color: 'var(--text-primary)',
+                                            outline: 'none',
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                            <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
+                                If both lines have text, they will alternate every 5 seconds on the overlay.
+                            </p>
+                            <div className="flex gap-3 mt-5">
+                                <button
+                                    onClick={() => {
+                                        sendOverlaySettings(overlaySize, tickerMode, displayMode, hidePremiumCard, customTickerLine1, customTickerLine2);
+                                        setShowTickerModal(false);
+                                    }}
+                                    className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
+                                    style={{ backgroundColor: '#0891B2', color: '#fff' }}
+                                >
+                                    Update
+                                </button>
+                                <button
+                                    onClick={() => setShowTickerModal(false)}
+                                    className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
+                                    style={{
+                                        backgroundColor: 'var(--surface-elevated)',
+                                        color: 'var(--text-secondary)',
+                                        border: '1px solid var(--border-primary)',
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 <div className="xl:col-span-2 h-full">
                     <TeamsAndSoldPlayersPanel
                         teams={teams}

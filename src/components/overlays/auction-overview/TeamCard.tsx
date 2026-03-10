@@ -9,6 +9,7 @@ interface TeamCardProps {
     tournament: Tournament | null;
     delay?: number;
     isWinning?: boolean;
+    currentBid?: number;
 }
 
 const formatCurrency = (amount: number) => amount.toLocaleString();
@@ -16,7 +17,7 @@ const formatCurrency = (amount: number) => amount.toLocaleString();
 /**
  * Individual team card showing logo, balance, max bid, and player count
  */
-const TeamCard: React.FC<TeamCardProps> = ({ team, tournament, delay = 0, isWinning = false }) => {
+const TeamCard: React.FC<TeamCardProps> = ({ team, tournament, delay = 0, isWinning = false, currentBid = 0 }) => {
     const [balanceKey, setBalanceKey] = useState(0);
     const [previousBalance, setPreviousBalance] = useState(team.currentBalance || 0);
 
@@ -47,6 +48,7 @@ const TeamCard: React.FC<TeamCardProps> = ({ team, tournament, delay = 0, isWinn
     const hasInsufficientFunds = maxBid <= 0 && playersPurchased < squadSize;
     const isHighSpender = team.currentBalance && team.initialBudget &&
                           (team.currentBalance / team.initialBudget) < 0.2; // Spent >80%
+    const cannotAfford = currentBid > 0 && maxBid < currentBid && !isSquadComplete;
 
     // Trigger balance update animation
     useEffect(() => {
@@ -63,7 +65,13 @@ const TeamCard: React.FC<TeamCardProps> = ({ team, tournament, delay = 0, isWinn
                 ${isHighSpender ? 'border-gold-500' : ''}
                 ${hasInsufficientFunds ? 'animate-team-glow-warning' : ''}
                 ${isSquadComplete ? 'bg-green-900/20 border-green-500' : ''}`}
-            style={{ animationDelay: `${delay}ms` }}
+            style={{
+                animationDelay: `${delay}ms`,
+                ...(cannotAfford && {
+                    boxShadow: '0 0 18px rgba(239, 68, 68, 0.75)',
+                    borderColor: 'rgb(239 68 68)',
+                })
+            }}
         >
             {/* Team Logo */}
             <div className="flex justify-center mb-1.5">

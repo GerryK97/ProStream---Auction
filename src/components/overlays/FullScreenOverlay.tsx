@@ -6,6 +6,7 @@ import SoldPlayersSummaryOverlay from './SoldPlayersSummaryOverlay';
 import TeamSummaryOverlay from './TeamSummaryOverlay';
 import RestingTimeOverlay from './RestingTimeOverlay';
 import Top10SummaryOverlay from './Top10SummaryOverlay';
+import CustomTickerOverlay from './CustomTickerOverlay';
 import { AuctionState, Player, Team, Tournament } from '@/types';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
 import type { OverlaySettings } from './OverlayWrapper';
@@ -545,7 +546,7 @@ function FullScreenOverlayContent({
         setPanelExiting(false);
       }, 1500);
       return () => clearTimeout(t);
-    } else if (prev === 'sold-summary' || prev === 'team-summary' || prev === 'top10-summary') {
+    } else if (prev === 'sold-summary' || prev === 'team-summary' || prev === 'top10-summary' || prev === 'custom-ticker') {
       setSummaryExiting(true);
       const t = setTimeout(() => {
         setActiveMode(incoming);
@@ -656,6 +657,16 @@ function FullScreenOverlayContent({
               teams={teams}
               tournament={tournament}
               isExiting={summaryExiting}
+            />
+          </div>
+        )}
+
+        {/* ── Custom Ticker mode ── */}
+        {activeMode === 'custom-ticker' && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
+            <CustomTickerOverlay
+              line1={effectiveSettings.customTickerLine1}
+              line2={effectiveSettings.customTickerLine2}
             />
           </div>
         )}

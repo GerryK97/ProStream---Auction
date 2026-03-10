@@ -109,6 +109,7 @@ const TeamsOverviewFlip: React.FC<TeamsOverviewFlipProps> = ({
                             tournament={tournament}
                             delay={index * 80}
                             isWinning={auctionState.winningTeamId === team._id}
+                            currentBid={auctionState.currentBid}
                         />
                     ))}
                     {/* Fill empty slots in row 1 */}
@@ -126,6 +127,7 @@ const TeamsOverviewFlip: React.FC<TeamsOverviewFlipProps> = ({
                             tournament={tournament}
                             delay={(index + 5) * 80}
                             isWinning={auctionState.winningTeamId === team._id}
+                            currentBid={auctionState.currentBid}
                         />
                     ))}
                     {/* Fill empty slots in row 2 */}

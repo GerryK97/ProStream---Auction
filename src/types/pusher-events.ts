@@ -150,8 +150,10 @@ export interface AuctionStateUpdateEvent extends BasePusherEvent {
 export interface OverlaySettingsEvent extends BasePusherEvent {
   size: 'large' | 'small';
   tickerMode: 'all' | 'sold' | 'available';
-  displayMode: 'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary';
+  displayMode: 'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary' | 'custom-ticker';
   hidePremiumCard?: boolean;
+  customTickerLine1?: string;
+  customTickerLine2?: string;
 }
 
 /**

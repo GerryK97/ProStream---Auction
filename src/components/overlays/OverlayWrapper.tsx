@@ -11,8 +11,10 @@ import '../../styles/animations.css';
 export interface OverlaySettings {
     size: 'large' | 'small';
     tickerMode: 'all' | 'sold' | 'available';
-    displayMode: 'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary';
+    displayMode: 'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary' | 'custom-ticker';
     hidePremiumCard: boolean;
+    customTickerLine1: string;
+    customTickerLine2: string;
 }
 
 const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
@@ -20,6 +22,8 @@ const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
     tickerMode: 'all',
     displayMode: 'standard',
     hidePremiumCard: false,
+    customTickerLine1: '',
+    customTickerLine2: '',
 };
 
 interface OverlayWrapperProps {
@@ -118,7 +122,14 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
         const pusher = getPusherClient();
         const channel = pusher.subscribe(`tournament-${liveTournamentId}`);
         channel.bind('overlay:settings', (data: OverlaySettingsEvent) => {
-            setOverlaySettings({ size: data.size, tickerMode: data.tickerMode ?? 'sold', displayMode: data.displayMode ?? 'standard', hidePremiumCard: data.hidePremiumCard ?? false });
+            setOverlaySettings({
+                size: data.size,
+                tickerMode: data.tickerMode ?? 'sold',
+                displayMode: data.displayMode ?? 'standard',
+                hidePremiumCard: data.hidePremiumCard ?? false,
+                customTickerLine1: data.customTickerLine1 ?? '',
+                customTickerLine2: data.customTickerLine2 ?? '',
+            });
         });
         return () => {
             channel.unbind('overlay:settings');
