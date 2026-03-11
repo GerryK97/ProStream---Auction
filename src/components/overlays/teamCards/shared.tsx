@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Team, Tournament, Player } from '@/types';
+import { getMinClassBasePrice } from '@/lib/playerClassUtils';
 
 export type TeamCardsLayout = 'horizontal' | 'vertical' | 'grid';
 export type TeamCardsPosition = 'top' | 'bottom' | 'left' | 'right';
@@ -44,7 +45,7 @@ const calculateMaxBid = (team: Team, tournament: Tournament | null) => {
     if (!tournament || !team.currentBalance) return 0;
 
     const squadSize = tournament.squadSize;
-    const basePrice = tournament.basePricePerPlayer;
+    const basePrice = getMinClassBasePrice(tournament);
     const playersPurchased = team.playersPurchased?.length || 0;
     const remainingPlayers = squadSize - playersPurchased;
 

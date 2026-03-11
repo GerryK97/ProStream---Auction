@@ -120,6 +120,32 @@ export function isValidPlayerClass(
 }
 
 /**
+ * Get the minimum base price across all configured player classes.
+ * Used to calculate maxBid reservation when strategy is 'player-class-based'.
+ * Falls back to tournament.basePricePerPlayer when strategy is tournament-level
+ * or no class prices are defined.
+ */
+export function getMinClassBasePrice(tournament: Tournament | null): number {
+    if (!tournament) return 0;
+
+    if (
+        tournament.basePriceStrategy !== 'player-class-based' ||
+        !tournament.usePlayerClasses ||
+        !tournament.playerClasses?.length
+    ) {
+        return tournament.basePricePerPlayer;
+    }
+
+    const prices = tournament.playerClasses
+        .map(c => c.basePrice)
+        .filter((p): p is number => typeof p === 'number' && p > 0);
+
+    if (!prices.length) return tournament.basePricePerPlayer;
+
+    return Math.min(...prices);
+}
+
+/**
  * Get sorted player classes by order
  */
 export function getSortedClasses(

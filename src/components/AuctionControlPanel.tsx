@@ -6,7 +6,7 @@ import { Player, Team, Tournament, AuctionState } from '@/types';
 import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { imageOptimizers } from '@/lib/imageOptimization';
 import ClassBadge from '@/components/shared/ClassBadge';
-import { getFormattedBasePrice, getClassBasePrice } from '@/lib/playerClassUtils';
+import { getFormattedBasePrice, getClassBasePrice, getMinClassBasePrice } from '@/lib/playerClassUtils';
 import { getAuthHeaders } from '@/lib/api-client';
 import { useTournamentContext } from '@/contexts/TournamentContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,8 +21,11 @@ const AvailablePlayersPanel: React.FC<{
     onSelectPlayer: (id: string) => void;
     isAuctioning: boolean;
     currentPlayerId?: string;
-}> = ({ players, tournament, onSelectPlayer, isAuctioning, currentPlayerId }) => {
+    onReAuction: () => void;
+    reAuctioning: boolean;
+}> = ({ players, tournament, onSelectPlayer, isAuctioning, currentPlayerId, onReAuction, reAuctioning }) => {
     const [searchTerm, setSearchTerm] = useState('');
+    const unsoldCount = players.filter(p => p.isUnsold).length;
     const availablePlayers = players
         .filter(p => !p.isSold && !p.isUnsold && p._id !== currentPlayerId)
         .sort((a, b) => a._id.localeCompare(b._id))
@@ -33,7 +36,20 @@ const AvailablePlayersPanel: React.FC<{
 
     return (
         <div className="rounded-lg p-4 flex flex-col h-full border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-secondary)' }}>
-            <h3 className="font-bold text-lg mb-2">Available Players</h3>
+            <div className="flex items-center justify-between mb-2">
+                <h3 className="font-bold text-lg">Available Players</h3>
+                {unsoldCount > 0 && (
+                    <button
+                        onClick={onReAuction}
+                        disabled={isAuctioning || reAuctioning}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ backgroundColor: '#D97706', color: '#fff' }}
+                        title={`Move ${unsoldCount} unsold player(s) back to available`}
+                    >
+                        {reAuctioning ? 'Processing…' : `Re-Auction (${unsoldCount} Unsold)`}
+                    </button>
+                )}
+            </div>
             {isAuctioning && (
                 <div className="bg-yellow-900/50 border border-yellow-700 text-yellow-200 text-xs rounded-md p-2 mb-3">
                     Please reset or complete the current auction to start a new one.
@@ -291,14 +307,15 @@ const TeamsAndSoldPlayersPanel: React.FC<{
     unsoldPlayers: Player[];
     tournament: Tournament | null;
     winningTeamId: string | null;
+    currentBid: number;
     onUndo: () => void;
     onCleanup: () => void;
-}> = ({ teams, soldPlayers, unsoldPlayers, tournament, winningTeamId, onUndo, onCleanup }) => {
+}> = ({ teams, soldPlayers, unsoldPlayers, tournament, winningTeamId, currentBid, onUndo, onCleanup }) => {
     const calculateMaxBid = (team: Team) => {
         if (!tournament || !team.currentBalance) return 0;
 
         const squadSize = tournament.squadSize;
-        const basePrice = tournament.basePricePerPlayer;
+        const basePrice = getMinClassBasePrice(tournament);
         const playersPurchased = team.playersPurchased?.length || 0;
         const remainingPlayers = squadSize - playersPurchased;
 
@@ -326,9 +343,13 @@ const TeamsAndSoldPlayersPanel: React.FC<{
                          const squadSize = tournament?.squadSize || 0;
                          const remainingPlayers = squadSize - playersPurchased;
                          const hasInsufficientFunds = maxBid <= 0 && remainingPlayers > 0;
+                         const isBidExceeded = currentBid > 0 && currentBid > maxBid;
 
                          return (
-                             <li key={team._id} className="p-2 rounded-md flex items-center gap-3 relative overflow-hidden transition-all duration-300 hover:opacity-90 border border-[var(--border-primary)]" style={{ backgroundColor: winningTeamId === team._id ? 'var(--surface-hover)' : 'var(--surface-card)' }}>
+                             <li key={team._id} className={`p-2 rounded-md flex items-center gap-3 relative overflow-hidden transition-all duration-300 hover:opacity-90 border ${isBidExceeded ? 'border-red-500' : 'border-[var(--border-primary)]'}`} style={{
+                                 backgroundColor: winningTeamId === team._id ? 'var(--surface-hover)' : isBidExceeded ? 'rgba(239,68,68,0.08)' : 'var(--surface-card)',
+                                 boxShadow: isBidExceeded ? '0 0 0 1px rgba(239,68,68,0.4)' : 'none',
+                             }}>
                                 {winningTeamId === team._id && <div className="absolute left-0 top-0 h-full w-1.5 bg-[var(--accent-color)] animate-pulse"></div>}
                                 <img
                                     src={imageOptimizers.teamThumbnail(team.logoURL)}
@@ -342,10 +363,13 @@ const TeamsAndSoldPlayersPanel: React.FC<{
                                         {hasInsufficientFunds && (
                                             <span className="text-red-500 text-xs" title="Insufficient funds for remaining players">⚠️</span>
                                         )}
+                                        {isBidExceeded && (
+                                            <span className="text-red-400 text-xs font-semibold">Over limit</span>
+                                        )}
                                     </div>
                                     <p className="text-xs text-[var(--text-secondary)]">Budget: <span className="text-[var(--brand-secondary)]">{formatCurrency(team.currentBalance || 0)}</span></p>
                                     <p className="text-xs text-[var(--text-secondary)]">
-                                        Max Bid: <span className={hasInsufficientFunds ? "text-red-500 font-semibold" : "text-[var(--brand-primary)]"}>{formatCurrency(maxBid)}</span>
+                                        Max Bid: <span className={hasInsufficientFunds || isBidExceeded ? "text-red-500 font-semibold" : "text-[var(--brand-primary)]"}>{formatCurrency(maxBid)}</span>
                                     </p>
                                     <p className="text-xs text-[var(--text-muted)]">{playersPurchased}/{squadSize} players</p>
                                 </div>
@@ -466,6 +490,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
     const [completingTournament, setCompletingTournament] = useState(false);
     const [reactivatingTournament, setReactivatingTournament] = useState(false);
+    const [showReAuctionConfirm, setShowReAuctionConfirm] = useState(false);
+    const [reAuctioning, setReAuctioning] = useState(false);
 
     // Overlay control panel settings
     const [overlaySize, setOverlaySize] = useState<'large' | 'small'>('large');
@@ -478,6 +504,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const [customTickerLine1, setCustomTickerLine1] = useState('');
     const [customTickerLine2, setCustomTickerLine2] = useState('');
     const [showTickerModal, setShowTickerModal] = useState(false);
+    const [soldMessagePosition, setSoldMessagePosition] = useState<'bottom-right' | 'bottom-left' | 'top-right' | 'top-left'>('bottom-right');
 
     // Refs to always read latest values inside the auto-switch effect without re-triggering it
     const tickerModeRef = useRef(tickerMode);
@@ -486,12 +513,14 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const hidePremiumCardRef = useRef(hidePremiumCard);
     const customTickerLine1Ref = useRef(customTickerLine1);
     const customTickerLine2Ref = useRef(customTickerLine2);
+    const soldMessagePositionRef = useRef(soldMessagePosition);
     tickerModeRef.current = tickerMode;
     autoSwitchDurationRef.current = autoSwitchDuration;
     displayModeRef.current = displayMode;
     hidePremiumCardRef.current = hidePremiumCard;
     customTickerLine1Ref.current = customTickerLine1;
     customTickerLine2Ref.current = customTickerLine2;
+    soldMessagePositionRef.current = soldMessagePosition;
 
     const sendOverlaySettings = async (
         size: 'large' | 'small',
@@ -499,7 +528,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         dm: 'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary' | 'custom-ticker' = displayModeRef.current,
         hideCard: boolean = hidePremiumCardRef.current,
         line1: string = customTickerLine1Ref.current,
-        line2: string = customTickerLine2Ref.current
+        line2: string = customTickerLine2Ref.current,
+        soldMsgPos: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' = soldMessagePositionRef.current
     ) => {
         const tournamentId = liveTournament?._id;
         if (!tournamentId) return;
@@ -507,7 +537,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             await fetch('/api/overlay/settings', {
                 method: 'POST',
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tournamentId, size, tickerMode: mode, displayMode: dm, hidePremiumCard: hideCard, customTickerLine1: line1, customTickerLine2: line2 }),
+                body: JSON.stringify({ tournamentId, size, tickerMode: mode, displayMode: dm, hidePremiumCard: hideCard, customTickerLine1: line1, customTickerLine2: line2, soldMessagePosition: soldMsgPos }),
             });
         } catch { /* non-critical */ }
     };
@@ -867,6 +897,30 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         }
     };
 
+    const handleReAuction = async () => {
+        if (!liveTournament) return;
+        setReAuctioning(true);
+        try {
+            const response = await fetch('/api/auction/re-auction', {
+                method: 'POST',
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tournamentId: liveTournament._id }),
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                setError(data.error || 'Failed to re-auction players');
+            } else {
+                // Immediately update local state — don't wait for Pusher
+                (data.reAuctionedPlayerIds as string[])?.forEach(id => setPlayerAvailable(id));
+            }
+        } catch {
+            setError('An error occurred during re-auction');
+        } finally {
+            setReAuctioning(false);
+            setShowReAuctionConfirm(false);
+        }
+    };
+
     const handleBid = async (amount: number) => {
         console.log('handleBid called with amount:', amount);
 
@@ -1159,6 +1213,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                         onSelectPlayer={handleSelectPlayer}
                         isAuctioning={isAuctioning}
                         currentPlayerId={currentPlayer?._id}
+                        onReAuction={() => setShowReAuctionConfirm(true)}
+                        reAuctioning={reAuctioning}
                     />
                 </div>
                 <div className="xl:col-span-5 h-full flex flex-col gap-3">
@@ -1234,9 +1290,9 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                                     <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>sec</span>
                                 </>
                             )}
-                        </div>
-                        {/* Premium Player Card visibility toggle */}
-                        <div className="flex items-center gap-3 mt-4 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border-primary)' }}>
+                            {/* Divider */}
+                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
+                            {/* Player Card visibility toggle */}
                             <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Player Card:</span>
                             <button
                                 onClick={() => {
@@ -1258,11 +1314,11 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                             </button>
                             {hidePremiumCard && (
                                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                                    Premium Player Card is hidden on OBS overlay
+                                    Card hidden on OBS overlay
                                 </span>
                             )}
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-wrap">
                             <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Ticker Option:</span>
                             {([
                                 { value: 'all',       label: 'All Players'       },
@@ -1279,100 +1335,6 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                                         border: '1px solid var(--border-primary)',
                                     }}>{label}</button>
                             ))}
-                        </div>
-                        {/* Player Summary + Team Summary toggles */}
-                        <div className="flex items-center gap-3 mt-4 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border-primary)' }}>
-                            {/* Player Summary */}
-                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Player Summary:</span>
-                            <button
-                                onClick={() => {
-                                    const next = displayMode === 'sold-summary' ? 'standard' : 'sold-summary';
-                                    setDisplayMode(next);
-                                    sendOverlaySettings(overlaySize, tickerMode, next);
-                                }}
-                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
-                                style={{
-                                    backgroundColor: displayMode === 'sold-summary' ? 'var(--brand-primary)' : 'var(--surface-elevated)',
-                                    color: displayMode === 'sold-summary' ? '#fff' : 'var(--text-secondary)',
-                                    border: '1px solid var(--border-primary)',
-                                }}
-                            >
-                                <span>Show/Hide</span>
-                                {displayMode === 'sold-summary' && (
-                                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                                )}
-                            </button>
-                            {/* Divider */}
-                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
-                            {/* Team Summary */}
-                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Team Summary:</span>
-                            <button
-                                onClick={() => {
-                                    const next = displayMode === 'team-summary' ? 'standard' : 'team-summary';
-                                    setDisplayMode(next);
-                                    sendOverlaySettings(overlaySize, tickerMode, next);
-                                }}
-                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
-                                style={{
-                                    backgroundColor: displayMode === 'team-summary' ? 'var(--brand-primary)' : 'var(--surface-elevated)',
-                                    color: displayMode === 'team-summary' ? '#fff' : 'var(--text-secondary)',
-                                    border: '1px solid var(--border-primary)',
-                                }}
-                            >
-                                <span>Show/Hide</span>
-                                {displayMode === 'team-summary' && (
-                                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                                )}
-                            </button>
-                            {/* Divider */}
-                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
-                            {/* Top 10 Summary */}
-                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Top 10 Sold:</span>
-                            <button
-                                onClick={() => {
-                                    const next = displayMode === 'top10-summary' ? 'standard' : 'top10-summary';
-                                    setDisplayMode(next);
-                                    sendOverlaySettings(overlaySize, tickerMode, next);
-                                }}
-                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
-                                style={{
-                                    backgroundColor: displayMode === 'top10-summary' ? '#D97706' : 'var(--surface-elevated)',
-                                    color: displayMode === 'top10-summary' ? '#fff' : 'var(--text-secondary)',
-                                    border: '1px solid var(--border-primary)',
-                                }}
-                            >
-                                <span>Show/Hide</span>
-                                {displayMode === 'top10-summary' && (
-                                    <span className="w-2 h-2 rounded-full bg-yellow-300 animate-pulse" />
-                                )}
-                            </button>
-                            {/* Divider */}
-                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
-                            {/* Resting Time */}
-                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Resting Time:</span>
-                            <button
-                                onClick={() => {
-                                    const next = displayMode === 'resting' ? 'standard' : 'resting';
-                                    setDisplayMode(next);
-                                    sendOverlaySettings(overlaySize, tickerMode, next);
-                                }}
-                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
-                                style={{
-                                    backgroundColor: displayMode === 'resting' ? '#8B5CF6' : 'var(--surface-elevated)',
-                                    color: displayMode === 'resting' ? '#fff' : 'var(--text-secondary)',
-                                    border: '1px solid var(--border-primary)',
-                                }}
-                            >
-                                <span>Show/Hide</span>
-                                {displayMode === 'resting' && (
-                                    <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
-                                )}
-                            </button>
-                            {(displayMode === 'sold-summary' || displayMode === 'team-summary' || displayMode === 'resting' || displayMode === 'top10-summary') && (
-                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                                    Player Card &amp; Teams hidden
-                                </span>
-                            )}
                             {/* Divider */}
                             <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
                             {/* Custom Ticker */}
@@ -1411,6 +1373,132 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                                 </svg>
                                 Edit
                             </button>
+                        </div>
+                        {/* Row 2: Player Summary · Team Summary · Top 10 Sold · Custom Ticker */}
+                        <div className="flex items-center gap-3 mt-4 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border-primary)' }}>
+                            {/* Player Summary */}
+                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Player Summary:</span>
+                            <button
+                                onClick={() => {
+                                    const next = displayMode === 'sold-summary' ? 'standard' : 'sold-summary';
+                                    setDisplayMode(next);
+                                    sendOverlaySettings(overlaySize, tickerMode, next);
+                                }}
+                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
+                                style={{
+                                    backgroundColor: displayMode === 'sold-summary' ? 'var(--brand-primary)' : 'var(--surface-elevated)',
+                                    color: displayMode === 'sold-summary' ? '#fff' : 'var(--text-secondary)',
+                                    border: '1px solid var(--border-primary)',
+                                }}
+                            >
+                                <span>Show</span>
+                                {displayMode === 'sold-summary' && (
+                                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                                )}
+                            </button>
+                            {/* Divider */}
+                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
+                            {/* Team Summary */}
+                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Team Summary:</span>
+                            <button
+                                onClick={() => {
+                                    const next = displayMode === 'team-summary' ? 'standard' : 'team-summary';
+                                    setDisplayMode(next);
+                                    sendOverlaySettings(overlaySize, tickerMode, next);
+                                }}
+                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
+                                style={{
+                                    backgroundColor: displayMode === 'team-summary' ? 'var(--brand-primary)' : 'var(--surface-elevated)',
+                                    color: displayMode === 'team-summary' ? '#fff' : 'var(--text-secondary)',
+                                    border: '1px solid var(--border-primary)',
+                                }}
+                            >
+                                <span>Show</span>
+                                {displayMode === 'team-summary' && (
+                                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                                )}
+                            </button>
+                            {/* Divider */}
+                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
+                            {/* Top 10 Sold */}
+                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Top 10 Sold:</span>
+                            <button
+                                onClick={() => {
+                                    const next = displayMode === 'top10-summary' ? 'standard' : 'top10-summary';
+                                    setDisplayMode(next);
+                                    sendOverlaySettings(overlaySize, tickerMode, next);
+                                }}
+                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
+                                style={{
+                                    backgroundColor: displayMode === 'top10-summary' ? '#D97706' : 'var(--surface-elevated)',
+                                    color: displayMode === 'top10-summary' ? '#fff' : 'var(--text-secondary)',
+                                    border: '1px solid var(--border-primary)',
+                                }}
+                            >
+                                <span>Show</span>
+                                {displayMode === 'top10-summary' && (
+                                    <span className="w-2 h-2 rounded-full bg-yellow-300 animate-pulse" />
+                                )}
+                            </button>
+                            {(displayMode === 'sold-summary' || displayMode === 'team-summary' || displayMode === 'top10-summary') && (
+                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                                    Player Card &amp; Teams hidden
+                                </span>
+                            )}
+                        </div>
+                        {/* Row 3: Sold Message position */}
+                        <div className="flex items-center gap-3 mt-4 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border-primary)' }}>
+                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Sold Message:</span>
+                            <select
+                                value={soldMessagePosition}
+                                onChange={e => {
+                                    const pos = e.target.value as typeof soldMessagePosition;
+                                    setSoldMessagePosition(pos);
+                                    sendOverlaySettings(overlaySize, tickerMode, displayMode, hidePremiumCard, customTickerLine1, customTickerLine2, pos);
+                                }}
+                                className="px-3 py-1.5 rounded-md text-sm font-semibold transition-all"
+                                style={{
+                                    backgroundColor: 'var(--surface-elevated)',
+                                    color: 'var(--text-primary)',
+                                    border: '1px solid var(--border-primary)',
+                                    cursor: 'pointer',
+                                    outline: 'none',
+                                }}
+                            >
+                                <option value="bottom-right">▼ Right · Bottom</option>
+                                <option value="bottom-left">▼ Left · Bottom</option>
+                                <option value="top-right">▲ Right · Top</option>
+                                <option value="top-left">▲ Left · Top</option>
+                            </select>
+                            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Toast corner position</span>
+                        </div>
+                        {/* Row 4: Resting Time */}
+                        <div className="flex items-center gap-3 mt-4 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border-primary)' }}>
+                            {/* Resting Time */}
+                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Resting Time:</span>
+                            <button
+                                onClick={() => {
+                                    const next = displayMode === 'resting' ? 'standard' : 'resting';
+                                    setDisplayMode(next);
+                                    sendOverlaySettings(overlaySize, tickerMode, next);
+                                }}
+                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
+                                style={{
+                                    backgroundColor: displayMode === 'resting' ? '#8B5CF6' : 'var(--surface-elevated)',
+                                    color: displayMode === 'resting' ? '#fff' : 'var(--text-secondary)',
+                                    border: '1px solid var(--border-primary)',
+                                }}
+                            >
+                                <span>Show</span>
+                                {displayMode === 'resting' && (
+                                    <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+                                )}
+                            </button>
+                            {displayMode === 'resting' && (
+                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                                    Player Card &amp; Teams hidden
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -1507,6 +1595,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                         unsoldPlayers={unsoldPlayers}
                         tournament={liveTournament}
                         winningTeamId={auctionState.winningTeamId}
+                        currentBid={auctionState.currentBid ?? 0}
                         onUndo={handleUndo}
                         onCleanup={handleCleanupAll}
                     />
@@ -1525,6 +1614,23 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                         <button onClick={() => setShowCompleteConfirm(false)} className="font-bold py-2 px-4 rounded-lg hover:opacity-80" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}>Cancel</button>
                         <button onClick={handleCompleteTournament} disabled={completingTournament} className="text-white font-bold py-2 px-4 rounded-lg hover:opacity-80 disabled:opacity-60" style={{ backgroundColor: 'var(--status-info)' }}>
                             {completingTournament ? 'Completing...' : 'Yes, Complete'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+            {/* Re-Auction Confirmation Modal */}
+            <Modal isOpen={showReAuctionConfirm} onClose={() => setShowReAuctionConfirm(false)} title="Re-Auction Unsold Players?" size="sm">
+                <div className="space-y-4">
+                    <p style={{ color: 'var(--text-secondary)' }}>
+                        All unsold players will be moved back to the available pool and can be auctioned again.
+                        Sold players and team budgets are not affected.
+                    </p>
+                    <div className="flex gap-3 justify-end pt-2">
+                        <button onClick={() => setShowReAuctionConfirm(false)} className="font-bold py-2 px-4 rounded-lg hover:opacity-80" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}>
+                            Cancel
+                        </button>
+                        <button onClick={handleReAuction} disabled={reAuctioning} className="text-white font-bold py-2 px-4 rounded-lg hover:opacity-80 disabled:opacity-60" style={{ backgroundColor: '#D97706' }}>
+                            {reAuctioning ? 'Processing…' : 'Re-Auction'}
                         </button>
                     </div>
                 </div>

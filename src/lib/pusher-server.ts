@@ -216,7 +216,7 @@ export async function triggerOverlaySettings(
   tournamentId: string,
   data: Omit<OverlaySettingsEvent, 'tournamentId' | 'timestamp'>
 ): Promise<void> {
-  return triggerAuctionEvent(tournamentId, 'overlay:settings' as PusherEventName, data);
+  return triggerAuctionEvent(tournamentId, 'overlay:settings', data);
 }
 
 /**

@@ -3,8 +3,6 @@ import { tournamentDB } from '@/lib/db-mongodb';
 import { PlayerClassConfig } from '@/types';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
-import { TournamentModel } from '@/models/Tournament';
-import { connectToDatabase } from '@/lib/mongodb';
 
 /**
  * Validate player class codes
@@ -80,19 +78,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         error: `Your role (${user.role}) does not have permission to create tournaments. Please contact an administrator.`
       }, { status: 403 });
-    }
-
-    // Enforce per-user tournament allowance (non-admin)
-    if (user.role !== 'Admin') {
-      await connectToDatabase();
-      const allowance = user.tournamentAllowance ?? 1;
-      const createdCount = await TournamentModel.countDocuments({ createdBy: user.userId });
-      if (createdCount >= allowance) {
-        return NextResponse.json(
-          { error: 'Tournament limit reached. Please ask an admin to increase your allowance.' },
-          { status: 403 }
-        );
-      }
     }
 
     const body = await request.json();

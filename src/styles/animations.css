@@ -476,3 +476,31 @@
     transform: translateY(0) scale(1);
   }
 }
+
+/* ── Sold Message Toast ────────────────────────────────────────── */
+@keyframes soldToastEnter {
+  0%   { transform: translateX(110%) scale(0.92); opacity: 0; }
+  60%  { transform: translateX(-8px) scale(1.01); opacity: 1; }
+  100% { transform: translateX(0) scale(1); opacity: 1; }
+}
+
+@keyframes soldToastExit {
+  0%   { transform: translateX(0) scale(1); opacity: 1; }
+  100% { transform: translateX(110%) scale(0.92); opacity: 0; }
+}
+
+.sold-toast-enter { animation: soldToastEnter 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.sold-toast-exit  { animation: soldToastExit  0.55s ease-in forwards; }
+
+/* ── Sold Message Toast — Left-side variants ───────────────────── */
+@keyframes soldToastEnterLeft {
+  0%   { transform: translateX(-110%) scale(0.92); opacity: 0; }
+  60%  { transform: translateX(8px) scale(1.01); opacity: 1; }
+  100% { transform: translateX(0) scale(1); opacity: 1; }
+}
+@keyframes soldToastExitLeft {
+  0%   { transform: translateX(0) scale(1); opacity: 1; }
+  100% { transform: translateX(-110%) scale(0.92); opacity: 0; }
+}
+.sold-toast-enter-left { animation: soldToastEnterLeft 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.sold-toast-exit-left  { animation: soldToastExitLeft  0.55s ease-in forwards; }

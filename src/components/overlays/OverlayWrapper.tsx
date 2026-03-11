@@ -15,6 +15,7 @@ export interface OverlaySettings {
     hidePremiumCard: boolean;
     customTickerLine1: string;
     customTickerLine2: string;
+    soldMessagePosition: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
 }
 
 const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
@@ -24,6 +25,7 @@ const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
     hidePremiumCard: false,
     customTickerLine1: '',
     customTickerLine2: '',
+    soldMessagePosition: 'bottom-right',
 };
 
 interface OverlayWrapperProps {
@@ -129,6 +131,7 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
                 hidePremiumCard: data.hidePremiumCard ?? false,
                 customTickerLine1: data.customTickerLine1 ?? '',
                 customTickerLine2: data.customTickerLine2 ?? '',
+                soldMessagePosition: data.soldMessagePosition ?? 'bottom-right',
             });
         });
         return () => {

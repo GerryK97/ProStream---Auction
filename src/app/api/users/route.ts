@@ -123,7 +123,6 @@ export async function POST(request: NextRequest) {
       assignedTeams = [],
       assignedPlayer = null,
       plan = 'Free',
-      tournamentAllowance = 1,
     } = await request.json();
 
     // Validation
@@ -141,9 +140,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    const parsedAllowance = Number(tournamentAllowance ?? 1);
-    const safeAllowance = Number.isFinite(parsedAllowance) && parsedAllowance >= 0 ? parsedAllowance : 1;
 
     // Check if username exists
     const existingUsername = await User.findOne({ username: username.toLowerCase() });
@@ -179,7 +175,6 @@ export async function POST(request: NextRequest) {
       assignedTeams,
       assignedPlayer,
       plan,
-      tournamentAllowance: safeAllowance,
     });
 
     await user.save();

@@ -12,7 +12,6 @@ export interface User {
   assignedTeams?: string[];
   assignedPlayer?: string;
    plan?: 'Free' | 'Standard' | 'Offer';
-   tournamentAllowance?: number;
 }
 
 interface AuthContextType {

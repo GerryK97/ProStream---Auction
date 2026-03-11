@@ -6,7 +6,7 @@ import SoldPlayersSummaryOverlay from './SoldPlayersSummaryOverlay';
 import TeamSummaryOverlay from './TeamSummaryOverlay';
 import RestingTimeOverlay from './RestingTimeOverlay';
 import Top10SummaryOverlay from './Top10SummaryOverlay';
-import CustomTickerOverlay from './CustomTickerOverlay';
+import SoldMessageToast from './SoldMessageToast';
 import { AuctionState, Player, Team, Tournament } from '@/types';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
 import type { OverlaySettings } from './OverlayWrapper';
@@ -19,12 +19,18 @@ function TickerStrip({
   teams,
   tournament,
   mode,
+  customMode,
+  customLine1,
+  customLine2,
 }: {
   soldPlayers: Player[];
   players: Player[];
   teams: Team[];
   tournament: Tournament | null;
   mode: 'all' | 'sold' | 'available';
+  customMode?: boolean;
+  customLine1?: string;
+  customLine2?: string;
 }) {
   const heading   = mode === 'sold'      ? 'SOLD PLAYERS'
                   : mode === 'available' ? 'AVAILABLE'
@@ -32,6 +38,31 @@ function TickerStrip({
   const emptyText = mode === 'sold'      ? 'Waiting for players to be sold…'
                   : mode === 'available' ? 'No players available…'
                   : 'No players in tournament yet…';
+
+  // ── Custom ticker slide state ──
+  const lines = customMode
+    ? [customLine1, customLine2].filter((l): l is string => !!l?.trim())
+    : [];
+  const [lineIndex, setLineIndex] = useState(0);
+  const [sliding, setSliding] = useState(false);
+  const linesLenRef = useRef(lines.length);
+
+  useEffect(() => { linesLenRef.current = lines.length; }, [lines.length]);
+
+  useEffect(() => {
+    if (!customMode || lines.length <= 1) return;
+    const iv = setInterval(() => {
+      setSliding(true);
+      const t = setTimeout(() => {
+        setLineIndex(prev => (prev + 1) % linesLenRef.current);
+        setSliding(false);
+      }, 600);
+      return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, 5000);
+    return () => clearInterval(iv);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customMode, customLine1, customLine2]);
 
   const nameStyle:   React.CSSProperties = { color: '#0d0d0d' };
   const detailStyle: React.CSSProperties = { color: 'rgba(0,0,0,0.48)' };
@@ -108,7 +139,29 @@ function TickerStrip({
           overflow: 'hidden',
         }}
       >
-        {hasItems ? (
+        {customMode ? (
+          /* ── Custom ticker: vertical slide ── */
+          <div style={{
+            display: 'flex', flexDirection: 'column',
+            transform: sliding ? 'translateY(-100%)' : 'translateY(0%)',
+            transition: sliding ? 'transform 0.55s cubic-bezier(0.4,0,0.2,1)' : 'none',
+            willChange: 'transform',
+          }}>
+            {[0, 1].map(offset => {
+              const idx = lines.length > 0 ? (lineIndex + offset) % lines.length : 0;
+              return (
+                <div key={offset} style={{
+                  height: 57, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: '"Concert One", cursive', fontSize: 26, color: '#0d0d0d',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {lines[idx] ?? ''}
+                </div>
+              );
+            })}
+          </div>
+        ) : hasItems ? (
+          /* ── Normal: horizontal scroll ── */
           <div
             style={{
               position: 'absolute',
@@ -154,22 +207,50 @@ function TickerStrip({
         }}
       />
 
-      {/* Heading text inside pill */}
+      {/* Heading / branding inside pill */}
       <div
         style={{
           position: 'absolute',
-          left: 59,
-          top: 1004.5,
-          height: 61,
-          lineHeight: '61px',
-          color: '#FFC919',
-          fontSize: 24,
-          fontFamily: '"Coda Caption", cursive',
-          fontWeight: 800,
-          whiteSpace: 'nowrap',
+          left: 6,
+          top: 998,
+          width: 335,
+          height: 70,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 10,
+          pointerEvents: 'none',
         }}
       >
-        {heading}
+        {customMode ? (
+          <>
+            <img
+              src="https://res.cloudinary.com/diitsd6nz/image/upload/v1760794476/ProSteam_logo_h9pb8b.png"
+              alt="ProStream"
+              style={{ height: 38, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
+            />
+            <span style={{
+              color: '#FFC919',
+              fontSize: 20,
+              fontFamily: '"Coda Caption", cursive',
+              fontWeight: 800,
+              whiteSpace: 'nowrap',
+              letterSpacing: 1,
+            }}>
+              ProStream
+            </span>
+          </>
+        ) : (
+          <span style={{
+            color: '#FFC919',
+            fontSize: 24,
+            fontFamily: '"Coda Caption", cursive',
+            fontWeight: 800,
+            whiteSpace: 'nowrap',
+          }}>
+            {heading}
+          </span>
+        )}
       </div>
     </>
   );
@@ -532,6 +613,11 @@ function FullScreenOverlayContent({
   const [summaryExiting, setSummaryExiting] = useState(false);
   const prevDisplayModeRef = useRef(effectiveSettings.displayMode);
 
+  // Sold message toast state
+  const [soldToast, setSoldToast] = useState<{ player: Player; team: Team; price: number } | null>(null);
+  const [toastExiting, setToastExiting] = useState(false);
+  const prevAuctionStatusRef = useRef<string | null>(null);
+
   useEffect(() => {
     const incoming = effectiveSettings.displayMode;
     const prev = prevDisplayModeRef.current;
@@ -539,14 +625,19 @@ function FullScreenOverlayContent({
 
     if (prev === incoming) return;
 
-    if (prev === 'standard') {
+    if (prev === 'standard' || prev === 'custom-ticker') {
+      if (incoming === 'standard' || incoming === 'custom-ticker') {
+        // Both show the player panel — switch immediately, just the ticker changes
+        setActiveMode(incoming);
+        return;
+      }
       setPanelExiting(true);
       const t = setTimeout(() => {
         setActiveMode(incoming);
         setPanelExiting(false);
       }, 1500);
       return () => clearTimeout(t);
-    } else if (prev === 'sold-summary' || prev === 'team-summary' || prev === 'top10-summary' || prev === 'custom-ticker') {
+    } else if (prev === 'sold-summary' || prev === 'team-summary' || prev === 'top10-summary') {
       setSummaryExiting(true);
       const t = setTimeout(() => {
         setActiveMode(incoming);
@@ -568,10 +659,28 @@ function FullScreenOverlayContent({
     return () => window.removeEventListener('resize', updateScale);
   }, []);
 
+  // Sold message toast — trigger when auction transitions to 'Sold'
+  useEffect(() => {
+    const status = auctionState.currentAuctionStatus;
+    if (status === 'Sold' && prevAuctionStatusRef.current !== 'Sold') {
+      const winningTeam = teams.find(t => t._id === currentPlayer?.winningTeamId);
+      const price = currentPlayer?.finalPrice ?? (auctionState.currentBid || 0);
+      if (currentPlayer && winningTeam) {
+        setSoldToast({ player: currentPlayer, team: winningTeam, price });
+        setToastExiting(false);
+        prevAuctionStatusRef.current = status;
+        const exitTimer  = setTimeout(() => setToastExiting(true), 4500);
+        const clearTimer = setTimeout(() => { setSoldToast(null); setToastExiting(false); }, 5100);
+        return () => { clearTimeout(exitTimer); clearTimeout(clearTimer); };
+      }
+    }
+    prevAuctionStatusRef.current = status;
+  }, [auctionState.currentAuctionStatus, currentPlayer, teams]);
+
   return (
     <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative', background: 'linear-gradient(160deg, #0a0a14 0%, #111827 60%, #0d1117 100%)' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Concert+One&family=Coda+Caption:wght@800&family=Graduate&family=Inconsolata:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Concert+One&family=Coda+Caption:wght@800&family=Graduate&family=Inconsolata:wght@400;700&family=Rajdhani:wght@500;600;700&display=swap');
         @keyframes fullscreenTickerScroll {
           0%   { transform: translateY(-50%) translateX(0); }
           100% { transform: translateY(-50%) translateX(-50%); }
@@ -661,18 +770,8 @@ function FullScreenOverlayContent({
           </div>
         )}
 
-        {/* ── Custom Ticker mode ── */}
-        {activeMode === 'custom-ticker' && (
-          <div style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
-            <CustomTickerOverlay
-              line1={effectiveSettings.customTickerLine1}
-              line2={effectiveSettings.customTickerLine2}
-            />
-          </div>
-        )}
-
-        {/* ── New Player Auction Panel ── (standard mode, with ScaleY enter/exit) */}
-        {activeMode === 'standard' && (
+        {/* ── New Player Auction Panel ── (standard + custom-ticker modes, with ScaleY enter/exit) */}
+        {(activeMode === 'standard' || activeMode === 'custom-ticker') && (
           <div
             key={currentPlayer?._id ?? 'no-player'}
             className={panelExiting ? 'fs-panel-exit' : 'fs-panel-enter'}
@@ -693,7 +792,21 @@ function FullScreenOverlayContent({
           teams={teams}
           tournament={tournament}
           mode={effectiveSettings.tickerMode}
+          customMode={activeMode === 'custom-ticker'}
+          customLine1={effectiveSettings.customTickerLine1}
+          customLine2={effectiveSettings.customTickerLine2}
         />
+
+        {/* Sold Message Toast */}
+        {soldToast && (
+          <SoldMessageToast
+            player={soldToast.player}
+            team={soldToast.team}
+            finalPrice={soldToast.price}
+            exiting={toastExiting}
+            position={effectiveSettings.soldMessagePosition ?? 'bottom-right'}
+          />
+        )}
       </div>
     </div>
   );

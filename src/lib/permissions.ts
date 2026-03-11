@@ -28,8 +28,9 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
   { path: '/manage/teams', allowedRoles: ['Admin', 'Tournament'] },
   { path: '/manage/players', allowedRoles: ['Admin', 'Tournament'] },
 
-  // Overlay routes (accessible to all registered users)
-  { path: '/overlays', allowedRoles: ['Admin', 'Tournament', 'MasterManager', 'Team', 'Player', 'Audience'] },
+  // Overlay management page (Admin only - this is where overlay URLs are generated)
+  { path: '/overlays', allowedRoles: ['Admin'] },
+  // Overlay viewer sub-paths (all registered users - for in-browser preview)
   { path: '/overlays/', allowedRoles: ['Admin', 'Tournament', 'MasterManager', 'Team', 'Player', 'Audience'] },
 
   // User management (Admin only)
@@ -46,8 +47,8 @@ export function canAccessRoute(userRole: UserRole | string, path: string): boole
   const permission = ROUTE_PERMISSIONS.find((perm) => {
     // Exact match
     if (perm.path === basePath) return true;
-    // Wildcard match (e.g., /overlays/* matches /overlays/auction-overview)
-    if (perm.path === '/overlays' && basePath.startsWith('/overlays')) return true;
+    // Trailing-slash prefix match (e.g., '/overlays/' matches '/overlays/abc123' and sub-paths)
+    if (perm.path.endsWith('/') && basePath.startsWith(perm.path)) return true;
     return false;
   });
 

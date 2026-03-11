@@ -87,7 +87,6 @@ export async function POST(request: NextRequest) {
       passwordHash,
       role: defaultRole,
       plan: 'Free',
-      tournamentAllowance: 1,
       status,
     });
 
@@ -113,7 +112,6 @@ export async function POST(request: NextRequest) {
           role: user.role,
           status: user.status,
           plan: user.plan,
-          tournamentAllowance: user.tournamentAllowance,
         },
         token: isAutoApproved ? token : null,
       },

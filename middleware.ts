@@ -25,8 +25,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check if this is an overlay route - they use token-based authentication
-  if (pathname.startsWith('/overlays')) {
+  // Check if this is an overlay viewer route - they use token-based authentication
+  // Only sub-paths (/overlays/[id]) bypass user auth; the management page (/overlays) requires user auth
+  if (pathname.startsWith('/overlays/')) {
     const overlayToken = getOverlayTokenFromRequest(request);
 
     if (overlayToken && validateOverlayToken(overlayToken)) {

@@ -456,7 +456,21 @@ export function usePusherAuction(
       return () => {
         console.log(`[Pusher] Unsubscribing from ${channelName}`);
         if (channelRef.current) {
-          channelRef.current.unbind_all();
+          // Explicitly unbind only the events bound in this effect.
+          // Do NOT use unbind_all() — it would also remove overlay:settings
+          // bindings set up externally by OverlayWrapper.
+          channelRef.current.unbind('pusher:subscription_succeeded');
+          channelRef.current.unbind('pusher:subscription_error');
+          channelRef.current.unbind('auction:started');
+          channelRef.current.unbind('auction:stopped');
+          channelRef.current.unbind('auction:restarted');
+          channelRef.current.unbind('auction:player-selected');
+          channelRef.current.unbind('auction:bid-placed');
+          channelRef.current.unbind('auction:player-sold');
+          channelRef.current.unbind('auction:reset');
+          channelRef.current.unbind('auction:undo');
+          channelRef.current.unbind('auction:player-unsold');
+          channelRef.current.unbind('auction:state-update');
           pusher.unsubscribe(channelName);
           channelRef.current = null;
         }

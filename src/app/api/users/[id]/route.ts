@@ -120,7 +120,6 @@ export async function PUT(
       assignedTeams,
       assignedPlayer,
       plan,
-      tournamentAllowance,
     } = await request.json();
 
     // Update fields
@@ -142,17 +141,6 @@ export async function PUT(
       }
       (user as any).plan = plan;
     }
-    if (tournamentAllowance !== undefined) {
-      const parsedAllowance = Number(tournamentAllowance);
-      if (!Number.isFinite(parsedAllowance) || parsedAllowance < 0) {
-        return NextResponse.json(
-          { error: 'Invalid tournament allowance' },
-          { status: 400 }
-        );
-      }
-      (user as any).tournamentAllowance = parsedAllowance;
-    }
-
     await user.save();
 
     return NextResponse.json(

@@ -20,7 +20,8 @@ export type PusherEventName =
   | 'auction:reset'
   | 'auction:undo'
   | 'auction:player-unsold'
-  | 'auction:state-update';
+  | 'auction:state-update'
+  | 'overlay:settings';
 
 /**
  * Base interface for all Pusher events
@@ -154,6 +155,7 @@ export interface OverlaySettingsEvent extends BasePusherEvent {
   hidePremiumCard?: boolean;
   customTickerLine1?: string;
   customTickerLine2?: string;
+  soldMessagePosition?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
 }
 
 /**

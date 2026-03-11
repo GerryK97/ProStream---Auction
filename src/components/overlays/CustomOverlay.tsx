@@ -6,6 +6,8 @@ import PremiumPlayerCardOverlay from './PremiumPlayerCardOverlay';
 import SoldPlayersSummaryOverlay from './SoldPlayersSummaryOverlay';
 import TeamSummaryOverlay from './TeamSummaryOverlay';
 import RestingTimeOverlay from './RestingTimeOverlay';
+import Top10SummaryOverlay from './Top10SummaryOverlay';
+import SoldMessageToast from './SoldMessageToast';
 import { AuctionState, Player, Team, Tournament } from '@/types';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
 import type { OverlaySettings } from './OverlayWrapper';
@@ -18,12 +20,18 @@ function TickerStrip({
   teams,
   tournament,
   mode,
+  customMode,
+  customLine1,
+  customLine2,
 }: {
   soldPlayers: Player[];
   players: Player[];
   teams: Team[];
   tournament: Tournament | null;
   mode: 'all' | 'sold' | 'available';
+  customMode?: boolean;
+  customLine1?: string;
+  customLine2?: string;
 }) {
   const heading   = mode === 'sold'      ? 'SOLD PLAYERS'
                   : mode === 'available' ? 'AVAILABLE'
@@ -31,6 +39,31 @@ function TickerStrip({
   const emptyText = mode === 'sold'      ? 'Waiting for players to be sold…'
                   : mode === 'available' ? 'No players available…'
                   : 'No players in tournament yet…';
+
+  // ── Custom ticker slide state ──
+  const lines = customMode
+    ? [customLine1, customLine2].filter((l): l is string => !!l?.trim())
+    : [];
+  const [lineIndex, setLineIndex] = useState(0);
+  const [sliding, setSliding] = useState(false);
+  const linesLenRef = useRef(lines.length);
+
+  useEffect(() => { linesLenRef.current = lines.length; }, [lines.length]);
+
+  useEffect(() => {
+    if (!customMode || lines.length <= 1) return;
+    const iv = setInterval(() => {
+      setSliding(true);
+      const t = setTimeout(() => {
+        setLineIndex(prev => (prev + 1) % linesLenRef.current);
+        setSliding(false);
+      }, 600);
+      return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, 5000);
+    return () => clearInterval(iv);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customMode, customLine1, customLine2]);
 
   const nameStyle:   React.CSSProperties = { color: '#0d0d0d' };
   const detailStyle: React.CSSProperties = { color: 'rgba(0,0,0,0.48)' };
@@ -107,7 +140,29 @@ function TickerStrip({
           overflow: 'hidden',
         }}
       >
-        {hasItems ? (
+        {customMode ? (
+          /* ── Custom ticker: vertical slide ── */
+          <div style={{
+            display: 'flex', flexDirection: 'column',
+            transform: sliding ? 'translateY(-100%)' : 'translateY(0%)',
+            transition: sliding ? 'transform 0.55s cubic-bezier(0.4,0,0.2,1)' : 'none',
+            willChange: 'transform',
+          }}>
+            {[0, 1].map(offset => {
+              const idx = lines.length > 0 ? (lineIndex + offset) % lines.length : 0;
+              return (
+                <div key={offset} style={{
+                  height: 57, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: '"Concert One", cursive', fontSize: 26, color: '#0d0d0d',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {lines[idx] ?? ''}
+                </div>
+              );
+            })}
+          </div>
+        ) : hasItems ? (
+          /* ── Normal: horizontal scroll ── */
           <div
             style={{
               position: 'absolute',
@@ -153,22 +208,50 @@ function TickerStrip({
         }}
       />
 
-      {/* Heading text inside pill */}
+      {/* Heading / branding inside pill */}
       <div
         style={{
           position: 'absolute',
-          left: 59,
-          top: 1004.5,
-          height: 61,
-          lineHeight: '61px',
-          color: '#FFC919',
-          fontSize: 24,
-          fontFamily: '"Coda Caption", cursive',
-          fontWeight: 800,
-          whiteSpace: 'nowrap',
+          left: 6,
+          top: 998,
+          width: 335,
+          height: 70,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 10,
+          pointerEvents: 'none',
         }}
       >
-        {heading}
+        {customMode ? (
+          <>
+            <img
+              src="https://res.cloudinary.com/diitsd6nz/image/upload/v1760794476/ProSteam_logo_h9pb8b.png"
+              alt="ProStream"
+              style={{ height: 38, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
+            />
+            <span style={{
+              color: '#FFC919',
+              fontSize: 20,
+              fontFamily: '"Coda Caption", cursive',
+              fontWeight: 800,
+              whiteSpace: 'nowrap',
+              letterSpacing: 1,
+            }}>
+              ProStream
+            </span>
+          </>
+        ) : (
+          <span style={{
+            color: '#FFC919',
+            fontSize: 24,
+            fontFamily: '"Coda Caption", cursive',
+            fontWeight: 800,
+            whiteSpace: 'nowrap',
+          }}>
+            {heading}
+          </span>
+        )}
       </div>
     </>
   );
@@ -244,7 +327,7 @@ function BidInfoPanel({
 
 // ─── Team Card ────────────────────────────────────────────────────────────────
 
-function TeamCard({ team, tournament }: { team: Team; tournament: Tournament | null }) {
+function TeamCard({ team, tournament, currentBid }: { team: Team; tournament: Tournament | null; currentBid: number }) {
   const spent = (team.initialBudget ?? 0) - (team.currentBalance ?? 0);
   const balance = team.currentBalance ?? 0;
   const initial = team.initialBudget ?? 1;
@@ -253,14 +336,30 @@ function TeamCard({ team, tournament }: { team: Team; tournament: Tournament | n
   const squadSize = tournament?.squadSize ?? '—';
   const initials = (team.shortCode || team.name).slice(0, 2).toUpperCase();
 
+  // Max bid calculation — mirrors AuctionControlPanel logic
+  const _playersPurchased = team.playersPurchased?.length ?? 0;
+  const _squadSize = tournament?.squadSize ?? 0;
+  const _basePrice = tournament?.basePricePerPlayer ?? 0;
+  const _remainingPlayers = _squadSize - _playersPurchased;
+  const maxBid = _remainingPlayers <= 1
+    ? (team.currentBalance ?? 0)
+    : Math.max(0, (team.currentBalance ?? 0) - (_remainingPlayers - 1) * _basePrice);
+  const isExceeded = currentBid > 0 && currentBid > maxBid;
+
   return (
     <div style={{
       position: 'relative',
       width: 362,
       height: 136,
-      background: 'linear-gradient(135deg, #0f0c29, #302b63)',
+      background: isExceeded
+        ? 'linear-gradient(135deg, #1a0808, #2d0f0f)'
+        : 'linear-gradient(135deg, #0f0c29, #302b63)',
       borderRadius: 20,
-      border: '1.5px solid rgba(255,255,255,0.15)',
+      border: isExceeded ? '2px solid #ef4444' : '1.5px solid rgba(255,255,255,0.15)',
+      boxShadow: isExceeded
+        ? '0 0 18px rgba(239,68,68,0.55), 0 0 40px rgba(239,68,68,0.25), inset 0 0 20px rgba(239,68,68,0.08)'
+        : 'none',
+      transition: 'border 0.3s ease, box-shadow 0.3s ease, background 0.3s ease',
       flexShrink: 0,
     }}>
       {/* Logo circle */}
@@ -408,7 +507,7 @@ function TeamCard({ team, tournament }: { team: Team; tournament: Tournament | n
 
 // ─── Team Cards Panel (with auto-rotation) ────────────────────────────────────
 
-function TeamCardsPanel({ teams, tournament }: { teams: Team[]; tournament: Tournament | null }) {
+function TeamCardsPanel({ teams, tournament, currentBid }: { teams: Team[]; tournament: Tournament | null; currentBid: number }) {
   const PAGE_SIZE = 4;
   const pages = Math.ceil(teams.length / PAGE_SIZE);
   const [pageIndex, setPageIndex] = useState(0);
@@ -451,7 +550,7 @@ function TeamCardsPanel({ teams, tournament }: { teams: Team[]; tournament: Tour
       }}
     >
       {currentPage.map(team => (
-        <TeamCard key={team._id} team={team} tournament={tournament} />
+        <TeamCard key={team._id} team={team} tournament={tournament} currentBid={currentBid} />
       ))}
     </div>
   );
@@ -478,6 +577,11 @@ function CustomOverlayContent({
 }) {
   const [scale, setScale] = useState(1);
 
+  // Sold message toast state
+  const [soldToast, setSoldToast] = useState<{ player: Player; team: Team; price: number } | null>(null);
+  const [toastExiting, setToastExiting] = useState(false);
+  const prevAuctionStatusRef = useRef<string | null>(null);
+
   useEffect(() => {
     const updateScale = () => {
       setScale(Math.min(window.innerWidth / 1920, window.innerHeight / 1080));
@@ -487,10 +591,28 @@ function CustomOverlayContent({
     return () => window.removeEventListener('resize', updateScale);
   }, []);
 
+  // Sold message toast — trigger when auction transitions to 'Sold'
+  useEffect(() => {
+    const status = auctionState.currentAuctionStatus;
+    if (status === 'Sold' && prevAuctionStatusRef.current !== 'Sold') {
+      const winningTeam = teams.find(t => t._id === currentPlayer?.winningTeamId);
+      const price = currentPlayer?.finalPrice ?? (auctionState.currentBid || 0);
+      if (currentPlayer && winningTeam) {
+        setSoldToast({ player: currentPlayer, team: winningTeam, price });
+        setToastExiting(false);
+        prevAuctionStatusRef.current = status;
+        const exitTimer  = setTimeout(() => setToastExiting(true), 4500);
+        const clearTimer = setTimeout(() => { setSoldToast(null); setToastExiting(false); }, 5100);
+        return () => { clearTimeout(exitTimer); clearTimeout(clearTimer); };
+      }
+    }
+    prevAuctionStatusRef.current = status;
+  }, [auctionState.currentAuctionStatus, currentPlayer, teams]);
+
   return (
     <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative', background: 'transparent' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Concert+One&family=Coda+Caption:wght@800&family=Graduate&family=Inconsolata:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Concert+One&family=Coda+Caption:wght@800&family=Graduate&family=Inconsolata:wght@400;700&family=Rajdhani:wght@500;600;700&display=swap');
         @keyframes customTickerScroll {
           0%   { transform: translateY(-50%) translateX(0); }
           100% { transform: translateY(-50%) translateX(-50%); }
@@ -547,10 +669,21 @@ function CustomOverlayContent({
           </div>
         )}
 
-        {/* ── Premium Player Card ── (standard mode only, unless hidden by control panel) */}
+        {/* ── Top 10 Sold Summary mode ── */}
+        {overlaySettings.displayMode === 'top10-summary' && (
+          <div style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
+            <Top10SummaryOverlay
+              players={players}
+              teams={teams}
+              tournament={tournament}
+            />
+          </div>
+        )}
+
+        {/* ── Premium Player Card ── (standard + custom-ticker modes, unless hidden by control panel) */}
         {/* Small: 45% scale, centered at x=960, just above bid panel */}
         {/* Large: original Figma slot left=713, top=237 */}
-        {overlaySettings.displayMode === 'standard' && !overlaySettings.hidePremiumCard && (
+        {(overlaySettings.displayMode === 'standard' || overlaySettings.displayMode === 'custom-ticker') && !overlaySettings.hidePremiumCard && (
           <div style={{
             position: 'absolute',
             left:            overlaySettings.size === 'small' ? 849 : 713,
@@ -603,9 +736,9 @@ function CustomOverlayContent({
           </div>
         )}
 
-        {/* ── Bid Info Panel ── (standard mode only) */}
+        {/* ── Bid Info Panel ── (standard + custom-ticker modes) */}
         {/* Small: 60% scale, pills repositioned just above ticker */}
-        {overlaySettings.displayMode === 'standard' && (
+        {(overlaySettings.displayMode === 'standard' || overlaySettings.displayMode === 'custom-ticker') && (
           <BidInfoPanel
             tournament={tournament}
             currentPlayer={currentPlayer}
@@ -614,9 +747,9 @@ function CustomOverlayContent({
           />
         )}
 
-        {/* ── Team Cards Panel ── (standard mode only) */}
-        {overlaySettings.displayMode === 'standard' && (
-          <TeamCardsPanel teams={teams} tournament={tournament} />
+        {/* ── Team Cards Panel ── (standard + custom-ticker modes) */}
+        {(overlaySettings.displayMode === 'standard' || overlaySettings.displayMode === 'custom-ticker') && (
+          <TeamCardsPanel teams={teams} tournament={tournament} currentBid={auctionState.currentBid ?? 0} />
         )}
 
         {/* ── Ticker component ── (always shown) */}
@@ -626,7 +759,21 @@ function CustomOverlayContent({
           teams={teams}
           tournament={tournament}
           mode={overlaySettings.tickerMode}
+          customMode={overlaySettings.displayMode === 'custom-ticker'}
+          customLine1={overlaySettings.customTickerLine1}
+          customLine2={overlaySettings.customTickerLine2}
         />
+
+        {/* Sold Message Toast */}
+        {soldToast && (
+          <SoldMessageToast
+            player={soldToast.player}
+            team={soldToast.team}
+            finalPrice={soldToast.price}
+            exiting={toastExiting}
+            position={overlaySettings.soldMessagePosition ?? 'bottom-right'}
+          />
+        )}
       </div>
     </div>
   );

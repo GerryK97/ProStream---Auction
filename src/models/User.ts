@@ -8,7 +8,6 @@ export interface IUser extends Document {
   role: 'Admin' | 'Tournament' | 'MasterManager' | 'Team' | 'Player' | 'Audience';
   status: 'Active' | 'PendingApproval' | 'Suspended';
   plan: 'Free' | 'Standard' | 'Offer';
-  tournamentAllowance: number;
 
   // Role-specific assignments
   assignedTournaments?: string[]; // For Tournament Managers
@@ -66,12 +65,6 @@ const UserSchema = new Schema<IUser>(
       enum: ['Free', 'Standard', 'Offer'],
       required: true,
       default: 'Free',
-    },
-    tournamentAllowance: {
-      type: Number,
-      required: true,
-      default: 1,
-      min: 0,
     },
     assignedTournaments: {
       type: [String],

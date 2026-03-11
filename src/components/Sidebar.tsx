@@ -75,7 +75,7 @@ const NAV_GROUPS = [
       {
         label: 'Overlays',
         href: '/overlays',
-        roles: null,
+        roles: ['Admin'],
         icon: (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0">
             <rect x="2" y="3" width="20" height="14" rx="2" />

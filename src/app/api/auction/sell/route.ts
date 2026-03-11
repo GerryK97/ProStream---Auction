@@ -5,6 +5,7 @@ import { TournamentModel } from '@/models/Tournament';
 import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
 import { triggerPlayerSold } from '@/lib/pusher-server';
+import { getMinClassBasePrice } from '@/lib/playerClassUtils';
 
 // POST /api/auction/sell - Sell the current player to the winning team
 export async function POST(request: NextRequest) {
@@ -58,6 +59,24 @@ export async function POST(request: NextRequest) {
     if (!tournament || (tournament as any).status !== 'Live') {
       return NextResponse.json(
         { error: 'Auction is not live' },
+        { status: 400 }
+      );
+    }
+
+    // Validate bid does not exceed team's max affordable bid (reserve budget for remaining squad slots)
+    const squadSize = (tournament as any)?.squadSize ?? 0;
+    const basePrice = getMinClassBasePrice(tournament as any);
+    const playersPurchased = (team as any).playersPurchased?.length ?? 0;
+    const squadRemainingPlayers = squadSize - playersPurchased;
+    const maxBid = squadRemainingPlayers <= 1
+      ? ((team as any).currentBalance ?? 0)
+      : Math.max(0, ((team as any).currentBalance ?? 0) - (squadRemainingPlayers - 1) * basePrice);
+
+    if (auctionState.currentBid > maxBid) {
+      return NextResponse.json(
+        {
+          error: `Cannot sell to ${(team as any).name} — bid of ₹${auctionState.currentBid.toLocaleString('en-IN')} exceeds their max bid of ₹${maxBid.toLocaleString('en-IN')} (balance needed for remaining squad slots)`,
+        },
         { status: 400 }
       );
     }
