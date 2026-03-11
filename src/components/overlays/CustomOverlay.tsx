@@ -5,6 +5,7 @@ import OverlayWrapper from './OverlayWrapper';
 import PremiumPlayerCardOverlay from './PremiumPlayerCardOverlay';
 import SoldPlayersSummaryOverlay from './SoldPlayersSummaryOverlay';
 import TeamSummaryOverlay from './TeamSummaryOverlay';
+import TeamWiseSummaryOverlay from './TeamWiseSummaryOverlay';
 import RestingTimeOverlay from './RestingTimeOverlay';
 import Top10SummaryOverlay from './Top10SummaryOverlay';
 import SoldMessageToast from './SoldMessageToast';
@@ -673,6 +674,17 @@ function CustomOverlayContent({
         {overlaySettings.displayMode === 'top10-summary' && (
           <div style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
             <Top10SummaryOverlay
+              players={players}
+              teams={teams}
+              tournament={tournament}
+            />
+          </div>
+        )}
+
+        {/* ── Team Wise Summary mode ── */}
+        {overlaySettings.displayMode === 'team-wise-summary' && (
+          <div style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
+            <TeamWiseSummaryOverlay
               players={players}
               teams={teams}
               tournament={tournament}

@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import OverlayWrapper from './OverlayWrapper';
 import SoldPlayersSummaryOverlay from './SoldPlayersSummaryOverlay';
 import TeamSummaryOverlay from './TeamSummaryOverlay';
+import TeamWiseSummaryOverlay from './TeamWiseSummaryOverlay';
 import RestingTimeOverlay from './RestingTimeOverlay';
 import Top10SummaryOverlay from './Top10SummaryOverlay';
 import SoldMessageFullScreen from './SoldMessageFullScreen';
@@ -637,7 +638,7 @@ function FullScreenOverlayContent({
         setPanelExiting(false);
       }, 1500);
       return () => clearTimeout(t);
-    } else if (prev === 'sold-summary' || prev === 'team-summary' || prev === 'top10-summary') {
+    } else if (prev === 'sold-summary' || prev === 'team-summary' || prev === 'team-wise-summary' || prev === 'top10-summary') {
       setSummaryExiting(true);
       const t = setTimeout(() => {
         setActiveMode(incoming);
@@ -762,6 +763,18 @@ function FullScreenOverlayContent({
         {activeMode === 'top10-summary' && (
           <div style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
             <Top10SummaryOverlay
+              players={players}
+              teams={teams}
+              tournament={tournament}
+              isExiting={summaryExiting}
+            />
+          </div>
+        )}
+
+        {/* ── Team Wise Summary mode ── */}
+        {activeMode === 'team-wise-summary' && (
+          <div style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
+            <TeamWiseSummaryOverlay
               players={players}
               teams={teams}
               tournament={tournament}

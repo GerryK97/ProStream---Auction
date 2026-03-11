@@ -11,7 +11,7 @@ import '../../styles/animations.css';
 export interface OverlaySettings {
     size: 'large' | 'small';
     tickerMode: 'all' | 'sold' | 'available';
-    displayMode: 'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary' | 'custom-ticker';
+    displayMode: 'standard' | 'sold-summary' | 'team-summary' | 'team-wise-summary' | 'resting' | 'top10-summary' | 'custom-ticker';
     hidePremiumCard: boolean;
     customTickerLine1: string;
     customTickerLine2: string;

@@ -169,6 +169,7 @@ export type OverlayType =
   | 'leaderboard'
   | 'sale-banner'
   | 'sold-summary'
+  | 'team-wise-summary'
   | 'auction-overview'
   | 'player-highlight-led';
 

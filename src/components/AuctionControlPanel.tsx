@@ -496,7 +496,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     // Overlay control panel settings
     const [overlaySize, setOverlaySize] = useState<'large' | 'small'>('large');
     const [tickerMode, setTickerMode] = useState<'all' | 'sold' | 'available'>('all');
-    const [displayMode, setDisplayMode] = useState<'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary' | 'custom-ticker'>('standard');
+    const [displayMode, setDisplayMode] = useState<'standard' | 'sold-summary' | 'team-summary' | 'team-wise-summary' | 'resting' | 'top10-summary' | 'custom-ticker'>('standard');
     const [hidePremiumCard, setHidePremiumCard] = useState(false);
     const [autoSwitch, setAutoSwitch] = useState(false);
     const [autoSwitchDuration, setAutoSwitchDuration] = useState(5);
@@ -525,7 +525,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const sendOverlaySettings = async (
         size: 'large' | 'small',
         mode: 'all' | 'sold' | 'available',
-        dm: 'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary' | 'custom-ticker' = displayModeRef.current,
+        dm: 'standard' | 'sold-summary' | 'team-summary' | 'team-wise-summary' | 'resting' | 'top10-summary' | 'custom-ticker' = displayModeRef.current,
         hideCard: boolean = hidePremiumCardRef.current,
         line1: string = customTickerLine1Ref.current,
         line2: string = customTickerLine2Ref.current,
@@ -1440,7 +1440,29 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                                     <span className="w-2 h-2 rounded-full bg-yellow-300 animate-pulse" />
                                 )}
                             </button>
-                            {(displayMode === 'sold-summary' || displayMode === 'team-summary' || displayMode === 'top10-summary') && (
+                            {/* Divider */}
+                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
+                            {/* Team Wise Summary */}
+                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Team Wise:</span>
+                            <button
+                                onClick={() => {
+                                    const next = displayMode === 'team-wise-summary' ? 'standard' : 'team-wise-summary';
+                                    setDisplayMode(next);
+                                    sendOverlaySettings(overlaySize, tickerMode, next);
+                                }}
+                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
+                                style={{
+                                    backgroundColor: displayMode === 'team-wise-summary' ? 'var(--brand-primary)' : 'var(--surface-elevated)',
+                                    color: displayMode === 'team-wise-summary' ? '#fff' : 'var(--text-secondary)',
+                                    border: '1px solid var(--border-primary)',
+                                }}
+                            >
+                                <span>Show</span>
+                                {displayMode === 'team-wise-summary' && (
+                                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                                )}
+                            </button>
+                            {(displayMode === 'sold-summary' || displayMode === 'team-summary' || displayMode === 'team-wise-summary' || displayMode === 'top10-summary') && (
                                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                                     Player Card &amp; Teams hidden
                                 </span>
