@@ -230,6 +230,7 @@ export default function UsersPage() {
       status: user.status,
       assignedTournaments: user.assignedTournaments || [],
       plan: (user.plan as any) || 'Free',
+      newPassword: '',
     });
     setShowEditModal(true);
   };
@@ -400,85 +401,85 @@ export default function UsersPage() {
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                <thead style={{
-                  borderColor: 'var(--border-primary)',
-                  borderBottom: `1px solid var(--border-primary)`,
-                  backgroundColor: 'var(--surface-elevated)'
-                }}>
-                  <tr>
-                    <th className="px-6 py-4 text-left text-sm font-semibold">Username</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold">Email</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold">Role</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold">Status</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {displayUsers.map((u) => (
-                    <tr key={u._id} style={{
-                      borderColor: 'var(--border-primary)',
-                      borderBottom: `1px solid var(--border-primary)`
-                    }} className="hover:opacity-80 transition-opacity">
-                      <td className="px-6 py-4 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{u.username}</td>
-                      <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>{u.email}</td>
-                      <td className="px-6 py-4 text-sm">
-                        <span
-                          className="px-3 py-1 rounded text-xs font-medium"
-                          style={{
-                            backgroundColor: 'color-mix(in oklab, var(--brand-primary) 22%, var(--surface-elevated))',
-                            color: 'var(--brand-primary)'
-                          }}
-                        >
-                          {u.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <span
-                          className="px-3 py-1 rounded text-xs font-medium"
-                          style={{
-                            backgroundColor: u.status === 'Active'
-                              ? 'color-mix(in oklab, var(--status-success) 22%, var(--surface-elevated))'
-                              : 'color-mix(in oklab, var(--status-warning) 22%, var(--surface-elevated))',
-                            color: u.status === 'Active' ? 'var(--status-success)' : 'var(--status-warning)'
-                          }}
-                        >
-                          {u.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm space-x-2">
-                        {u.status === 'PendingApproval' && (
-                          <>
-                            <button
-                              onClick={() => handleApproveUser(u._id)}
-                              className="px-3 py-1 rounded text-xs font-medium transition-colors hover:opacity-80"
-                              style={{ backgroundColor: 'var(--status-success)', color: '#fff' }}
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => handleRejectUser(u._id)}
-                              className="px-3 py-1 rounded text-xs font-medium transition-colors hover:opacity-80"
-                              style={{ backgroundColor: 'var(--status-danger)', color: '#fff' }}
-                            >
-                              Reject
-                            </button>
-                          </>
-                        )}
-                        <EditButton
-                          size="sm"
-                          ariaLabel={`Edit user ${u.username}`}
-                          onClick={() => handleEditClick(u)}
-                          className="align-middle"
-                        />
-                        <DeleteButton
-                          ariaLabel={`Delete user ${u.username}`}
-                          onClick={() => handleDeleteUser(u._id)}
-                          className="ml-2 align-middle"
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
+                      <thead style={{
+                        borderColor: 'var(--border-primary)',
+                        borderBottom: `1px solid var(--border-primary)`,
+                        backgroundColor: 'var(--surface-elevated)'
+                      }}>
+                        <tr>
+                          <th className="px-6 py-4 text-left text-sm font-semibold">Username</th>
+                          <th className="px-6 py-4 text-left text-sm font-semibold">Email</th>
+                          <th className="px-6 py-4 text-left text-sm font-semibold">Role</th>
+                          <th className="px-6 py-4 text-left text-sm font-semibold">Status</th>
+                          <th className="px-6 py-4 text-left text-sm font-semibold">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {displayUsers.map((u) => (
+                          <tr key={u._id} style={{
+                            borderColor: 'var(--border-primary)',
+                            borderBottom: `1px solid var(--border-primary)`
+                          }} className="hover:opacity-80 transition-opacity">
+                            <td className="px-6 py-4 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{u.username}</td>
+                            <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>{u.email}</td>
+                            <td className="px-6 py-4 text-sm">
+                              <span
+                                className="px-3 py-1 rounded text-xs font-medium"
+                                style={{
+                                  backgroundColor: 'color-mix(in oklab, var(--brand-primary) 22%, var(--surface-elevated))',
+                                  color: 'var(--brand-primary)'
+                                }}
+                              >
+                                {u.role}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-sm">
+                              <span
+                                className="px-3 py-1 rounded text-xs font-medium"
+                                style={{
+                                  backgroundColor: u.status === 'Active'
+                                    ? 'color-mix(in oklab, var(--status-success) 22%, var(--surface-elevated))'
+                                    : 'color-mix(in oklab, var(--status-warning) 22%, var(--surface-elevated))',
+                                  color: u.status === 'Active' ? 'var(--status-success)' : 'var(--status-warning)'
+                                }}
+                              >
+                                {u.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-sm space-x-2">
+                              {u.status === 'PendingApproval' && (
+                                <>
+                                  <button
+                                    onClick={() => handleApproveUser(u._id)}
+                                    className="px-3 py-1 rounded text-xs font-medium transition-colors hover:opacity-80"
+                                    style={{ backgroundColor: 'var(--status-success)', color: '#fff' }}
+                                  >
+                                    Approve
+                                  </button>
+                                  <button
+                                    onClick={() => handleRejectUser(u._id)}
+                                    className="px-3 py-1 rounded text-xs font-medium transition-colors hover:opacity-80"
+                                    style={{ backgroundColor: 'var(--status-danger)', color: '#fff' }}
+                                  >
+                                    Reject
+                                  </button>
+                                </>
+                              )}
+                              <EditButton
+                                size="sm"
+                                ariaLabel={`Edit user ${u.username}`}
+                                onClick={() => handleEditClick(u)}
+                                className="align-middle"
+                              />
+                              <DeleteButton
+                                ariaLabel={`Delete user ${u.username}`}
+                                onClick={() => handleDeleteUser(u._id)}
+                                className="ml-2 align-middle"
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
                     </table>
                   </div>
                 )}
