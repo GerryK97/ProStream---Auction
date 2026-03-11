@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       reAuctionedCount: unsoldPlayers.length,
-      reAuctionedPlayerIds: unsoldPlayers.map(p => p._id.toString()),
+      reAuctionedPlayerIds: unsoldPlayers.map(p => (p as any)._id.toString()),
       message: `${unsoldPlayers.length} player(s) are now available for re-auction`,
     });
   } catch (error) {
