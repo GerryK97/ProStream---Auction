@@ -6,7 +6,7 @@ import SoldPlayersSummaryOverlay from './SoldPlayersSummaryOverlay';
 import TeamSummaryOverlay from './TeamSummaryOverlay';
 import RestingTimeOverlay from './RestingTimeOverlay';
 import Top10SummaryOverlay from './Top10SummaryOverlay';
-import SoldMessageToast from './SoldMessageToast';
+import SoldMessageFullScreen from './SoldMessageFullScreen';
 import { AuctionState, Player, Team, Tournament } from '@/types';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
 import type { OverlaySettings } from './OverlayWrapper';
@@ -797,14 +797,13 @@ function FullScreenOverlayContent({
           customLine2={effectiveSettings.customTickerLine2}
         />
 
-        {/* Sold Message Toast */}
+        {/* Full-screen sold message — covers everything including ticker */}
         {soldToast && (
-          <SoldMessageToast
+          <SoldMessageFullScreen
             player={soldToast.player}
             team={soldToast.team}
             finalPrice={soldToast.price}
             exiting={toastExiting}
-            position={effectiveSettings.soldMessagePosition ?? 'bottom-right'}
           />
         )}
       </div>

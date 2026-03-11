@@ -60,11 +60,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Auto-stop any other live tournament before restarting this one
-    await TournamentModel.updateMany(
-      { status: 'Live', _id: { $ne: tournamentId } },
-      { $set: { status: 'Stopped' } }
-    );
+    // Non-Admin users can only have one Live tournament at a time.
+    // Auto-stop their other Live tournament (if any) before restarting this one.
+    // Admin users may run multiple tournaments concurrently — do not touch others.
+    if (user.role !== 'Admin') {
+      await TournamentModel.updateMany(
+        { status: 'Live', _id: { $ne: tournamentId }, createdBy: user.userId },
+        { $set: { status: 'Stopped' } }
+      );
+    }
 
     // Check if there are unsold players
     const unsoldPlayers = await PlayerModel.countDocuments({

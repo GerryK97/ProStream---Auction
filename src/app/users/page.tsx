@@ -46,6 +46,7 @@ export default function UsersPage() {
     status: 'Active',
     assignedTournaments: [] as string[],
     plan: 'Free' as 'Free' | 'Standard' | 'Offer',
+    newPassword: '',
   });
   const [formData, setFormData] = useState({
     username: '',
@@ -238,13 +239,17 @@ export default function UsersPage() {
     if (!token || !editingUser) return;
 
     try {
+      const { newPassword, ...restFormData } = editFormData;
       const response = await fetch(`/api/users/${editingUser._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(editFormData),
+        body: JSON.stringify({
+          ...restFormData,
+          ...(newPassword ? { password: newPassword } : {}),
+        }),
       });
 
       if (!response.ok) {
@@ -261,6 +266,7 @@ export default function UsersPage() {
         status: 'Active',
         assignedTournaments: [],
         plan: 'Free',
+        newPassword: '',
       });
 
       // Refresh users list
@@ -625,6 +631,21 @@ export default function UsersPage() {
                         className="w-full px-4 py-2 rounded focus:outline-none"
                         style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
                         required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                        New Password <span className="text-xs font-normal" style={{ color: 'var(--text-tertiary)' }}>(leave blank to keep unchanged)</span>
+                      </label>
+                      <input
+                        type="password"
+                        value={editFormData.newPassword}
+                        onChange={(e) => setEditFormData({ ...editFormData, newPassword: e.target.value })}
+                        className="w-full px-4 py-2 rounded focus:outline-none"
+                        style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
+                        placeholder="Enter new password"
+                        minLength={6}
                       />
                     </div>
 
