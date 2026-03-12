@@ -496,7 +496,10 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     // Overlay control panel settings
     const [overlaySize, setOverlaySize] = useState<'large' | 'small'>('large');
     const [tickerMode, setTickerMode] = useState<'all' | 'sold' | 'available'>('all');
-    const [displayMode, setDisplayMode] = useState<'standard' | 'sold-summary' | 'team-summary' | 'team-wise-summary' | 'resting' | 'top10-summary' | 'custom-ticker'>('standard');
+    const [displayMode, setDisplayMode] = useState<'standard' | 'sold-summary' | 'team-summary' | 'team-wise-summary' | 'resting' | 'top10-summary' | 'custom-ticker' | 'wheel-spin'>('standard');
+    const [isSpinning, setIsSpinning] = useState(false);
+    const spinTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [hidePremiumCard, setHidePremiumCard] = useState(false);
     const [autoSwitch, setAutoSwitch] = useState(false);
     const [autoSwitchDuration, setAutoSwitchDuration] = useState(5);
@@ -525,7 +528,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const sendOverlaySettings = async (
         size: 'large' | 'small',
         mode: 'all' | 'sold' | 'available',
-        dm: 'standard' | 'sold-summary' | 'team-summary' | 'team-wise-summary' | 'resting' | 'top10-summary' | 'custom-ticker' = displayModeRef.current,
+        dm: 'standard' | 'sold-summary' | 'team-summary' | 'team-wise-summary' | 'resting' | 'top10-summary' | 'custom-ticker' | 'wheel-spin' = displayModeRef.current,
         hideCard: boolean = hidePremiumCardRef.current,
         line1: string = customTickerLine1Ref.current,
         line2: string = customTickerLine2Ref.current,
@@ -614,9 +617,13 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [auctionState.currentPlayerId, autoSwitch]);
 
-    // Cleanup timer on unmount
+    // Cleanup timers on unmount
     useEffect(() => {
-        return () => { if (autoSwitchTimerRef.current) clearTimeout(autoSwitchTimerRef.current); };
+        return () => {
+            if (autoSwitchTimerRef.current) clearTimeout(autoSwitchTimerRef.current);
+            if (spinTimerRef.current)       clearTimeout(spinTimerRef.current);
+            if (resetTimerRef.current)      clearTimeout(resetTimerRef.current);
+        };
     }, []);
 
     // Display Pusher errors
@@ -894,6 +901,50 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         } catch (error) {
             console.error('Failed to select player:', error);
             setError('An error occurred while selecting the player');
+        }
+    };
+
+    const handleSpinWheel = async () => {
+        if (isSpinning || !liveTournament) return;
+        const tournamentId = liveTournament._id;
+        setIsSpinning(true);
+        setDisplayMode('wheel-spin');
+        displayModeRef.current = 'wheel-spin';
+        try {
+            const res = await fetch('/api/overlay/spin', {
+                method: 'POST',
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tournamentId }),
+            });
+            if (!res.ok) {
+                const { error } = await res.json().catch(() => ({}));
+                setError(error || 'Spin failed');
+                setIsSpinning(false);
+                setDisplayMode('standard');
+                displayModeRef.current = 'standard';
+                return;
+            }
+            const { winnerId } = await res.json();
+            // Auto-select winner after spin (8s) + buffer (200ms)
+            spinTimerRef.current = setTimeout(async () => {
+                await fetch('/api/auction/select-player', {
+                    method: 'POST',
+                    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tournamentId, playerId: winnerId }),
+                }).catch(() => {});
+                // Reset overlay to standard after hold period (3s)
+                resetTimerRef.current = setTimeout(async () => {
+                    setDisplayMode('standard');
+                    displayModeRef.current = 'standard';
+                    setIsSpinning(false);
+                    await sendOverlaySettings(overlaySize, tickerMode, 'standard');
+                }, 3000);
+            }, 8200);
+        } catch {
+            setIsSpinning(false);
+            setDisplayMode('standard');
+            displayModeRef.current = 'standard';
+            setError('Spin failed');
         }
     };
 
@@ -1520,6 +1571,27 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                                     Player Card &amp; Teams hidden
                                 </span>
+                            )}
+                        </div>
+
+                        {/* Row 5: Spin Wheel */}
+                        <div className="flex items-center gap-3 mt-4 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border-primary)' }}>
+                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Spin Wheel:</span>
+                            <button
+                                onClick={handleSpinWheel}
+                                disabled={isSpinning || !liveTournament || auctionState.currentAuctionStatus === 'Bidding'}
+                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                style={{
+                                    backgroundColor: isSpinning ? '#7C3AED' : 'var(--surface-elevated)',
+                                    color: isSpinning ? '#fff' : 'var(--text-secondary)',
+                                    border: '1px solid var(--border-primary)',
+                                }}
+                            >
+                                <span>{isSpinning ? 'Spinning…' : 'Spin'}</span>
+                                {isSpinning && <span className="w-2 h-2 rounded-full bg-purple-300 animate-pulse" />}
+                            </button>
+                            {isSpinning && (
+                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Auto-selects winner in ~8s</span>
                             )}
                         </div>
                     </div>

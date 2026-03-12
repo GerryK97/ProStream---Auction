@@ -21,6 +21,7 @@ import type {
   PlayerMarkedUnsoldEvent,
   AuctionStateUpdateEvent,
   OverlaySettingsEvent,
+  WheelSpinEvent,
 } from '@/types/pusher-events';
 
 // Validate environment variables
@@ -217,6 +218,16 @@ export async function triggerOverlaySettings(
   data: Omit<OverlaySettingsEvent, 'tournamentId' | 'timestamp'>
 ): Promise<void> {
   return triggerAuctionEvent(tournamentId, 'overlay:settings', data);
+}
+
+/**
+ * Helper: Trigger overlay:wheel-spin event
+ */
+export async function triggerWheelSpin(
+  tournamentId: string,
+  data: Omit<WheelSpinEvent, 'tournamentId' | 'timestamp'>
+): Promise<void> {
+  return triggerAuctionEvent(tournamentId, 'overlay:wheel-spin', data);
 }
 
 /**

@@ -8,10 +8,12 @@ import TeamSummaryOverlay from './TeamSummaryOverlay';
 import TeamWiseSummaryOverlay from './TeamWiseSummaryOverlay';
 import RestingTimeOverlay from './RestingTimeOverlay';
 import Top10SummaryOverlay from './Top10SummaryOverlay';
+import WheelSpinOverlay from './WheelSpinOverlay';
 import SoldMessageToast from './SoldMessageToast';
 import { AuctionState, Player, Team, Tournament } from '@/types';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
 import type { OverlaySettings } from './OverlayWrapper';
+import type { WheelSpinEvent } from '@/types/pusher-events';
 
 // ─── Ticker strip ─────────────────────────────────────────────────────────────
 
@@ -567,6 +569,7 @@ function CustomOverlayContent({
   tournament,
   auctionState,
   overlaySettings,
+  wheelSpinData,
 }: {
   soldPlayers: Player[];
   teams: Team[];
@@ -575,6 +578,7 @@ function CustomOverlayContent({
   tournament: Tournament | null;
   auctionState: AuctionState;
   overlaySettings: OverlaySettings;
+  wheelSpinData: WheelSpinEvent | null;
 }) {
   const [scale, setScale] = useState(1);
 
@@ -692,6 +696,13 @@ function CustomOverlayContent({
           </div>
         )}
 
+        {/* ── Wheel Spin mode ── */}
+        {overlaySettings.displayMode === 'wheel-spin' && wheelSpinData && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
+            <WheelSpinOverlay data={wheelSpinData} />
+          </div>
+        )}
+
         {/* ── Premium Player Card ── (standard + custom-ticker modes, unless hidden by control panel) */}
         {/* Small: 45% scale, centered at x=960, just above bid panel */}
         {/* Large: original Figma slot left=713, top=237 */}
@@ -797,7 +808,7 @@ export default function CustomOverlay({ tournamentId }: { tournamentId: string }
   return (
     <div className="w-screen h-screen overflow-hidden bg-transparent">
       <OverlayWrapper tournamentId={tournamentId}>
-        {({ soldPlayers, teams, players, currentPlayer, tournament, auctionState, overlaySettings }) => (
+        {({ soldPlayers, teams, players, currentPlayer, tournament, auctionState, overlaySettings, wheelSpinData }) => (
           <CustomOverlayContent
             soldPlayers={soldPlayers}
             teams={teams}
@@ -806,6 +817,7 @@ export default function CustomOverlay({ tournamentId }: { tournamentId: string }
             tournament={tournament}
             auctionState={auctionState}
             overlaySettings={overlaySettings}
+            wheelSpinData={wheelSpinData}
           />
         )}
       </OverlayWrapper>

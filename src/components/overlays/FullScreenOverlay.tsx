@@ -7,10 +7,12 @@ import TeamSummaryOverlay from './TeamSummaryOverlay';
 import TeamWiseSummaryOverlay from './TeamWiseSummaryOverlay';
 import RestingTimeOverlay from './RestingTimeOverlay';
 import Top10SummaryOverlay from './Top10SummaryOverlay';
+import WheelSpinOverlay from './WheelSpinOverlay';
 import SoldMessageFullScreen from './SoldMessageFullScreen';
 import { AuctionState, Player, Team, Tournament } from '@/types';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
 import type { OverlaySettings } from './OverlayWrapper';
+import type { WheelSpinEvent } from '@/types/pusher-events';
 
 // ─── Ticker strip ─────────────────────────────────────────────────────────────
 
@@ -594,6 +596,7 @@ function FullScreenOverlayContent({
   tournament,
   auctionState,
   overlaySettings,
+  wheelSpinData,
 }: {
   soldPlayers: Player[];
   teams: Team[];
@@ -602,6 +605,7 @@ function FullScreenOverlayContent({
   tournament: Tournament | null;
   auctionState: AuctionState;
   overlaySettings: OverlaySettings;
+  wheelSpinData: WheelSpinEvent | null;
 }) {
   const [scale, setScale] = useState(1);
 
@@ -638,7 +642,7 @@ function FullScreenOverlayContent({
         setPanelExiting(false);
       }, 1500);
       return () => clearTimeout(t);
-    } else if (prev === 'sold-summary' || prev === 'team-summary' || prev === 'team-wise-summary' || prev === 'top10-summary') {
+    } else if (prev === 'sold-summary' || prev === 'team-summary' || prev === 'team-wise-summary' || prev === 'top10-summary' || prev === 'wheel-spin') {
       setSummaryExiting(true);
       const t = setTimeout(() => {
         setActiveMode(incoming);
@@ -783,6 +787,13 @@ function FullScreenOverlayContent({
           </div>
         )}
 
+        {/* ── Wheel Spin mode ── */}
+        {activeMode === 'wheel-spin' && wheelSpinData && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
+            <WheelSpinOverlay data={wheelSpinData} />
+          </div>
+        )}
+
         {/* ── New Player Auction Panel ── (standard + custom-ticker modes, with ScaleY enter/exit) */}
         {(activeMode === 'standard' || activeMode === 'custom-ticker') && (
           <div
@@ -830,7 +841,7 @@ export default function FullScreenOverlay({ tournamentId }: { tournamentId: stri
   return (
     <div className="w-screen h-screen overflow-hidden" style={{ background: 'linear-gradient(160deg, #0a0a14 0%, #111827 60%, #0d1117 100%)' }}>
       <OverlayWrapper tournamentId={tournamentId}>
-        {({ soldPlayers, teams, players, currentPlayer, tournament, auctionState, overlaySettings }) => (
+        {({ soldPlayers, teams, players, currentPlayer, tournament, auctionState, overlaySettings, wheelSpinData }) => (
           <FullScreenOverlayContent
             soldPlayers={soldPlayers}
             teams={teams}
@@ -839,6 +850,7 @@ export default function FullScreenOverlay({ tournamentId }: { tournamentId: stri
             tournament={tournament}
             auctionState={auctionState}
             overlaySettings={overlaySettings}
+            wheelSpinData={wheelSpinData}
           />
         )}
       </OverlayWrapper>

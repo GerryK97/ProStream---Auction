@@ -21,7 +21,8 @@ export type PusherEventName =
   | 'auction:undo'
   | 'auction:player-unsold'
   | 'auction:state-update'
-  | 'overlay:settings';
+  | 'overlay:settings'
+  | 'overlay:wheel-spin';
 
 /**
  * Base interface for all Pusher events
@@ -151,11 +152,29 @@ export interface AuctionStateUpdateEvent extends BasePusherEvent {
 export interface OverlaySettingsEvent extends BasePusherEvent {
   size: 'large' | 'small';
   tickerMode: 'all' | 'sold' | 'available';
-  displayMode: 'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary' | 'custom-ticker';
+  displayMode: 'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary' | 'custom-ticker' | 'wheel-spin';
   hidePremiumCard?: boolean;
   customTickerLine1?: string;
   customTickerLine2?: string;
   soldMessagePosition?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+}
+
+/**
+ * Event: overlay:wheel-spin
+ * Triggered when admin clicks "Spin Wheel" — carries a snapshot of available
+ * players and the pre-determined winner index so overlays animate to the result.
+ */
+export interface WheelSpinEvent extends BasePusherEvent {
+  players: Array<{
+    _id: string;
+    name: string;
+    playerNo?: string;
+    position?: string;
+    playerClass?: string;
+  }>;
+  winnerId: string;
+  winnerIndex: number;
+  spinDurationMs: number;
 }
 
 /**
@@ -172,7 +191,8 @@ export type PusherEventPayload =
   | AuctionUndoEvent
   | PlayerMarkedUnsoldEvent
   | AuctionStateUpdateEvent
-  | OverlaySettingsEvent;
+  | OverlaySettingsEvent
+  | WheelSpinEvent;
 
 /**
  * Helper function to get channel name for a tournament

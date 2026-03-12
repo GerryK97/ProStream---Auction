@@ -5,13 +5,13 @@ import { useSearchParams } from 'next/navigation';
 import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { Tournament, AuctionState, Player, Team } from '@/types';
 import { getPusherClient } from '@/lib/pusher-client';
-import type { OverlaySettingsEvent } from '@/types/pusher-events';
+import type { OverlaySettingsEvent, WheelSpinEvent } from '@/types/pusher-events';
 import '../../styles/animations.css';
 
 export interface OverlaySettings {
     size: 'large' | 'small';
     tickerMode: 'all' | 'sold' | 'available';
-    displayMode: 'standard' | 'sold-summary' | 'team-summary' | 'team-wise-summary' | 'resting' | 'top10-summary' | 'custom-ticker';
+    displayMode: 'standard' | 'sold-summary' | 'team-summary' | 'team-wise-summary' | 'resting' | 'top10-summary' | 'custom-ticker' | 'wheel-spin';
     hidePremiumCard: boolean;
     customTickerLine1: string;
     customTickerLine2: string;
@@ -39,6 +39,7 @@ interface OverlayWrapperProps {
         currentPlayer: Player | undefined;
         soldPlayers: Player[];
         overlaySettings: OverlaySettings;
+        wheelSpinData: WheelSpinEvent | null;
     }) => ReactNode;
 }
 
@@ -115,6 +116,10 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
     // Overlay settings — updated via overlay:settings Pusher event
     const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>(DEFAULT_OVERLAY_SETTINGS);
 
+    // Wheel spin data — updated via overlay:wheel-spin Pusher event
+    const [wheelSpinData, setWheelSpinData] = useState<WheelSpinEvent | null>(null);
+    const wheelResetTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
     useEffect(() => {
         if (!liveTournamentId) return;
         // Only subscribe when the tournament channel is active (Live/Paused/Stopped)
@@ -134,8 +139,19 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
                 soldMessagePosition: data.soldMessagePosition ?? 'bottom-right',
             });
         });
+
+        channel.bind('overlay:wheel-spin', (data: WheelSpinEvent) => {
+            setWheelSpinData(data);
+            if (wheelResetTimerRef.current) clearTimeout(wheelResetTimerRef.current);
+            wheelResetTimerRef.current = setTimeout(() => {
+                setWheelSpinData(null);
+            }, (data.spinDurationMs ?? 8000) + 3500);
+        });
+
         return () => {
             channel.unbind('overlay:settings');
+            channel.unbind('overlay:wheel-spin');
+            if (wheelResetTimerRef.current) clearTimeout(wheelResetTimerRef.current);
             // Don't unsubscribe the channel here — usePusherAuction owns it
         };
     }, [liveTournamentId, tournament?.status]);
@@ -208,6 +224,7 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
                 currentPlayer,
                 soldPlayers,
                 overlaySettings,
+                wheelSpinData,
             })}
         </div>
     );
