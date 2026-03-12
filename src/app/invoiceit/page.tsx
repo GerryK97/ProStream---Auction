@@ -52,47 +52,53 @@ export default function InvoiceItPage() {
     try {
       setLoading(true);
 
-      // Fetch invoices and quotations in parallel
+      // Fetch invoices and quotations stats in parallel
       const [invoicesResponse, quotationsResponse] = await Promise.all([
-        fetch('/api/invoices', { headers: getAuthHeaders() }),
-        fetch('/api/quotations', { headers: getAuthHeaders() }).catch(() => null),
+        fetch('/api/invoices/stats', { headers: getAuthHeaders() }),
+        fetch('/api/quotations/stats', { headers: getAuthHeaders() }).catch(() => null),
       ]);
 
       if (!invoicesResponse.ok) {
-        throw new Error('Failed to fetch invoices');
+        throw new Error('Failed to fetch invoices stats');
       }
 
       const invoicesData = await invoicesResponse.json();
-      const invoices: Invoice[] = invoicesData.invoices || [];
+      const invoiceStats = invoicesData.stats || null;
 
-      // Quotations might not be implemented yet, so handle gracefully
-      let quotations: Quotation[] = [];
+      let quotationStats = null;
       if (quotationsResponse && quotationsResponse.ok) {
         const quotationsData = await quotationsResponse.json();
-        quotations = quotationsData.quotations || [];
+        quotationStats = quotationsData.stats || null;
       }
 
-      // Calculate statistics
-      const totalInvoices = invoices.length;
-      const totalPaid = invoices.reduce((sum, inv) => sum + inv.amountPaid, 0);
-      const totalOutstanding = invoices.reduce((sum, inv) => sum + inv.balance, 0);
-      const totalQuotations = quotations.length;
+      // We still need to fetch recent invoices and quotations separately
+      // In a real app we would create a specific endpoint for recent items or use pagination
+      const [recentInvoicesRes, recentQuotesRes] = await Promise.all([
+        fetch('/api/invoices', { headers: getAuthHeaders() }).catch(() => null),
+        fetch('/api/quotations', { headers: getAuthHeaders() }).catch(() => null),
+      ]);
 
-      // Get recent invoices (last 5)
-      const recentInvoices = [...invoices]
-        .sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime())
-        .slice(0, 5);
+      let recentInvoices: Invoice[] = [];
+      if (recentInvoicesRes && recentInvoicesRes.ok) {
+        const data = await recentInvoicesRes.json();
+        recentInvoices = (data.invoices || [])
+          .sort((a: any, b: any) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime())
+          .slice(0, 5);
+      }
 
-      // Get recent quotations (last 5)
-      const recentQuotations = [...quotations]
-        .sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime())
-        .slice(0, 5);
+      let recentQuotations: Quotation[] = [];
+      if (recentQuotesRes && recentQuotesRes.ok) {
+        const data = await recentQuotesRes.json();
+        recentQuotations = (data.quotations || [])
+          .sort((a: any, b: any) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime())
+          .slice(0, 5);
+      }
 
       setStats({
-        totalInvoices,
-        totalPaid,
-        totalOutstanding,
-        totalQuotations,
+        totalInvoices: invoiceStats ? invoiceStats.total : 0,
+        totalPaid: invoiceStats ? invoiceStats.paidAmount : 0,
+        totalOutstanding: invoiceStats ? invoiceStats.outstandingAmount : 0,
+        totalQuotations: quotationStats ? quotationStats.total : 0,
         recentInvoices,
         recentQuotations,
       });

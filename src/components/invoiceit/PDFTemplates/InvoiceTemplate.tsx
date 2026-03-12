@@ -45,6 +45,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 15,
   },
+  grid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
   column: {
     flexDirection: 'column',
     width: '48%',
@@ -59,6 +64,11 @@ const styles = StyleSheet.create({
   value: {
     fontSize: 11,
     color: '#111827',
+  },
+  text: {
+    fontSize: 10,
+    color: '#374151',
+    lineHeight: 1.5,
   },
   table: {
     marginTop: 20,

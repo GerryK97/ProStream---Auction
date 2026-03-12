@@ -41,8 +41,8 @@ export default function QuotationForm({ initialData, quotationId, mode }: Quotat
   const tax = subtotal * (formData.taxRate / 100);
   const total = subtotal + tax - formData.discount;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent, overrideStatus?: string) => {
+    if (e) e.preventDefault();
 
     if (!formData.customerId) {
       alert('Please select a customer');
@@ -69,9 +69,10 @@ export default function QuotationForm({ initialData, quotationId, mode }: Quotat
         },
         body: JSON.stringify({
           ...formData,
+          status: overrideStatus || formData.status,
           items,
-          taxRate: parseFloat(formData.taxRate.toString()),
-          discount: parseFloat(formData.discount.toString()),
+          taxRate: parseFloat(formData.taxRate.toString()) || 0,
+          discount: parseFloat(formData.discount.toString()) || 0,
         }),
       });
 
@@ -92,10 +93,7 @@ export default function QuotationForm({ initialData, quotationId, mode }: Quotat
   };
 
   const handleSaveAsDraft = async () => {
-    const originalStatus = formData.status;
-    setFormData({ ...formData, status: 'draft' });
-    await handleSubmit(new Event('submit') as any);
-    setFormData({ ...formData, status: originalStatus });
+    await handleSubmit(undefined, 'draft');
   };
 
   return (
@@ -216,8 +214,11 @@ export default function QuotationForm({ initialData, quotationId, mode }: Quotat
             </label>
             <input
               type="number"
-              value={formData.taxRate}
-              onChange={(e) => setFormData({ ...formData, taxRate: parseFloat(e.target.value) || 0 })}
+              value={formData.taxRate === 0 ? '' : formData.taxRate}
+              onChange={(e) => {
+                const val = e.target.value;
+                setFormData({ ...formData, taxRate: val === '' ? 0 : parseFloat(val) });
+              }}
               min="0"
               max="100"
               step="0.01"
@@ -237,8 +238,11 @@ export default function QuotationForm({ initialData, quotationId, mode }: Quotat
             </label>
             <input
               type="number"
-              value={formData.discount}
-              onChange={(e) => setFormData({ ...formData, discount: parseFloat(e.target.value) || 0 })}
+              value={formData.discount === 0 ? '' : formData.discount}
+              onChange={(e) => {
+                const val = e.target.value;
+                setFormData({ ...formData, discount: val === '' ? 0 : parseFloat(val) });
+              }}
               min="0"
               step="0.01"
               className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2"

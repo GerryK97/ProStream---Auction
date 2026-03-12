@@ -22,12 +22,14 @@ export default function LineItemsTable({ items, onChange, readonly = false }: Li
     if (field === 'description') {
       newItems[index][field] = value as string;
     } else {
-      const numValue = typeof value === 'string' ? parseFloat(value) || 0 : value;
-      newItems[index][field] = numValue;
+      const numValue = value === '' ? 0 : (typeof value === 'string' ? parseFloat(value) : value);
+      newItems[index][field] = value === '' ? ('' as any) : numValue;
 
       // Auto-calculate total
       if (field === 'quantity' || field === 'unitPrice') {
-        newItems[index].total = newItems[index].quantity * newItems[index].unitPrice;
+        const qty = Number(newItems[index].quantity) || 0;
+        const price = Number(newItems[index].unitPrice) || 0;
+        newItems[index].total = qty * price;
       }
     }
 
@@ -105,7 +107,7 @@ export default function LineItemsTable({ items, onChange, readonly = false }: Li
                     ) : (
                       <input
                         type="number"
-                        value={item.quantity}
+                        value={item.quantity === 0 && item.quantity.toString() !== '0' ? '' : item.quantity}
                         onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                         min="0"
                         step="1"
@@ -127,7 +129,7 @@ export default function LineItemsTable({ items, onChange, readonly = false }: Li
                     ) : (
                       <input
                         type="number"
-                        value={item.unitPrice}
+                        value={item.unitPrice === 0 && item.unitPrice.toString() !== '0' ? '' : item.unitPrice}
                         onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
                         min="0"
                         step="0.01"

@@ -73,6 +73,22 @@ export async function PUT(
 
     const body = await request.json();
 
+    // Prevent invalid state transitions
+    if (body.status && body.status !== invoice.status) {
+      if (body.status === 'draft' && invoice.amountPaid > 0) {
+        return NextResponse.json(
+          { error: 'Cannot revert a partially or fully paid invoice to draft.' },
+          { status: 400 }
+        );
+      }
+      if (body.status === 'cancelled' && invoice.amountPaid > 0) {
+        return NextResponse.json(
+          { error: 'Cannot cancel an invoice that has been partially paid.' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Update invoice
     const updatedInvoice = await invoiceDB.update(id, body);
 

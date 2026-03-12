@@ -45,6 +45,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 15,
   },
+  grid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
   column: {
     flexDirection: 'column',
     width: '48%',
@@ -59,6 +64,11 @@ const styles = StyleSheet.create({
   value: {
     fontSize: 11,
     color: '#111827',
+  },
+  text: {
+    fontSize: 10,
+    color: '#374151',
+    lineHeight: 1.5,
   },
   table: {
     marginTop: 20,
@@ -328,6 +338,30 @@ export const QuotationTemplate: React.FC<QuotationTemplateProps> = ({ quotation,
               </View>
             </View>
           ))}
+        </View>
+
+        {/* Sender and Customer Info */}
+        <View style={styles.section}>
+          <View style={styles.grid}>
+            <View>
+              <Text style={styles.label}>From:</Text>
+              <Text style={styles.text}>ProStream Inc.</Text>
+              <Text style={styles.text}>123 Business Avenue</Text>
+              <Text style={styles.text}>Colombo 03, Sri Lanka</Text>
+              <Text style={styles.text}>VAT: 123456789-V</Text>
+            </View>
+            <View style={{ marginLeft: 'auto' }}>
+              <Text style={styles.label}>Quote To:</Text>
+              <Text style={[styles.text, { fontWeight: 'bold' }]}>{customer.name}</Text>
+              {customer.companyName && (
+                <Text style={styles.text}>{customer.companyName}</Text>
+              )}
+              <Text style={styles.text}>{customer.email}</Text>
+              {customer.phone && (
+                <Text style={styles.text}>{customer.phone}</Text>
+              )}
+            </View>
+          </View>
         </View>
 
         {/* Totals */}

@@ -17,9 +17,8 @@ export const customerDB = {
   async create(data: Partial<Customer>, userId: string): Promise<Customer> {
     await connectToDatabase();
 
-    // Generate customer ID
-    const customerCount = await CustomerModel.countDocuments();
-    const customerId = `CUS${(customerCount + 1).toString().padStart(5, '0')}`;
+    // Generate robust customer ID
+    const customerId = `CUS-${crypto.randomUUID()}`;
 
     const customer = await CustomerModel.create({
       ...data,
@@ -95,16 +94,24 @@ export const customerDB = {
   async updateStats(customerId: string): Promise<void> {
     await connectToDatabase();
 
-    const invoices = await InvoiceModel.find({ customerId }).lean();
+    const result = await InvoiceModel.aggregate([
+      { $match: { customerId } },
+      {
+        $group: {
+          _id: null,
+          totalInvoices: { $sum: 1 },
+          totalPaid: { $sum: "$amountPaid" },
+          totalOutstanding: { $sum: "$balance" },
+        }
+      }
+    ]);
 
-    const totalInvoices = invoices.length;
-    const totalPaid = invoices.reduce((sum, inv) => sum + inv.amountPaid, 0);
-    const totalOutstanding = invoices.reduce((sum, inv) => sum + inv.balance, 0);
+    const stats = result[0] || { totalInvoices: 0, totalPaid: 0, totalOutstanding: 0 };
 
     await CustomerModel.findByIdAndUpdate(customerId, {
-      totalInvoices,
-      totalPaid,
-      totalOutstanding,
+      totalInvoices: stats.totalInvoices,
+      totalPaid: stats.totalPaid,
+      totalOutstanding: stats.totalOutstanding,
     });
   },
 };
@@ -116,12 +123,9 @@ export const invoiceDB = {
    * Generate next invoice number
    */
   async generateInvoiceNumber(): Promise<string> {
-    await connectToDatabase();
-    const year = new Date().getFullYear();
-    const count = await InvoiceModel.countDocuments({
-      invoiceNumber: { $regex: `^INV-${year}` },
-    });
-    return `INV-${year}-${(count + 1).toString().padStart(4, '0')}`;
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `INV-${new Date().getFullYear()}-${timestamp}${random}`;
   },
 
   /**
@@ -130,9 +134,8 @@ export const invoiceDB = {
   async create(data: Partial<Invoice>, userId: string): Promise<Invoice> {
     await connectToDatabase();
 
-    // Generate invoice ID and number
-    const invoiceCount = await InvoiceModel.countDocuments();
-    const invoiceId = `INV${(invoiceCount + 1).toString().padStart(6, '0')}`;
+    // Generate robust invoice ID and number
+    const invoiceId = `INV-${crypto.randomUUID()}`;
     const invoiceNumber = data.invoiceNumber || (await this.generateInvoiceNumber());
 
     const invoice = await InvoiceModel.create({
@@ -242,9 +245,14 @@ export const invoiceDB = {
     const invoice = await InvoiceModel.findById(invoiceId).lean() as Invoice | null;
     if (!invoice) return null;
 
-    const newAmountPaid = invoice.amountPaid + amount;
+    let actualAmount = amount;
+    if (amount > invoice.balance) {
+      actualAmount = invoice.balance; // Clamp to balance to prevent overpayment
+    }
+
+    const newAmountPaid = invoice.amountPaid + actualAmount;
     const newBalance = invoice.total - newAmountPaid;
-    const newStatus = newBalance <= 0 ? 'paid' : invoice.status;
+    const newStatus = newBalance <= 0 && invoice.status !== 'cancelled' ? 'paid' : invoice.status;
 
     const updated = await InvoiceModel.findByIdAndUpdate(
       invoiceId,
@@ -281,18 +289,33 @@ export const invoiceDB = {
   }> {
     await connectToDatabase();
 
-    const invoices = await InvoiceModel.find({ createdBy: userId }).lean();
+    const result = await InvoiceModel.aggregate([
+      { $match: { createdBy: userId } },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          draft: { $sum: { $cond: [{ $eq: ["$status", "draft"] }, 1, 0] } },
+          sent: { $sum: { $cond: [{ $eq: ["$status", "sent"] }, 1, 0] } },
+          paid: { $sum: { $cond: [{ $eq: ["$status", "paid"] }, 1, 0] } },
+          overdue: { $sum: { $cond: [{ $eq: ["$status", "overdue"] }, 1, 0] } },
+          totalAmount: { $sum: "$total" },
+          paidAmount: { $sum: "$amountPaid" },
+          outstandingAmount: { $sum: "$balance" },
+        }
+      }
+    ]);
 
-    return {
-      total: invoices.length,
-      draft: invoices.filter((inv) => inv.status === 'draft').length,
-      sent: invoices.filter((inv) => inv.status === 'sent').length,
-      paid: invoices.filter((inv) => inv.status === 'paid').length,
-      overdue: invoices.filter((inv) => inv.status === 'overdue').length,
-      totalAmount: invoices.reduce((sum, inv) => sum + inv.total, 0),
-      paidAmount: invoices.reduce((sum, inv) => sum + inv.amountPaid, 0),
-      outstandingAmount: invoices.reduce((sum, inv) => sum + inv.balance, 0),
-    };
+    if (result.length === 0) {
+      return {
+        total: 0, draft: 0, sent: 0, paid: 0, overdue: 0,
+        totalAmount: 0, paidAmount: 0, outstandingAmount: 0
+      };
+    }
+
+    const stats = result[0];
+    delete stats._id;
+    return stats;
   },
 };
 
@@ -303,12 +326,9 @@ export const quotationDB = {
    * Generate next quotation number
    */
   async generateQuotationNumber(): Promise<string> {
-    await connectToDatabase();
-    const year = new Date().getFullYear();
-    const count = await QuotationModel.countDocuments({
-      quotationNumber: { $regex: `^QUO-${year}` },
-    });
-    return `QUO-${year}-${(count + 1).toString().padStart(4, '0')}`;
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `QUO-${new Date().getFullYear()}-${timestamp}${random}`;
   },
 
   /**
@@ -317,9 +337,8 @@ export const quotationDB = {
   async create(data: Partial<Quotation>, userId: string): Promise<Quotation> {
     await connectToDatabase();
 
-    // Generate quotation ID and number
-    const quotationCount = await QuotationModel.countDocuments();
-    const quotationId = `QUO${(quotationCount + 1).toString().padStart(6, '0')}`;
+    // Generate robust quotation ID and number
+    const quotationId = `QUO-${crypto.randomUUID()}`;
     const quotationNumber = data.quotationNumber || (await this.generateQuotationNumber());
 
     const quotation = await QuotationModel.create({
@@ -463,15 +482,27 @@ export const quotationDB = {
   }> {
     await connectToDatabase();
 
-    const quotations = await QuotationModel.find({ createdBy: userId }).lean();
+    const result = await QuotationModel.aggregate([
+      { $match: { createdBy: userId } },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          draft: { $sum: { $cond: [{ $eq: ["$status", "draft"] }, 1, 0] } },
+          sent: { $sum: { $cond: [{ $eq: ["$status", "sent"] }, 1, 0] } },
+          accepted: { $sum: { $cond: [{ $eq: ["$status", "accepted"] }, 1, 0] } },
+          rejected: { $sum: { $cond: [{ $eq: ["$status", "rejected"] }, 1, 0] } },
+          expired: { $sum: { $cond: [{ $eq: ["$status", "expired"] }, 1, 0] } },
+        }
+      }
+    ]);
 
-    return {
-      total: quotations.length,
-      draft: quotations.filter((q) => q.status === 'draft').length,
-      sent: quotations.filter((q) => q.status === 'sent').length,
-      accepted: quotations.filter((q) => q.status === 'accepted').length,
-      rejected: quotations.filter((q) => q.status === 'rejected').length,
-      expired: quotations.filter((q) => q.status === 'expired').length,
-    };
+    if (result.length === 0) {
+      return { total: 0, draft: 0, sent: 0, accepted: 0, rejected: 0, expired: 0 };
+    }
+
+    const stats = result[0];
+    delete stats._id;
+    return stats;
   },
 };
