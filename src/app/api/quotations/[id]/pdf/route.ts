@@ -89,12 +89,14 @@ export async function GET(
       doc.text(quotation.terms);
     }
 
-    doc.end();
-
     // Wait for PDF to be generated
-    await new Promise<void>((resolve) => {
+    const endPromise = new Promise<void>((resolve) => {
       doc.on('end', () => resolve());
     });
+
+    doc.end();
+
+    await endPromise;
 
     const pdfBuffer = Buffer.concat(chunks);
 

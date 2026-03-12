@@ -147,7 +147,14 @@ export default function QuotationDetailPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to download PDF');
+        let errorMsg = 'Failed to download PDF';
+        try {
+          const errData = await response.json();
+          if (errData.error) errorMsg = errData.error;
+        } catch (e) {
+          // ignore
+        }
+        throw new Error(errorMsg);
       }
 
       const blob = await response.blob();
