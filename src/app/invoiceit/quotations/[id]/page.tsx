@@ -56,6 +56,7 @@ export default function QuotationDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
   const [converting, setConverting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     if (params.id) {
@@ -137,6 +138,34 @@ export default function QuotationDetailPage() {
     }
   };
 
+  const handleDownloadPDF = async () => {
+    if (!quotation) return;
+    try {
+      setDownloading(true);
+      const response = await fetch(`/api/quotations/${quotation._id}/pdf`, {
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${quotation.quotationNumber.replace(/[^a-zA-Z0-9-]/g, '_')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      alert(err.message || 'Failed to download PDF');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const formatCurrency = (amount: number) =>
     `LKR ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -198,14 +227,14 @@ export default function QuotationDetailPage() {
               </h1>
               <div className="flex items-center gap-3 flex-wrap">
                 <StatusBadge status={quotation.status} type="quotation" />
-                <a
-                  href={`/api/quotations/${quotation._id}/pdf`}
-                  download
-                  className="px-4 py-2 rounded-xl font-medium text-white transition hover:scale-105"
+                <button
+                  onClick={handleDownloadPDF}
+                  disabled={downloading}
+                  className="px-4 py-2 rounded-xl font-medium text-white transition hover:scale-105 disabled:opacity-50"
                   style={{ backgroundColor: 'var(--brand-secondary)' }}
                 >
-                  Download PDF
-                </a>
+                  {downloading ? 'Downloading...' : 'Download PDF'}
+                </button>
                 {quotation.status === 'accepted' && !quotation.convertedToInvoiceId && (
                   <button
                     onClick={convertToInvoice}

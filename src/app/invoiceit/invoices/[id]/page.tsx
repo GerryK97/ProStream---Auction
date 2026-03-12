@@ -57,6 +57,7 @@ export default function InvoiceDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     if (params.id) {
@@ -119,6 +120,34 @@ export default function InvoiceDetailPage() {
       alert(err.message || 'Failed to update status');
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!invoice) return;
+    try {
+      setDownloading(true);
+      const response = await fetch(`/api/invoices/${invoice._id}/pdf`, {
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${invoice.invoiceNumber.replace(/[^a-zA-Z0-9-]/g, '_')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      alert(err.message || 'Failed to download PDF');
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -189,14 +218,14 @@ export default function InvoiceDetailPage() {
               </h1>
               <div className="flex items-center gap-3">
                 <StatusBadge status={invoice.status} type="invoice" />
-                <a
-                  href={`/api/invoices/${invoice._id}/pdf`}
-                  download
-                  className="px-4 py-2 rounded-xl font-medium text-white transition hover:scale-105"
+                <button
+                  onClick={handleDownloadPDF}
+                  disabled={downloading}
+                  className="px-4 py-2 rounded-xl font-medium text-white transition hover:scale-105 disabled:opacity-50"
                   style={{ backgroundColor: 'var(--brand-primary)' }}
                 >
-                  Download PDF
-                </a>
+                  {downloading ? 'Downloading...' : 'Download PDF'}
+                </button>
               </div>
             </div>
           </div>

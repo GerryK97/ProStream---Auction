@@ -23,6 +23,7 @@ export default function InvoicesListPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchInvoices();
@@ -59,6 +60,33 @@ export default function InvoicesListPage() {
       month: 'short',
       day: 'numeric'
     });
+  };
+
+  const handleDownloadPDF = async (invoiceId: string, invoiceNumber: string) => {
+    try {
+      setDownloadingId(invoiceId);
+      const response = await fetch(`/api/invoices/${invoiceId}/pdf`, {
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${invoiceNumber.replace(/[^a-zA-Z0-9-]/g, '_')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      alert(err.message || 'Failed to download PDF');
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   return (
@@ -222,17 +250,17 @@ export default function InvoicesListPage() {
                           >
                             View
                           </Link>
-                          <a
-                            href={`/api/invoices/${invoice._id}/pdf`}
-                            download
-                            className="px-3 py-1 text-sm rounded-lg transition hover:scale-105"
+                          <button
+                            onClick={() => handleDownloadPDF(invoice._id, invoice.invoiceNumber)}
+                            disabled={downloadingId === invoice._id}
+                            className="px-3 py-1 text-sm rounded-lg transition hover:scale-105 disabled:opacity-50"
                             style={{
                               backgroundColor: 'var(--brand-primary)',
                               color: 'white'
                             }}
                           >
-                            PDF
-                          </a>
+                            {downloadingId === invoice._id ? '...' : 'PDF'}
+                          </button>
                         </div>
                       </td>
                     </tr>

@@ -22,6 +22,7 @@ export default function QuotationsListPage() {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchQuotations();
@@ -46,6 +47,33 @@ export default function QuotationsListPage() {
 
   const formatDate = (date: string) =>
     new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
+  const handleDownloadPDF = async (quotationId: string, quotationNumber: string) => {
+    try {
+      setDownloadingId(quotationId);
+      const response = await fetch(`/api/quotations/${quotationId}/pdf`, {
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${quotationNumber.replace(/[^a-zA-Z0-9-]/g, '_')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      alert(err.message || 'Failed to download PDF');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   return (
     <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'MasterManager']}>
@@ -137,13 +165,23 @@ export default function QuotationsListPage() {
                         {formatCurrency(quotation.total)}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <Link
-                          href={`/invoiceit/quotations/${quotation._id}`}
-                          className="text-sm font-medium hover:underline"
-                          style={{ color: 'var(--brand-secondary)' }}
-                        >
-                          View
-                        </Link>
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href={`/invoiceit/quotations/${quotation._id}`}
+                            className="text-sm font-medium hover:underline"
+                            style={{ color: 'var(--brand-secondary)' }}
+                          >
+                            View
+                          </Link>
+                          <button
+                            onClick={() => handleDownloadPDF(quotation._id, quotation.quotationNumber)}
+                            disabled={downloadingId === quotation._id}
+                            className="text-sm font-medium hover:underline disabled:opacity-50"
+                            style={{ color: 'var(--brand-primary)' }}
+                          >
+                            PDF
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
