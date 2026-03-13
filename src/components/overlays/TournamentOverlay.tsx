@@ -233,7 +233,7 @@ function OverlayContent({ tournament, auctionState, teams, currentPlayer }: Cont
       return () => clearTimeout(timer);
     }
     prevStatusRef.current = status;
-  }, [auctionState.currentAuctionStatus, auctionState.currentBid, auctionState.winningTeamId]);
+  }, [auctionState.currentAuctionStatus, auctionState.currentBid, auctionState.winningTeamId, currentPlayer, teams]);
 
   const isBidding = auctionState.currentAuctionStatus === 'Bidding' && currentPlayer;
 

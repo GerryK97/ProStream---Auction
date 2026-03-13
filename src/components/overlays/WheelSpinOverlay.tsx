@@ -141,7 +141,7 @@ const WheelSpinOverlay: React.FC<WheelSpinOverlayProps> = ({ data }) => {
           style={{
             position: 'absolute',
             left: (1920 - 880) / 2,
-            top:  (1080 - 880) / 2,
+            top:  (1080 - 880) / 2 + 50,
             width: 880,
             height: 880,
           }}
