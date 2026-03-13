@@ -14,9 +14,7 @@ interface SoldMessageToastProps {
 }
 
 function formatPrice(amount: number): string {
-    if (amount >= 10_000_000) return `₹ ${(amount / 10_000_000).toFixed(2)} Cr`;
-    if (amount >= 100_000)    return `₹ ${(amount / 100_000).toFixed(2)} L`;
-    return `₹ ${amount.toLocaleString('en-IN')}`;
+    return amount.toLocaleString('en-IN');
 }
 
 const positionStyle: Record<SoldMessagePosition, React.CSSProperties> = {

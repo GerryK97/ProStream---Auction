@@ -68,9 +68,9 @@ function TickerStrip({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customMode, customLine1, customLine2]);
 
-  const nameStyle:   React.CSSProperties = { color: '#0d0d0d' };
-  const detailStyle: React.CSSProperties = { color: 'rgba(0,0,0,0.48)' };
-  const sepStyle:    React.CSSProperties = { color: '#222' };
+  const nameStyle:   React.CSSProperties = { color: 'rgba(255,255,255,0.88)' };
+  const detailStyle: React.CSSProperties = { color: 'rgba(255,255,255,0.42)' };
+  const sepStyle:    React.CSSProperties = { color: 'rgba(255,201,25,0.5)' };
 
   const renderItem = (p: Player, keyPrefix: string): React.ReactNode => {
     if (mode === 'sold') {
@@ -120,7 +120,7 @@ function TickerStrip({
 
   return (
     <>
-      {/* Grey ticker bar */}
+      {/* Dark ticker bar */}
       <div
         style={{
           position: 'absolute',
@@ -128,7 +128,8 @@ function TickerStrip({
           top: 1006,
           width: 1690,
           height: 57,
-          backgroundColor: '#D9D9D9',
+          backgroundColor: 'rgba(8,10,20,0.92)',
+          borderTop: '1px solid rgba(255,201,25,0.22)',
         }}
       />
 
@@ -156,7 +157,7 @@ function TickerStrip({
               return (
                 <div key={offset} style={{
                   height: 57, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontFamily: '"Concert One", cursive', fontSize: 26, color: '#0d0d0d',
+                  fontFamily: '"Concert One", cursive', fontSize: 26, color: 'rgba(255,255,255,0.88)',
                   whiteSpace: 'nowrap',
                 }}>
                   {lines[idx] ?? ''}
@@ -188,7 +189,7 @@ function TickerStrip({
               whiteSpace: 'nowrap',
               fontFamily: '"Concert One", cursive',
               fontSize: 22,
-              color: 'rgba(0,0,0,0.4)',
+              color: 'rgba(255,255,255,0.28)',
               paddingLeft: 16,
             }}
           >
@@ -207,7 +208,7 @@ function TickerStrip({
           top: 998,
           background: 'linear-gradient(270deg, #6B72FF 0%, #222899 74%)',
           borderRadius: 28,
-          border: '1.5px solid black',
+          border: '1.5px solid rgba(255,201,25,0.3)',
         }}
       />
 
@@ -276,13 +277,28 @@ function BidInfoPanel({
   if (!currentPlayer || tournament?.status !== 'Live') return null;
 
   const basePrice = getClassBasePrice(tournament, currentPlayer);
-  const currentBid = auctionState.currentBid > 0 ? auctionState.currentBid : basePrice;
+  const currentBid = auctionState.currentBid > 0
+    ? auctionState.currentBid
+    : (auctionState.currentAuctionStatus === 'Bidding' ? basePrice : 0);
+
+  const [bidPopping, setBidPopping] = useState(false);
+  const prevBidRef = useRef(auctionState.currentBid);
+  useEffect(() => {
+    if (auctionState.currentAuctionStatus === 'Bidding' &&
+        auctionState.currentBid !== prevBidRef.current) {
+      setBidPopping(true);
+      const t = setTimeout(() => setBidPopping(false), 300);
+      prevBidRef.current = auctionState.currentBid;
+      return () => clearTimeout(t);
+    }
+    prevBidRef.current = auctionState.currentBid;
+  }, [auctionState.currentBid, auctionState.currentAuctionStatus]);
 
   const pillStyle: React.CSSProperties = {
     position: 'absolute',
     width:        smallMode ? 266 : 444,
     height:       smallMode ? 71  : 119,
-    top:          smallMode ? 919 : 864,
+    top:          smallMode ? 925 : 877,
     borderRadius: smallMode ? 10  : 16,
     gap:          smallMode ? 1   : 2,
     background: 'linear-gradient(135deg, #0f0c29, #302b63)',
@@ -314,15 +330,15 @@ function BidInfoPanel({
   return (
     <>
       {/* Base Price */}
-      <div style={{ ...pillStyle, left: smallMode ? 653 : 448 }}>
+      <div style={{ ...pillStyle, left: smallMode ? 328 : 27 }}>
         <div style={labelStyle}>BASE PRICE</div>
         <div style={valueStyle}>{basePrice.toLocaleString('en-IN')}</div>
       </div>
 
       {/* Current Bid */}
-      <div style={{ ...pillStyle, left: smallMode ? 1025 : 1068 }}>
+      <div style={{ ...pillStyle, left: smallMode ? 896 : 1019 }}>
         <div style={labelStyle}>CURRENT BID</div>
-        <div style={valueStyle}>{currentBid.toLocaleString('en-IN')}</div>
+        <div className={bidPopping ? 'fs-bid-pop' : ''} style={valueStyle}>{currentBid.toLocaleString('en-IN')}</div>
       </div>
     </>
   );
@@ -582,6 +598,39 @@ function CustomOverlayContent({
 }) {
   const [scale, setScale] = useState(1);
 
+  // Mode transition state machine
+  const [visibleMode, setVisibleMode] = useState(overlaySettings.displayMode);
+  const [modeExiting, setModeExiting] = useState(false);
+  const modeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (overlaySettings.displayMode === visibleMode) return;
+    // wheel-spin is immediate — protect spin timer
+    if (overlaySettings.displayMode === 'wheel-spin') {
+      if (modeTimerRef.current) clearTimeout(modeTimerRef.current);
+      setModeExiting(false);
+      setVisibleMode('wheel-spin');
+      return;
+    }
+    if (modeTimerRef.current) clearTimeout(modeTimerRef.current);
+    setModeExiting(true);
+    modeTimerRef.current = setTimeout(() => {
+      setVisibleMode(overlaySettings.displayMode);
+      setModeExiting(false);
+    }, 300);
+    return () => { if (modeTimerRef.current) clearTimeout(modeTimerRef.current); };
+  }, [overlaySettings.displayMode]);
+
+  // Player card cross-fade key
+  const [playerKey, setPlayerKey] = useState(0);
+  const prevPlayerIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (currentPlayer?._id && currentPlayer._id !== prevPlayerIdRef.current) {
+      setPlayerKey(k => k + 1);
+      prevPlayerIdRef.current = currentPlayer._id;
+    }
+  }, [currentPlayer?._id]);
+
   // Sold message toast state
   const [soldToast, setSoldToast] = useState<{ player: Player; team: Team; price: number } | null>(null);
   const [toastExiting, setToastExiting] = useState(false);
@@ -596,7 +645,7 @@ function CustomOverlayContent({
     return () => window.removeEventListener('resize', updateScale);
   }, []);
 
-  // Sold message toast — trigger when auction transitions to 'Sold'
+  // Sold message toast — show on Sold, no auto-dismiss
   useEffect(() => {
     const status = auctionState.currentAuctionStatus;
     if (status === 'Sold' && prevAuctionStatusRef.current !== 'Sold') {
@@ -605,14 +654,21 @@ function CustomOverlayContent({
       if (currentPlayer && winningTeam) {
         setSoldToast({ player: currentPlayer, team: winningTeam, price });
         setToastExiting(false);
-        prevAuctionStatusRef.current = status;
-        const exitTimer  = setTimeout(() => setToastExiting(true), 4500);
-        const clearTimer = setTimeout(() => { setSoldToast(null); setToastExiting(false); }, 5100);
-        return () => { clearTimeout(exitTimer); clearTimeout(clearTimer); };
       }
     }
     prevAuctionStatusRef.current = status;
   }, [auctionState.currentAuctionStatus, currentPlayer, teams]);
+
+  // Dismiss toast when next player is selected
+  useEffect(() => {
+    if (!soldToast) return;
+    if (currentPlayer && currentPlayer._id !== soldToast.player._id) {
+      setToastExiting(true);
+      const t = setTimeout(() => { setSoldToast(null); setToastExiting(false); }, 600);
+      return () => clearTimeout(t);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPlayer?._id]);
 
   return (
     <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative', background: 'transparent' }}>
@@ -647,15 +703,15 @@ function CustomOverlayContent({
         }}
       >
         {/* ── Resting Time mode ── */}
-        {overlaySettings.displayMode === 'resting' && (
-          <div style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
+        {visibleMode === 'resting' && (
+          <div className={modeExiting ? 'fs-summary-exit' : 'animate-fade-in'} style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
             <RestingTimeOverlay tournament={tournament} />
           </div>
         )}
 
         {/* ── Sold Player Summary mode ── */}
-        {overlaySettings.displayMode === 'sold-summary' && (
-          <div style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
+        {visibleMode === 'sold-summary' && (
+          <div className={modeExiting ? 'fs-summary-exit' : 'animate-fade-in'} style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
             <SoldPlayersSummaryOverlay
               players={players}
               teams={teams}
@@ -665,8 +721,8 @@ function CustomOverlayContent({
         )}
 
         {/* ── Team Summary mode ── */}
-        {overlaySettings.displayMode === 'team-summary' && (
-          <div style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
+        {visibleMode === 'team-summary' && (
+          <div className={modeExiting ? 'fs-summary-exit' : 'animate-fade-in'} style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
             <TeamSummaryOverlay
               teams={teams}
               tournament={tournament}
@@ -675,8 +731,8 @@ function CustomOverlayContent({
         )}
 
         {/* ── Top 10 Sold Summary mode ── */}
-        {overlaySettings.displayMode === 'top10-summary' && (
-          <div style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
+        {visibleMode === 'top10-summary' && (
+          <div className={modeExiting ? 'fs-summary-exit' : 'animate-fade-in'} style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
             <Top10SummaryOverlay
               players={players}
               teams={teams}
@@ -686,8 +742,8 @@ function CustomOverlayContent({
         )}
 
         {/* ── Team Wise Summary mode ── */}
-        {overlaySettings.displayMode === 'team-wise-summary' && (
-          <div style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
+        {visibleMode === 'team-wise-summary' && (
+          <div className={modeExiting ? 'fs-summary-exit' : 'animate-fade-in'} style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
             <TeamWiseSummaryOverlay
               players={players}
               teams={teams}
@@ -697,7 +753,7 @@ function CustomOverlayContent({
         )}
 
         {/* ── Wheel Spin mode ── */}
-        {overlaySettings.displayMode === 'wheel-spin' && wheelSpinData && (
+        {visibleMode === 'wheel-spin' && wheelSpinData && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
             <WheelSpinOverlay data={wheelSpinData} />
           </div>
@@ -706,17 +762,20 @@ function CustomOverlayContent({
         {/* ── Premium Player Card ── (standard + custom-ticker modes, unless hidden by control panel) */}
         {/* Small: 45% scale, centered at x=960, just above bid panel */}
         {/* Large: original Figma slot left=713, top=237 */}
-        {(overlaySettings.displayMode === 'standard' || overlaySettings.displayMode === 'custom-ticker') && !overlaySettings.hidePremiumCard && (
-          <div style={{
-            position: 'absolute',
-            left:            overlaySettings.size === 'small' ? 849 : 713,
-            top:             overlaySettings.size === 'small' ? 637 : 237,
-            width: 494,
-            height: 605,
-            overflow: 'hidden',
-            transform:       overlaySettings.size === 'small' ? 'scale(0.45)' : undefined,
-            transformOrigin: overlaySettings.size === 'small' ? 'top left'    : undefined,
-          }}>
+        {(visibleMode === 'standard' || visibleMode === 'custom-ticker') && !overlaySettings.hidePremiumCard && (
+          <div
+            key={playerKey}
+            className="fs-player-enter"
+            style={{
+              position: 'absolute',
+              left:            overlaySettings.size === 'small' ? 634 : 498,
+              top:             overlaySettings.size === 'small' ? 724 : 391,
+              width: 494,
+              height: 605,
+              overflow: 'hidden',
+              transform:       overlaySettings.size === 'small' ? 'scale(0.45)' : undefined,
+              transformOrigin: overlaySettings.size === 'small' ? 'top left'    : undefined,
+            }}>
             <PremiumPlayerCardOverlay
               currentPlayer={currentPlayer}
               tournament={tournament}
@@ -761,7 +820,7 @@ function CustomOverlayContent({
 
         {/* ── Bid Info Panel ── (standard + custom-ticker modes) */}
         {/* Small: 60% scale, pills repositioned just above ticker */}
-        {(overlaySettings.displayMode === 'standard' || overlaySettings.displayMode === 'custom-ticker') && (
+        {(visibleMode === 'standard' || visibleMode === 'custom-ticker') && (
           <BidInfoPanel
             tournament={tournament}
             currentPlayer={currentPlayer}
@@ -771,7 +830,7 @@ function CustomOverlayContent({
         )}
 
         {/* ── Team Cards Panel ── (standard + custom-ticker modes) */}
-        {(overlaySettings.displayMode === 'standard' || overlaySettings.displayMode === 'custom-ticker') && (
+        {(visibleMode === 'standard' || visibleMode === 'custom-ticker') && (
           <TeamCardsPanel teams={teams} tournament={tournament} currentBid={auctionState.currentBid ?? 0} />
         )}
 
@@ -782,7 +841,7 @@ function CustomOverlayContent({
           teams={teams}
           tournament={tournament}
           mode={overlaySettings.tickerMode}
-          customMode={overlaySettings.displayMode === 'custom-ticker'}
+          customMode={visibleMode === 'custom-ticker'}
           customLine1={overlaySettings.customTickerLine1}
           customLine2={overlaySettings.customTickerLine2}
         />

@@ -67,9 +67,9 @@ function TickerStrip({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customMode, customLine1, customLine2]);
 
-  const nameStyle:   React.CSSProperties = { color: '#0d0d0d' };
-  const detailStyle: React.CSSProperties = { color: 'rgba(0,0,0,0.48)' };
-  const sepStyle:    React.CSSProperties = { color: '#222' };
+  const nameStyle:   React.CSSProperties = { color: '#e2e8f0' };
+  const detailStyle: React.CSSProperties = { color: 'rgba(255,255,255,0.45)' };
+  const sepStyle:    React.CSSProperties = { color: 'rgba(255,201,25,0.4)' };
 
   const renderItem = (p: Player, keyPrefix: string): React.ReactNode => {
     if (mode === 'sold') {
@@ -119,7 +119,7 @@ function TickerStrip({
 
   return (
     <>
-      {/* Grey ticker bar */}
+      {/* Dark ticker bar */}
       <div
         style={{
           position: 'absolute',
@@ -127,7 +127,9 @@ function TickerStrip({
           top: 1006,
           width: 1690,
           height: 57,
-          backgroundColor: '#D9D9D9',
+          background: 'linear-gradient(90deg, #0a0a14 0%, #111827 100%)',
+          borderTop: '1px solid rgba(255,201,25,0.18)',
+          borderBottom: '1px solid rgba(255,201,25,0.10)',
         }}
       />
 
@@ -204,9 +206,9 @@ function TickerStrip({
           height: 70,
           left: 6,
           top: 998,
-          background: 'linear-gradient(270deg, #6B72FF 0%, #222899 74%)',
+          background: 'linear-gradient(270deg, #1a1438 0%, #0d0d18 100%)',
           borderRadius: 28,
-          border: '1.5px solid black',
+          border: '1.5px solid rgba(255,201,25,0.4)',
         }}
       />
 
@@ -272,9 +274,23 @@ function PlayerAuctionPanel({
 }) {
   const hasPlayer = !!currentPlayer;
   const basePrice = hasPlayer ? getClassBasePrice(tournament, currentPlayer!) : 0;
-  const currentBid = auctionState.currentBid > 0 ? auctionState.currentBid : (hasPlayer ? basePrice : 0);
+  const currentBid = auctionState.currentBid > 0
+    ? auctionState.currentBid
+    : (auctionState.currentAuctionStatus === 'Bidding' && hasPlayer ? basePrice : 0);
   const isSold = auctionState.currentAuctionStatus === 'Sold';
   const isBidding = auctionState.currentAuctionStatus === 'Bidding';
+
+  const [bidPopping, setBidPopping] = useState(false);
+  const prevBidRef = useRef(currentBid);
+  useEffect(() => {
+    if (isBidding && currentBid !== prevBidRef.current) {
+      setBidPopping(true);
+      const t = setTimeout(() => setBidPopping(false), 300);
+      prevBidRef.current = currentBid;
+      return () => clearTimeout(t);
+    }
+    prevBidRef.current = currentBid;
+  }, [currentBid, isBidding]);
 
   const classConfig = tournament?.playerClasses?.find(c => c.name === currentPlayer?.playerClass);
   const classColor = classConfig?.color ?? '#6B7280';
@@ -377,38 +393,6 @@ function PlayerAuctionPanel({
           </div>
         )}
 
-        {/* SOLD stamp */}
-        {isSold && (
-          <div style={{
-            position: 'absolute', inset: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(0,0,0,0.35)',
-            pointerEvents: 'none',
-          }}>
-            <div
-              className="animate-stamp-seal"
-              style={{
-                border: '7px solid #DC2626',
-                borderRadius: 14,
-                padding: '10px 30px',
-                background: 'rgba(220, 38, 38, 0.08)',
-                boxShadow: '0 0 0 3px rgba(220,38,38,0.25), inset 0 0 24px rgba(220,38,38,0.1)',
-              }}
-            >
-              <span style={{
-                fontFamily: "'Bebas Neue', cursive",
-                fontSize: 120,
-                color: '#DC2626',
-                letterSpacing: 14,
-                lineHeight: 1,
-                display: 'block',
-                textShadow: '0 0 30px rgba(220,38,38,0.6)',
-              }}>
-                SOLD
-              </span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ── Gold vertical accent bar ── */}
@@ -456,7 +440,7 @@ function PlayerAuctionPanel({
         textAlign: 'right',
         fontFamily: '"Inconsolata", monospace',
         fontSize: 38,
-        color: '#FFD700',
+        color: '#FFC919',
         fontWeight: 700,
         letterSpacing: 2,
         lineHeight: 1,
@@ -476,7 +460,7 @@ function PlayerAuctionPanel({
       }} />
 
       {/* Current Bid — hero card */}
-      <div style={{
+      <div className={isBidding ? 'fs-bid-card-active' : ''} style={{
         position: 'absolute',
         left: 880,
         top: 215,
@@ -504,7 +488,7 @@ function PlayerAuctionPanel({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div
-            className={isBidding ? 'fs-bid-active' : ''}
+            className={`${isBidding ? 'fs-bid-active' : ''} ${bidPopping ? 'fs-bid-pop' : ''}`}
             style={{
               fontFamily: '"Inconsolata", monospace',
               fontSize: 88,
@@ -622,6 +606,7 @@ function FullScreenOverlayContent({
   const [soldToast, setSoldToast] = useState<{ player: Player; team: Team; price: number } | null>(null);
   const [toastExiting, setToastExiting] = useState(false);
   const prevAuctionStatusRef = useRef<string | null>(null);
+  const toastTimersRef = useRef<{ exit: ReturnType<typeof setTimeout> | null; clear: ReturnType<typeof setTimeout> | null }>({ exit: null, clear: null });
 
   useEffect(() => {
     const incoming = effectiveSettings.displayMode;
@@ -636,13 +621,18 @@ function FullScreenOverlayContent({
         setActiveMode(incoming);
         return;
       }
+      if (incoming === 'wheel-spin') {
+        // Wheel spin has its own enter animation — switch immediately so full spin is visible
+        setActiveMode('wheel-spin');
+        return;
+      }
       setPanelExiting(true);
       const t = setTimeout(() => {
         setActiveMode(incoming);
         setPanelExiting(false);
       }, 1500);
       return () => clearTimeout(t);
-    } else if (prev === 'sold-summary' || prev === 'team-summary' || prev === 'team-wise-summary' || prev === 'top10-summary' || prev === 'wheel-spin') {
+    } else if (prev === 'sold-summary' || prev === 'team-summary' || prev === 'team-wise-summary' || prev === 'top10-summary' || prev === 'wheel-spin' || prev === 'resting') {
       setSummaryExiting(true);
       const t = setTimeout(() => {
         setActiveMode(incoming);
@@ -664,23 +654,45 @@ function FullScreenOverlayContent({
     return () => window.removeEventListener('resize', updateScale);
   }, []);
 
-  // Sold message toast — trigger when auction transitions to 'Sold'
+  // Sold message — show when auction transitions to 'Sold', stays until next player
   useEffect(() => {
     const status = auctionState.currentAuctionStatus;
     if (status === 'Sold' && prevAuctionStatusRef.current !== 'Sold') {
       const winningTeam = teams.find(t => t._id === currentPlayer?.winningTeamId);
       const price = currentPlayer?.finalPrice ?? (auctionState.currentBid || 0);
       if (currentPlayer && winningTeam) {
+        if (toastTimersRef.current.exit)  clearTimeout(toastTimersRef.current.exit);
+        if (toastTimersRef.current.clear) clearTimeout(toastTimersRef.current.clear);
         setSoldToast({ player: currentPlayer, team: winningTeam, price });
         setToastExiting(false);
-        prevAuctionStatusRef.current = status;
-        const exitTimer  = setTimeout(() => setToastExiting(true), 4500);
-        const clearTimer = setTimeout(() => { setSoldToast(null); setToastExiting(false); }, 5100);
-        return () => { clearTimeout(exitTimer); clearTimeout(clearTimer); };
       }
     }
     prevAuctionStatusRef.current = status;
-  }, [auctionState.currentAuctionStatus, currentPlayer, teams]);
+  }, [auctionState.currentAuctionStatus]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Dismiss sold message when a new player is selected for auction
+  useEffect(() => {
+    if (!soldToast) return;
+    if (currentPlayer && currentPlayer._id !== soldToast.player._id) {
+      if (toastTimersRef.current.exit)  clearTimeout(toastTimersRef.current.exit);
+      if (toastTimersRef.current.clear) clearTimeout(toastTimersRef.current.clear);
+      setToastExiting(true);
+      toastTimersRef.current.clear = setTimeout(() => {
+        setSoldToast(null);
+        setToastExiting(false);
+      }, 600);
+    }
+  }, [currentPlayer?._id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Immediately clear sold message when wheel spin starts (it covers the wheel at zIndex 200)
+  useEffect(() => {
+    if (effectiveSettings.displayMode === 'wheel-spin') {
+      if (toastTimersRef.current.exit)  clearTimeout(toastTimersRef.current.exit);
+      if (toastTimersRef.current.clear) clearTimeout(toastTimersRef.current.clear);
+      setSoldToast(null);
+      setToastExiting(false);
+    }
+  }, [effectiveSettings.displayMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative', background: 'linear-gradient(160deg, #0a0a14 0%, #111827 60%, #0d1117 100%)' }}>
@@ -718,6 +730,22 @@ function FullScreenOverlayContent({
           animation: playerPanelExit 1.5s ease-in forwards;
           transform-origin: center center;
         }
+        @keyframes bidCardPulse {
+          0%, 100% { box-shadow: none; }
+          50%      { box-shadow: 0 0 24px rgba(255,201,25,0.22), inset 0 0 16px rgba(255,201,25,0.06); }
+        }
+        .fs-bid-card-active { animation: bidCardPulse 1.5s ease-in-out infinite; }
+        @keyframes bidValuePop {
+          0%   { transform: scale(1); }
+          40%  { transform: scale(1.1); }
+          100% { transform: scale(1); }
+        }
+        .fs-bid-pop { animation: bidValuePop 0.3s ease-out forwards; }
+        @keyframes summaryFadeOut {
+          from { opacity: 1; transform: scale(1); }
+          to   { opacity: 0; transform: scale(0.97); }
+        }
+        .fs-summary-exit { animation: summaryFadeOut 0.5s ease-in forwards; }
       `}</style>
 
       {/* 1920×1080 canvas scaled to fit viewport */}
@@ -742,7 +770,7 @@ function FullScreenOverlayContent({
 
         {/* ── Sold Player Summary mode ── */}
         {activeMode === 'sold-summary' && (
-          <div style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
+          <div className={summaryExiting ? 'fs-summary-exit' : ''} style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
             <SoldPlayersSummaryOverlay
               players={players}
               teams={teams}
@@ -754,7 +782,7 @@ function FullScreenOverlayContent({
 
         {/* ── Team Summary mode ── */}
         {activeMode === 'team-summary' && (
-          <div style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
+          <div className={summaryExiting ? 'fs-summary-exit' : ''} style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
             <TeamSummaryOverlay
               teams={teams}
               tournament={tournament}
@@ -765,7 +793,7 @@ function FullScreenOverlayContent({
 
         {/* ── Top 10 Sold Summary mode ── */}
         {activeMode === 'top10-summary' && (
-          <div style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
+          <div className={summaryExiting ? 'fs-summary-exit' : ''} style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
             <Top10SummaryOverlay
               players={players}
               teams={teams}
@@ -777,7 +805,7 @@ function FullScreenOverlayContent({
 
         {/* ── Team Wise Summary mode ── */}
         {activeMode === 'team-wise-summary' && (
-          <div style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
+          <div className={summaryExiting ? 'fs-summary-exit' : ''} style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
             <TeamWiseSummaryOverlay
               players={players}
               teams={teams}
@@ -789,7 +817,7 @@ function FullScreenOverlayContent({
 
         {/* ── Wheel Spin mode ── */}
         {activeMode === 'wheel-spin' && wheelSpinData && (
-          <div style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
+          <div className={summaryExiting ? 'fs-summary-exit' : ''} style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
             <WheelSpinOverlay data={wheelSpinData} />
           </div>
         )}
