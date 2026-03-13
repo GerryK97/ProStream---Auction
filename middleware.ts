@@ -42,8 +42,13 @@ export function middleware(request: NextRequest) {
   // Get token from request - check Authorization header first, then cookies
   const token = getTokenFromRequest(request) || getTokenFromCookies(request);
 
+  const isApiRoute = pathname.startsWith('/api/');
+
   if (!token) {
-    // Redirect to login if no token
+    // API routes: return 401 JSON (not a redirect, browser fetch can't redirect to login)
+    if (isApiRoute) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     return NextResponse.redirect(new URL('/auth/login', request.url));
   }
 
@@ -51,15 +56,25 @@ export function middleware(request: NextRequest) {
   const payload = verifyToken(token);
 
   if (!payload) {
-    // Token is invalid or expired, redirect to login
+    // Token is invalid or expired
+    if (isApiRoute) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     return NextResponse.redirect(new URL('/auth/login', request.url));
   }
 
-  // Check if user has access to the route
+  // For API routes: token is valid, let the route handler do fine-grained authorization
+  if (isApiRoute) {
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-user-id', payload.userId);
+    requestHeaders.set('x-user-role', payload.role);
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  // Check if user has access to the UI route
   const hasAccess = canAccessRoute(payload.role as any, pathname);
 
   if (!hasAccess) {
-    // User doesn't have permission for this route
     return NextResponse.redirect(new URL('/auth/unauthorized', request.url));
   }
 

@@ -35,6 +35,17 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
 
   // User management (Admin only)
   { path: '/users', allowedRoles: ['Admin'] },
+
+  // InvoiceIt routes
+  { path: '/invoiceit', allowedRoles: ['Admin', 'Tournament', 'MasterManager'] },
+  { path: '/invoiceit/', allowedRoles: ['Admin', 'Tournament', 'MasterManager'] },
+
+  // API routes for InvoiceIt (allow through to be handled by route handlers)
+  { path: '/api/invoices/', allowedRoles: ['Admin', 'Tournament', 'MasterManager'] },
+  { path: '/api/quotations/', allowedRoles: ['Admin', 'Tournament', 'MasterManager'] },
+  { path: '/api/customers/', allowedRoles: ['Admin', 'Tournament', 'MasterManager'] },
+  // All other /api/ routes (tournaments, teams, players, etc.)
+  { path: '/api/', allowedRoles: ['Admin', 'Tournament', 'MasterManager', 'Team', 'Player', 'Audience'] },
 ];
 
 /**
@@ -85,6 +96,14 @@ export function canPerformAction(
       auction: ['read', 'update', 'manage'],
       overlayConfig: ['create', 'read', 'update', 'delete'],
       invoice: ['create', 'read', 'update', 'delete'],
+      user: [],
+    },
+    MasterManager: {
+      invoice: ['create', 'read', 'update', 'delete'],
+      tournament: ['read'],
+      team: ['read'],
+      player: ['read'],
+      auction: ['read'],
       user: [],
     },
     Team: {
