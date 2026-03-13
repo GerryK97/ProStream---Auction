@@ -311,7 +311,7 @@ export function usePusherAuction(
       console.error('[usePusherAuction] Error fetching data:', err);
       dispatch({ type: 'SET_ERROR', error: 'Failed to load tournament data. Please try again.' });
     }
-  }, [tournamentId, overlayToken, buildHeaders]);
+  }, [tournamentId, buildHeaders, initialData?.tournament]);
 
   // ─── Effect 1: Initial status check (overlay mode only) ─────────────────────
   // Lightweight fetch to determine whether to connect immediately.

@@ -274,13 +274,6 @@ function BidInfoPanel({
   auctionState: AuctionState;
   smallMode?: boolean;
 }) {
-  if (!currentPlayer || tournament?.status !== 'Live') return null;
-
-  const basePrice = getClassBasePrice(tournament, currentPlayer);
-  const currentBid = auctionState.currentBid > 0
-    ? auctionState.currentBid
-    : (auctionState.currentAuctionStatus === 'Bidding' ? basePrice : 0);
-
   const [bidPopping, setBidPopping] = useState(false);
   const prevBidRef = useRef(auctionState.currentBid);
   useEffect(() => {
@@ -293,6 +286,13 @@ function BidInfoPanel({
     }
     prevBidRef.current = auctionState.currentBid;
   }, [auctionState.currentBid, auctionState.currentAuctionStatus]);
+
+  if (!currentPlayer || tournament?.status !== 'Live') return null;
+
+  const basePrice = getClassBasePrice(tournament, currentPlayer);
+  const currentBid = auctionState.currentBid > 0
+    ? auctionState.currentBid
+    : (auctionState.currentAuctionStatus === 'Bidding' ? basePrice : 0);
 
   const pillStyle: React.CSSProperties = {
     position: 'absolute',
@@ -619,7 +619,7 @@ function CustomOverlayContent({
       setModeExiting(false);
     }, 300);
     return () => { if (modeTimerRef.current) clearTimeout(modeTimerRef.current); };
-  }, [overlaySettings.displayMode]);
+  }, [overlaySettings.displayMode, visibleMode]);
 
   // Player card cross-fade key
   const [playerKey, setPlayerKey] = useState(0);
@@ -657,7 +657,7 @@ function CustomOverlayContent({
       }
     }
     prevAuctionStatusRef.current = status;
-  }, [auctionState.currentAuctionStatus, currentPlayer, teams]);
+  }, [auctionState.currentAuctionStatus, auctionState.currentBid, currentPlayer, teams]);
 
   // Dismiss toast when next player is selected
   useEffect(() => {
