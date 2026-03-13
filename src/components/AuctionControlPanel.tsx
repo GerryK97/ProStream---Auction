@@ -106,7 +106,9 @@ const CurrentAuctionPanel: React.FC<{
     onSell: () => void;
     onReset: () => void;
     onMarkUnsold: () => void;
-}> = ({ currentPlayer, tournament, teams, biddingTeamId, setBiddingTeamId, auctionState, onBid, onCorrectBid, onSell, onReset, onMarkUnsold }) => {
+    onSpinWheel: () => void;
+    isSpinning: boolean;
+}> = ({ currentPlayer, tournament, teams, biddingTeamId, setBiddingTeamId, auctionState, onBid, onCorrectBid, onSell, onReset, onMarkUnsold, onSpinWheel, isSpinning }) => {
     const [bidAmount, setBidAmount] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -253,7 +255,7 @@ const CurrentAuctionPanel: React.FC<{
                 </select>
 
                 {/* Action buttons — one row */}
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                     <button
                         onClick={onSell}
                         disabled={isSold || currentBid === 0 || !biddingTeamId}
@@ -294,6 +296,20 @@ const CurrentAuctionPanel: React.FC<{
                         onMouseEnter={e => { if (!isSold) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(251,146,60,0.25)'; }}
                         onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(251,146,60,0.1)'; }}>
                         Unsold
+                    </button>
+                    <button
+                        onClick={onSpinWheel}
+                        disabled={isSpinning || auctionState.currentAuctionStatus === 'Bidding'}
+                        className="py-3 rounded-lg text-sm font-bold tracking-wide uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                        style={{
+                            background: isSpinning ? 'rgba(124,58,237,0.25)' : 'rgba(124,58,237,0.1)',
+                            color: isSpinning ? '#c4b5fd' : '#a78bfa',
+                            border: `1.5px solid ${isSpinning ? 'rgba(124,58,237,0.6)' : 'rgba(124,58,237,0.35)'}`,
+                        }}
+                        onMouseEnter={e => { if (!isSpinning && auctionState.currentAuctionStatus !== 'Bidding') (e.currentTarget as HTMLButtonElement).style.background = 'rgba(124,58,237,0.25)'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = isSpinning ? 'rgba(124,58,237,0.25)' : 'rgba(124,58,237,0.1)'; }}>
+                        {isSpinning ? 'Spinning…' : 'Spin'}
+                        {isSpinning && <span className="w-1.5 h-1.5 rounded-full bg-purple-300 animate-pulse" />}
                     </button>
                 </div>
             </div>
@@ -1281,6 +1297,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                         onSell={handleSell}
                         onReset={handleReset}
                         onMarkUnsold={handleMarkUnsold}
+                        onSpinWheel={handleSpinWheel}
+                        isSpinning={isSpinning}
                     />
                     {/* Overlay Controls — spacious panel with room for future features */}
                     <div className="rounded-lg p-5 border border-[var(--border-primary)] flex-1 min-h-0" style={{ backgroundColor: 'var(--surface-secondary)' }}>
@@ -1571,27 +1589,6 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                                     Player Card &amp; Teams hidden
                                 </span>
-                            )}
-                        </div>
-
-                        {/* Row 5: Spin Wheel */}
-                        <div className="flex items-center gap-3 mt-4 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border-primary)' }}>
-                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Spin Wheel:</span>
-                            <button
-                                onClick={handleSpinWheel}
-                                disabled={isSpinning || !liveTournament || auctionState.currentAuctionStatus === 'Bidding'}
-                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                style={{
-                                    backgroundColor: isSpinning ? '#7C3AED' : 'var(--surface-elevated)',
-                                    color: isSpinning ? '#fff' : 'var(--text-secondary)',
-                                    border: '1px solid var(--border-primary)',
-                                }}
-                            >
-                                <span>{isSpinning ? 'Spinning…' : 'Spin'}</span>
-                                {isSpinning && <span className="w-2 h-2 rounded-full bg-purple-300 animate-pulse" />}
-                            </button>
-                            {isSpinning && (
-                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Auto-selects winner in ~8s</span>
                             )}
                         </div>
                     </div>

@@ -11,9 +11,7 @@ interface SoldMessageFullScreenProps {
 }
 
 function formatPrice(amount: number): string {
-  if (amount >= 10_000_000) return `₹ ${(amount / 10_000_000).toFixed(2)} Cr`;
-  if (amount >= 100_000) return `₹ ${(amount / 100_000).toFixed(2)} L`;
-  return `₹ ${amount.toLocaleString('en-IN')}`;
+  return amount.toLocaleString('en-IN');
 }
 
 const SoldMessageFullScreen: React.FC<SoldMessageFullScreenProps> = ({
@@ -23,7 +21,7 @@ const SoldMessageFullScreen: React.FC<SoldMessageFullScreenProps> = ({
   exiting,
 }) => (
   <div
-    className={exiting ? 'fs-panel-exit' : 'fs-panel-enter'}
+    className={exiting ? 'fsm-panel-exit' : 'fsm-panel-enter'}
     style={{
       position: 'absolute',
       inset: 0,
@@ -122,6 +120,37 @@ const SoldMessageFullScreen: React.FC<SoldMessageFullScreenProps> = ({
         background: 'linear-gradient(to top, rgba(13,17,23,0.92) 0%, transparent 100%)',
         pointerEvents: 'none',
       }} />
+
+      {/* SOLD stamp overlay on photo */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(0,0,0,0.28)',
+        pointerEvents: 'none',
+      }}>
+        <div
+          className="animate-stamp-seal"
+          style={{
+            border: '7px solid #DC2626',
+            borderRadius: 14,
+            padding: '10px 30px',
+            background: 'rgba(220,38,38,0.08)',
+            boxShadow: '0 0 0 3px rgba(220,38,38,0.25), 0 0 40px rgba(255,201,25,0.18), inset 0 0 24px rgba(220,38,38,0.1)',
+          }}
+        >
+          <span style={{
+            fontFamily: "'Bebas Neue', cursive",
+            fontSize: 120,
+            color: '#DC2626',
+            letterSpacing: 14,
+            lineHeight: 1,
+            display: 'block',
+            textShadow: '0 0 30px rgba(220,38,38,0.6), 0 4px 20px rgba(0,0,0,0.8)',
+          }}>
+            SOLD
+          </span>
+        </div>
+      </div>
     </div>
 
     {/* ── Gold vertical accent bar ── */}
