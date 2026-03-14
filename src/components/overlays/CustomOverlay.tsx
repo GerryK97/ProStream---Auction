@@ -645,7 +645,7 @@ function CustomOverlayContent({
     return () => window.removeEventListener('resize', updateScale);
   }, []);
 
-  // Sold message toast — show on Sold, no auto-dismiss
+  // Sold message toast — show on Sold, auto-dismiss after 5s
   useEffect(() => {
     const status = auctionState.currentAuctionStatus;
     if (status === 'Sold' && prevAuctionStatusRef.current !== 'Sold') {
@@ -654,21 +654,14 @@ function CustomOverlayContent({
       if (currentPlayer && winningTeam) {
         setSoldToast({ player: currentPlayer, team: winningTeam, price });
         setToastExiting(false);
+        // Begin exit animation at 4.4s, fully remove at 5s
+        const exitTimer = setTimeout(() => setToastExiting(true), 4400);
+        const removeTimer = setTimeout(() => { setSoldToast(null); setToastExiting(false); }, 5000);
+        return () => { clearTimeout(exitTimer); clearTimeout(removeTimer); };
       }
     }
     prevAuctionStatusRef.current = status;
   }, [auctionState.currentAuctionStatus, auctionState.currentBid, currentPlayer, teams]);
-
-  // Dismiss toast when next player is selected
-  useEffect(() => {
-    if (!soldToast) return;
-    if (currentPlayer && currentPlayer._id !== soldToast.player._id) {
-      setToastExiting(true);
-      const t = setTimeout(() => { setSoldToast(null); setToastExiting(false); }, 600);
-      return () => clearTimeout(t);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPlayer?._id]);
 
   return (
     <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative', background: 'transparent' }}>
