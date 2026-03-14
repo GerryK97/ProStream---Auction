@@ -330,13 +330,13 @@ function BidInfoPanel({
   return (
     <>
       {/* Base Price */}
-      <div style={{ ...pillStyle, left: smallMode ? 328 : 27 }}>
+      <div style={{ ...pillStyle, left: smallMode ? 353 : 27 }}>
         <div style={labelStyle}>BASE PRICE</div>
         <div style={valueStyle}>{basePrice.toLocaleString('en-IN')}</div>
       </div>
 
       {/* Current Bid */}
-      <div style={{ ...pillStyle, left: smallMode ? 896 : 1019 }}>
+      <div style={{ ...pillStyle, left: smallMode ? 871 : 1019 }}>
         <div style={labelStyle}>CURRENT BID</div>
         <div className={bidPopping ? 'fs-bid-pop' : ''} style={valueStyle}>{currentBid.toLocaleString('en-IN')}</div>
       </div>
@@ -763,19 +763,22 @@ function CustomOverlayContent({
         {/* Small: 45% scale, centered at x=960, just above bid panel */}
         {/* Large: original Figma slot left=713, top=237 */}
         {(visibleMode === 'standard' || visibleMode === 'custom-ticker') && !overlaySettings.hidePremiumCard && (
+          // Outer div: position + scale only — never re-mounts so scale is never clobbered by animation
           <div
-            key={playerKey}
-            className="fs-player-enter"
             style={{
               position: 'absolute',
               left:            overlaySettings.size === 'small' ? 634 : 498,
               top:             overlaySettings.size === 'small' ? 724 : 391,
-              width: 494,
-              height: 605,
-              overflow: 'hidden',
               transform:       overlaySettings.size === 'small' ? 'scale(0.45)' : undefined,
               transformOrigin: overlaySettings.size === 'small' ? 'top left'    : undefined,
-            }}>
+            }}
+          >
+          {/* Inner div: animation + overflow + re-mount on player change */}
+          <div
+            key={playerKey}
+            className="fs-player-enter"
+            style={{ width: 494, height: 605, overflow: 'hidden' }}
+          >
             <PremiumPlayerCardOverlay
               currentPlayer={currentPlayer}
               tournament={tournament}
@@ -815,6 +818,7 @@ function CustomOverlayContent({
                 </div>
               </div>
             )}
+          </div>
           </div>
         )}
 
