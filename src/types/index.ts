@@ -22,7 +22,8 @@ export interface Tournament {
   usePlayerClasses?: boolean;           // Toggle to enable/disable player classes
   playerClasses?: PlayerClassConfig[];  // Custom player classes for this tournament
   basePriceStrategy?: BasePriceStrategy; // Strategy for determining base prices (default: 'tournament-level')
-  overlayTheme?: 'standard'; // Overlay theme for OBS browser source
+  overlayTheme?: 'standard' | 'premium' | 'neon'; // Overlay theme for OBS browser source
+  overlayPalette?: string; // e.g. 'default', 'ocean', 'crimson'
 }
 
 export interface Team {

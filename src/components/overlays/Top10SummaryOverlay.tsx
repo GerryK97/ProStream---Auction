@@ -66,7 +66,7 @@ const Top10SummaryOverlay: React.FC<Top10SummaryOverlayProps> = ({
                 <div style={{
                     fontFamily: FONT_HEADING,
                     fontSize: 48,
-                    color: 'rgba(245,158,11,0.4)',
+                    color: 'rgba(var(--overlay-color-primary-rgb),0.4)',
                     letterSpacing: 8,
                 }}>
                     NO PLAYERS SOLD YET
@@ -96,9 +96,9 @@ const Top10SummaryOverlay: React.FC<Top10SummaryOverlayProps> = ({
                     top: panelTop,
                     width: PANEL_WIDTH,
                     height: contentH,
-                    background: '#0D1B2A',
+                    background: 'var(--overlay-bg-panel)',
                     borderRadius: 20,
-                    border: '1px solid #1E3A5F',
+                    border: '1px solid var(--overlay-border-accent-subtle)',
                     animation: dashAnim,
                 }} />
 
@@ -109,7 +109,7 @@ const Top10SummaryOverlay: React.FC<Top10SummaryOverlayProps> = ({
                     top: panelTop + 20,
                     width: 5,
                     height: contentH - 40,
-                    background: '#F59E0B',
+                    background: 'var(--overlay-color-primary)',
                     borderRadius: '0 0 4px 4px',
                     animation: dashAnim,
                 }} />
@@ -132,7 +132,7 @@ const Top10SummaryOverlay: React.FC<Top10SummaryOverlayProps> = ({
                         <div style={{
                             fontFamily: FONT_HEADING,
                             fontSize: 64,
-                            color: '#F59E0B',
+                            color: 'var(--overlay-color-primary)',
                             letterSpacing: 8,
                             lineHeight: 1,
                         }}>
@@ -142,7 +142,7 @@ const Top10SummaryOverlay: React.FC<Top10SummaryOverlayProps> = ({
                             fontFamily: FONT_ROW,
                             fontSize: 22,
                             fontWeight: 500,
-                            color: '#64748B',
+                            color: 'var(--overlay-text-subtle)',
                             letterSpacing: 2,
                             marginTop: 4,
                         }}>
@@ -154,7 +154,7 @@ const Top10SummaryOverlay: React.FC<Top10SummaryOverlayProps> = ({
                     <div style={{
                         fontFamily: FONT_HEADING,
                         fontSize: 52,
-                        color: 'rgba(245,158,11,0.25)',
+                        color: 'rgba(var(--overlay-color-primary-rgb),0.25)',
                         letterSpacing: 4,
                     }}>
                         LEADERBOARD
@@ -168,7 +168,7 @@ const Top10SummaryOverlay: React.FC<Top10SummaryOverlayProps> = ({
                     top: panelTop + HEADING_H,
                     width: PANEL_WIDTH - 40,
                     height: SEPARATOR_H,
-                    background: 'linear-gradient(90deg, #F59E0B 0%, rgba(245,158,11,0.15) 100%)',
+                    background: 'linear-gradient(90deg, var(--overlay-color-primary) 0%, rgba(var(--overlay-color-primary-rgb),0.15) 100%)',
                     animation: dashAnim,
                 }} />
 
@@ -185,7 +185,7 @@ const Top10SummaryOverlay: React.FC<Top10SummaryOverlayProps> = ({
                     fontFamily: FONT_ROW,
                     fontSize: 16,
                     fontWeight: 600,
-                    color: 'rgba(100,116,139,0.6)',
+                    color: 'var(--overlay-text-dim)',
                     letterSpacing: 3,
                     textTransform: 'uppercase',
                     animation: dashAnim,
@@ -244,9 +244,9 @@ const Top10SummaryOverlay: React.FC<Top10SummaryOverlayProps> = ({
                                     top: AVATAR_OVERLAP,
                                     width: PILL_WIDTH,
                                     height: PILL_H,
-                                    background: isTop3 ? `rgba(${rank === 1 ? '245,158,11' : rank === 2 ? '148,163,184' : '205,127,50'},0.07)` : '#0A1628',
+                                    background: isTop3 ? `rgba(${rank === 1 ? 'var(--overlay-color-primary-rgb)' : rank === 2 ? '148,163,184' : '205,127,50'},0.07)` : 'rgba(var(--overlay-color-primary-rgb),0.03)',
                                     borderRadius: 26.5,
-                                    border: `1px solid ${isTop3 ? rankColor + '44' : '#1E3A5F'}`,
+                                    border: `1px solid ${isTop3 ? rankColor + '44' : 'var(--overlay-border-accent-subtle)'}`,
                                 }} />
 
                                 {/* Avatar */}
@@ -316,7 +316,7 @@ const Top10SummaryOverlay: React.FC<Top10SummaryOverlayProps> = ({
                                     fontSize: 44,
                                     fontWeight: 500,
                                     letterSpacing: 2,
-                                    color: '#94A3B8',
+                                    color: 'var(--overlay-text-dim)',
                                     whiteSpace: 'nowrap',
                                     maxWidth: 400,
                                     overflow: 'hidden',
@@ -338,7 +338,7 @@ const Top10SummaryOverlay: React.FC<Top10SummaryOverlayProps> = ({
                                     fontSize: isTop3 ? 48 : 44,
                                     fontWeight: 700,
                                     letterSpacing: 2,
-                                    color: isTop3 ? rankColor : '#F59E0B',
+                                    color: isTop3 ? rankColor : 'var(--overlay-color-primary)',
                                     whiteSpace: 'nowrap',
                                 }}>
                                     {formatCurrency(player.finalPrice || 0)}
@@ -353,7 +353,7 @@ const Top10SummaryOverlay: React.FC<Top10SummaryOverlayProps> = ({
                                     top: pillTop + PILL_H + 12,
                                     width: PILL_WIDTH - 20,
                                     height: 1,
-                                    background: 'rgba(30,58,95,0.5)',
+                                    background: 'var(--overlay-border-accent-subtle)',
                                 }} />
                             )}
                         </React.Fragment>

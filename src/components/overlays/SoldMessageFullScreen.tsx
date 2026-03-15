@@ -26,20 +26,20 @@ const SoldMessageFullScreen: React.FC<SoldMessageFullScreenProps> = ({
       position: 'absolute',
       inset: 0,
       zIndex: 200,
-      background: 'linear-gradient(135deg, #0d1117 0%, #111827 100%)',
+      background: 'var(--overlay-bg-fullscreen)',
       transformOrigin: 'center center',
       overflow: 'hidden',
     }}
   >
-    {/* ── Gold top accent bar ── */}
+    {/* ── Top accent bar ── */}
     <div style={{
       position: 'absolute',
       top: 0,
       left: 0,
       right: 0,
       height: 110,
-      background: 'linear-gradient(90deg, rgba(255,201,25,0.18) 0%, transparent 100%)',
-      borderBottom: '1px solid rgba(255,201,25,0.25)',
+      background: 'linear-gradient(90deg, rgba(var(--overlay-color-primary-rgb),0.18) 0%, transparent 100%)',
+      borderBottom: '1px solid var(--overlay-border-accent-subtle)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -49,17 +49,17 @@ const SoldMessageFullScreen: React.FC<SoldMessageFullScreenProps> = ({
         width: 14,
         height: 14,
         borderRadius: '50%',
-        background: '#FFC919',
-        boxShadow: '0 0 16px rgba(255,201,25,0.9)',
+        background: 'var(--overlay-color-primary)',
+        boxShadow: '0 0 16px rgba(var(--overlay-color-primary-rgb),0.9)',
         flexShrink: 0,
       }} />
       <span style={{
         fontFamily: '"Graduate", cursive',
         fontSize: 40,
         letterSpacing: 12,
-        color: '#FFC919',
+        color: 'var(--overlay-color-primary)',
         textTransform: 'uppercase',
-        textShadow: '0 0 40px rgba(255,201,25,0.5)',
+        textShadow: '0 0 40px rgba(var(--overlay-color-primary-rgb),0.5)',
       }}>
         SOLD
       </span>
@@ -67,8 +67,8 @@ const SoldMessageFullScreen: React.FC<SoldMessageFullScreenProps> = ({
         width: 14,
         height: 14,
         borderRadius: '50%',
-        background: '#FFC919',
-        boxShadow: '0 0 16px rgba(255,201,25,0.9)',
+        background: 'var(--overlay-color-primary)',
+        boxShadow: '0 0 16px rgba(var(--overlay-color-primary-rgb),0.9)',
         flexShrink: 0,
       }} />
     </div>
@@ -135,7 +135,7 @@ const SoldMessageFullScreen: React.FC<SoldMessageFullScreenProps> = ({
             borderRadius: 14,
             padding: '10px 30px',
             background: 'rgba(220,38,38,0.08)',
-            boxShadow: '0 0 0 3px rgba(220,38,38,0.25), 0 0 40px rgba(255,201,25,0.18), inset 0 0 24px rgba(220,38,38,0.1)',
+            boxShadow: '0 0 0 3px rgba(220,38,38,0.25), 0 0 40px rgba(var(--overlay-color-primary-rgb),0.18), inset 0 0 24px rgba(220,38,38,0.1)',
           }}
         >
           <span style={{
@@ -153,14 +153,14 @@ const SoldMessageFullScreen: React.FC<SoldMessageFullScreenProps> = ({
       </div>
     </div>
 
-    {/* ── Gold vertical accent bar ── */}
+    {/* ── Vertical accent bar ── */}
     <div style={{
       position: 'absolute',
       left: 725,
       top: 110,
       width: 5,
       height: 970,
-      background: 'linear-gradient(180deg, #FFC919 0%, rgba(255,201,25,0.08) 100%)',
+      background: 'linear-gradient(180deg, var(--overlay-color-primary) 0%, rgba(var(--overlay-color-primary-rgb),0.08) 100%)',
       borderRadius: 3,
     }} />
 
@@ -175,25 +175,25 @@ const SoldMessageFullScreen: React.FC<SoldMessageFullScreenProps> = ({
       fontFamily: '"Inconsolata", monospace',
       fontSize: 110,
       fontWeight: 700,
-      color: '#FFC919',
+      color: 'var(--overlay-color-primary)',
       lineHeight: 1.05,
       letterSpacing: 4,
       overflow: 'hidden',
       textOverflow: 'ellipsis',
       whiteSpace: 'nowrap',
-      textShadow: '0 0 40px rgba(255,201,25,0.55), 0 0 80px rgba(255,201,25,0.2)',
+      textShadow: '0 0 40px rgba(var(--overlay-color-primary-rgb),0.55), 0 0 80px rgba(var(--overlay-color-primary-rgb),0.2)',
     }}>
       {player.name}
     </div>
 
-    {/* Gold divider */}
+    {/* Divider */}
     <div style={{
       position: 'absolute',
       left: 780,
       top: 300,
       width: 1080,
       height: 3,
-      background: 'linear-gradient(90deg, #FFC919 0%, rgba(255,201,25,0.08) 100%)',
+      background: 'linear-gradient(90deg, var(--overlay-color-primary) 0%, rgba(var(--overlay-color-primary-rgb),0.08) 100%)',
       borderRadius: 2,
     }} />
 
@@ -223,14 +223,14 @@ const SoldMessageFullScreen: React.FC<SoldMessageFullScreenProps> = ({
           width: 100,
           height: 100,
           borderRadius: '50%',
-          background: 'rgba(255,201,25,0.12)',
-          border: '2px solid rgba(255,201,25,0.4)',
+          background: 'rgba(var(--overlay-color-primary-rgb),0.12)',
+          border: '2px solid rgba(var(--overlay-color-primary-rgb),0.4)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontFamily: '"Graduate", cursive',
           fontSize: 28,
-          color: '#FFC919',
+          color: 'var(--overlay-color-primary)',
           fontWeight: 700,
           flexShrink: 0,
         }}>
@@ -241,7 +241,7 @@ const SoldMessageFullScreen: React.FC<SoldMessageFullScreenProps> = ({
         <div style={{
           fontFamily: '"Concert One", cursive',
           fontSize: 52,
-          color: '#fff',
+          color: 'var(--overlay-text-bright)',
           lineHeight: 1.15,
           letterSpacing: 0.5,
           whiteSpace: 'nowrap',
@@ -252,7 +252,7 @@ const SoldMessageFullScreen: React.FC<SoldMessageFullScreenProps> = ({
           <div style={{
             fontFamily: '"Graduate", cursive',
             fontSize: 20,
-            color: 'rgba(255,255,255,0.35)',
+            color: 'var(--overlay-text-dim)',
             letterSpacing: 5,
             textTransform: 'uppercase',
             marginTop: 4,
@@ -271,10 +271,10 @@ const SoldMessageFullScreen: React.FC<SoldMessageFullScreenProps> = ({
       fontFamily: '"Inconsolata", monospace',
       fontSize: 120,
       fontWeight: 700,
-      color: '#FFC919',
+      color: 'var(--overlay-color-primary)',
       lineHeight: 1,
       letterSpacing: 4,
-      textShadow: '0 0 40px rgba(255,201,25,0.55), 0 0 80px rgba(255,201,25,0.2)',
+      textShadow: '0 0 40px rgba(var(--overlay-color-primary-rgb),0.55), 0 0 80px rgba(var(--overlay-color-primary-rgb),0.2)',
       whiteSpace: 'nowrap',
     }}>
       {formatPrice(finalPrice)}
@@ -287,7 +287,7 @@ const SoldMessageFullScreen: React.FC<SoldMessageFullScreenProps> = ({
       bottom: 48,
       width: 1080,
       height: 2,
-      background: 'linear-gradient(90deg, rgba(255,201,25,0.6) 0%, transparent 100%)',
+      background: 'linear-gradient(90deg, rgba(var(--overlay-color-primary-rgb),0.6) 0%, transparent 100%)',
       borderRadius: 2,
     }} />
   </div>

@@ -67,17 +67,17 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
     showWickets = true,
 
     // Color defaults
-    gradientStart = '#ff5411',
-    gradientEnd = '#ffcc00',
-    cardBackground = '#ffffff',
-    playerNameColor = '#1e293b',
-    statValueColor = '#1e293b',
-    statLabelColor = '#9ca3af',
-    statsSectionBackground = '#f1f5f9',
-    jerseyBadgeGradientStart = '#ff5411',
-    jerseyBadgeGradientEnd = '#ffcc00',
-    decorativeBadgeColor = '#ffffff',
-    watermarkColor = '#ffffff',
+    gradientStart = 'var(--overlay-color-primary, #ff5411)',
+    gradientEnd = 'var(--overlay-color-secondary, #ffcc00)',
+    cardBackground = 'var(--overlay-bg-panel, #ffffff)',
+    playerNameColor = 'var(--overlay-text-bright, #1e293b)',
+    statValueColor = 'var(--overlay-text-bright, #1e293b)',
+    statLabelColor = 'var(--overlay-text-dim, #9ca3af)',
+    statsSectionBackground = 'var(--overlay-bg-fullscreen, #f1f5f9)',
+    jerseyBadgeGradientStart = 'var(--overlay-color-primary, #ff5411)',
+    jerseyBadgeGradientEnd = 'var(--overlay-color-secondary, #ffcc00)',
+    decorativeBadgeColor = 'var(--overlay-bg-panel, #ffffff)',
+    watermarkColor = 'rgba(var(--overlay-text-bright-rgb, 255, 255, 255), 0.1)',
 
     // Layout defaults
     cardSize = 'medium',

@@ -68,9 +68,9 @@ function TickerStrip({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customMode, customLine1, customLine2]);
 
-  const nameStyle:   React.CSSProperties = { color: 'rgba(255,255,255,0.88)' };
-  const detailStyle: React.CSSProperties = { color: 'rgba(255,255,255,0.42)' };
-  const sepStyle:    React.CSSProperties = { color: 'rgba(255,201,25,0.5)' };
+  const nameStyle:   React.CSSProperties = { color: 'var(--overlay-text-bright)' };
+  const detailStyle: React.CSSProperties = { color: 'var(--overlay-text-muted)' };
+  const sepStyle:    React.CSSProperties = { color: 'var(--overlay-border-accent-strong)' };
 
   const renderItem = (p: Player, keyPrefix: string): React.ReactNode => {
     if (mode === 'sold') {
@@ -128,8 +128,8 @@ function TickerStrip({
           top: 1006,
           width: 1690,
           height: 57,
-          backgroundColor: 'rgba(8,10,20,0.92)',
-          borderTop: '1px solid rgba(255,201,25,0.22)',
+          backgroundColor: 'var(--overlay-bg-ticker)',
+          borderTop: '1px solid var(--overlay-border-accent-subtle)',
         }}
       />
 
@@ -157,7 +157,7 @@ function TickerStrip({
               return (
                 <div key={offset} style={{
                   height: 57, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontFamily: '"Concert One", cursive', fontSize: 26, color: 'rgba(255,255,255,0.88)',
+                  fontFamily: '"Concert One", cursive', fontSize: 26, color: 'var(--overlay-text-bright)',
                   whiteSpace: 'nowrap',
                 }}>
                   {lines[idx] ?? ''}
@@ -189,7 +189,7 @@ function TickerStrip({
               whiteSpace: 'nowrap',
               fontFamily: '"Concert One", cursive',
               fontSize: 22,
-              color: 'rgba(255,255,255,0.28)',
+              color: 'var(--overlay-text-dim)',
               paddingLeft: 16,
             }}
           >
@@ -206,9 +206,9 @@ function TickerStrip({
           height: 70,
           left: 6,
           top: 998,
-          background: 'linear-gradient(270deg, #6B72FF 0%, #222899 74%)',
+          background: 'var(--overlay-bg-logo-pill)',
           borderRadius: 28,
-          border: '1.5px solid rgba(255,201,25,0.3)',
+          border: '1.5px solid var(--overlay-border-accent-strong)',
         }}
       />
 
@@ -235,7 +235,7 @@ function TickerStrip({
               style={{ height: 38, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
             />
             <span style={{
-              color: '#FFC919',
+              color: 'var(--overlay-color-primary)',
               fontSize: 20,
               fontFamily: '"Coda Caption", cursive',
               fontWeight: 800,
@@ -247,7 +247,7 @@ function TickerStrip({
           </>
         ) : (
           <span style={{
-            color: '#FFC919',
+            color: 'var(--overlay-color-primary)',
             fontSize: 24,
             fontFamily: '"Coda Caption", cursive',
             fontWeight: 800,
@@ -301,8 +301,8 @@ function BidInfoPanel({
     top:          smallMode ? 925 : 877,
     borderRadius: smallMode ? 10  : 16,
     gap:          smallMode ? 1   : 2,
-    background: 'linear-gradient(135deg, #0f0c29, #302b63)',
-    border: '1.5px solid rgba(255,255,255,0.15)',
+    background: 'var(--overlay-bg-panel)',
+    border: '1.5px solid var(--overlay-border-light)',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
@@ -310,7 +310,7 @@ function BidInfoPanel({
   };
 
   const labelStyle: React.CSSProperties = {
-    color: '#FFC919',
+    color: 'var(--overlay-color-primary)',
     fontSize: smallMode ? 11 : 18,
     fontFamily: '"Graduate", cursive',
     letterSpacing: 5,
@@ -319,7 +319,7 @@ function BidInfoPanel({
   };
 
   const valueStyle: React.CSSProperties = {
-    color: '#ffffff',
+    color: 'var(--overlay-text-bright)',
     fontSize:      smallMode ? 37 : 62,
     fontFamily: '"Inconsolata", monospace',
     fontWeight: 700,
@@ -371,12 +371,12 @@ function TeamCard({ team, tournament, currentBid }: { team: Team; tournament: To
       width: 362,
       height: 136,
       background: isExceeded
-        ? 'linear-gradient(135deg, #1a0808, #2d0f0f)'
-        : 'linear-gradient(135deg, #0f0c29, #302b63)',
+        ? 'var(--overlay-bg-danger)'
+        : 'var(--overlay-bg-panel)',
       borderRadius: 20,
-      border: isExceeded ? '2px solid #ef4444' : '1.5px solid rgba(255,255,255,0.15)',
+      border: isExceeded ? '2px solid var(--overlay-color-danger)' : '1.5px solid var(--overlay-border-light)',
       boxShadow: isExceeded
-        ? '0 0 18px rgba(239,68,68,0.55), 0 0 40px rgba(239,68,68,0.25), inset 0 0 20px rgba(239,68,68,0.08)'
+        ? '0 0 18px rgba(var(--overlay-color-danger-rgb),0.55), 0 0 40px rgba(var(--overlay-color-danger-rgb),0.25), inset 0 0 20px rgba(var(--overlay-color-danger-rgb),0.08)'
         : 'none',
       transition: 'border 0.3s ease, box-shadow 0.3s ease, background 0.3s ease',
       flexShrink: 0,
@@ -399,7 +399,7 @@ function TeamCard({ team, tournament, currentBid }: { team: Team; tournament: To
         {team.logoURL ? (
           <img src={team.logoURL} alt={team.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
-          <span style={{ color: '#FFC919', fontSize: 36, fontFamily: '"Graduate", cursive', fontWeight: 700 }}>
+          <span style={{ color: 'var(--overlay-color-primary)', fontSize: 36, fontFamily: '"Graduate", cursive', fontWeight: 700 }}>
             {initials}
           </span>
         )}
@@ -411,7 +411,7 @@ function TeamCard({ team, tournament, currentBid }: { team: Team; tournament: To
         left: 152,
         top: 8,
         right: 8,
-        color: '#FFC919',
+        color: 'var(--overlay-color-primary)',
         fontSize: 20,
         fontFamily: '"Graduate", cursive',
         letterSpacing: 2,
@@ -436,7 +436,7 @@ function TeamCard({ team, tournament, currentBid }: { team: Team; tournament: To
         <div style={{
           width: `${barPct}%`,
           height: '100%',
-          background: barPct > 80 ? '#ff4444' : '#00C54C',
+          background: barPct > 80 ? 'var(--overlay-color-danger)' : 'var(--overlay-color-success)',
           borderRadius: 4.5,
           transition: 'width 0.4s ease',
         }} />
@@ -460,7 +460,7 @@ function TeamCard({ team, tournament, currentBid }: { team: Team; tournament: To
         position: 'absolute',
         left: 152,
         top: 63,
-        color: '#ffffff',
+        color: 'var(--overlay-text-bright)',
         fontSize: 16,
         fontFamily: '"Inconsolata", monospace',
         letterSpacing: 1.5,
@@ -486,7 +486,7 @@ function TeamCard({ team, tournament, currentBid }: { team: Team; tournament: To
         position: 'absolute',
         left: 255,
         top: 63,
-        color: '#ffffff',
+        color: 'var(--overlay-text-bright)',
         fontSize: 14,
         fontFamily: '"Inconsolata", monospace',
         letterSpacing: 1,
@@ -512,7 +512,7 @@ function TeamCard({ team, tournament, currentBid }: { team: Team; tournament: To
         position: 'absolute',
         left: 152,
         top: 82,
-        color: '#ffffff',
+        color: 'var(--overlay-text-bright)',
         fontSize: 24,
         fontFamily: '"Inconsolata", monospace',
         fontWeight: 700,
@@ -790,21 +790,21 @@ function CustomOverlayContent({
                 <div
                   className="animate-stamp-seal"
                   style={{
-                    border: '7px solid #DC2626',
+                    border: '7px solid var(--overlay-color-danger)',
                     borderRadius: 14,
                     padding: '10px 30px',
-                    background: 'rgba(220, 38, 38, 0.08)',
-                    boxShadow: '0 0 0 3px rgba(220,38,38,0.25), inset 0 0 24px rgba(220,38,38,0.1)',
+                    background: 'rgba(var(--overlay-color-danger-rgb), 0.08)',
+                    boxShadow: '0 0 0 3px rgba(var(--overlay-color-danger-rgb),0.25), inset 0 0 24px rgba(var(--overlay-color-danger-rgb),0.1)',
                   }}
                 >
                   <span style={{
                     fontFamily: "'Bebas Neue', cursive",
                     fontSize: 100,
-                    color: '#DC2626',
+                    color: 'var(--overlay-color-danger)',
                     letterSpacing: 14,
                     lineHeight: 1,
                     display: 'block',
-                    textShadow: '0 0 30px rgba(220,38,38,0.6)',
+                    textShadow: '0 0 30px rgba(var(--overlay-color-danger-rgb),0.6)',
                   }}>
                     SOLD
                   </span>

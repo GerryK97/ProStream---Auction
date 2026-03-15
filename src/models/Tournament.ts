@@ -44,8 +44,12 @@ const tournamentSchema = new Schema<Tournament>(
     },
     overlayTheme: {
       type: String,
-      enum: ['standard'],
+      enum: ['standard', 'premium', 'neon'],
       default: 'standard',
+    },
+    overlayPalette: {
+      type: String,
+      default: 'default',
     },
   },
   {

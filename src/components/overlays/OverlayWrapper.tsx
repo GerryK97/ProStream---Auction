@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { Tournament, AuctionState, Player, Team } from '@/types';
 import { getPusherClient } from '@/lib/pusher-client';
+import { OVERLAY_PALETTES } from '@/config/overlayPalettes';
 import type { OverlaySettingsEvent, WheelSpinEvent } from '@/types/pusher-events';
 import '../../styles/animations.css';
 
@@ -196,8 +197,18 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
         );
     }
 
+    // Determine active palette CSS variables
+    const theme = tournament?.overlayTheme || 'standard';
+    const paletteId = tournament?.overlayPalette || 'default';
+    const activePalette = OVERLAY_PALETTES[theme]?.find(p => p.id === paletteId) 
+        || OVERLAY_PALETTES[theme]?.[0] 
+        || { cssVars: {} };
+
     return (
-        <div className="w-full h-full bg-transparent text-white font-sans relative overflow-hidden">
+        <div 
+            className="w-full h-full bg-transparent text-white font-sans relative overflow-hidden"
+            style={{ ...activePalette.cssVars }}
+        >
             {/* Debug overlay - shows connection status */}
             {isDebugMode && (
                 <div className="fixed top-2 right-2 bg-black/90 text-white p-3 text-xs font-mono rounded border border-green-500 z-50 max-w-xs">

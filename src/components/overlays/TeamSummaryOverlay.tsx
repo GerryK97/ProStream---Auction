@@ -62,9 +62,9 @@ const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tourname
                 top: panelTop,
                 width: PANEL_WIDTH,
                 height: contentH,
-                background: '#0D1B2A',
+                background: 'var(--overlay-bg-panel)',
                 borderRadius: 20,
-                border: '1px solid #1E3A5F',
+                border: '1px solid var(--overlay-border-accent-subtle)',
                 animation: dashAnim,
             }} />
 
@@ -75,7 +75,7 @@ const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tourname
                 top: panelTop + 20,
                 width: 5,
                 height: contentH - 40,
-                background: '#F59E0B',
+                background: 'var(--overlay-color-primary)',
                 borderRadius: '0 0 4px 4px',
                 animation: dashAnim,
             }} />
@@ -98,7 +98,7 @@ const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tourname
                     <div style={{
                         fontFamily: FONT_HEADING,
                         fontSize: 64,
-                        color: '#F59E0B',
+                        color: 'var(--overlay-color-primary)',
                         letterSpacing: 8,
                         lineHeight: 1,
                     }}>
@@ -108,7 +108,7 @@ const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tourname
                         fontFamily: FONT_ROW,
                         fontSize: 22,
                         fontWeight: 500,
-                        color: '#64748B',
+                        color: 'var(--overlay-text-subtle)',
                         letterSpacing: 2,
                         marginTop: 4,
                     }}>
@@ -124,7 +124,7 @@ const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tourname
                 top: panelTop + HEADING_H,
                 width: PANEL_WIDTH - 40,
                 height: SEPARATOR_H,
-                background: 'linear-gradient(90deg, #F59E0B 0%, rgba(245,158,11,0.15) 100%)',
+                background: 'linear-gradient(90deg, var(--overlay-color-primary) 0%, rgba(var(--overlay-color-primary-rgb),0.15) 100%)',
                 animation: dashAnim,
             }} />
 
@@ -136,7 +136,7 @@ const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tourname
                 const budget = team.initialBudget ?? 0;
                 const spent = budget - balance;
                 const initials = (team.shortCode || team.name).slice(0, 2).toUpperCase();
-                const balanceColor = balance <= 0 ? '#EF4444' : '#F59E0B';
+                const balanceColor = balance <= 0 ? 'var(--overlay-danger, #EF4444)' : 'var(--overlay-color-primary)';
 
                 return (
                     <React.Fragment key={team._id}>
@@ -158,9 +158,9 @@ const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tourname
                                 top: AVATAR_OVERLAP,
                                 width: PILL_WIDTH,
                                 height: PILL_H,
-                                background: '#0A1628',
+                                background: 'rgba(var(--overlay-color-primary-rgb),0.03)',
                                 borderRadius: 26.5,
-                                border: '1px solid #1E3A5F',
+                                border: '1px solid var(--overlay-border-accent-subtle)',
                             }} />
 
                             {/* Avatar — team logo or initials */}
@@ -171,8 +171,8 @@ const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tourname
                                 width: AVATAR_SIZE,
                                 height: AVATAR_SIZE,
                                 borderRadius: '50%',
-                                background: '#071020',
-                                border: '2px solid #F59E0B',
+                                background: 'var(--overlay-bg-fullscreen)',
+                                border: '2px solid var(--overlay-color-primary)',
                                 overflow: 'hidden',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -189,7 +189,7 @@ const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tourname
                                         fontFamily: FONT_ROW,
                                         fontSize: 24,
                                         fontWeight: 700,
-                                        color: '#F59E0B',
+                                        color: 'var(--overlay-color-primary)',
                                         letterSpacing: 1,
                                     }}>
                                         {initials}
@@ -209,7 +209,7 @@ const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tourname
                                 fontSize: 46,
                                 fontWeight: 600,
                                 letterSpacing: 2,
-                                color: '#FFFFFF',
+                                color: 'var(--overlay-text-bright)',
                                 whiteSpace: 'nowrap',
                                 maxWidth: 380,
                                 overflow: 'hidden',
@@ -232,7 +232,7 @@ const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tourname
                                     fontFamily: FONT_ROW,
                                     fontSize: 14,
                                     fontWeight: 500,
-                                    color: '#475569',
+                                    color: 'var(--overlay-text-dim)',
                                     letterSpacing: 3,
                                     textTransform: 'uppercase',
                                     lineHeight: 1,
@@ -244,7 +244,7 @@ const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tourname
                                     fontSize: 40,
                                     fontWeight: 500,
                                     letterSpacing: 2,
-                                    color: '#94A3B8',
+                                    color: 'var(--overlay-text-subtle)',
                                     lineHeight: 1.1,
                                     whiteSpace: 'nowrap',
                                 }}>
@@ -267,7 +267,7 @@ const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tourname
                                     fontFamily: FONT_ROW,
                                     fontSize: 14,
                                     fontWeight: 500,
-                                    color: '#475569',
+                                    color: 'var(--overlay-text-dim)',
                                     letterSpacing: 3,
                                     textTransform: 'uppercase',
                                     lineHeight: 1,
@@ -279,7 +279,7 @@ const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tourname
                                     fontSize: 40,
                                     fontWeight: 500,
                                     letterSpacing: 2,
-                                    color: '#94A3B8',
+                                    color: 'var(--overlay-text-subtle)',
                                     lineHeight: 1.1,
                                     whiteSpace: 'nowrap',
                                 }}>
@@ -302,7 +302,7 @@ const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tourname
                                     fontFamily: FONT_ROW,
                                     fontSize: 14,
                                     fontWeight: 500,
-                                    color: '#475569',
+                                    color: 'var(--overlay-text-dim)',
                                     letterSpacing: 3,
                                     textTransform: 'uppercase',
                                     lineHeight: 1,
@@ -331,7 +331,7 @@ const TeamSummaryOverlay: React.FC<TeamSummaryOverlayProps> = ({ teams, tourname
                                 top: pillTop + PILL_H + 13,
                                 width: PILL_WIDTH - 20,
                                 height: 1,
-                                background: 'rgba(30,58,95,0.5)',
+                                background: 'var(--overlay-border-accent-subtle)',
                             }} />
                         )}
                     </React.Fragment>
