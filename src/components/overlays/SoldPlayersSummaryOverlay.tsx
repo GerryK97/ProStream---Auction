@@ -42,7 +42,7 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
     const [currentPage, setCurrentPage] = useState(0);
 
     const soldPlayers = players
-        .filter(p => p.isSold)
+        .filter(p => p.isSold && !p.isIconic)
         .sort((a, b) => (b._id > a._id ? 1 : -1));
 
     const explicitlyUnsoldPlayers = players

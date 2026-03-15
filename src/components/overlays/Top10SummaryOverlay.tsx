@@ -45,7 +45,7 @@ const Top10SummaryOverlay: React.FC<Top10SummaryOverlayProps> = ({
     isExiting = false,
 }) => {
     const top10 = players
-        .filter(p => p.isSold)
+        .filter(p => p.isSold && !p.isIconic)
         .sort((a, b) => (b.finalPrice || 0) - (a.finalPrice || 0))
         .slice(0, 10);
 
