@@ -182,7 +182,7 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
                             letterSpacing: 2,
                             marginTop: 4,
                         }}>
-                            {currentPlayers.length} PLAYER{currentPlayers.length !== 1 ? 'S' : ''}&nbsp;·&nbsp;TOTAL ₹{formatCurrency(teamTotal)}
+                            {currentPlayers.length} PLAYER{currentPlayers.length !== 1 ? 'S' : ''}&nbsp;·&nbsp;TOTAL {formatCurrency(teamTotal)}
                         </div>
                     </div>
 
@@ -318,7 +318,7 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
                                     {player.position ?? '—'}
                                 </div>
 
-                                {/* Sold Amount */}
+                                {/* Sold Amount / Iconic Badge */}
                                 <div style={{
                                     position: 'absolute',
                                     left: 1075,
@@ -329,11 +329,11 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
                                     fontFamily: FONT_ROW,
                                     fontSize: 46,
                                     fontWeight: 700,
-                                    letterSpacing: 2,
+                                    letterSpacing: player.isIconic ? 6 : 2,
                                     color: 'var(--overlay-color-primary)',
                                     whiteSpace: 'nowrap',
                                 }}>
-                                    {formatCurrency(player.finalPrice || 0)}
+                                    {player.isIconic ? 'ICONIC' : formatCurrency(player.finalPrice || 0)}
                                 </div>
                             </div>
 

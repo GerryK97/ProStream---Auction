@@ -76,8 +76,8 @@ export async function GET(request: NextRequest) {
       row['Total Wickets'] = player.stats?.totalWickets || 0;
 
       // Add auction data
-      row['Status'] = player.isSold ? 'SOLD' : player.isUnsold ? 'UNSOLD' : 'AVAILABLE';
-      row['Final Price'] = player.finalPrice || '';
+      row['Status'] = player.isIconic ? 'ICONIC' : (player.isSold ? 'SOLD' : player.isUnsold ? 'UNSOLD' : 'AVAILABLE');
+      row['Final Price'] = player.isIconic ? 'ICONIC' : (player.finalPrice || '');
       row['Winning Team'] = player.winningTeamId ? (teamMap.get(player.winningTeamId) || 'Unknown') : '';
 
       return row;

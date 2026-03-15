@@ -54,6 +54,7 @@ export interface Player {
   isUnsold?: boolean;
   finalPrice?: number;
   winningTeamId?: string;
+  isIconic?: boolean;
 }
 
 export interface AuctionState {

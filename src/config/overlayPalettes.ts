@@ -12,6 +12,7 @@ export const OVERLAY_PALETTES: Record<string, OverlayPalette[]> = {
       cssVars: {
         '--overlay-color-primary': '#FFC919',
         '--overlay-color-primary-rgb': '255, 201, 25',
+        '--overlay-color-secondary': '#FFCC00',
         '--overlay-color-success': '#00C54C',
         '--overlay-color-danger': '#ef4444',
         '--overlay-bg-panel': 'linear-gradient(135deg, #0f0c29, #302b63)',
@@ -37,6 +38,7 @@ export const OVERLAY_PALETTES: Record<string, OverlayPalette[]> = {
       cssVars: {
         '--overlay-color-primary': '#06b6d4', /* Cyan 500 */
         '--overlay-color-primary-rgb': '6, 182, 212',
+        '--overlay-color-secondary': '#0284c7', /* Blue 600 */
         '--overlay-color-success': '#10b981', /* Emerald 500 */
         '--overlay-color-danger': '#ef4444', /* Red 500 */
         '--overlay-bg-panel': 'linear-gradient(135deg, #001e36, #003b6b)',
@@ -62,6 +64,7 @@ export const OVERLAY_PALETTES: Record<string, OverlayPalette[]> = {
       cssVars: {
         '--overlay-color-primary': '#f43f5e', /* Rose 500 */
         '--overlay-color-primary-rgb': '244, 63, 94',
+        '--overlay-color-secondary': '#be123c', /* Rose 700 */
         '--overlay-color-success': '#00C54C',
         '--overlay-color-danger': '#ef4444', 
         '--overlay-bg-panel': 'linear-gradient(135deg, #1a0505, #4d0a0a)',

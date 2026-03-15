@@ -85,10 +85,14 @@ export async function POST(request: NextRequest) {
     if (!canPerformAction(user.role, 'create', 'player')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const body = await request.json();
-    const { name, position, currentClub, photoURL, playerClass, age, tournamentId } = body;
+    const { name, position, currentClub, photoURL, playerClass, age, tournamentId, isIconic, winningTeamId } = body;
 
     if (!name || !tournamentId) {
       return NextResponse.json({ error: 'name and tournamentId are required' }, { status: 400 });
+    }
+
+    if (isIconic && !winningTeamId) {
+      return NextResponse.json({ error: 'winningTeamId is required when creating an iconic player' }, { status: 400 });
     }
 
     // Validate tournament access
@@ -102,10 +106,25 @@ export async function POST(request: NextRequest) {
       user.assignedTournaments.includes(tournamentId);
     if (!hasAccess) return NextResponse.json({ error: 'Access denied to this tournament' }, { status: 403 });
 
-    const newPlayer = await playerDB.create(
-      { name, position, currentClub, photoURL, playerClass, age: age !== undefined ? Number(age) : undefined, tournamentId },
-      user.userId
-    );
+    const newPlayerData: any = { 
+      name, 
+      position, 
+      currentClub, 
+      photoURL, 
+      playerClass, 
+      age: age !== undefined ? Number(age) : undefined, 
+      tournamentId 
+    };
+
+    if (isIconic) {
+      newPlayerData.isIconic = true;
+      newPlayerData.isSold = true;
+      newPlayerData.isUnsold = false;
+      newPlayerData.finalPrice = 0;
+      newPlayerData.winningTeamId = winningTeamId;
+    }
+
+    const newPlayer = await playerDB.create(newPlayerData, user.userId);
     return NextResponse.json(newPlayer, { status: 201 });
   } catch (error: any) {
     console.error('Error creating player:', error);

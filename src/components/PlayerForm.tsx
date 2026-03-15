@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Tournament, Player } from '@/types';
+import { Tournament, Player, Team } from '@/types';
 import { getAuthHeaders } from '@/lib/api-client';
 import ImageUpload from './ImageUpload';
 import { PlusIcon } from './icons';
@@ -27,6 +27,10 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
     const [photoURL, setPhotoURL] = useState(editPlayer?.photoURL ?? '');
     const [playerClass, setPlayerClass] = useState(editPlayer?.playerClass ?? '');
     const [age, setAge] = useState<string>(editPlayer?.age !== undefined ? String(editPlayer.age) : '');
+    const [isIconic, setIsIconic] = useState<boolean>(editPlayer?.isIconic ?? false);
+    const [winningTeamId, setWinningTeamId] = useState<string>(editPlayer?.winningTeamId ?? '');
+    const [teams, setTeams] = useState<Team[]>([]);
+    const [loadingTeams, setLoadingTeams] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
 
@@ -36,7 +40,32 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
     const handleTournamentChange = (id: string) => {
         setTournamentId(id);
         setPlayerClass('');
+        setWinningTeamId('');
     };
+
+    React.useEffect(() => {
+        if (!tournamentId) {
+            setTeams([]);
+            return;
+        }
+        const fetchTeams = async () => {
+            setLoadingTeams(true);
+            try {
+                const res = await fetch(`/api/teams?tournamentId=${tournamentId}`, {
+                    headers: getAuthHeaders(),
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setTeams(data);
+                }
+            } catch (err) {
+                console.error('Failed to fetch teams:', err);
+            } finally {
+                setLoadingTeams(false);
+            }
+        };
+        fetchTeams();
+    }, [tournamentId]);
 
     const handlePhotoUploaded = async (url: string) => {
         if (!isEditMode) return;
@@ -62,13 +91,28 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                 res = await fetch(`/api/players/${editPlayer._id}`, {
                     method: 'PUT',
                     headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, position, currentClub, photoURL: photoURL || undefined, playerClass: playerClass || undefined, age: age ? Number(age) : undefined }),
+                    body: JSON.stringify({ 
+                        name, position, currentClub, 
+                        photoURL: photoURL || undefined, 
+                        playerClass: playerClass || undefined, 
+                        age: age ? Number(age) : undefined,
+                        isIconic,
+                        winningTeamId: isIconic ? winningTeamId : undefined
+                    }),
                 });
             } else {
                 res = await fetch('/api/players', {
                     method: 'POST',
                     headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, position, currentClub, photoURL: photoURL || undefined, playerClass: playerClass || undefined, age: age ? Number(age) : undefined, tournamentId }),
+                    body: JSON.stringify({ 
+                        name, position, currentClub, 
+                        photoURL: photoURL || undefined, 
+                        playerClass: playerClass || undefined, 
+                        age: age ? Number(age) : undefined, 
+                        tournamentId,
+                        isIconic,
+                        winningTeamId: isIconic ? winningTeamId : undefined
+                    }),
                 });
             }
             if (!res.ok) {
@@ -144,6 +188,56 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                             </option>
                         ))}
                     </select>
+                </div>
+            )}
+
+            {/* Iconic Player Selection */}
+            {tournamentId && (
+                <div className="rounded-md p-4 space-y-3" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                            type="checkbox" 
+                            checked={isIconic} 
+                            onChange={(e) => {
+                                setIsIconic(e.target.checked);
+                                if (!e.target.checked) setWinningTeamId('');
+                            }}
+                            className="w-4 h-4"
+                            style={{ accentColor: 'var(--brand-primary)' }}
+                        />
+                        <span className="text-sm font-bold" style={{ color: isIconic ? 'var(--brand-primary)' : 'var(--text-primary)' }}>
+                            Is Iconic Player?
+                        </span>
+                    </label>
+                    
+                    {isIconic && (
+                        <div className="pt-2">
+                            <label className="block text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--brand-primary)' }}>
+                                Assign to Team
+                            </label>
+                            {loadingTeams ? (
+                                <div className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Loading teams...</div>
+                            ) : teams.length === 0 ? (
+                                <div className="text-sm" style={{ color: 'var(--status-warning)' }}>No teams available in this tournament.</div>
+                            ) : (
+                                <select 
+                                    value={winningTeamId} 
+                                    onChange={(e) => setWinningTeamId(e.target.value)} 
+                                    required={isIconic}
+                                    className="w-full rounded-md p-2" 
+                                    style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--brand-primary)', color: 'var(--text-primary)' }}
+                                >
+                                    <option value="">Select Team</option>
+                                    {teams.map(t => (
+                                        <option key={t._id} value={t._id}>{t.name} ({t.shortCode})</option>
+                                    ))}
+                                </select>
+                            )}
+                            <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
+                                Iconic players are automatically marked as Sold with a final price of ₹0. They will appear in the team's summary without affecting the budget.
+                            </p>
+                        </div>
+                    )}
                 </div>
             )}
 

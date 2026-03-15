@@ -64,7 +64,7 @@ const THEMES = [
 
 export default function OutputPage() {
   const router = useRouter();
-  const { selectedTournamentId, selectedTournament, tournaments, setSelectedTournamentId } = useTournamentContext();
+  const { selectedTournamentId, selectedTournament, setTournaments, tournaments, setSelectedTournamentId, refreshTournaments } = useTournamentContext();
   const { token } = useAuth();
   const [saving, setSaving] = useState(false);
 
@@ -110,6 +110,12 @@ export default function OutputPage() {
 
   async function selectTheme(themeId: string) {
     if (!selectedTournamentId || themeId === currentTheme) return;
+    
+    // Optimistic UI update
+    setTournaments(prev => prev.map(t => 
+      t._id === selectedTournamentId ? { ...t, overlayTheme: themeId as 'standard' | 'premium' | 'neon', overlayPalette: 'default' } : t
+    ));
+    
     setSaving(true);
     try {
       await fetch(`/api/tournaments/${selectedTournamentId}`, {
@@ -118,8 +124,11 @@ export default function OutputPage() {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ overlayTheme: themeId, overlayPalette: 'default' }), // reset palette when theme changes
+        body: JSON.stringify({ overlayTheme: themeId, overlayPalette: 'default' }),
       });
+      
+      // Update local state by refetching
+      await refreshTournaments();
     } finally {
       setSaving(false);
     }
@@ -127,6 +136,12 @@ export default function OutputPage() {
 
   async function selectPalette(paletteId: string) {
     if (!selectedTournamentId || paletteId === currentPalette) return;
+    
+    // Optimistic UI update
+    setTournaments(prev => prev.map(t => 
+      t._id === selectedTournamentId ? { ...t, overlayPalette: paletteId } : t
+    ));
+    
     setSaving(true);
     try {
       await fetch(`/api/tournaments/${selectedTournamentId}`, {
@@ -137,6 +152,9 @@ export default function OutputPage() {
         },
         body: JSON.stringify({ overlayPalette: paletteId }),
       });
+      
+      // Update local state by refetching
+      await refreshTournaments();
     } finally {
       setSaving(false);
     }
