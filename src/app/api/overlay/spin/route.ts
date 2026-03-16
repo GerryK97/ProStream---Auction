@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
       playerNo: (p as any).playerNo as string | undefined,
       position: (p as any).position as string | undefined,
       playerClass: (p as any).playerClass as string | undefined,
+      photoURL: (p as any).photoURL as string | undefined,
     }));
 
     // Broadcast spin event — overlays animate to winner

@@ -51,6 +51,20 @@ const tournamentSchema = new Schema<Tournament>(
       type: String,
       default: 'default',
     },
+    biddingMode: {
+      type: String,
+      enum: ['direct', 'team'],
+      default: 'direct',
+    },
+    bidIncrements: {
+      type: [
+        {
+          upTo:      { type: Number, required: true },
+          increment: { type: Number, required: true },
+        },
+      ],
+      default: [],
+    },
   },
   {
     timestamps: true,

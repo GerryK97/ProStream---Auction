@@ -171,6 +171,7 @@ export interface WheelSpinEvent extends BasePusherEvent {
     playerNo?: string;
     position?: string;
     playerClass?: string;
+    photoURL?: string;
   }>;
   winnerId: string;
   winnerIndex: number;

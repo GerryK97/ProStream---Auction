@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { Tournament } from '@/types';
+import { Tournament, BidIncrementRange } from '@/types';
 import { getAuthHeaders } from '@/lib/api-client';
 import DeleteButton from '@/components/shared/DeleteButton';
 import ImageUpload from '@/components/ImageUpload';
@@ -21,6 +21,8 @@ const EMPTY_FORM = {
   logoURL: '',
   basePriceStrategy: 'tournament-level' as 'tournament-level' | 'player-class-based',
   playerClasses: [] as ClassRow[],
+  biddingMode: 'direct' as 'direct' | 'team',
+  bidIncrements: [] as BidIncrementRange[],
 };
 
 function generateCodes(classes: ClassRow[]): string[] {
@@ -99,6 +101,8 @@ function TournamentsManagePage() {
         basePrice: cls.basePrice ?? 0,
         code: cls.code,
       })),
+      biddingMode: t.biddingMode ?? 'direct',
+      bidIncrements: t.bidIncrements ?? [],
     });
     setShowCreate(true);
   };
@@ -139,6 +143,8 @@ function TournamentsManagePage() {
   const buildPayload = () => {
     const useClasses = form.basePriceStrategy === 'player-class-based' && form.playerClasses.length > 0;
     const codes = useClasses ? generateCodes(form.playerClasses) : [];
+    // Sort bid increments by upTo ascending for clean storage
+    const sortedIncrements = [...form.bidIncrements].sort((a, b) => a.upTo - b.upTo);
     return {
       name: form.name,
       year: form.year,
@@ -157,6 +163,8 @@ function TournamentsManagePage() {
             order: i + 1,
           }))
         : [],
+      biddingMode: form.biddingMode,
+      bidIncrements: form.biddingMode === 'team' ? sortedIncrements : [],
     };
   };
 
@@ -503,6 +511,114 @@ function TournamentsManagePage() {
                               onClick={() => removeClass(i)}
                               className="shrink-0 text-gray-400 hover:text-red-400 text-lg leading-none px-1"
                               title="Remove class"
+                            >
+                              &times;
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Bidding Mode */}
+                <div className="border border-gray-700 rounded-lg p-4 space-y-3">
+                  <p className="text-sm font-medium text-white">Bidding Mode</p>
+                  <div className="flex flex-col gap-2">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="biddingMode"
+                        value="direct"
+                        checked={form.biddingMode === 'direct'}
+                        onChange={() => setForm(f => ({ ...f, biddingMode: 'direct' }))}
+                        className="mt-0.5"
+                      />
+                      <div>
+                        <p className="text-sm text-white font-medium">Direct Bidding</p>
+                        <p className="text-xs text-gray-400">Auctioneer types or picks any bid amount manually</p>
+                      </div>
+                    </label>
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="biddingMode"
+                        value="team"
+                        checked={form.biddingMode === 'team'}
+                        onChange={() => setForm(f => ({
+                          ...f,
+                          biddingMode: 'team',
+                          // Set default brackets if none yet
+                          bidIncrements: f.bidIncrements.length > 0 ? f.bidIncrements : [
+                            { upTo: 50000,  increment: 5000  },
+                            { upTo: 100000, increment: 10000 },
+                            { upTo: 200000, increment: 25000 },
+                          ],
+                        }))}
+                        className="mt-0.5"
+                      />
+                      <div>
+                        <p className="text-sm text-white font-medium">Team Bidding</p>
+                        <p className="text-xs text-gray-400">Each team gets a bid button; increments auto-increase by preset bracket</p>
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Bracket Builder — only shown in team mode */}
+                  {form.biddingMode === 'team' && (
+                    <div className="space-y-3 pt-2 border-t border-gray-700">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-orange-300">Bid Increment Brackets</p>
+                        <button
+                          type="button"
+                          onClick={() => setForm(f => ({
+                            ...f,
+                            bidIncrements: [...f.bidIncrements, { upTo: 0, increment: 0 }],
+                          }))}
+                          className="px-3 py-1 bg-orange-700 hover:bg-orange-600 text-white rounded text-xs font-medium"
+                        >
+                          + Add Range
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500">Each row defines: when bid is below "Up To", the increment used. Last row acts as the catch-all.</p>
+                      <div className="grid grid-cols-3 gap-1 text-xs text-gray-400 px-1">
+                        <span>Up To (₹)</span>
+                        <span>Increment (₹)</span>
+                        <span></span>
+                      </div>
+                      {form.bidIncrements.length === 0 && (
+                        <p className="text-xs text-gray-500 italic">No brackets yet. Click "+ Add Range" to add one.</p>
+                      )}
+                      <div className="space-y-2">
+                        {form.bidIncrements.map((br, i) => (
+                          <div key={i} className="grid grid-cols-3 gap-2 items-center bg-gray-700/50 rounded-lg p-2">
+                            <input
+                              type="number"
+                              value={br.upTo || ''}
+                              min={0}
+                              onChange={e => setForm(f => {
+                                const updated = f.bidIncrements.map((b, j) => j === i ? { ...b, upTo: parseInt(e.target.value) || 0 } : b);
+                                return { ...f, bidIncrements: updated };
+                              })}
+                              placeholder="e.g. 50000"
+                              className="bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-white text-sm focus:outline-none focus:border-orange-500"
+                            />
+                            <input
+                              type="number"
+                              value={br.increment || ''}
+                              min={1}
+                              onChange={e => setForm(f => {
+                                const updated = f.bidIncrements.map((b, j) => j === i ? { ...b, increment: parseInt(e.target.value) || 0 } : b);
+                                return { ...f, bidIncrements: updated };
+                              })}
+                              placeholder="e.g. 5000"
+                              className="bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-white text-sm focus:outline-none focus:border-orange-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setForm(f => ({ ...f, bidIncrements: f.bidIncrements.filter((_, j) => j !== i) }))}
+                              className="text-gray-400 hover:text-red-400 text-lg leading-none px-1 justify-self-end"
+                              title="Remove bracket"
                             >
                               &times;
                             </button>

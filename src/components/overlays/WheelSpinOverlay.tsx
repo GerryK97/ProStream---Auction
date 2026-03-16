@@ -69,7 +69,7 @@ const WheelSpinOverlay: React.FC<WheelSpinOverlayProps> = ({ data }) => {
     <div style={{
       position: 'absolute',
       inset: 0,
-      background: 'radial-gradient(ellipse at center, var(--overlay-bg-panel, #0c0f1a) 0%, var(--overlay-bg-fullscreen, #040508) 100%)',
+      background: 'var(--overlay-bg-fullscreen, #040508)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -237,7 +237,7 @@ const WheelSpinOverlay: React.FC<WheelSpinOverlayProps> = ({ data }) => {
               bottom: 64,
               left: '50%',
               transform: 'translateX(-50%)',
-              background: 'linear-gradient(135deg, var(--overlay-bg-panel, #0f0c29) 0%, var(--overlay-bg-fullscreen, #1a1438) 100%)',
+              background: 'var(--overlay-bg-panel, #0f0c29)',
               border: '2px solid var(--overlay-color-primary, #FFC919)',
               borderRadius: 24,
               padding: '24px 60px 28px',

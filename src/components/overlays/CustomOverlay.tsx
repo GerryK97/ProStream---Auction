@@ -10,6 +10,7 @@ import RestingTimeOverlay from './RestingTimeOverlay';
 import Top10SummaryOverlay from './Top10SummaryOverlay';
 import WheelSpinOverlay from './WheelSpinOverlay';
 import SoldMessageToast from './SoldMessageToast';
+import LeadingBidsOverlay from './LeadingBidsOverlay'; // Added import
 import { AuctionState, Player, Team, Tournament } from '@/types';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
 import type { OverlaySettings } from './OverlayWrapper';
@@ -560,7 +561,7 @@ function TeamCardsPanel({ teams, tournament, currentBid }: { teams: Team[]; tour
       style={{
         position: 'absolute',
         left: 1490,
-        top: 280,
+        top: 160,
         width: 400,
         display: 'flex',
         flexDirection: 'column',
@@ -842,6 +843,16 @@ function CustomOverlayContent({
           customLine1={overlaySettings.customTickerLine1}
           customLine2={overlaySettings.customTickerLine2}
         />
+
+        {/* Leading Team Overlay */}
+        {(visibleMode === 'standard' || visibleMode === 'custom-ticker') && (
+          <LeadingBidsOverlay
+            auctionState={auctionState}
+            teams={teams}
+            position={overlaySettings.soldMessagePosition ?? 'bottom-right'}
+            isVisible={tournament?.biddingMode === 'team' && auctionState.currentAuctionStatus === 'Bidding' && !soldToast}
+          />
+        )}
 
         {/* Sold Message Toast */}
         {soldToast && (

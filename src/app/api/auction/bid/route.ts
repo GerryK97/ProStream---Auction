@@ -6,6 +6,7 @@ import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
 import { triggerBidPlaced } from '@/lib/pusher-server';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
+import { getNextTeamBid } from '@/lib/bidIncrementUtils';
 
 // POST /api/auction/bid - Place a bid for the current player
 export async function POST(request: NextRequest) {
@@ -77,6 +78,18 @@ export async function POST(request: NextRequest) {
         { error: `The first bid must be at least the base price of ${actualBasePrice.toLocaleString()}` },
         { status: 400 }
       );
+    }
+
+    // In team bidding mode, validate that the submitted amount equals the next preset bid
+    if ((tournament as any).biddingMode === 'team') {
+      const bidIncrements = (tournament as any).bidIncrements ?? [];
+      const expectedBid = getNextTeamBid(bidIncrements, auctionState.currentBid, actualBasePrice);
+      if (amount !== expectedBid) {
+        return NextResponse.json(
+          { error: `Invalid bid amount for team bidding mode. Expected: ${expectedBid.toLocaleString()}` },
+          { status: 400 }
+        );
+      }
     }
 
     // Update auction state (team will be assigned when selling)
