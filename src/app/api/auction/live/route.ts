@@ -35,8 +35,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
     }
 
-    const currentPlayer = auctionState?.currentPlayerId
-      ? players.find((p: any) => p._id.toString() === auctionState.currentPlayerId) ?? null
+    const state = auctionState as any;
+    const currentPlayer = state?.currentPlayerId
+      ? players.find((p: any) => p._id.toString() === state.currentPlayerId) ?? null
       : null;
 
     const availablePlayers = players.filter(
