@@ -7,6 +7,7 @@ import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { imageOptimizers } from '@/lib/imageOptimization';
 import ClassBadge from '@/components/shared/ClassBadge';
 import { getFormattedBasePrice, getClassBasePrice, getMinClassBasePrice } from '@/lib/playerClassUtils';
+import { getBidIncrement, getNextTeamBid } from '@/lib/bidIncrementUtils';
 import { getAuthHeaders } from '@/lib/api-client';
 import { useTournamentContext } from '@/contexts/TournamentContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -94,6 +95,108 @@ const AvailablePlayersPanel: React.FC<{
     );
 };
 
+// ─── Team Bidding Panel ──────────────────────────────────────────────────────
+const TeamBiddingPanel: React.FC<{
+    teams: Team[];
+    tournament: Tournament;
+    auctionState: any;
+    currentPlayer: Player | undefined;
+    biddingTeamId: string;
+    setBiddingTeamId: (id: string) => void;
+    onBid: (amount: number, teamId: string) => void;
+    isSold: boolean;
+}> = ({ teams, tournament, auctionState, currentPlayer, biddingTeamId, setBiddingTeamId, onBid, isSold }) => {
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { currentBid } = auctionState;
+    const basePrice = getClassBasePrice(tournament, currentPlayer ?? null);
+    const increments = tournament.bidIncrements ?? [];
+    const nextBidAmount = getNextTeamBid(increments, currentBid, basePrice);
+    const increment = currentBid === 0 ? basePrice : getBidIncrement(increments, currentBid);
+
+    // Mirrors the same max-bid calculation used in TeamsAndSoldPlayersPanel
+    const calcMaxBid = (team: Team): number => {
+        if (!tournament || !team.currentBalance) return 0;
+        const squadSize = tournament.squadSize;
+        const minBase = getMinClassBasePrice(tournament);
+        const purchased = team.playersPurchased?.length || 0;
+        const remaining = squadSize - purchased;
+        if (remaining <= 1) return team.currentBalance;
+        const reserved = (remaining - 1) * minBase;
+        return Math.max(0, team.currentBalance - reserved);
+    };
+
+    return (
+        <div className="space-y-2 shrink-0">
+            {/* Next bid summary bar */}
+            <div className="flex items-center justify-between px-3 py-1.5 rounded-lg" style={{ background: 'var(--surface-elevated)' }}>
+                <div>
+                    <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest">Next Bid</p>
+                    <p className="text-xl font-black" style={{ color: 'var(--brand-secondary)' }}>{nextBidAmount.toLocaleString()}</p>
+                </div>
+                <div className="text-right">
+                    <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest">Increment</p>
+                    <p className="text-base font-bold" style={{ color: 'var(--brand-primary)' }}>+{increment.toLocaleString()}</p>
+                </div>
+            </div>
+
+            {/* Compact team buttons — 3-column, no scroll */}
+            <div className="grid grid-cols-3 gap-1.5">
+                {teams.map(team => {
+                    const maxBid = calcMaxBid(team);
+                    const canAfford = maxBid >= nextBidAmount;
+                    const isLeading = biddingTeamId === team._id && currentBid > 0;
+                    const blocked = isSold || isSubmitting || !canAfford;
+
+                    return (
+                        <button
+                            key={team._id}
+                            disabled={blocked}
+                            onClick={async () => {
+                                if (blocked) return;
+                                setBiddingTeamId(team._id);
+                                setIsSubmitting(true);
+                                try { await onBid(nextBidAmount, team._id); }
+                                finally { setIsSubmitting(false); }
+                            }}
+                            className="flex flex-row items-center gap-1.5 py-2 px-2 rounded-lg transition-all"
+                            style={{
+                                background: !canAfford
+                                    ? 'rgba(239,68,68,0.08)'
+                                    : isLeading
+                                    ? 'rgba(var(--brand-primary-rgb, 99,102,241),0.18)'
+                                    : 'var(--surface-elevated)',
+                                border: !canAfford
+                                    ? '2px solid rgba(239,68,68,0.45)'
+                                    : isLeading
+                                    ? '2px solid var(--brand-primary)'
+                                    : '1.5px solid var(--border-primary)',
+                                opacity: (isSold || isSubmitting) ? 0.55 : 1,
+                                cursor: blocked ? 'not-allowed' : 'pointer',
+                            }}
+                        >
+                            <img
+                                src={imageOptimizers.teamThumbnail(team.logoURL)}
+                                alt={team.name}
+                                className="w-9 h-9 rounded-full object-cover shrink-0"
+                                loading="lazy"
+                            />
+                            <div className="flex flex-col items-start min-w-0">
+                                <p className="font-black text-base leading-tight truncate w-full"
+                                   style={{ color: isLeading ? 'var(--brand-primary)' : !canAfford ? '#f87171' : 'var(--text-primary)' }}>
+                                    {team.shortCode || team.name}
+                                </p>
+                                <p className="text-sm leading-tight" style={{ color: !canAfford ? '#f87171' : 'var(--text-tertiary)' }}>
+                                    {!canAfford ? 'Can\'t Bid' : isLeading ? '● LEADING' : maxBid.toLocaleString()}
+                                </p>
+                            </div>
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
 const CurrentAuctionPanel: React.FC<{
     currentPlayer: Player | undefined;
     tournament: Tournament | null;
@@ -101,7 +204,7 @@ const CurrentAuctionPanel: React.FC<{
     biddingTeamId: string;
     setBiddingTeamId: (id: string) => void;
     auctionState: any;
-    onBid: (amount: number) => void;
+    onBid: (amount: number, teamId?: string) => void;
     onCorrectBid: (amount: number) => void;
     onSell: () => void;
     onReset: () => void;
@@ -169,7 +272,19 @@ const CurrentAuctionPanel: React.FC<{
                 </div>
             </div>
 
-            {/* Quick Bid buttons — primary action */}
+            {/* Quick Bid (Direct) or Team Bidding buttons */}
+            {tournament.biddingMode === 'team' ? (
+                <TeamBiddingPanel
+                    teams={teams}
+                    tournament={tournament}
+                    auctionState={auctionState}
+                    currentPlayer={currentPlayer}
+                    biddingTeamId={biddingTeamId}
+                    setBiddingTeamId={setBiddingTeamId}
+                    onBid={(amount, teamId) => { setBiddingTeamId(teamId); return onBid(amount, teamId); }}
+                    isSold={isSold}
+                />
+            ) : (
             <div className="shrink-0">
                 <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--text-tertiary)' }}>Quick Bid</p>
                 <div className="grid grid-cols-6 gap-1.5">
@@ -192,6 +307,7 @@ const CurrentAuctionPanel: React.FC<{
                     ))}
                 </div>
             </div>
+            )}
 
             {/* Custom bid row — accepts any amount; auto-routes to correction if lower than current */}
             <div className="shrink-0">
@@ -988,7 +1104,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         }
     };
 
-    const handleBid = async (amount: number) => {
+    const handleBid = async (amount: number, teamId?: string) => {
         console.log('handleBid called with amount:', amount);
 
         if (!liveTournament) return;
@@ -1014,6 +1130,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     tournamentId: liveTournament._id,
+                    teamId,
                     amount,
                 }),
             });

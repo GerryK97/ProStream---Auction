@@ -97,6 +97,26 @@ export async function PUT(
     }
 
     const body = await request.json();
+
+    if (body.isIconic) {
+      if (!body.winningTeamId) {
+        return NextResponse.json({ error: 'winningTeamId is required when making a player iconic' }, { status: 400 });
+      }
+      body.isSold = true;
+      body.isUnsold = false;
+      body.finalPrice = 0;
+    } else if (body.isIconic === false) {
+      // If toggled off from iconic, and no other auction state is provided, we reset to unsold pool
+      // But only if it was previously iconic to prevent wiping legitimate auction data unintentionally
+      if (player.isIconic) {
+        body.isSold = false;
+        body.isUnsold = false;
+        // Don't send finalPrice or winningTeamId in update to keep them as is or clear them
+        body.finalPrice = null;
+        body.winningTeamId = null;
+      }
+    }
+
     const updatedPlayer = await playerDB.update(id, body);
     if (!updatedPlayer) {
       return NextResponse.json(

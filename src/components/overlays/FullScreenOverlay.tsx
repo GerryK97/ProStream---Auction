@@ -67,9 +67,9 @@ function TickerStrip({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customMode, customLine1, customLine2]);
 
-  const nameStyle:   React.CSSProperties = { color: '#e2e8f0' };
-  const detailStyle: React.CSSProperties = { color: 'rgba(255,255,255,0.45)' };
-  const sepStyle:    React.CSSProperties = { color: 'rgba(255,201,25,0.4)' };
+  const nameStyle:   React.CSSProperties = { color: 'var(--overlay-text-subtle)' };
+  const detailStyle: React.CSSProperties = { color: 'var(--overlay-text-muted)' };
+  const sepStyle:    React.CSSProperties = { color: 'var(--overlay-border-accent-strong)' };
 
   const renderItem = (p: Player, keyPrefix: string): React.ReactNode => {
     if (mode === 'sold') {
@@ -127,9 +127,9 @@ function TickerStrip({
           top: 1006,
           width: 1690,
           height: 57,
-          background: 'linear-gradient(90deg, #0a0a14 0%, #111827 100%)',
-          borderTop: '1px solid rgba(255,201,25,0.18)',
-          borderBottom: '1px solid rgba(255,201,25,0.10)',
+          background: 'var(--overlay-bg-ticker)',
+          borderTop: '1px solid var(--overlay-border-accent-subtle)',
+          borderBottom: '1px solid var(--overlay-border-light)',
         }}
       />
 
@@ -157,7 +157,7 @@ function TickerStrip({
               return (
                 <div key={offset} style={{
                   height: 57, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontFamily: '"Concert One", cursive', fontSize: 26, color: '#0d0d0d',
+                  fontFamily: '"Concert One", cursive', fontSize: 26, color: 'var(--overlay-text-dark)',
                   whiteSpace: 'nowrap',
                 }}>
                   {lines[idx] ?? ''}
@@ -189,7 +189,7 @@ function TickerStrip({
               whiteSpace: 'nowrap',
               fontFamily: '"Concert One", cursive',
               fontSize: 22,
-              color: 'rgba(0,0,0,0.4)',
+              color: 'var(--overlay-text-dim)',
               paddingLeft: 16,
             }}
           >
@@ -206,9 +206,9 @@ function TickerStrip({
           height: 70,
           left: 6,
           top: 998,
-          background: 'linear-gradient(270deg, #1a1438 0%, #0d0d18 100%)',
+          background: 'var(--overlay-bg-logo-pill)',
           borderRadius: 28,
-          border: '1.5px solid rgba(255,201,25,0.4)',
+          border: '1.5px solid var(--overlay-border-accent-strong)',
         }}
       />
 
@@ -235,7 +235,7 @@ function TickerStrip({
               style={{ height: 38, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
             />
             <span style={{
-              color: '#FFC919',
+              color: 'var(--overlay-color-primary)',
               fontSize: 20,
               fontFamily: '"Coda Caption", cursive',
               fontWeight: 800,
@@ -247,7 +247,7 @@ function TickerStrip({
           </>
         ) : (
           <span style={{
-            color: '#FFC919',
+            color: 'var(--overlay-color-primary)',
             fontSize: 24,
             fontFamily: '"Coda Caption", cursive',
             fontWeight: 800,
@@ -298,7 +298,7 @@ function PlayerAuctionPanel({
   const labelStyle: React.CSSProperties = {
     position: 'absolute',
     fontSize: 26,
-    color: 'rgba(255,255,255,0.38)',
+    color: 'var(--overlay-text-dim)',
     fontFamily: '"Graduate", cursive',
     letterSpacing: 6,
     textTransform: 'uppercase',
@@ -308,7 +308,7 @@ function PlayerAuctionPanel({
   const valueStyle: React.CSSProperties = {
     fontFamily: '"Inconsolata", monospace',
     fontSize: 50,
-    color: '#e2e8f0',
+    color: 'var(--overlay-text-subtle)',
     fontWeight: 400,
     lineHeight: '70px',
     letterSpacing: 4,
@@ -326,7 +326,7 @@ function PlayerAuctionPanel({
           height: 929,
           borderRadius: 16,
           overflow: 'hidden',
-          background: '#1a1f2e',
+          background: 'var(--overlay-bg-photo)',
         }}
       >
         {hasPlayer && currentPlayer!.photoURL ? (
@@ -340,7 +340,7 @@ function PlayerAuctionPanel({
           <div style={{
             width: '100%', height: '100%',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: '#0d1220',
+            background: 'var(--overlay-bg-photo-fallback)',
           }}>
             <img
               src={tournament.logoURL}
@@ -402,7 +402,7 @@ function PlayerAuctionPanel({
         top: 73,
         width: 5,
         height: 929,
-        background: 'linear-gradient(180deg, #FFC919 0%, rgba(255,201,25,0.08) 100%)',
+        background: 'linear-gradient(180deg, var(--overlay-color-primary) 0%, rgba(var(--overlay-color-primary-rgb),0.08) 100%)',
         borderRadius: 3,
       }} />
 
@@ -416,14 +416,14 @@ function PlayerAuctionPanel({
         width: 700,
         fontFamily: '"Inconsolata", monospace',
         fontSize: 80,
-        color: '#FFC919',
+        color: 'var(--overlay-color-primary)',
         fontWeight: 700,
         lineHeight: '90px',
         letterSpacing: 4,
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
-        textShadow: '0 0 40px rgba(255,201,25,0.55), 0 0 80px rgba(255,201,25,0.2)',
+        textShadow: '0 0 40px rgba(var(--overlay-color-primary-rgb),0.55), 0 0 80px rgba(var(--overlay-color-primary-rgb),0.2)',
       }}>
         {hasPlayer ? currentPlayer!.name : '—'}
       </div>
@@ -440,7 +440,7 @@ function PlayerAuctionPanel({
         textAlign: 'right',
         fontFamily: '"Inconsolata", monospace',
         fontSize: 38,
-        color: '#FFC919',
+        color: 'var(--overlay-color-primary)',
         fontWeight: 700,
         letterSpacing: 2,
         lineHeight: 1,
@@ -455,7 +455,7 @@ function PlayerAuctionPanel({
         top: 200,
         width: 960,
         height: 3,
-        background: 'linear-gradient(90deg, #FFC919 0%, rgba(255,201,25,0.08) 100%)',
+        background: 'linear-gradient(90deg, var(--overlay-color-primary) 0%, rgba(var(--overlay-color-primary-rgb),0.08) 100%)',
         borderRadius: 2,
       }} />
 
@@ -466,8 +466,8 @@ function PlayerAuctionPanel({
         top: 215,
         width: 920,
         height: 135,
-        background: 'rgba(255,201,25,0.05)',
-        border: '1px solid rgba(255,201,25,0.22)',
+        background: 'rgba(var(--overlay-color-primary-rgb),0.05)',
+        border: '1px solid var(--overlay-border-accent-subtle)',
         borderRadius: 12,
         boxSizing: 'border-box',
         display: 'flex',
@@ -479,7 +479,7 @@ function PlayerAuctionPanel({
         <div style={{
           fontFamily: '"Graduate", cursive',
           fontSize: 20,
-          color: '#FFC919',
+          color: 'var(--overlay-color-primary)',
           letterSpacing: 8,
           textTransform: 'uppercase',
           lineHeight: 1,
@@ -492,7 +492,7 @@ function PlayerAuctionPanel({
             style={{
               fontFamily: '"Inconsolata", monospace',
               fontSize: 88,
-              color: '#ffffff',
+              color: 'var(--overlay-text-bright)',
               fontWeight: 700,
               lineHeight: 1,
               letterSpacing: 4,
@@ -505,7 +505,7 @@ function PlayerAuctionPanel({
               width: 16,
               height: 16,
               borderRadius: '50%',
-              background: '#FFC919',
+              background: 'var(--overlay-color-primary)',
               flexShrink: 0,
               alignSelf: 'center',
               marginTop: 4,
@@ -521,7 +521,7 @@ function PlayerAuctionPanel({
       </div>
 
       {/* Thin divider */}
-      <div style={{ position: 'absolute', left: 880, top: 476, width: 960, height: 1, background: 'rgba(255,255,255,0.07)' }} />
+      <div style={{ position: 'absolute', left: 880, top: 476, width: 960, height: 1, background: 'var(--overlay-border-light)' }} />
 
       {/* POSITION row */}
       <div style={{ ...labelStyle, left: 880, top: 498 }}>Position</div>
@@ -530,7 +530,7 @@ function PlayerAuctionPanel({
       </div>
 
       {/* Thin divider */}
-      <div style={{ position: 'absolute', left: 880, top: 622, width: 960, height: 1, background: 'rgba(255,255,255,0.07)' }} />
+      <div style={{ position: 'absolute', left: 880, top: 622, width: 960, height: 1, background: 'var(--overlay-border-light)' }} />
 
       {/* CLASS row */}
       <div style={{ ...labelStyle, left: 880, top: 644 }}>Class</div>
@@ -703,8 +703,8 @@ function FullScreenOverlayContent({
           100% { transform: translateY(-50%) translateX(-50%); }
         }
         @keyframes bidActivePulse {
-          0%, 100% { text-shadow: 0 0 0px #FFC919; }
-          50%      { text-shadow: 0 0 40px #FFC919, 0 0 80px rgba(255,201,25,0.5), 0 0 120px rgba(255,201,25,0.2); }
+          0%, 100% { text-shadow: 0 0 0px var(--overlay-color-primary); }
+          50%      { text-shadow: 0 0 40px var(--overlay-color-primary), 0 0 80px rgba(var(--overlay-color-primary-rgb),0.5), 0 0 120px rgba(var(--overlay-color-primary-rgb),0.2); }
         }
         .fs-bid-active { animation: bidActivePulse 1.5s ease-in-out infinite; }
         @keyframes liveDotPulse {
@@ -732,7 +732,7 @@ function FullScreenOverlayContent({
         }
         @keyframes bidCardPulse {
           0%, 100% { box-shadow: none; }
-          50%      { box-shadow: 0 0 24px rgba(255,201,25,0.22), inset 0 0 16px rgba(255,201,25,0.06); }
+          50%      { box-shadow: 0 0 24px rgba(var(--overlay-color-primary-rgb),0.22), inset 0 0 16px rgba(var(--overlay-color-primary-rgb),0.06); }
         }
         .fs-bid-card-active { animation: bidCardPulse 1.5s ease-in-out infinite; }
         @keyframes bidValuePop {
@@ -758,7 +758,7 @@ function FullScreenOverlayContent({
           left: 0,
           transformOrigin: 'top left',
           transform: `scale(${scale})`,
-          background: 'linear-gradient(160deg, #0a0a14 0%, #111827 60%, #0d1117 100%)',
+          background: 'var(--overlay-bg-fullscreen)',
         }}
       >
         {/* ── Resting Time mode ── */}
@@ -867,7 +867,7 @@ function FullScreenOverlayContent({
 
 export default function FullScreenOverlay({ tournamentId }: { tournamentId: string }) {
   return (
-    <div className="w-screen h-screen overflow-hidden" style={{ background: 'linear-gradient(160deg, #0a0a14 0%, #111827 60%, #0d1117 100%)' }}>
+    <div className="w-screen h-screen overflow-hidden" style={{ background: 'var(--overlay-bg-fullscreen)' }}>
       <OverlayWrapper tournamentId={tournamentId}>
         {({ soldPlayers, teams, players, currentPlayer, tournament, auctionState, overlaySettings, wheelSpinData }) => (
           <FullScreenOverlayContent

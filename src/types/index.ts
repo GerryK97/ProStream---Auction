@@ -9,6 +9,11 @@ export interface PlayerClassConfig {
   order: number;          // Display order (lower = higher tier)
 }
 
+export interface BidIncrementRange {
+  upTo: number;        // Exclusive ceiling. e.g. 50000 means bids below 50,000.
+  increment: number;   // Step size in this range, e.g. 5000.
+}
+
 export interface Tournament {
   _id: string;
   name: string;
@@ -22,7 +27,10 @@ export interface Tournament {
   usePlayerClasses?: boolean;           // Toggle to enable/disable player classes
   playerClasses?: PlayerClassConfig[];  // Custom player classes for this tournament
   basePriceStrategy?: BasePriceStrategy; // Strategy for determining base prices (default: 'tournament-level')
-  overlayTheme?: 'standard'; // Overlay theme for OBS browser source
+  overlayTheme?: 'standard' | 'premium' | 'neon'; // Overlay theme for OBS browser source
+  overlayPalette?: string; // e.g. 'default', 'ocean', 'crimson'
+  biddingMode?: 'direct' | 'team'; // 'direct' = typed input (default), 'team' = per-team bid buttons
+  bidIncrements?: BidIncrementRange[]; // Ordered list of price ranges and their increment steps
 }
 
 export interface Team {
@@ -53,6 +61,7 @@ export interface Player {
   isUnsold?: boolean;
   finalPrice?: number;
   winningTeamId?: string;
+  isIconic?: boolean;
 }
 
 export interface AuctionState {
@@ -65,7 +74,7 @@ export interface AuctionState {
 }
 
 export interface Bid {
-  teamId: string;
+  teamId: string | null;
   amount: number;
   timestamp: number;
 }

@@ -6,6 +6,7 @@ import { useTournamentContext } from '@/contexts/TournamentContext';
 import { useAuth } from '@/contexts/AuthContext';
 import StepsProgress from '@/components/shared/StepsProgress';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { OVERLAY_PALETTES } from '@/config/overlayPalettes';
 
 const THEMES = [
   {
@@ -63,7 +64,7 @@ const THEMES = [
 
 export default function OutputPage() {
   const router = useRouter();
-  const { selectedTournamentId, selectedTournament, tournaments, setSelectedTournamentId } = useTournamentContext();
+  const { selectedTournamentId, selectedTournament, setTournaments, tournaments, setSelectedTournamentId, refreshTournaments } = useTournamentContext();
   const { token } = useAuth();
   const [saving, setSaving] = useState(false);
 
@@ -91,6 +92,9 @@ export default function OutputPage() {
   }, [token]);
 
   const currentTheme = selectedTournament?.overlayTheme ?? 'standard';
+  const currentPalette = selectedTournament?.overlayPalette ?? 'default';
+  const availablePalettes = OVERLAY_PALETTES[currentTheme] || [];
+
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
   const obsBaseUrl = selectedTournamentId ? `${origin}/overlays/${selectedTournamentId}` : '';
@@ -106,6 +110,12 @@ export default function OutputPage() {
 
   async function selectTheme(themeId: string) {
     if (!selectedTournamentId || themeId === currentTheme) return;
+    
+    // Optimistic UI update
+    setTournaments(prev => prev.map(t => 
+      t._id === selectedTournamentId ? { ...t, overlayTheme: themeId as 'standard' | 'premium' | 'neon', overlayPalette: 'default' } : t
+    ));
+    
     setSaving(true);
     try {
       await fetch(`/api/tournaments/${selectedTournamentId}`, {
@@ -114,8 +124,37 @@ export default function OutputPage() {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ overlayTheme: themeId }),
+        body: JSON.stringify({ overlayTheme: themeId, overlayPalette: 'default' }),
       });
+      
+      // Update local state by refetching
+      await refreshTournaments();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function selectPalette(paletteId: string) {
+    if (!selectedTournamentId || paletteId === currentPalette) return;
+    
+    // Optimistic UI update
+    setTournaments(prev => prev.map(t => 
+      t._id === selectedTournamentId ? { ...t, overlayPalette: paletteId } : t
+    ));
+    
+    setSaving(true);
+    try {
+      await fetch(`/api/tournaments/${selectedTournamentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ overlayPalette: paletteId }),
+      });
+      
+      // Update local state by refetching
+      await refreshTournaments();
     } finally {
       setSaving(false);
     }
@@ -212,6 +251,44 @@ export default function OutputPage() {
           })}
         </div>
       </div>
+
+      {/* Color Palette section */}
+      {selectedTournamentId && availablePalettes.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-sm font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>
+            Choose Color Palette
+          </h2>
+          <div className="flex flex-wrap gap-4">
+            {availablePalettes.map(palette => {
+              const isSelected = currentPalette === palette.id;
+              // Extract primary color/gradient for the swatch
+              const swatchBg = (palette.cssVars as any)['--overlay-color-primary'] || (palette.cssVars as any)['--overlay-bg-panel'];
+              
+              return (
+                <button
+                  key={palette.id}
+                  disabled={saving}
+                  onClick={() => selectPalette(palette.id)}
+                  className="flex items-center gap-3 rounded-full border px-4 py-2 transition-all duration-200"
+                  style={{
+                    borderColor: isSelected ? 'var(--brand-primary)' : 'var(--border-primary)',
+                    backgroundColor: isSelected ? 'rgba(79,70,229,0.08)' : 'var(--surface-elevated)',
+                    opacity: saving ? 0.5 : 1,
+                  }}
+                >
+                  <div 
+                    className="w-5 h-5 rounded-full border shadow-inner" 
+                    style={{ background: swatchBg, borderColor: 'rgba(255,255,255,0.2)' }}
+                  />
+                  <span className="text-sm font-medium" style={{ color: isSelected ? 'var(--brand-primary)' : 'var(--text-primary)' }}>
+                    {palette.name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* OBS URLs */}
       {selectedTournamentId ? (

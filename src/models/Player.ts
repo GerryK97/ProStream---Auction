@@ -17,6 +17,7 @@ const playerSchema = new Schema<Player>(
     isUnsold: { type: Boolean, default: false },
     finalPrice: { type: Number },
     winningTeamId: { type: String },
+    isIconic: { type: Boolean, default: false },
   },
   {
     timestamps: true,

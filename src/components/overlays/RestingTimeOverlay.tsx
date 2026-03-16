@@ -23,14 +23,14 @@ const RestingTimeOverlay: React.FC<RestingTimeOverlayProps> = ({ tournament }) =
     return (
         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
             <div style={{ width: CANVAS_W, height: CANVAS_H, position: 'relative', overflow: 'hidden', flexShrink: 0,
-                background: 'radial-gradient(ellipse at center, #0A1628 0%, #050B14 60%, #000 100%)',
+                background: 'radial-gradient(ellipse at center, var(--overlay-bg-panel) 0%, var(--overlay-bg-fullscreen) 65%, #000 100%)',
             }}>
 
                 {/* ── Ambient color blobs ── */}
                 <div style={{
                     position: 'absolute', left: -100, top: -80,
                     width: 600, height: 600, borderRadius: '50%',
-                    background: 'rgba(245,158,11,0.07)',
+                    background: 'rgba(var(--overlay-color-primary-rgb),0.07)',
                     filter: 'blur(120px)',
                     pointerEvents: 'none',
                 }} />
@@ -58,8 +58,8 @@ const RestingTimeOverlay: React.FC<RestingTimeOverlayProps> = ({ tournament }) =
                     width: COIN_SIZE,
                     height: COIN_SIZE,
                     borderRadius: '50%',
-                    border: '5px solid #F59E0B',
-                    background: 'linear-gradient(145deg, #0D1B2A 0%, #071020 100%)',
+                    border: '5px solid var(--overlay-color-primary)',
+                    background: 'linear-gradient(145deg, var(--overlay-bg-panel) 0%, var(--overlay-bg-fullscreen) 100%)',
                     overflow: 'hidden',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     // Combine both animations on the same element to avoid class-override conflict
@@ -75,7 +75,7 @@ const RestingTimeOverlay: React.FC<RestingTimeOverlayProps> = ({ tournament }) =
                         <span style={{
                             fontFamily: FONT_HEADING,
                             fontSize: 110,
-                            color: '#F59E0B',
+                            color: 'var(--overlay-color-primary)',
                             letterSpacing: 8,
                             lineHeight: 1,
                             display: 'block',
@@ -94,11 +94,11 @@ const RestingTimeOverlay: React.FC<RestingTimeOverlayProps> = ({ tournament }) =
                     fontFamily: FONT_BODY,
                     fontSize: 38,
                     fontWeight: 600,
-                    color: '#CBD5E1',
+                    color: 'var(--overlay-text-bright)',
                     letterSpacing: 10,
                     whiteSpace: 'nowrap',
                     textTransform: 'uppercase',
-                    textShadow: '0 0 20px rgba(203,213,225,0.3)',
+                    textShadow: '0 0 20px rgba(var(--overlay-text-bright-rgb, 203,213,225),0.3)',
                 }}>
                     {tournament?.name ?? 'PROSTREAM AUCTION'}
                 </div>

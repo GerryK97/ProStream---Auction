@@ -10,6 +10,7 @@ interface TournamentContextType {
   setSelectedTournamentId: (id: string | null) => void;
   selectedTournament: Tournament | null;
   tournaments: Tournament[];
+  setTournaments: React.Dispatch<React.SetStateAction<Tournament[]>>;
   loading: boolean;
   refreshTournaments: () => Promise<void>;
 }
@@ -92,6 +93,7 @@ export function TournamentProvider({ children }: TournamentProviderProps) {
         setSelectedTournamentId,
         selectedTournament,
         tournaments,
+        setTournaments,
         loading,
         refreshTournaments,
       }}

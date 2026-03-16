@@ -67,17 +67,17 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
     showWickets = true,
 
     // Color defaults
-    gradientStart = '#ff5411',
-    gradientEnd = '#ffcc00',
-    cardBackground = '#ffffff',
-    playerNameColor = '#1e293b',
-    statValueColor = '#1e293b',
-    statLabelColor = '#9ca3af',
-    statsSectionBackground = '#f1f5f9',
-    jerseyBadgeGradientStart = '#ff5411',
-    jerseyBadgeGradientEnd = '#ffcc00',
-    decorativeBadgeColor = '#ffffff',
-    watermarkColor = '#ffffff',
+    gradientStart = 'var(--overlay-color-primary, #FFC919)',
+    gradientEnd = 'var(--overlay-color-secondary, #FFCC00)',
+    cardBackground = 'var(--overlay-bg-card, #ffffff)',
+    playerNameColor = 'var(--overlay-text-card, #1e293b)',
+    statValueColor = 'var(--overlay-text-card, #1e293b)',
+    statLabelColor = 'var(--overlay-text-card-dim, #9ca3af)',
+    statsSectionBackground = 'var(--overlay-bg-card-alt, #f1f5f9)',
+    jerseyBadgeGradientStart = 'var(--overlay-color-primary, #FFC919)',
+    jerseyBadgeGradientEnd = 'var(--overlay-color-secondary, #FFCC00)',
+    decorativeBadgeColor = 'var(--overlay-bg-card, #ffffff)',
+    watermarkColor = 'rgba(var(--overlay-text-card-rgb, 30, 41, 59), 0.1)',
 
     // Layout defaults
     cardSize = 'medium',
@@ -103,9 +103,9 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
 
     // Size configurations
     const sizeConfig = {
-        small: { width: 300, imageHeight: 300, circleSize: 240, jerseySize: 10, nameFontSize: '18px' },
-        medium: { width: 380, imageHeight: 400, circleSize: 320, jerseySize: 12, nameFontSize: '22px' },
-        large: { width: 460, imageHeight: 480, circleSize: 400, jerseySize: 14, nameFontSize: '26px' }
+        small: { width: 300, imageHeight: 300, circleSize: 240, jerseySize: 10, nameFontSize: '24px' },
+        medium: { width: 380, imageHeight: 400, circleSize: 320, jerseySize: 12, nameFontSize: '32px' },
+        large: { width: 460, imageHeight: 480, circleSize: 400, jerseySize: 14, nameFontSize: '40px' }
     };
 
     const size = sizeConfig[cardSize];
@@ -132,6 +132,15 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
     // Use custom background text for watermark
     const watermarkLine1 = backgroundTextLine1;
     const watermarkLine2 = backgroundTextLine2;
+
+    // Output Player name with dynamic scale string
+    const nameLength = currentPlayer.name.length;
+    let dynamicFontSize = size.nameFontSize;
+    if (nameLength > 12 && nameLength <= 18) {
+        dynamicFontSize = `calc(${size.nameFontSize} * 0.85)`;
+    } else if (nameLength > 18) {
+        dynamicFontSize = `calc(${size.nameFontSize} * 0.70)`;
+    }
 
     return (
         <div className={`w-full h-full flex items-center ${positionConfig[position]}`}>
@@ -226,13 +235,14 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
 
                         {/* Player Name Section */}
                         {(showPlayerName || showRoleLabel) && (
-                            <div className="pt-3 pb-1 text-center">
+                            <div className="pt-3 pb-2 text-center flex flex-col items-center justify-center">
                                 {showPlayerName && (
                                     <h2
-                                        className="leading-tight font-bold tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
+                                        className="leading-none font-black tracking-tight uppercase w-full break-words"
                                         style={{
                                             color: playerNameColor,
-                                            fontSize: size.nameFontSize
+                                            fontSize: dynamicFontSize,
+                                            textWrap: 'balance'
                                         }}
                                     >
                                         {currentPlayer.name}
@@ -240,7 +250,7 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
                                 )}
                                 {showRoleLabel && (
                                     currentPlayer.playerClass && tournament?.usePlayerClasses ? (
-                                        <div className="flex justify-center mt-1">
+                                        <div className="flex justify-center mt-2">
                                             <ClassBadge
                                                 tournament={tournament}
                                                 player={currentPlayer}
@@ -250,10 +260,10 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
                                         </div>
                                     ) : (
                                         <div
-                                            className="text-sm drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
-                                            style={{ color: statLabelColor }}
+                                            className="text-sm font-extrabold uppercase tracking-widest mt-1.5"
+                                            style={{ color: jerseyBadgeGradientStart }}
                                         >
-                                            {roleLabel}
+                                            {currentPlayer.position || roleLabel}
                                         </div>
                                     )
                                 )}
@@ -273,13 +283,13 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
                             {visibleStats.map((stat: any, index) => (
                                 <div key={index} className="px-7 text-center">
                                     <div
-                                        className="mb-2 text-sm font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
+                                        className="mb-2 text-sm font-bold"
                                         style={{ color: statValueColor }}
                                     >
                                         {stat.value}
                                     </div>
                                     <div
-                                        className="text-2xs uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
+                                        className="text-2xs uppercase"
                                         style={{ color: statLabelColor }}
                                     >
                                         {stat.label}

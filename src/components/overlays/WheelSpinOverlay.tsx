@@ -69,7 +69,7 @@ const WheelSpinOverlay: React.FC<WheelSpinOverlayProps> = ({ data }) => {
     <div style={{
       position: 'absolute',
       inset: 0,
-      background: 'radial-gradient(ellipse at center, #0c0f1a 0%, #040508 100%)',
+      background: 'var(--overlay-bg-fullscreen, #040508)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -94,8 +94,8 @@ const WheelSpinOverlay: React.FC<WheelSpinOverlayProps> = ({ data }) => {
           100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
         }
         @keyframes wsWinnerGlow {
-          0%, 100% { box-shadow: 0 0 30px rgba(255,201,25,0.4), 0 0 60px rgba(255,201,25,0.15); }
-          50%       { box-shadow: 0 0 70px rgba(255,201,25,0.85), 0 0 120px rgba(255,201,25,0.35); }
+          0%, 100% { box-shadow: 0 0 30px rgba(var(--overlay-color-primary-rgb, 255,201,25),0.4), 0 0 60px rgba(var(--overlay-color-primary-rgb, 255,201,25),0.15); }
+          50%       { box-shadow: 0 0 70px rgba(var(--overlay-color-primary-rgb, 255,201,25),0.85), 0 0 120px rgba(var(--overlay-color-primary-rgb, 255,201,25),0.35); }
         }
         .ws-container {
           animation: wsEnter 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
@@ -128,9 +128,9 @@ const WheelSpinOverlay: React.FC<WheelSpinOverlayProps> = ({ data }) => {
           textAlign: 'center',
           fontFamily: '"Bebas Neue", cursive',
           fontSize: 76,
-          color: '#FFC919',
+          color: 'var(--overlay-color-primary, #FFC919)',
           letterSpacing: 12,
-          textShadow: '0 0 40px rgba(255,201,25,0.55), 0 0 80px rgba(255,201,25,0.2)',
+          textShadow: '0 0 40px rgba(var(--overlay-color-primary-rgb, 255,201,25),0.55), 0 0 80px rgba(var(--overlay-color-primary-rgb, 255,201,25),0.2)',
         }}>
           SPIN THE WHEEL
         </div>
@@ -148,8 +148,8 @@ const WheelSpinOverlay: React.FC<WheelSpinOverlayProps> = ({ data }) => {
         >
           <svg viewBox="0 0 1000 1000" width="880" height="880" style={{ display: 'block' }}>
             {/* Outer glow rings */}
-            <circle cx={CX} cy={CY} r={R + 14} fill="none" stroke="rgba(255,201,25,0.28)" strokeWidth="6" />
-            <circle cx={CX} cy={CY} r={R + 26} fill="none" stroke="rgba(255,201,25,0.10)" strokeWidth="3" />
+            <circle cx={CX} cy={CY} r={R + 14} fill="none" stroke="rgba(var(--overlay-color-primary-rgb, 255,201,25),0.28)" strokeWidth="6" />
+            <circle cx={CX} cy={CY} r={R + 26} fill="none" stroke="rgba(var(--overlay-color-primary-rgb, 255,201,25),0.10)" strokeWidth="3" />
 
             {/* Spinning group — segments + labels */}
             <g
@@ -192,7 +192,7 @@ const WheelSpinOverlay: React.FC<WheelSpinOverlayProps> = ({ data }) => {
               ))}
 
               {/* Center hub */}
-              <circle cx={CX} cy={CY} r={52} fill="#0d1117" stroke="#FFC919" strokeWidth="4" />
+              <circle cx={CX} cy={CY} r={52} fill="var(--overlay-bg-fullscreen, #0d1117)" stroke="var(--overlay-color-primary, #FFC919)" strokeWidth="4" />
               <text
                 x={CX} y={CY + 2}
                 textAnchor="middle"
@@ -200,7 +200,7 @@ const WheelSpinOverlay: React.FC<WheelSpinOverlayProps> = ({ data }) => {
                 style={{
                   fontFamily: '"Bebas Neue", cursive',
                   fontSize: 24,
-                  fill: '#FFC919',
+                  fill: 'var(--overlay-color-primary, #FFC919)',
                   letterSpacing: 3,
                 } as React.CSSProperties}
               >
@@ -219,7 +219,7 @@ const WheelSpinOverlay: React.FC<WheelSpinOverlayProps> = ({ data }) => {
               {/* Pointer */}
               <polygon
                 points={`${CX - 22},${CY - R - 44} ${CX + 22},${CY - R - 44} ${CX},${CY - R + 16}`}
-                fill="#FFC919"
+                fill="var(--overlay-color-primary, #FFC919)"
                 stroke="#fff"
                 strokeWidth="2.5"
                 strokeLinejoin="round"
@@ -237,8 +237,8 @@ const WheelSpinOverlay: React.FC<WheelSpinOverlayProps> = ({ data }) => {
               bottom: 64,
               left: '50%',
               transform: 'translateX(-50%)',
-              background: 'linear-gradient(135deg, #0f0c29 0%, #1a1438 100%)',
-              border: '2px solid #FFC919',
+              background: 'var(--overlay-bg-panel, #0f0c29)',
+              border: '2px solid var(--overlay-color-primary, #FFC919)',
               borderRadius: 24,
               padding: '24px 60px 28px',
               textAlign: 'center',
@@ -250,7 +250,7 @@ const WheelSpinOverlay: React.FC<WheelSpinOverlayProps> = ({ data }) => {
               fontFamily: '"Rajdhani", sans-serif',
               fontSize: 20,
               fontWeight: 600,
-              color: '#FFC919',
+              color: 'var(--overlay-color-primary, #FFC919)',
               letterSpacing: 6,
               textTransform: 'uppercase',
               marginBottom: 6,
@@ -262,7 +262,7 @@ const WheelSpinOverlay: React.FC<WheelSpinOverlayProps> = ({ data }) => {
               <div style={{
                 fontFamily: '"Bebas Neue", cursive',
                 fontSize: 30,
-                color: 'rgba(255,201,25,0.75)',
+                color: 'rgba(var(--overlay-color-primary-rgb, 255,201,25),0.75)',
                 letterSpacing: 8,
                 lineHeight: 1,
                 marginBottom: 4,
@@ -303,18 +303,18 @@ const WheelSpinOverlay: React.FC<WheelSpinOverlayProps> = ({ data }) => {
                   </span>
                 )}
                 {winner.position && winner.playerClass && (
-                  <span style={{ color: 'rgba(255,201,25,0.4)', fontSize: 20 }}>·</span>
+                  <span style={{ color: 'rgba(var(--overlay-color-primary-rgb, 255,201,25),0.4)', fontSize: 20 }}>·</span>
                 )}
                 {winner.playerClass && (
                   <span style={{
-                    background: 'rgba(255,201,25,0.14)',
-                    border: '1px solid rgba(255,201,25,0.4)',
+                    background: 'rgba(var(--overlay-color-primary-rgb, 255,201,25),0.14)',
+                    border: '1px solid rgba(var(--overlay-color-primary-rgb, 255,201,25),0.4)',
                     borderRadius: 8,
                     padding: '3px 16px',
                     fontFamily: '"Rajdhani", sans-serif',
                     fontSize: 20,
                     fontWeight: 600,
-                    color: '#FFC919',
+                    color: 'var(--overlay-color-primary, #FFC919)',
                     letterSpacing: 3,
                   }}>
                     {winner.playerClass}

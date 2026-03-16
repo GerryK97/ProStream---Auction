@@ -42,7 +42,7 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
     const [currentPage, setCurrentPage] = useState(0);
 
     const soldPlayers = players
-        .filter(p => p.isSold)
+        .filter(p => p.isSold && !p.isIconic)
         .sort((a, b) => (b._id > a._id ? 1 : -1));
 
     const explicitlyUnsoldPlayers = players
@@ -100,9 +100,9 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                 top: panelTop,
                 width: PANEL_WIDTH,
                 height: contentH,
-                background: '#0D1B2A',
+                background: 'var(--overlay-bg-panel)',
                 borderRadius: 20,
-                border: '1px solid #1E3A5F',
+                border: '1px solid var(--overlay-border-accent-subtle)',
                 animation: dashAnim,
             }} />
 
@@ -113,7 +113,7 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                 top: panelTop + 20,
                 width: 5,
                 height: contentH - 40,
-                background: '#F59E0B',
+                background: 'var(--overlay-color-primary)',
                 borderRadius: '0 0 4px 4px',
                 animation: dashAnim,
             }} />
@@ -137,7 +137,7 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                     <div style={{
                         fontFamily: FONT_HEADING,
                         fontSize: 64,
-                        color: '#F59E0B',
+                        color: 'var(--overlay-color-primary)',
                         letterSpacing: 8,
                         lineHeight: 1,
                     }}>
@@ -147,7 +147,7 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                         fontFamily: FONT_ROW,
                         fontSize: 22,
                         fontWeight: 500,
-                        color: '#64748B',
+                        color: 'var(--overlay-text-subtle)',
                         letterSpacing: 2,
                         marginTop: 4,
                     }}>
@@ -163,7 +163,7 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                                 width: i === currentPage ? 24 : 8,
                                 height: 8,
                                 borderRadius: 4,
-                                background: i === currentPage ? '#F59E0B' : '#1E3A5F',
+                                background: i === currentPage ? 'var(--overlay-color-primary)' : 'var(--overlay-border-accent-subtle)',
                                 transition: 'all 0.3s ease',
                             }} />
                         ))}
@@ -178,7 +178,7 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                 top: panelTop + HEADING_H,
                 width: PANEL_WIDTH - 40,
                 height: SEPARATOR_H,
-                background: 'linear-gradient(90deg, #F59E0B 0%, rgba(245,158,11,0.15) 100%)',
+                background: 'linear-gradient(90deg, var(--overlay-color-primary) 0%, rgba(var(--overlay-color-primary-rgb),0.15) 100%)',
                 animation: dashAnim,
             }} />
 
@@ -211,9 +211,9 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                                 top: AVATAR_OVERLAP,
                                 width: PILL_WIDTH,
                                 height: PILL_H,
-                                background: isSold ? '#0A1628' : isUnsold ? '#0A0F1A' : '#07111A',
+                                background: isSold ? 'rgba(var(--overlay-color-primary-rgb),0.03)' : isUnsold ? 'rgba(var(--overlay-text-dim-rgb, 107, 114, 128), 0.05)' : 'rgba(var(--overlay-text-dim-rgb, 107, 114, 128), 0.05)',
                                 borderRadius: 26.5,
-                                border: `1px solid ${isSold ? '#1E3A5F' : isUnsold ? '#2D1B1B' : '#0F1D2E'}`,
+                                border: `1px solid ${isSold ? 'var(--overlay-border-accent-subtle)' : isUnsold ? 'rgba(var(--overlay-danger-rgb, 239, 68, 68), 0.2)' : 'var(--overlay-border-light)'}`,
                             }} />
 
                             {/* Avatar circle — player photo */}
@@ -224,8 +224,8 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                                 width: AVATAR_SIZE,
                                 height: AVATAR_SIZE,
                                 borderRadius: '50%',
-                                background: '#071020',
-                                border: `2px solid ${isSold ? '#F59E0B' : isUnsold ? '#7F1D1D' : '#1E293B'}`,
+                                background: 'var(--overlay-bg-fullscreen)',
+                                border: `2px solid ${isSold ? 'var(--overlay-color-primary)' : isUnsold ? 'var(--overlay-danger, #EF4444)' : 'var(--overlay-border-light)'}`,
                                 overflow: 'hidden',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -243,7 +243,7 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                                         fontFamily: FONT_ROW,
                                         fontSize: 24,
                                         fontWeight: 700,
-                                        color: isSold ? '#F59E0B' : isUnsold ? '#EF4444' : '#475569',
+                                        color: isSold ? 'var(--overlay-color-primary)' : isUnsold ? 'var(--overlay-danger, #EF4444)' : 'var(--overlay-text-dim)',
                                         letterSpacing: 1,
                                     }}>
                                         {initials}
@@ -251,7 +251,6 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                                 )}
                             </div>
 
-                            {/* Player name */}
                             <div style={{
                                 position: 'absolute',
                                 left: 83,
@@ -263,7 +262,7 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                                 fontSize: 46,
                                 fontWeight: 600,
                                 letterSpacing: 2,
-                                color: isSold ? '#FFFFFF' : isUnsold ? '#6B7280' : '#374151',
+                                color: isSold ? 'var(--overlay-text-bright)' : isUnsold ? 'var(--overlay-text-subtle)' : 'var(--overlay-text-dim)',
                                 whiteSpace: 'nowrap',
                                 maxWidth: 380,
                                 overflow: 'hidden',
@@ -271,7 +270,6 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                                 {player.name}
                             </div>
 
-                            {/* Team name / UNSOLD */}
                             <div style={{
                                 position: 'absolute',
                                 left: 495,
@@ -283,7 +281,7 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                                 fontSize: 46,
                                 fontWeight: isSold ? 500 : 700,
                                 letterSpacing: 2,
-                                color: isSold ? '#CBD5E1' : isUnsold ? '#EF4444' : '#3B82F6',
+                                color: isSold ? 'var(--overlay-text-subtle)' : isUnsold ? 'var(--overlay-danger, #EF4444)' : 'var(--overlay-text-dim)',
                                 whiteSpace: 'nowrap',
                                 maxWidth: 540,
                                 overflow: 'hidden',
@@ -304,7 +302,7 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                                     fontSize: 46,
                                     fontWeight: 700,
                                     letterSpacing: 2,
-                                    color: '#F59E0B',
+                                    color: 'var(--overlay-color-primary)',
                                     whiteSpace: 'nowrap',
                                 }}>
                                     {formatCurrency(player.finalPrice || 0)}
@@ -320,7 +318,7 @@ const SoldPlayersSummaryOverlay: React.FC<SoldPlayersSummaryOverlayProps> = ({
                                 top: pillTop + PILL_H + 13,
                                 width: PILL_WIDTH - 20,
                                 height: 1,
-                                background: 'rgba(30,58,95,0.5)',
+                                background: 'var(--overlay-border-accent-subtle)',
                             }} />
                         )}
                     </React.Fragment>

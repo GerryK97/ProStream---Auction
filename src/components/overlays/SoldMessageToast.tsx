@@ -37,37 +37,37 @@ const SoldMessageToast: React.FC<SoldMessageToastProps> = ({ player, team, final
             position: 'absolute',
             ...positionStyle[position],
             width: 440,
-            background: 'linear-gradient(135deg, #0d1117 0%, #111827 100%)',
+            background: 'var(--overlay-bg-panel)',
             borderRadius: 14,
-            border: '1px solid rgba(255,201,25,0.25)',
-            borderLeft: '5px solid #FFC919',
-            boxShadow: '0 12px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,201,25,0.12), 0 0 60px rgba(255,201,25,0.08)',
+            border: '1px solid var(--overlay-border-accent-subtle)',
+            borderLeft: '5px solid var(--overlay-color-primary)',
+            boxShadow: '0 12px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(var(--overlay-color-primary-rgb),0.12), 0 0 60px rgba(var(--overlay-color-primary-rgb),0.08)',
             overflow: 'hidden',
             zIndex: 100,
         }}
     >
-        {/* Gold top accent bar */}
+        {/* Top accent bar */}
         <div style={{
-            background: 'linear-gradient(90deg, rgba(255,201,25,0.18) 0%, transparent 100%)',
+            background: 'linear-gradient(90deg, rgba(var(--overlay-color-primary-rgb),0.18) 0%, transparent 100%)',
             padding: '10px 20px 10px 22px',
             display: 'flex',
             alignItems: 'center',
             gap: 10,
-            borderBottom: '1px solid rgba(255,201,25,0.15)',
+            borderBottom: '1px solid var(--overlay-border-accent-subtle)',
         }}>
             <div style={{
                 width: 9,
                 height: 9,
                 borderRadius: '50%',
-                background: '#FFC919',
-                boxShadow: '0 0 8px rgba(255,201,25,0.8)',
+                background: 'var(--overlay-color-primary)',
+                boxShadow: '0 0 8px rgba(var(--overlay-color-primary-rgb),0.8)',
                 flexShrink: 0,
             }} />
             <span style={{
                 fontFamily: '"Graduate", cursive',
                 fontSize: 13,
                 letterSpacing: 5,
-                color: '#FFC919',
+                color: 'var(--overlay-color-primary)',
                 textTransform: 'uppercase',
             }}>SOLD</span>
         </div>
@@ -78,10 +78,10 @@ const SoldMessageToast: React.FC<SoldMessageToastProps> = ({ player, team, final
                 fontFamily: '"Inconsolata", monospace',
                 fontSize: 38,
                 fontWeight: 700,
-                color: '#FFC919',
+                color: 'var(--overlay-color-primary)',
                 letterSpacing: 2,
                 lineHeight: 1.1,
-                textShadow: '0 0 30px rgba(255,201,25,0.4)',
+                textShadow: '0 0 30px rgba(var(--overlay-color-primary-rgb),0.4)',
                 textTransform: 'uppercase',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
@@ -93,7 +93,7 @@ const SoldMessageToast: React.FC<SoldMessageToastProps> = ({ player, team, final
                 <div style={{
                     fontFamily: '"Graduate", cursive',
                     fontSize: 13,
-                    color: 'rgba(255,255,255,0.45)',
+                    color: 'var(--overlay-text-dim)',
                     letterSpacing: 2,
                     marginTop: 4,
                     textTransform: 'uppercase',
@@ -107,7 +107,7 @@ const SoldMessageToast: React.FC<SoldMessageToastProps> = ({ player, team, final
         <div style={{
             height: 1,
             margin: '0 22px',
-            background: 'linear-gradient(90deg, rgba(255,201,25,0.35) 0%, transparent 100%)',
+            background: 'linear-gradient(90deg, rgba(var(--overlay-color-primary-rgb),0.35) 0%, transparent 100%)',
         }} />
 
         {/* Team + Price section */}
@@ -137,14 +137,14 @@ const SoldMessageToast: React.FC<SoldMessageToastProps> = ({ player, team, final
                         width: 54,
                         height: 54,
                         borderRadius: '50%',
-                        background: 'rgba(255,201,25,0.15)',
-                        border: '2px solid rgba(255,201,25,0.4)',
+                        background: 'rgba(var(--overlay-color-primary-rgb),0.15)',
+                        border: '2px solid rgba(var(--overlay-color-primary-rgb),0.4)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontFamily: '"Graduate", cursive',
                         fontSize: 16,
-                        color: '#FFC919',
+                        color: 'var(--overlay-color-primary)',
                         fontWeight: 700,
                         flexShrink: 0,
                     }}>
@@ -155,7 +155,7 @@ const SoldMessageToast: React.FC<SoldMessageToastProps> = ({ player, team, final
                     <div style={{
                         fontFamily: '"Concert One", cursive',
                         fontSize: 20,
-                        color: '#fff',
+                        color: 'var(--overlay-text-bright)',
                         lineHeight: 1.2,
                         letterSpacing: 0.5,
                         whiteSpace: 'nowrap',
@@ -168,7 +168,7 @@ const SoldMessageToast: React.FC<SoldMessageToastProps> = ({ player, team, final
                         <div style={{
                             fontFamily: '"Graduate", cursive',
                             fontSize: 11,
-                            color: 'rgba(255,255,255,0.35)',
+                            color: 'var(--overlay-text-dim)',
                             letterSpacing: 3,
                             textTransform: 'uppercase',
                             marginTop: 2,
@@ -184,10 +184,10 @@ const SoldMessageToast: React.FC<SoldMessageToastProps> = ({ player, team, final
                 fontFamily: '"Inconsolata", monospace',
                 fontSize: 26,
                 fontWeight: 700,
-                color: '#FFC919',
+                color: 'var(--overlay-color-primary)',
                 textAlign: 'right',
                 flexShrink: 0,
-                textShadow: '0 0 20px rgba(255,201,25,0.35)',
+                textShadow: '0 0 20px rgba(var(--overlay-color-primary-rgb),0.35)',
                 whiteSpace: 'nowrap',
             }}>
                 {formatPrice(finalPrice)}

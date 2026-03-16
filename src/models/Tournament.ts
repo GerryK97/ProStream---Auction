@@ -44,8 +44,26 @@ const tournamentSchema = new Schema<Tournament>(
     },
     overlayTheme: {
       type: String,
-      enum: ['standard'],
+      enum: ['standard', 'premium', 'neon'],
       default: 'standard',
+    },
+    overlayPalette: {
+      type: String,
+      default: 'default',
+    },
+    biddingMode: {
+      type: String,
+      enum: ['direct', 'team'],
+      default: 'direct',
+    },
+    bidIncrements: {
+      type: [
+        {
+          upTo:      { type: Number, required: true },
+          increment: { type: Number, required: true },
+        },
+      ],
+      default: [],
     },
   },
   {

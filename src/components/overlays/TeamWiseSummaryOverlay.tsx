@@ -96,9 +96,9 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
                     top: panelTop,
                     width: PANEL_WIDTH,
                     height: contentH,
-                    background: '#0D1B2A',
+                    background: 'var(--overlay-bg-panel)',
                     borderRadius: 20,
-                    border: '1px solid #1E3A5F',
+                    border: '1px solid var(--overlay-border-accent-subtle)',
                     animation: dashAnim,
                 }} />
 
@@ -109,7 +109,7 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
                     top: panelTop + 20,
                     width: 5,
                     height: contentH - 40,
-                    background: '#F59E0B',
+                    background: 'var(--overlay-color-primary)',
                     borderRadius: '0 0 4px 4px',
                     animation: dashAnim,
                 }} />
@@ -138,7 +138,7 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
                                 height: 96,
                                 objectFit: 'contain',
                                 flexShrink: 0,
-                                filter: 'drop-shadow(0 0 8px rgba(245,158,11,0.4))',
+                                filter: 'drop-shadow(0 0 8px rgba(var(--overlay-color-primary-rgb),0.4))',
                             }}
                         />
                     ) : (
@@ -146,14 +146,14 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
                             width: 96,
                             height: 96,
                             borderRadius: '50%',
-                            background: 'rgba(245,158,11,0.12)',
-                            border: '2px solid rgba(245,158,11,0.5)',
+                            background: 'rgba(var(--overlay-color-primary-rgb),0.12)',
+                            border: '2px solid rgba(var(--overlay-color-primary-rgb),0.5)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontFamily: FONT_HEADING,
                             fontSize: 30,
-                            color: '#F59E0B',
+                            color: 'var(--overlay-color-primary)',
                             flexShrink: 0,
                         }}>
                             {currentTeam.shortCode?.slice(0, 2) ?? currentTeam.name.slice(0, 2).toUpperCase()}
@@ -165,7 +165,7 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
                         <div style={{
                             fontFamily: FONT_HEADING,
                             fontSize: 72,
-                            color: '#F59E0B',
+                            color: 'var(--overlay-color-primary)',
                             letterSpacing: 6,
                             lineHeight: 1,
                             whiteSpace: 'nowrap',
@@ -178,11 +178,11 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
                             fontFamily: FONT_ROW,
                             fontSize: 22,
                             fontWeight: 500,
-                            color: '#64748B',
+                            color: 'var(--overlay-text-subtle)',
                             letterSpacing: 2,
                             marginTop: 4,
                         }}>
-                            {currentPlayers.length} PLAYER{currentPlayers.length !== 1 ? 'S' : ''}&nbsp;·&nbsp;TOTAL ₹{formatCurrency(teamTotal)}
+                            {currentPlayers.length} PLAYER{currentPlayers.length !== 1 ? 'S' : ''}&nbsp;·&nbsp;TOTAL {formatCurrency(teamTotal)}
                         </div>
                     </div>
 
@@ -194,7 +194,7 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
                                     width: i === currentTeamIndex ? 24 : 8,
                                     height: 8,
                                     borderRadius: 4,
-                                    background: i === currentTeamIndex ? '#F59E0B' : '#1E3A5F',
+                                    background: i === currentTeamIndex ? 'var(--overlay-color-primary)' : 'var(--overlay-border-accent-subtle)',
                                     transition: 'all 0.3s ease',
                                 }} />
                             ))}
@@ -209,7 +209,7 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
                     top: panelTop + HEADER_H,
                     width: PANEL_WIDTH - 40,
                     height: SEPARATOR_H,
-                    background: 'linear-gradient(90deg, #F59E0B 0%, rgba(245,158,11,0.15) 100%)',
+                    background: 'linear-gradient(90deg, var(--overlay-color-primary) 0%, rgba(var(--overlay-color-primary-rgb),0.15) 100%)',
                     animation: dashAnim,
                 }} />
 
@@ -239,9 +239,9 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
                                     top: AVATAR_OVERLAP,
                                     width: PILL_WIDTH,
                                     height: PILL_H,
-                                    background: '#0A1628',
+                                    background: 'rgba(var(--overlay-color-primary-rgb),0.03)',
                                     borderRadius: 26.5,
-                                    border: '1px solid #1E3A5F',
+                                    border: '1px solid var(--overlay-border-accent-subtle)',
                                 }} />
 
                                 {/* Avatar circle */}
@@ -252,8 +252,8 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
                                     width: AVATAR_SIZE,
                                     height: AVATAR_SIZE,
                                     borderRadius: '50%',
-                                    background: '#071020',
-                                    border: '2px solid #F59E0B',
+                                    background: 'var(--overlay-bg-fullscreen)',
+                                    border: '2px solid var(--overlay-color-primary)',
                                     overflow: 'hidden',
                                     display: 'flex',
                                     alignItems: 'center',
@@ -270,7 +270,7 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
                                             fontFamily: FONT_ROW,
                                             fontSize: 24,
                                             fontWeight: 700,
-                                            color: '#F59E0B',
+                                            color: 'var(--overlay-color-primary)',
                                             letterSpacing: 1,
                                         }}>
                                             {initials}
@@ -290,7 +290,7 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
                                     fontSize: 46,
                                     fontWeight: 600,
                                     letterSpacing: 2,
-                                    color: '#FFFFFF',
+                                    color: 'var(--overlay-text-bright)',
                                     whiteSpace: 'nowrap',
                                     maxWidth: 480,
                                     overflow: 'hidden',
@@ -310,7 +310,7 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
                                     fontSize: 46,
                                     fontWeight: 500,
                                     letterSpacing: 2,
-                                    color: '#CBD5E1',
+                                    color: 'var(--overlay-text-subtle)',
                                     whiteSpace: 'nowrap',
                                     maxWidth: 440,
                                     overflow: 'hidden',
@@ -318,7 +318,7 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
                                     {player.position ?? '—'}
                                 </div>
 
-                                {/* Sold Amount */}
+                                {/* Sold Amount / Iconic Badge */}
                                 <div style={{
                                     position: 'absolute',
                                     left: 1075,
@@ -329,11 +329,11 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
                                     fontFamily: FONT_ROW,
                                     fontSize: 46,
                                     fontWeight: 700,
-                                    letterSpacing: 2,
-                                    color: '#F59E0B',
+                                    letterSpacing: player.isIconic ? 6 : 2,
+                                    color: 'var(--overlay-color-primary)',
                                     whiteSpace: 'nowrap',
                                 }}>
-                                    {formatCurrency(player.finalPrice || 0)}
+                                    {player.isIconic ? 'ICONIC' : formatCurrency(player.finalPrice || 0)}
                                 </div>
                             </div>
 
@@ -345,7 +345,7 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
                                     top: pillTop + PILL_H + 13,
                                     width: PILL_WIDTH - 20,
                                     height: 1,
-                                    background: 'rgba(30,58,95,0.5)',
+                                    background: 'var(--overlay-border-accent-subtle)',
                                 }} />
                             )}
                         </React.Fragment>
