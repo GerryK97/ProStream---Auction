@@ -11,6 +11,7 @@ const playerSchema = new Schema<Player>(
     position: { type: String, required: false },
     currentClub: { type: String, required: false },
     photoURL: { type: String, required: false },
+    secondaryImageURL: { type: String, required: false },
     playerClass: { type: String, required: false },
     age: { type: Number, required: false },
     isSold: { type: Boolean, default: false },

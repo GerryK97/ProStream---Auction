@@ -17,6 +17,8 @@ export interface OverlaySettings {
     customTickerLine1: string;
     customTickerLine2: string;
     soldMessagePosition: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+    hideTickerCustom: boolean;
+    hideTickerFullscreen: boolean;
 }
 
 const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
@@ -27,6 +29,8 @@ const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
     customTickerLine1: '',
     customTickerLine2: '',
     soldMessagePosition: 'bottom-right',
+    hideTickerCustom: false,
+    hideTickerFullscreen: false,
 };
 
 interface OverlayWrapperProps {
@@ -138,6 +142,8 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
                 customTickerLine1: data.customTickerLine1 ?? '',
                 customTickerLine2: data.customTickerLine2 ?? '',
                 soldMessagePosition: data.soldMessagePosition ?? 'bottom-right',
+                hideTickerCustom: data.hideTickerCustom ?? false,
+                hideTickerFullscreen: data.hideTickerFullscreen ?? false,
             });
         });
 

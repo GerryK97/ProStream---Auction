@@ -640,6 +640,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const [customTickerLine2, setCustomTickerLine2] = useState('');
     const [showTickerModal, setShowTickerModal] = useState(false);
     const [soldMessagePosition, setSoldMessagePosition] = useState<'bottom-right' | 'bottom-left' | 'top-right' | 'top-left'>('bottom-right');
+    const [hideTickerCustom, setHideTickerCustom] = useState(false);
+    const [hideTickerFullscreen, setHideTickerFullscreen] = useState(false);
 
     // Refs to always read latest values inside the auto-switch effect without re-triggering it
     const tickerModeRef = useRef(tickerMode);
@@ -649,6 +651,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const customTickerLine1Ref = useRef(customTickerLine1);
     const customTickerLine2Ref = useRef(customTickerLine2);
     const soldMessagePositionRef = useRef(soldMessagePosition);
+    const hideTickerCustomRef = useRef(hideTickerCustom);
+    const hideTickerFullscreenRef = useRef(hideTickerFullscreen);
     tickerModeRef.current = tickerMode;
     autoSwitchDurationRef.current = autoSwitchDuration;
     displayModeRef.current = displayMode;
@@ -672,7 +676,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             await fetch('/api/overlay/settings', {
                 method: 'POST',
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tournamentId, size, tickerMode: mode, displayMode: dm, hidePremiumCard: hideCard, customTickerLine1: line1, customTickerLine2: line2, soldMessagePosition: soldMsgPos }),
+                body: JSON.stringify({ tournamentId, size, tickerMode: mode, displayMode: dm, hidePremiumCard: hideCard, customTickerLine1: line1, customTickerLine2: line2, soldMessagePosition: soldMsgPos, hideTickerCustom: hideTickerCustomRef.current, hideTickerFullscreen: hideTickerFullscreenRef.current }),
             });
         } catch { /* non-critical */ }
     };
@@ -1558,6 +1562,44 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                                     <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
                                 </svg>
                                 Edit
+                            </button>
+                            {/* Divider */}
+                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
+                            {/* Hide Ticker */}
+                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Hide Ticker:</span>
+                            <button
+                                onClick={() => {
+                                    const next = !hideTickerCustom;
+                                    setHideTickerCustom(next);
+                                    hideTickerCustomRef.current = next;
+                                    sendOverlaySettings(overlaySize, tickerMode);
+                                }}
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-semibold transition-all"
+                                style={{
+                                    backgroundColor: hideTickerCustom ? 'var(--status-danger)' : 'var(--surface-elevated)',
+                                    color: hideTickerCustom ? '#fff' : 'var(--text-secondary)',
+                                    border: `1px solid ${hideTickerCustom ? 'var(--status-danger)' : 'var(--border-primary)'}`,
+                                }}
+                                title="Hide ticker on Custom Overlay (Screen 1)"
+                            >
+                                Screen 1
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const next = !hideTickerFullscreen;
+                                    setHideTickerFullscreen(next);
+                                    hideTickerFullscreenRef.current = next;
+                                    sendOverlaySettings(overlaySize, tickerMode);
+                                }}
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-semibold transition-all"
+                                style={{
+                                    backgroundColor: hideTickerFullscreen ? 'var(--status-danger)' : 'var(--surface-elevated)',
+                                    color: hideTickerFullscreen ? '#fff' : 'var(--text-secondary)',
+                                    border: `1px solid ${hideTickerFullscreen ? 'var(--status-danger)' : 'var(--border-primary)'}`,
+                                }}
+                                title="Hide ticker on FullScreen Overlays (Screen 2)"
+                            >
+                                Screen 2
                             </button>
                         </div>
                         {/* Row 2: Player Summary · Team Summary · Top 10 Sold · Custom Ticker */}

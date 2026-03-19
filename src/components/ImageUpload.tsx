@@ -14,6 +14,8 @@ interface ImageUploadProps {
   previewShape?: 'circle' | 'square';
   id?: string;
   onUploadComplete?: (url: string) => void;
+  /** Crop aspect ratio. Defaults to 1 (square). Use 16/9 for widescreen images. */
+  cropAspect?: number;
 }
 
 const MAX_DIMENSION = 1024;
@@ -81,6 +83,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   previewShape = 'circle',
   id = 'image-upload',
   onUploadComplete,
+  cropAspect = 1,
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [fileName, setFileName] = useState<string>('');
@@ -153,6 +156,9 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
   const previewShapeClass = previewShape === 'circle' ? 'rounded-full' : 'rounded-md';
   const placeholderUrl = previewShape === 'circle' ? PLACEHOLDER_CIRCLE : PLACEHOLDER_SQUARE;
+
+  const vpWidth = cropAspect > 1 ? Math.round(360 * cropAspect) : 360;
+  const vpHeight = cropAspect > 1 ? 360 : Math.round(360 / cropAspect);
 
   return (
     <>
@@ -235,12 +241,12 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           </div>
 
           {/* Cropper viewport */}
-          <div style={{ position: 'relative', width: 360, height: 360, borderRadius: 12, overflow: 'hidden', background: '#000' }}>
+          <div style={{ position: 'relative', width: vpWidth, height: vpHeight, borderRadius: 12, overflow: 'hidden', background: '#000' }}>
             <Cropper
               image={cropSrc}
               crop={crop}
               zoom={zoom}
-              aspect={1}
+              aspect={cropAspect}
               cropShape={previewShape === 'circle' ? 'round' : 'rect'}
               showGrid={false}
               onCropChange={setCrop}
@@ -250,7 +256,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           </div>
 
           {/* Zoom slider */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: 360 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: vpWidth }}>
             <span style={{ color: '#94A3B8', fontSize: 13, minWidth: 36 }}>Zoom</span>
             <input
               type="range"

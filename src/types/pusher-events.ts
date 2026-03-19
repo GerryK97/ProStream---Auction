@@ -157,6 +157,8 @@ export interface OverlaySettingsEvent extends BasePusherEvent {
   customTickerLine1?: string;
   customTickerLine2?: string;
   soldMessagePosition?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+  hideTickerCustom?: boolean;
+  hideTickerFullscreen?: boolean;
 }
 
 /**
