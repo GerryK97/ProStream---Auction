@@ -76,6 +76,7 @@ export default function OutputPage() {
   // Copy states
   const [copiedObs, setCopiedObs] = useState(false);
   const [copiedCustom, setCopiedCustom] = useState(false);
+  const [copiedFullscreen2, setCopiedFullscreen2] = useState(false);
 
   // OBS setup instructions toggle
   const [showSetup, setShowSetup] = useState(false);
@@ -99,14 +100,18 @@ export default function OutputPage() {
 
   const obsBaseUrl = selectedTournamentId ? `${origin}/overlays/${selectedTournamentId}` : '';
   const customBaseUrl = selectedTournamentId ? `${origin}/overlays/${selectedTournamentId}/custom` : '';
+  const fullscreen2BaseUrl = selectedTournamentId ? `${origin}/overlays/${selectedTournamentId}/fullscreen2` : '';
   const obsUrlWithToken = overlayToken ? `${obsBaseUrl}?token=${encodeURIComponent(overlayToken)}` : obsBaseUrl;
   const customUrlWithToken = overlayToken ? `${customBaseUrl}?token=${encodeURIComponent(overlayToken)}` : customBaseUrl;
+  const fullscreen2UrlWithToken = overlayToken ? `${fullscreen2BaseUrl}?token=${encodeURIComponent(overlayToken)}` : fullscreen2BaseUrl;
 
   // Masked display version (hides the actual token value)
   const maskedObsUrl = overlayToken ? `${obsBaseUrl}?token=••••••••` : obsBaseUrl;
   const maskedCustomUrl = overlayToken ? `${customBaseUrl}?token=••••••••` : customBaseUrl;
+  const maskedFullscreen2Url = overlayToken ? `${fullscreen2BaseUrl}?token=••••••••` : fullscreen2BaseUrl;
   const displayObsUrl = showToken ? obsUrlWithToken : maskedObsUrl;
   const displayCustomUrl = showToken ? customUrlWithToken : maskedCustomUrl;
+  const displayFullscreen2Url = showToken ? fullscreen2UrlWithToken : maskedFullscreen2Url;
 
   async function selectTheme(themeId: string) {
     if (!selectedTournamentId || themeId === currentTheme) return;
@@ -172,6 +177,13 @@ export default function OutputPage() {
     await navigator.clipboard.writeText(customUrlWithToken);
     setCopiedCustom(true);
     setTimeout(() => setCopiedCustom(false), 2000);
+  }
+
+  async function copyFullscreen2Url() {
+    if (!fullscreen2UrlWithToken) return;
+    await navigator.clipboard.writeText(fullscreen2UrlWithToken);
+    setCopiedFullscreen2(true);
+    setTimeout(() => setCopiedFullscreen2(false), 2000);
   }
 
   return (
@@ -442,6 +454,53 @@ export default function OutputPage() {
                 </p>
               )}
             </div>
+          </div>
+
+          {/* Full Screen Overlay 2 URL (Secondary Image) */}
+          <div
+            className="rounded-xl border p-5"
+            style={{ backgroundColor: 'var(--surface-elevated)', borderColor: 'var(--border-primary)' }}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                Full Screen Overlay 2 URL
+              </p>
+              <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ backgroundColor: 'rgba(79,70,229,0.12)', color: 'var(--brand-primary)' }}>
+                Secondary Image
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <code
+                className="flex-1 text-xs px-4 py-3 rounded-lg truncate font-mono"
+                style={{ backgroundColor: 'var(--surface-secondary)', color: 'var(--brand-primary)' }}
+                title={fullscreen2UrlWithToken}
+              >
+                {displayFullscreen2Url || fullscreen2BaseUrl}
+              </code>
+              <button
+                onClick={copyFullscreen2Url}
+                disabled={!overlayToken}
+                className="shrink-0 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 disabled:opacity-50"
+                style={{
+                  backgroundColor: copiedFullscreen2 ? '#22c55e' : 'var(--brand-primary)',
+                  color: '#fff',
+                }}
+              >
+                {copiedFullscreen2 ? 'Copied!' : 'Copy'}
+              </button>
+              <a
+                href={fullscreen2UrlWithToken}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 px-4 py-3 rounded-lg text-sm font-semibold border transition-all duration-200 hover:opacity-80"
+                style={{ borderColor: 'var(--border-primary)', color: 'var(--text-secondary)' }}
+              >
+                Preview ↗
+              </a>
+            </div>
+            <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
+              Same as Full Screen Overlay, but the player panel shows only the <strong>Secondary Image</strong>. Falls back to primary photo if no secondary image is set.
+            </p>
           </div>
 
           {/* OBS Setup Instructions (collapsible) */}

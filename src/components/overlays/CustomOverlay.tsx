@@ -832,8 +832,8 @@ function CustomOverlayContent({
           <TeamCardsPanel teams={teams} tournament={tournament} currentBid={auctionState.currentBid ?? 0} />
         )}
 
-        {/* ── Ticker component ── (always shown) */}
-        <TickerStrip
+        {/* ── Ticker component ── */}
+        {!overlaySettings.hideTickerCustom && <TickerStrip
           soldPlayers={soldPlayers}
           players={players}
           teams={teams}
@@ -842,7 +842,7 @@ function CustomOverlayContent({
           customMode={visibleMode === 'custom-ticker'}
           customLine1={overlaySettings.customTickerLine1}
           customLine2={overlaySettings.customTickerLine2}
-        />
+        />}
 
         {/* Leading Team Overlay */}
         {(visibleMode === 'standard' || visibleMode === 'custom-ticker') && (

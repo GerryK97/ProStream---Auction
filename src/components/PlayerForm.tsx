@@ -25,6 +25,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
     const [position, setPosition] = useState(editPlayer?.position ?? '');
     const [currentClub, setCurrentClub] = useState(editPlayer?.currentClub ?? '');
     const [photoURL, setPhotoURL] = useState(editPlayer?.photoURL ?? '');
+    const [secondaryImageURL, setSecondaryImageURL] = useState(editPlayer?.secondaryImageURL ?? '');
     const [playerClass, setPlayerClass] = useState(editPlayer?.playerClass ?? '');
     const [age, setAge] = useState<string>(editPlayer?.age !== undefined ? String(editPlayer.age) : '');
     const [isIconic, setIsIconic] = useState<boolean>(editPlayer?.isIconic ?? false);
@@ -80,6 +81,19 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
         }
     };
 
+    const handleSecondaryPhotoUploaded = async (url: string) => {
+        if (!isEditMode) return;
+        try {
+            await fetch(`/api/players/${editPlayer!._id}`, {
+                method: 'PUT',
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ secondaryImageURL: url }),
+            });
+        } catch (err) {
+            console.error('Failed to auto-save secondary image:', err);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name || !position || !currentClub || !tournamentId) return;
@@ -91,10 +105,11 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                 res = await fetch(`/api/players/${editPlayer._id}`, {
                     method: 'PUT',
                     headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        name, position, currentClub, 
-                        photoURL: photoURL || undefined, 
-                        playerClass: playerClass || undefined, 
+                    body: JSON.stringify({
+                        name, position, currentClub,
+                        photoURL: photoURL || undefined,
+                        secondaryImageURL: secondaryImageURL || undefined,
+                        playerClass: playerClass || undefined,
                         age: age ? Number(age) : undefined,
                         isIconic,
                         winningTeamId: isIconic ? winningTeamId : undefined
@@ -104,11 +119,12 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                 res = await fetch('/api/players', {
                     method: 'POST',
                     headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        name, position, currentClub, 
-                        photoURL: photoURL || undefined, 
-                        playerClass: playerClass || undefined, 
-                        age: age ? Number(age) : undefined, 
+                    body: JSON.stringify({
+                        name, position, currentClub,
+                        photoURL: photoURL || undefined,
+                        secondaryImageURL: secondaryImageURL || undefined,
+                        playerClass: playerClass || undefined,
+                        age: age ? Number(age) : undefined,
                         tournamentId,
                         isIconic,
                         winningTeamId: isIconic ? winningTeamId : undefined
@@ -251,6 +267,19 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                 previewShape="circle"
                 id="player-photo-form"
                 onUploadComplete={handlePhotoUploaded}
+            />
+
+            <ImageUpload
+                value={secondaryImageURL}
+                onChange={setSecondaryImageURL}
+                folder="players"
+                label="Secondary Image (optional)"
+                placeholder="Secondary Image URL"
+                previewClassName="w-16 h-9"
+                previewShape="square"
+                id="player-secondary-image-form"
+                onUploadComplete={handleSecondaryPhotoUploaded}
+                cropAspect={16 / 9}
             />
 
             <div className="pt-2 flex justify-end gap-3">

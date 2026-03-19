@@ -55,6 +55,7 @@ export interface Player {
   position?: string;
   currentClub?: string;
   photoURL?: string;
+  secondaryImageURL?: string;
   playerClass?: string;
   age?: number;
   isSold?: boolean;
