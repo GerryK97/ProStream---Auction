@@ -72,6 +72,8 @@ export interface AuctionState {
   winningTeamId: string | null;
   currentAuctionStatus: 'Pending' | 'Bidding' | 'Sold';
   history: Bid[];
+  currentAuctionClass: string | null;  // class code currently being auctioned (e.g. "PT"), or null for unfiltered
+  completedClasses: string[];           // class codes whose players are all sold/unsold
 }
 
 export interface Bid {

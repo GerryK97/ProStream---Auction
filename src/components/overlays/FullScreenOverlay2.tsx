@@ -582,6 +582,7 @@ function FullScreenOverlay2Content({
               teams={teams}
               tournament={tournament}
               isExiting={summaryExiting}
+              filterTeamId={overlaySettings.teamWiseTeamId}
             />
           </div>
         )}

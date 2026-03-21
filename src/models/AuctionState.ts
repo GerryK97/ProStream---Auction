@@ -22,6 +22,8 @@ const auctionStateSchema = new Schema<AuctionState>(
       default: 'Pending',
     },
     history: [bidSchema],
+    currentAuctionClass: { type: String, default: null },
+    completedClasses: [{ type: String }],
   },
   {
     timestamps: true,

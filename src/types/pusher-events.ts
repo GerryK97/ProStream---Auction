@@ -21,6 +21,8 @@ export type PusherEventName =
   | 'auction:undo'
   | 'auction:player-unsold'
   | 'auction:state-update'
+  | 'auction:class-selected'
+  | 'auction:class-completed'
   | 'overlay:settings'
   | 'overlay:wheel-spin';
 
@@ -146,6 +148,29 @@ export interface AuctionStateUpdateEvent extends BasePusherEvent {
 }
 
 /**
+ * Event: auction:class-selected
+ * Triggered when the auctioneer activates a player class for bidding
+ */
+export interface ClassSelectedEvent extends BasePusherEvent {
+  classCode: string;
+  className: string;
+  playerCount: number;
+  auctionState: AuctionState;
+  message: string;
+}
+
+/**
+ * Event: auction:class-completed
+ * Triggered when all players in the active class are sold or unsold
+ */
+export interface ClassCompletedEvent extends BasePusherEvent {
+  completedClassCode: string;
+  completedClasses: string[];
+  auctionState: AuctionState;
+  message: string;
+}
+
+/**
  * Event: overlay:settings
  * Triggered when the host changes overlay display settings from the control panel
  */
@@ -159,6 +184,7 @@ export interface OverlaySettingsEvent extends BasePusherEvent {
   soldMessagePosition?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
   hideTickerCustom?: boolean;
   hideTickerFullscreen?: boolean;
+  teamWiseTeamId?: string | null;
 }
 
 /**
@@ -194,6 +220,8 @@ export type PusherEventPayload =
   | AuctionUndoEvent
   | PlayerMarkedUnsoldEvent
   | AuctionStateUpdateEvent
+  | ClassSelectedEvent
+  | ClassCompletedEvent
   | OverlaySettingsEvent
   | WheelSpinEvent;
 

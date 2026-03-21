@@ -8,6 +8,7 @@ interface TeamWiseSummaryOverlayProps {
     teams: Team[];
     tournament: Tournament | null;
     isExiting?: boolean;
+    filterTeamId?: string | null;
 }
 
 const formatCurrency = (amount: number) => amount.toLocaleString('en-IN');
@@ -37,11 +38,12 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
     teams,
     tournament,
     isExiting = false,
+    filterTeamId = null,
 }) => {
     const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
 
     // Build teams that have at least one sold player, sorted by player count desc
-    const teamsWithPlayers = teams
+    const allTeamsWithPlayers = teams
         .map(team => ({
             team,
             soldPlayers: players
@@ -51,20 +53,26 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
         .filter(({ soldPlayers }) => soldPlayers.length > 0)
         .sort((a, b) => b.soldPlayers.length - a.soldPlayers.length);
 
+    // When a specific team is selected, show only that team (no cycling)
+    const teamsWithPlayers = filterTeamId
+        ? allTeamsWithPlayers.filter(({ team }) => team._id === filterTeamId)
+        : allTeamsWithPlayers;
+
     const totalTeams = teamsWithPlayers.length;
 
     useEffect(() => {
-        if (totalTeams <= 1) return;
+        // No cycling when a specific team is pinned
+        if (totalTeams <= 1 || filterTeamId) return;
         const timer = setInterval(() => {
             setCurrentTeamIndex(prev => (prev + 1) % totalTeams);
         }, TEAM_DURATION);
         return () => clearInterval(timer);
-    }, [totalTeams]);
+    }, [totalTeams, filterTeamId]);
 
-    // Reset to first team when team composition changes
+    // Reset to first team when filter or team composition changes
     useEffect(() => {
         setCurrentTeamIndex(0);
-    }, [totalTeams]);
+    }, [totalTeams, filterTeamId]);
 
     if (!tournament || totalTeams === 0) return null;
 

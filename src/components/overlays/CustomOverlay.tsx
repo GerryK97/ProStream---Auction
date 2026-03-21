@@ -742,6 +742,7 @@ function CustomOverlayContent({
               players={players}
               teams={teams}
               tournament={tournament}
+              filterTeamId={overlaySettings.teamWiseTeamId}
             />
           </div>
         )}

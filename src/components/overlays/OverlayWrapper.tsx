@@ -19,6 +19,7 @@ export interface OverlaySettings {
     soldMessagePosition: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
     hideTickerCustom: boolean;
     hideTickerFullscreen: boolean;
+    teamWiseTeamId: string | null;
 }
 
 const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
@@ -31,6 +32,7 @@ const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
     soldMessagePosition: 'bottom-right',
     hideTickerCustom: false,
     hideTickerFullscreen: false,
+    teamWiseTeamId: null,
 };
 
 interface OverlayWrapperProps {
@@ -144,6 +146,7 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
                 soldMessagePosition: data.soldMessagePosition ?? 'bottom-right',
                 hideTickerCustom: data.hideTickerCustom ?? false,
                 hideTickerFullscreen: data.hideTickerFullscreen ?? false,
+                teamWiseTeamId: data.teamWiseTeamId ?? null,
             });
         });
 

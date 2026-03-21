@@ -16,6 +16,65 @@ import Modal from './Modal';
 
 const formatCurrency = (amount: number) => amount.toLocaleString();
 
+interface ClassStat {
+    code: string;
+    name: string;
+    color: string;
+    icon?: string;
+    order: number;
+    total: number;
+    sold: number;
+    unsold: number;
+    remaining: number;
+    isActive: boolean;
+    isCompleted: boolean;
+}
+
+const ClassManagerPanel: React.FC<{
+    classStats: ClassStat[];
+    onSelectClass: (code: string) => void;
+    onClearClass: () => void;
+    selectingClass: boolean;
+}> = ({ classStats, onSelectClass, onClearClass, selectingClass }) => {
+    const activeClass = classStats.find(c => c.isActive);
+    // Only show classes that still have available players
+    const availableClasses = classStats.filter(c => !c.isCompleted && c.remaining > 0);
+
+    const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const val = e.target.value;
+        if (val === '') onClearClass();
+        else onSelectClass(val);
+    };
+
+    return (
+        <div className="rounded-lg px-3 py-2 border border-[var(--border-primary)] shrink-0 flex items-center gap-2" style={{ backgroundColor: 'var(--surface-secondary)' }}>
+            <label className="text-xs font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>
+                Auction Class:
+            </label>
+            <select
+                value={activeClass?.name ?? ''}
+                onChange={handleChange}
+                disabled={selectingClass}
+                className="flex-1 text-xs rounded-md px-2 py-1.5 font-semibold transition-all disabled:opacity-50"
+                style={{
+                    backgroundColor: activeClass ? `${activeClass.color}22` : 'var(--surface-elevated)',
+                    color: activeClass ? activeClass.color : 'var(--text-primary)',
+                    border: activeClass ? `1.5px solid ${activeClass.color}` : '1px solid var(--border-primary)',
+                    outline: 'none',
+                    cursor: 'pointer',
+                }}
+            >
+                <option value="">All Classes</option>
+                {availableClasses.map(cls => (
+                    <option key={cls.name} value={cls.name}>
+                        {cls.icon ? `${cls.icon} ` : ''}{cls.name} ({cls.remaining} left)
+                    </option>
+                ))}
+            </select>
+        </div>
+    );
+};
+
 const AvailablePlayersPanel: React.FC<{
     players: Player[];
     tournament: Tournament | null;
@@ -24,11 +83,13 @@ const AvailablePlayersPanel: React.FC<{
     currentPlayerId?: string;
     onReAuction: () => void;
     reAuctioning: boolean;
-}> = ({ players, tournament, onSelectPlayer, isAuctioning, currentPlayerId, onReAuction, reAuctioning }) => {
+    activeClass: string | null;
+}> = ({ players, tournament, onSelectPlayer, isAuctioning, currentPlayerId, onReAuction, reAuctioning, activeClass }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const unsoldCount = players.filter(p => p.isUnsold).length;
     const availablePlayers = players
         .filter(p => !p.isSold && !p.isUnsold && p._id !== currentPlayerId)
+        .filter(p => !activeClass || p.playerClass === activeClass)
         .sort((a, b) => a._id.localeCompare(b._id))
         .filter(p =>
             p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -38,7 +99,14 @@ const AvailablePlayersPanel: React.FC<{
     return (
         <div className="rounded-lg p-4 flex flex-col h-full border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-secondary)' }}>
             <div className="flex items-center justify-between mb-2">
-                <h3 className="font-bold text-lg">Available Players</h3>
+                <div>
+                    <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-lg">Available Players</h3>
+                    </div>
+                    {activeClass && (
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Filtered by active class</p>
+                    )}
+                </div>
                 {unsoldCount > 0 && (
                     <button
                         onClick={onReAuction}
@@ -98,6 +166,7 @@ const AvailablePlayersPanel: React.FC<{
 // ─── Team Bidding Panel ──────────────────────────────────────────────────────
 const TeamBiddingPanel: React.FC<{
     teams: Team[];
+    players: Player[];
     tournament: Tournament;
     auctionState: any;
     currentPlayer: Player | undefined;
@@ -105,7 +174,7 @@ const TeamBiddingPanel: React.FC<{
     setBiddingTeamId: (id: string) => void;
     onBid: (amount: number, teamId: string) => void;
     isSold: boolean;
-}> = ({ teams, tournament, auctionState, currentPlayer, biddingTeamId, setBiddingTeamId, onBid, isSold }) => {
+}> = ({ teams, players, tournament, auctionState, currentPlayer, biddingTeamId, setBiddingTeamId, onBid, isSold }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { currentBid } = auctionState;
     const basePrice = getClassBasePrice(tournament, currentPlayer ?? null);
@@ -113,12 +182,12 @@ const TeamBiddingPanel: React.FC<{
     const nextBidAmount = getNextTeamBid(increments, currentBid, basePrice);
     const increment = currentBid === 0 ? basePrice : getBidIncrement(increments, currentBid);
 
-    // Mirrors the same max-bid calculation used in TeamsAndSoldPlayersPanel
+    // Count actual players in squad (sold + iconic) — more accurate than playersPurchased
     const calcMaxBid = (team: Team): number => {
         if (!tournament || !team.currentBalance) return 0;
         const squadSize = tournament.squadSize;
         const minBase = getMinClassBasePrice(tournament);
-        const purchased = team.playersPurchased?.length || 0;
+        const purchased = players.filter(p => p.isSold && p.winningTeamId === team._id).length;
         const remaining = squadSize - purchased;
         if (remaining <= 1) return team.currentBalance;
         const reserved = (remaining - 1) * minBase;
@@ -201,6 +270,7 @@ const CurrentAuctionPanel: React.FC<{
     currentPlayer: Player | undefined;
     tournament: Tournament | null;
     teams: Team[];
+    players: Player[];
     biddingTeamId: string;
     setBiddingTeamId: (id: string) => void;
     auctionState: any;
@@ -211,7 +281,7 @@ const CurrentAuctionPanel: React.FC<{
     onMarkUnsold: () => void;
     onSpinWheel: () => void;
     isSpinning: boolean;
-}> = ({ currentPlayer, tournament, teams, biddingTeamId, setBiddingTeamId, auctionState, onBid, onCorrectBid, onSell, onReset, onMarkUnsold, onSpinWheel, isSpinning }) => {
+}> = ({ currentPlayer, tournament, teams, players, biddingTeamId, setBiddingTeamId, auctionState, onBid, onCorrectBid, onSell, onReset, onMarkUnsold, onSpinWheel, isSpinning }) => {
     const [bidAmount, setBidAmount] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -236,8 +306,23 @@ const CurrentAuctionPanel: React.FC<{
 
     if (!currentPlayer || !tournament) {
         return (
-            <div className="rounded-lg p-4 flex items-center justify-center min-h-[80px] border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-secondary)' }}>
+            <div className="rounded-lg p-4 flex flex-col items-center justify-center gap-4 min-h-[120px] border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-secondary)' }}>
                 <p className="text-[var(--text-tertiary)] text-lg">{!tournament ? "No tournament data" : "Select a player to start the auction"}</p>
+                {tournament && (
+                    <button
+                        onClick={onSpinWheel}
+                        disabled={isSpinning}
+                        className="px-6 py-2.5 rounded-lg text-sm font-bold tracking-wide uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+                        style={{
+                            background: isSpinning ? 'rgba(124,58,237,0.25)' : 'rgba(124,58,237,0.1)',
+                            color: isSpinning ? '#c4b5fd' : '#a78bfa',
+                            border: `1.5px solid ${isSpinning ? 'rgba(124,58,237,0.6)' : 'rgba(124,58,237,0.35)'}`,
+                        }}
+                    >
+                        {isSpinning ? 'Spinning…' : 'Spin Wheel'}
+                        {isSpinning && <span className="w-1.5 h-1.5 rounded-full bg-purple-300 animate-pulse" />}
+                    </button>
+                )}
             </div>
         );
     }
@@ -276,6 +361,7 @@ const CurrentAuctionPanel: React.FC<{
             {tournament.biddingMode === 'team' ? (
                 <TeamBiddingPanel
                     teams={teams}
+                    players={players}
                     tournament={tournament}
                     auctionState={auctionState}
                     currentPlayer={currentPlayer}
@@ -442,67 +528,99 @@ const TeamsAndSoldPlayersPanel: React.FC<{
     currentBid: number;
     onUndo: () => void;
     onCleanup: () => void;
-}> = ({ teams, soldPlayers, unsoldPlayers, tournament, winningTeamId, currentBid, onUndo, onCleanup }) => {
+    onEditSaved: (player: Player, teams: Team[]) => void;
+}> = ({ teams, soldPlayers, unsoldPlayers, tournament, winningTeamId, currentBid, onUndo, onCleanup, onEditSaved }) => {
+    const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
+    const [editStatus, setEditStatus] = useState<'sold' | 'unsold' | 'available'>('sold');
+    const [editPrice, setEditPrice] = useState('');
+    const [editTeamId, setEditTeamId] = useState('');
+    const [saving, setSaving] = useState(false);
+    const [editError, setEditError] = useState<string | null>(null);
+
+    const openEdit = (player: Player) => {
+        setEditingPlayerId(player._id);
+        setEditStatus(player.isSold ? 'sold' : 'unsold');
+        setEditPrice(player.finalPrice ? String(player.finalPrice) : '');
+        setEditTeamId(player.winningTeamId ?? '');
+        setEditError(null);
+    };
+
+    const closeEdit = () => {
+        setEditingPlayerId(null);
+        setEditError(null);
+    };
+
+    const saveEdit = async (player: Player) => {
+        if (!tournament) return;
+        setSaving(true);
+        setEditError(null);
+        try {
+            const res = await fetch('/api/auction/edit-player-result', {
+                method: 'PATCH',
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tournamentId: tournament._id,
+                    playerId: player._id,
+                    status: editStatus,
+                    finalPrice: editStatus === 'sold' ? Number(editPrice) : undefined,
+                    winningTeamId: editStatus === 'sold' ? editTeamId : undefined,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) { setEditError(data.error || 'Failed to save'); return; }
+            // Immediately update local state so UI reflects changes without waiting for Pusher
+            if (data.player && data.teams) {
+                onEditSaved(data.player as Player, data.teams as Team[]);
+            }
+            closeEdit();
+        } catch {
+            setEditError('Failed to save changes');
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const calculateMaxBid = (team: Team) => {
         if (!tournament || !team.currentBalance) return 0;
-
         const squadSize = tournament.squadSize;
         const basePrice = getMinClassBasePrice(tournament);
-        const playersPurchased = team.playersPurchased?.length || 0;
-        const remainingPlayers = squadSize - playersPurchased;
-
-        // If squad is complete or it's the last player, team can spend all remaining balance
-        if (remainingPlayers <= 1) {
-            return team.currentBalance;
-        }
-
-        // Otherwise, reserve base price for remaining players
+        // Count actual sold players (including iconics) rather than playersPurchased
+        const purchased = soldPlayers.filter(p => p.winningTeamId === team._id).length;
+        const remainingPlayers = squadSize - purchased;
+        if (remainingPlayers <= 1) return team.currentBalance;
         const reservedAmount = (remainingPlayers - 1) * basePrice;
-        const maxBid = team.currentBalance - reservedAmount;
-
-        // Return 0 if insufficient funds
-        return Math.max(0, maxBid);
+        return Math.max(0, team.currentBalance - reservedAmount);
     };
+
+    const allPlayers = [...soldPlayers, ...unsoldPlayers];
 
     return (
         <div className="h-full flex flex-col gap-3">
             <div className="rounded-lg p-4 border border-[var(--border-primary)] flex flex-col flex-1 min-h-0" style={{ backgroundColor: 'var(--surface-secondary)' }}>
                  <h3 className="font-bold text-base mb-2 shrink-0">Teams</h3>
                  <ul className="space-y-2 overflow-y-auto pr-1 flex-1 min-h-0">
-                     {teams.map((team, index) => {
+                     {teams.map((team) => {
                          const maxBid = calculateMaxBid(team);
-                         const playersPurchased = team.playersPurchased?.length || 0;
+                         const playersPurchased = soldPlayers.filter(p => p.winningTeamId === team._id).length;
                          const squadSize = tournament?.squadSize || 0;
                          const remainingPlayers = squadSize - playersPurchased;
                          const hasInsufficientFunds = maxBid <= 0 && remainingPlayers > 0;
                          const isBidExceeded = currentBid > 0 && currentBid > maxBid;
-
                          return (
                              <li key={team._id} className={`p-2 rounded-md flex items-center gap-3 relative overflow-hidden transition-all duration-300 hover:opacity-90 border ${isBidExceeded ? 'border-red-500' : 'border-[var(--border-primary)]'}`} style={{
                                  backgroundColor: winningTeamId === team._id ? 'var(--surface-hover)' : isBidExceeded ? 'rgba(239,68,68,0.08)' : 'var(--surface-card)',
                                  boxShadow: isBidExceeded ? '0 0 0 1px rgba(239,68,68,0.4)' : 'none',
                              }}>
                                 {winningTeamId === team._id && <div className="absolute left-0 top-0 h-full w-1.5 bg-[var(--accent-color)] animate-pulse"></div>}
-                                <img
-                                    src={imageOptimizers.teamThumbnail(team.logoURL)}
-                                    alt={team.name}
-                                    className="w-10 h-10 rounded-full object-cover"
-                                    loading="lazy"
-                                />
+                                <img src={imageOptimizers.teamThumbnail(team.logoURL)} alt={team.name} className="w-10 h-10 rounded-full object-cover" loading="lazy" />
                                 <div className="flex-grow">
                                     <div className="flex items-center gap-2">
                                         <p className="font-semibold">{team.name}</p>
-                                        {hasInsufficientFunds && (
-                                            <span className="text-red-500 text-xs" title="Insufficient funds for remaining players">⚠️</span>
-                                        )}
-                                        {isBidExceeded && (
-                                            <span className="text-red-400 text-xs font-semibold">Over limit</span>
-                                        )}
+                                        {hasInsufficientFunds && <span className="text-red-500 text-xs" title="Insufficient funds">⚠️</span>}
+                                        {isBidExceeded && <span className="text-red-400 text-xs font-semibold">Over limit</span>}
                                     </div>
                                     <p className="text-xs text-[var(--text-secondary)]">Budget: <span className="text-[var(--brand-secondary)]">{formatCurrency(team.currentBalance || 0)}</span></p>
-                                    <p className="text-xs text-[var(--text-secondary)]">
-                                        Max Bid: <span className={hasInsufficientFunds || isBidExceeded ? "text-red-500 font-semibold" : "text-[var(--brand-primary)]"}>{formatCurrency(maxBid)}</span>
-                                    </p>
+                                    <p className="text-xs text-[var(--text-secondary)]">Max Bid: <span className={hasInsufficientFunds || isBidExceeded ? 'text-red-500 font-semibold' : 'text-[var(--brand-primary)]'}>{formatCurrency(maxBid)}</span></p>
                                     <p className="text-xs text-[var(--text-muted)]">{playersPurchased}/{squadSize} players</p>
                                 </div>
                              </li>
@@ -512,73 +630,217 @@ const TeamsAndSoldPlayersPanel: React.FC<{
             </div>
              <div className="rounded-lg p-4 border border-[var(--border-primary)] flex flex-col flex-1 min-h-0" style={{ backgroundColor: 'var(--surface-secondary)' }}>
                 <div className="flex items-center justify-between mb-2 shrink-0">
-                    <h3 className="font-bold text-base">Sold/Unsold Player List ({soldPlayers.length + unsoldPlayers.length})</h3>
+                    <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-base">Results</h3>
+                    </div>
                     <div className="flex gap-1.5">
                         <button
                             onClick={onUndo}
-                            disabled={soldPlayers.length === 0 && unsoldPlayers.length === 0}
+                            disabled={allPlayers.length === 0}
                             className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide px-3 py-1.5 rounded-md transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                            style={{
-                                background: 'rgba(99,102,241,0.12)',
-                                color: '#a5b4fc',
-                                border: '1.5px solid rgba(99,102,241,0.35)',
-                            }}
-                            onMouseEnter={e => { if (soldPlayers.length > 0 || unsoldPlayers.length > 0) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(99,102,241,0.25)'; }}
+                            style={{ background: 'rgba(99,102,241,0.12)', color: '#a5b4fc', border: '1.5px solid rgba(99,102,241,0.35)' }}
+                            onMouseEnter={e => { if (allPlayers.length > 0) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(99,102,241,0.25)'; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(99,102,241,0.12)'; }}>
                             Undo
                         </button>
-                        <ClearAllButton onClick={onCleanup} disabled={soldPlayers.length === 0 && unsoldPlayers.length === 0} label="Clear" size="sm" />
+                        <ClearAllButton onClick={onCleanup} disabled={allPlayers.length === 0} label="Clear" size="sm" />
                     </div>
                 </div>
                 <div className="overflow-y-auto pr-1 flex-1 min-h-0">
-                    {soldPlayers.length === 0 && unsoldPlayers.length === 0 ? (
+                    {allPlayers.length === 0 ? (
                         <p className="text-center text-[var(--text-tertiary)] py-8 text-sm">No sold or unsold players yet</p>
                     ) : (
                         <ul className="space-y-2">
                             {soldPlayers.map((player) => {
                                 const playerTeam = teams.find(t => t._id === player.winningTeamId);
+                                const isEditing = editingPlayerId === player._id;
                                 return (
-                                    <li key={player._id} className="p-2 rounded-md transition-colors hover:opacity-90 border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-card)' }}>
-                                        <div className="flex items-center gap-2">
-                                            <img
-                                                src={imageOptimizers.playerThumbnail(player.photoURL)}
-                                                alt={player.name}
-                                                className="w-10 h-10 rounded-full object-cover"
-                                                loading="lazy"
-                                            />
+                                    <li key={player._id} className="rounded-md border border-[var(--border-primary)] overflow-hidden" style={{ backgroundColor: 'var(--surface-card)' }}>
+                                        {/* Row */}
+                                        <div className="flex items-center gap-2 p-2">
+                                            <img src={imageOptimizers.playerThumbnail(player.photoURL)} alt={player.name} className="w-10 h-10 rounded-full object-cover shrink-0" loading="lazy" />
                                             <div className="flex-grow min-w-0">
                                                 <div className="flex items-center gap-1.5">
                                                     <ClassBadge tournament={tournament} player={player} variant="dot" />
                                                     <p className="font-semibold text-sm truncate">{player.name}</p>
                                                 </div>
                                                 <p className="text-xs text-[var(--brand-secondary)]">{formatCurrency(player.finalPrice || 0)}</p>
-                                                <p className="text-xs text-[var(--text-secondary)] truncate">
-                                                    {playerTeam ? playerTeam.name : 'Unknown Team'}
-                                                </p>
+                                                <p className="text-xs text-[var(--text-secondary)] truncate">{playerTeam ? playerTeam.name : 'Unknown Team'}</p>
                                             </div>
+                                            <button
+                                                onClick={() => isEditing ? closeEdit() : openEdit(player)}
+                                                className="shrink-0 p-1.5 rounded-md transition-all"
+                                                style={{ backgroundColor: isEditing ? 'var(--surface-elevated)' : 'transparent', color: 'var(--text-muted)' }}
+                                                title="Edit result"
+                                            >
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                                                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                                                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                                </svg>
+                                            </button>
                                         </div>
+                                        {/* Inline edit form */}
+                                        {isEditing && (
+                                            <div className="px-3 pb-3 pt-1 border-t border-[var(--border-primary)] space-y-2" style={{ backgroundColor: 'var(--surface-elevated)' }}>
+                                                <div className="flex gap-2">
+                                                    <div className="flex-1">
+                                                        <label className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Status</label>
+                                                        <select
+                                                            value={editStatus}
+                                                            onChange={e => setEditStatus(e.target.value as any)}
+                                                            className="w-full mt-0.5 text-xs rounded px-2 py-1.5"
+                                                            style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', outline: 'none' }}
+                                                        >
+                                                            <option value="sold">Sold</option>
+                                                            <option value="unsold">Unsold</option>
+                                                            <option value="available">Available (Reset)</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                {editStatus === 'sold' && (
+                                                    <div className="flex gap-2">
+                                                        <div className="flex-1">
+                                                            <label className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Amount</label>
+                                                            <input
+                                                                type="number"
+                                                                value={editPrice}
+                                                                onChange={e => setEditPrice(e.target.value)}
+                                                                placeholder="Final price"
+                                                                className="w-full mt-0.5 text-xs rounded px-2 py-1.5"
+                                                                style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', outline: 'none' }}
+                                                            />
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <label className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Team</label>
+                                                            <select
+                                                                value={editTeamId}
+                                                                onChange={e => setEditTeamId(e.target.value)}
+                                                                className="w-full mt-0.5 text-xs rounded px-2 py-1.5"
+                                                                style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', outline: 'none' }}
+                                                            >
+                                                                <option value="">Select team</option>
+                                                                {teams.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {editError && <p className="text-[10px] text-red-400">{editError}</p>}
+                                                <div className="flex gap-2 pt-1">
+                                                    <button
+                                                        onClick={() => saveEdit(player)}
+                                                        disabled={saving || (editStatus === 'sold' && (!editPrice || !editTeamId))}
+                                                        className="flex-1 py-1.5 rounded text-xs font-bold transition-all disabled:opacity-50"
+                                                        style={{ backgroundColor: 'var(--brand-primary)', color: '#fff' }}
+                                                    >
+                                                        {saving ? 'Saving…' : 'Save'}
+                                                    </button>
+                                                    <button
+                                                        onClick={closeEdit}
+                                                        className="flex-1 py-1.5 rounded text-xs font-semibold transition-all"
+                                                        style={{ backgroundColor: 'var(--surface-card)', color: 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                     </li>
                                 );
                             })}
-                            {unsoldPlayers.map((player) => (
-                                <li key={player._id} className="p-2 rounded-md transition-colors hover:opacity-90 border border-red-900/40" style={{ backgroundColor: 'var(--surface-card)' }}>
-                                    <div className="flex items-center gap-2">
-                                        <img
-                                            src={imageOptimizers.playerThumbnail(player.photoURL)}
-                                            alt={player.name}
-                                            className="w-10 h-10 rounded-full object-cover opacity-60 grayscale"
-                                            loading="lazy"
-                                        />
-                                        <div className="flex-grow min-w-0">
-                                            <div className="flex items-center gap-1.5">
-                                                <ClassBadge tournament={tournament} player={player} variant="dot" />
-                                                <p className="font-semibold text-sm truncate text-[var(--text-secondary)]">{player.name}</p>
+                            {unsoldPlayers.map((player) => {
+                                const isEditing = editingPlayerId === player._id;
+                                return (
+                                    <li key={player._id} className="rounded-md border border-red-900/40 overflow-hidden" style={{ backgroundColor: 'var(--surface-card)' }}>
+                                        {/* Row */}
+                                        <div className="flex items-center gap-2 p-2">
+                                            <img src={imageOptimizers.playerThumbnail(player.photoURL)} alt={player.name} className="w-10 h-10 rounded-full object-cover opacity-60 grayscale shrink-0" loading="lazy" />
+                                            <div className="flex-grow min-w-0">
+                                                <div className="flex items-center gap-1.5">
+                                                    <ClassBadge tournament={tournament} player={player} variant="dot" />
+                                                    <p className="font-semibold text-sm truncate text-[var(--text-secondary)]">{player.name}</p>
+                                                </div>
+                                                <p className="text-xs font-bold text-red-400">UNSOLD</p>
                                             </div>
-                                            <p className="text-xs font-bold text-red-400">UNSOLD</p>
+                                            <button
+                                                onClick={() => isEditing ? closeEdit() : openEdit(player)}
+                                                className="shrink-0 p-1.5 rounded-md transition-all"
+                                                style={{ backgroundColor: isEditing ? 'var(--surface-elevated)' : 'transparent', color: 'var(--text-muted)' }}
+                                                title="Edit result"
+                                            >
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                                                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                                                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                                </svg>
+                                            </button>
                                         </div>
-                                    </div>
-                                </li>
-                            ))}
+                                        {/* Inline edit form */}
+                                        {isEditing && (
+                                            <div className="px-3 pb-3 pt-1 border-t border-red-900/40 space-y-2" style={{ backgroundColor: 'var(--surface-elevated)' }}>
+                                                <div className="flex gap-2">
+                                                    <div className="flex-1">
+                                                        <label className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Status</label>
+                                                        <select
+                                                            value={editStatus}
+                                                            onChange={e => setEditStatus(e.target.value as any)}
+                                                            className="w-full mt-0.5 text-xs rounded px-2 py-1.5"
+                                                            style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', outline: 'none' }}
+                                                        >
+                                                            <option value="unsold">Unsold</option>
+                                                            <option value="sold">Sold</option>
+                                                            <option value="available">Available (Reset)</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                {editStatus === 'sold' && (
+                                                    <div className="flex gap-2">
+                                                        <div className="flex-1">
+                                                            <label className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Amount</label>
+                                                            <input
+                                                                type="number"
+                                                                value={editPrice}
+                                                                onChange={e => setEditPrice(e.target.value)}
+                                                                placeholder="Final price"
+                                                                className="w-full mt-0.5 text-xs rounded px-2 py-1.5"
+                                                                style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', outline: 'none' }}
+                                                            />
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <label className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Team</label>
+                                                            <select
+                                                                value={editTeamId}
+                                                                onChange={e => setEditTeamId(e.target.value)}
+                                                                className="w-full mt-0.5 text-xs rounded px-2 py-1.5"
+                                                                style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', outline: 'none' }}
+                                                            >
+                                                                <option value="">Select team</option>
+                                                                {teams.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {editError && <p className="text-[10px] text-red-400">{editError}</p>}
+                                                <div className="flex gap-2 pt-1">
+                                                    <button
+                                                        onClick={() => saveEdit(player)}
+                                                        disabled={saving || (editStatus === 'sold' && (!editPrice || !editTeamId))}
+                                                        className="flex-1 py-1.5 rounded text-xs font-bold transition-all disabled:opacity-50"
+                                                        style={{ backgroundColor: 'var(--brand-primary)', color: '#fff' }}
+                                                    >
+                                                        {saving ? 'Saving…' : 'Save'}
+                                                    </button>
+                                                    <button
+                                                        onClick={closeEdit}
+                                                        className="flex-1 py-1.5 rounded text-xs font-semibold transition-all"
+                                                        style={{ backgroundColor: 'var(--surface-card)', color: 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </li>
+                                );
+                            })}
                         </ul>
                     )}
                 </div>
@@ -625,10 +887,17 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const [showReAuctionConfirm, setShowReAuctionConfirm] = useState(false);
     const [reAuctioning, setReAuctioning] = useState(false);
 
+    // Class-wise auction management
+    const [classCompletionAlert, setClassCompletionAlert] = useState<string | null>(null);
+    const [selectingClass, setSelectingClass] = useState(false);
+    const prevCompletedClassesRef = useRef<string[]>([]);
+
     // Overlay control panel settings
     const [overlaySize, setOverlaySize] = useState<'large' | 'small'>('large');
     const [tickerMode, setTickerMode] = useState<'all' | 'sold' | 'available'>('all');
     const [displayMode, setDisplayMode] = useState<'standard' | 'sold-summary' | 'team-summary' | 'team-wise-summary' | 'resting' | 'top10-summary' | 'custom-ticker' | 'wheel-spin'>('standard');
+    const [teamWiseTeamId, setTeamWiseTeamId] = useState<string | null>(null);
+    const teamWiseTeamIdRef = useRef<string | null>(null);
     const [isSpinning, setIsSpinning] = useState(false);
     const spinTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
     const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -657,6 +926,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     autoSwitchDurationRef.current = autoSwitchDuration;
     displayModeRef.current = displayMode;
     hidePremiumCardRef.current = hidePremiumCard;
+    teamWiseTeamIdRef.current = teamWiseTeamId;
     customTickerLine1Ref.current = customTickerLine1;
     customTickerLine2Ref.current = customTickerLine2;
     soldMessagePositionRef.current = soldMessagePosition;
@@ -676,7 +946,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             await fetch('/api/overlay/settings', {
                 method: 'POST',
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tournamentId, size, tickerMode: mode, displayMode: dm, hidePremiumCard: hideCard, customTickerLine1: line1, customTickerLine2: line2, soldMessagePosition: soldMsgPos, hideTickerCustom: hideTickerCustomRef.current, hideTickerFullscreen: hideTickerFullscreenRef.current }),
+                body: JSON.stringify({ tournamentId, size, tickerMode: mode, displayMode: dm, hidePremiumCard: hideCard, customTickerLine1: line1, customTickerLine2: line2, soldMessagePosition: soldMsgPos, hideTickerCustom: hideTickerCustomRef.current, hideTickerFullscreen: hideTickerFullscreenRef.current, teamWiseTeamId: teamWiseTeamIdRef.current }),
             });
         } catch { /* non-critical */ }
     };
@@ -729,6 +999,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         error: pusherError,
         setPlayerUnsold,
         setPlayerAvailable,
+        updatePlayerAndTeams,
     } = usePusherAuction(liveTournamentId, initialData || undefined);
 
     // Detect loading state: tournamentId is set but tournament data hasn't loaded yet
@@ -802,6 +1073,46 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         () => !!currentPlayer && auctionState.currentAuctionStatus !== 'Sold',
         [currentPlayer, auctionState.currentAuctionStatus]
     );
+
+    // Per-class statistics derived from local players + auctionState
+    // NOTE: player.playerClass stores the class NAME (e.g. "Platinum"), not the code ("PT")
+    const classStats = useMemo((): ClassStat[] => {
+        if (!liveTournament?.usePlayerClasses || !liveTournament.playerClasses) return [];
+        return liveTournament.playerClasses
+            .map(cls => {
+                const classPlayers = players.filter(p => p.playerClass === cls.name);
+                const sold = classPlayers.filter(p => p.isSold).length;
+                const unsold = classPlayers.filter(p => p.isUnsold).length;
+                return {
+                    ...cls,
+                    total: classPlayers.length,
+                    sold,
+                    unsold,
+                    remaining: classPlayers.length - sold - unsold,
+                    isActive: auctionState.currentAuctionClass === cls.name,
+                    isCompleted: (auctionState.completedClasses ?? []).includes(cls.name),
+                };
+            })
+            .sort((a, b) => a.order - b.order);
+    }, [liveTournament, players, auctionState.currentAuctionClass, auctionState.completedClasses]);
+
+    // Show completion toast when a class finishes (completedClasses array grows)
+    useEffect(() => {
+        const completedClasses = auctionState.completedClasses ?? [];
+        const prev = prevCompletedClassesRef.current;
+        if (completedClasses.length > prev.length && liveTournament?.playerClasses) {
+            const newName = completedClasses.find(c => !prev.includes(c));
+            if (newName) {
+                const cls = liveTournament.playerClasses.find(c => c.name === newName);
+                if (cls) {
+                    const msg = `${cls.icon ?? ''} ${cls.name} class completed! Select the next class.`.trim();
+                    setClassCompletionAlert(msg);
+                    setTimeout(() => setClassCompletionAlert(null), 8000);
+                }
+            }
+        }
+        prevCompletedClassesRef.current = [...completedClasses];
+    }, [auctionState.completedClasses]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Fetch stats when auction is not live (pre/post-auction state)
     useEffect(() => {
@@ -1084,6 +1395,44 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         }
     };
 
+    const handleSelectClass = async (className: string) => {
+        if (!liveTournament || selectingClass) return;
+        setSelectingClass(true);
+        try {
+            const res = await fetch('/api/auction/select-class', {
+                method: 'POST',
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tournamentId: liveTournament._id, className }),
+            });
+            const data = await res.json();
+            if (!res.ok) setError(data.error || 'Failed to select class');
+        } catch {
+            setError('Failed to select class');
+        } finally {
+            setSelectingClass(false);
+        }
+    };
+
+    const handleClearClass = async () => {
+        if (!liveTournament || selectingClass) return;
+        setSelectingClass(true);
+        try {
+            const res = await fetch('/api/auction/select-class', {
+                method: 'DELETE',
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tournamentId: liveTournament._id }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                setError(data.error || 'Failed to clear class');
+            }
+        } catch {
+            setError('Failed to clear class');
+        } finally {
+            setSelectingClass(false);
+        }
+    };
+
     const handleReAuction = async () => {
         if (!liveTournament) return;
         setReAuctioning(true);
@@ -1361,6 +1710,18 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                                 Budget: {liveTournament.budgetPerTeam.toLocaleString()} | Squad: {liveTournament.squadSize} | Base Price: {liveTournament.basePricePerPlayer.toLocaleString()}
                             </p>
                         </div>
+                        <div className="h-6 w-px" style={{ backgroundColor: 'var(--border-primary)' }}></div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold px-3 py-1 rounded-md" style={{ backgroundColor: 'var(--surface-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}>
+                                {players.filter(p => !p.isSold && !p.isUnsold).length} Available
+                            </span>
+                            <span className="text-sm font-semibold px-3 py-1 rounded-md" style={{ backgroundColor: 'var(--surface-elevated)', color: 'var(--status-success)', border: '1px solid var(--border-primary)' }}>
+                                {soldPlayers.length} Sold
+                            </span>
+                            <span className="text-sm font-semibold px-3 py-1 rounded-md" style={{ backgroundColor: 'var(--surface-elevated)', color: 'var(--status-danger)', border: '1px solid var(--border-primary)' }}>
+                                {unsoldPlayers.length} Unsold
+                            </span>
+                        </div>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                         {!isAuctionStopped && (
@@ -1394,22 +1755,34 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
 
             {/* Auction Control Grid */}
             <div className="grid grid-cols-1 xl:grid-cols-9 gap-3 relative" style={{ height: 'calc(100vh - 18rem)' }}>
-                <div className="xl:col-span-2 h-full">
-                    <AvailablePlayersPanel
-                        players={players}
-                        tournament={liveTournament}
-                        onSelectPlayer={handleSelectPlayer}
-                        isAuctioning={isAuctioning}
-                        currentPlayerId={currentPlayer?._id}
-                        onReAuction={() => setShowReAuctionConfirm(true)}
-                        reAuctioning={reAuctioning}
-                    />
+                <div className="xl:col-span-2 h-full flex flex-col gap-3">
+                    {liveTournament?.usePlayerClasses && classStats.length > 0 && (
+                        <ClassManagerPanel
+                            classStats={classStats}
+                            onSelectClass={handleSelectClass}
+                            onClearClass={handleClearClass}
+                            selectingClass={selectingClass}
+                        />
+                    )}
+                    <div className="flex-1 min-h-0">
+                        <AvailablePlayersPanel
+                            players={players}
+                            tournament={liveTournament}
+                            onSelectPlayer={handleSelectPlayer}
+                            isAuctioning={isAuctioning}
+                            currentPlayerId={currentPlayer?._id}
+                            onReAuction={() => setShowReAuctionConfirm(true)}
+                            reAuctioning={reAuctioning}
+                            activeClass={auctionState.currentAuctionClass ?? null}
+                        />
+                    </div>
                 </div>
                 <div className="xl:col-span-5 h-full flex flex-col gap-3">
                     <CurrentAuctionPanel
                         currentPlayer={currentPlayer}
                         tournament={liveTournament}
                         teams={teams}
+                        players={players}
                         biddingTeamId={biddingTeamId}
                         setBiddingTeamId={setBiddingTeamId}
                         auctionState={auctionState}
@@ -1672,6 +2045,33 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                             <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
                             {/* Team Wise Summary */}
                             <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Team Wise:</span>
+                            <select
+                                value={teamWiseTeamId ?? ''}
+                                onChange={e => {
+                                    const val = e.target.value || null;
+                                    setTeamWiseTeamId(val);
+                                    teamWiseTeamIdRef.current = val;
+                                    if (displayMode === 'team-wise-summary') {
+                                        sendOverlaySettings(overlaySize, tickerMode, 'team-wise-summary');
+                                    }
+                                }}
+                                className="text-xs rounded-md px-2 py-1.5 font-semibold shrink-0"
+                                style={{
+                                    backgroundColor: 'var(--surface-elevated)',
+                                    color: 'var(--text-secondary)',
+                                    border: '1px solid var(--border-primary)',
+                                    outline: 'none',
+                                    maxWidth: 140,
+                                }}
+                            >
+                                <option value="">All Teams</option>
+                                {[...teams]
+                                    .sort((a, b) => a.name.localeCompare(b.name))
+                                    .map(t => (
+                                        <option key={t._id} value={t._id}>{t.name}</option>
+                                    ))
+                                }
+                            </select>
                             <button
                                 onClick={() => {
                                     const next = displayMode === 'team-wise-summary' ? 'standard' : 'team-wise-summary';
@@ -1848,9 +2248,15 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                         currentBid={auctionState.currentBid ?? 0}
                         onUndo={handleUndo}
                         onCleanup={handleCleanupAll}
+                        onEditSaved={updatePlayerAndTeams}
                     />
                 </div>
                 {error && <div className="absolute bottom-4 right-4 text-center text-red-400 bg-red-900/80 backdrop-blur-sm p-3 rounded-lg shadow-lg border border-red-700 animate-fade-in">{error}</div>}
+                {classCompletionAlert && (
+                    <div className="absolute bottom-16 right-4 max-w-xs text-sm font-semibold text-green-200 bg-green-900/90 backdrop-blur-sm px-4 py-3 rounded-lg shadow-lg border border-green-700 animate-fade-in">
+                        {classCompletionAlert}
+                    </div>
+                )}
             </div>
             {/* Complete Confirmation Modal */}
             <Modal isOpen={showCompleteConfirm} onClose={() => setShowCompleteConfirm(false)} title="Complete Tournament?" size="sm">
