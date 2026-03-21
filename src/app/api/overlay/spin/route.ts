@@ -26,17 +26,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing tournamentId' }, { status: 400 });
     }
 
-    // Get current auction state to exclude the player already on stage
+    // Get current auction state to exclude the player already on stage and apply class filter
     const auctionState = await AuctionStateModel.findOne({ tournamentId }).lean();
     const currentPlayerId = (auctionState as any)?.currentPlayerId ?? null;
+    const currentAuctionClass = (auctionState as any)?.currentAuctionClass ?? null;
 
     // Fetch available players (not sold, not unsold, not currently selected)
+    // If a class is active, restrict to that class only
     const query: Record<string, unknown> = {
       tournamentId,
       isSold: { $ne: true },
       isUnsold: { $ne: true },
     };
     if (currentPlayerId) query._id = { $ne: currentPlayerId };
+    if (currentAuctionClass) query.playerClass = currentAuctionClass;
 
     const availablePlayers = await PlayerModel
       .find(query)
@@ -44,7 +47,10 @@ export async function POST(request: NextRequest) {
       .lean();
 
     if (availablePlayers.length === 0) {
-      return NextResponse.json({ error: 'No available players to spin' }, { status: 400 });
+      const msg = currentAuctionClass
+        ? `No available players in the active class to spin`
+        : 'No available players to spin';
+      return NextResponse.json({ error: msg }, { status: 400 });
     }
 
     const winnerIndex = Math.floor(Math.random() * availablePlayers.length);

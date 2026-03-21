@@ -77,6 +77,7 @@ export default function OutputPage() {
   const [copiedObs, setCopiedObs] = useState(false);
   const [copiedCustom, setCopiedCustom] = useState(false);
   const [copiedFullscreen2, setCopiedFullscreen2] = useState(false);
+  const [copiedTeamOwner, setCopiedTeamOwner] = useState(false);
 
   // OBS setup instructions toggle
   const [showSetup, setShowSetup] = useState(false);
@@ -101,17 +102,21 @@ export default function OutputPage() {
   const obsBaseUrl = selectedTournamentId ? `${origin}/overlays/${selectedTournamentId}` : '';
   const customBaseUrl = selectedTournamentId ? `${origin}/overlays/${selectedTournamentId}/custom` : '';
   const fullscreen2BaseUrl = selectedTournamentId ? `${origin}/overlays/${selectedTournamentId}/fullscreen2` : '';
+  const teamOwnerBaseUrl = selectedTournamentId ? `${origin}/overlays/${selectedTournamentId}/team-owner` : '';
   const obsUrlWithToken = overlayToken ? `${obsBaseUrl}?token=${encodeURIComponent(overlayToken)}` : obsBaseUrl;
   const customUrlWithToken = overlayToken ? `${customBaseUrl}?token=${encodeURIComponent(overlayToken)}` : customBaseUrl;
   const fullscreen2UrlWithToken = overlayToken ? `${fullscreen2BaseUrl}?token=${encodeURIComponent(overlayToken)}` : fullscreen2BaseUrl;
+  const teamOwnerUrlWithToken = overlayToken ? `${teamOwnerBaseUrl}?token=${encodeURIComponent(overlayToken)}` : teamOwnerBaseUrl;
 
   // Masked display version (hides the actual token value)
   const maskedObsUrl = overlayToken ? `${obsBaseUrl}?token=••••••••` : obsBaseUrl;
   const maskedCustomUrl = overlayToken ? `${customBaseUrl}?token=••••••••` : customBaseUrl;
   const maskedFullscreen2Url = overlayToken ? `${fullscreen2BaseUrl}?token=••••••••` : fullscreen2BaseUrl;
+  const maskedTeamOwnerUrl = overlayToken ? `${teamOwnerBaseUrl}?token=••••••••` : teamOwnerBaseUrl;
   const displayObsUrl = showToken ? obsUrlWithToken : maskedObsUrl;
   const displayCustomUrl = showToken ? customUrlWithToken : maskedCustomUrl;
   const displayFullscreen2Url = showToken ? fullscreen2UrlWithToken : maskedFullscreen2Url;
+  const displayTeamOwnerUrl = showToken ? teamOwnerUrlWithToken : maskedTeamOwnerUrl;
 
   async function selectTheme(themeId: string) {
     if (!selectedTournamentId || themeId === currentTheme) return;
@@ -184,6 +189,13 @@ export default function OutputPage() {
     await navigator.clipboard.writeText(fullscreen2UrlWithToken);
     setCopiedFullscreen2(true);
     setTimeout(() => setCopiedFullscreen2(false), 2000);
+  }
+
+  async function copyTeamOwnerUrl() {
+    if (!teamOwnerUrlWithToken) return;
+    await navigator.clipboard.writeText(teamOwnerUrlWithToken);
+    setCopiedTeamOwner(true);
+    setTimeout(() => setCopiedTeamOwner(false), 2000);
   }
 
   return (
@@ -500,6 +512,53 @@ export default function OutputPage() {
             </div>
             <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
               Same as Full Screen Overlay, but the player panel shows only the <strong>Secondary Image</strong>. Falls back to primary photo if no secondary image is set.
+            </p>
+          </div>
+
+          {/* Team Owner Dashboard URL */}
+          <div
+            className="rounded-xl border p-5"
+            style={{ backgroundColor: 'var(--surface-elevated)', borderColor: 'var(--border-primary)' }}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                Team Owner Dashboard URL
+              </p>
+              <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ backgroundColor: 'rgba(79,70,229,0.12)', color: 'var(--brand-primary)' }}>
+                Mobile Friendly
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <code
+                className="flex-1 text-xs px-4 py-3 rounded-lg truncate font-mono"
+                style={{ backgroundColor: 'var(--surface-secondary)', color: 'var(--brand-primary)' }}
+                title={teamOwnerUrlWithToken}
+              >
+                {displayTeamOwnerUrl || teamOwnerBaseUrl}
+              </code>
+              <button
+                onClick={copyTeamOwnerUrl}
+                disabled={!overlayToken}
+                className="shrink-0 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 disabled:opacity-50"
+                style={{
+                  backgroundColor: copiedTeamOwner ? '#22c55e' : 'var(--brand-primary)',
+                  color: '#fff',
+                }}
+              >
+                {copiedTeamOwner ? 'Copied!' : 'Copy'}
+              </button>
+              <a
+                href={teamOwnerUrlWithToken}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 px-4 py-3 rounded-lg text-sm font-semibold border transition-all duration-200 hover:opacity-80"
+                style={{ borderColor: 'var(--border-primary)', color: 'var(--text-secondary)' }}
+              >
+                Preview ↗
+              </a>
+            </div>
+            <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
+              Share this link with team owners. They can select their team and view their balance, max bid, squad, and player lists in real time.
             </p>
           </div>
 

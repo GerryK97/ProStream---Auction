@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { playerDB } from '@/lib/db-mongodb';
 import { PlayerModel } from '@/models/Player';
+import { TeamModel } from '@/models/Team';
 import { TournamentModel } from '@/models/Tournament';
 import { connectToDatabase } from '@/lib/mongodb';
 import { getUserFromRequest } from '@/lib/request-helpers';
@@ -126,6 +127,14 @@ export async function POST(request: NextRequest) {
     }
 
     const newPlayer = await playerDB.create(newPlayerData, user.userId);
+
+    // Add iconic player to team's squad roster (no budget deduction — finalPrice is 0)
+    if (isIconic && winningTeamId && newPlayer._id) {
+      await TeamModel.findByIdAndUpdate(winningTeamId, {
+        $addToSet: { playersPurchased: String(newPlayer._id) },
+      });
+    }
+
     return NextResponse.json(newPlayer, { status: 201 });
   } catch (error: any) {
     console.error('Error creating player:', error);

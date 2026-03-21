@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { playerDB, tournamentDB } from '@/lib/db-mongodb';
+import { TeamModel } from '@/models/Team';
+import { connectToDatabase } from '@/lib/mongodb';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction, canAccessPlayer, canModifyResource } from '@/lib/permissions';
 
@@ -118,6 +120,26 @@ export async function PUT(
     }
 
     const updatedPlayer = await playerDB.update(id, body);
+
+    // Sync iconic player's squad slot in the team's playersPurchased list
+    if (body.isIconic && body.winningTeamId) {
+      await connectToDatabase();
+      // If team changed, remove from old team first
+      const oldTeamId = (player as any).winningTeamId;
+      if (oldTeamId && oldTeamId !== body.winningTeamId) {
+        await TeamModel.findByIdAndUpdate(oldTeamId, { $pull: { playersPurchased: id } });
+      }
+      await TeamModel.findByIdAndUpdate(body.winningTeamId, {
+        $addToSet: { playersPurchased: id },
+      });
+    } else if (body.isIconic === false && (player as any).isIconic) {
+      // Removed iconic status — free the squad slot
+      await connectToDatabase();
+      const oldTeamId = (player as any).winningTeamId;
+      if (oldTeamId) {
+        await TeamModel.findByIdAndUpdate(oldTeamId, { $pull: { playersPurchased: id } });
+      }
+    }
     if (!updatedPlayer) {
       return NextResponse.json(
         { error: 'Player not found' },

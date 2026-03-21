@@ -4,7 +4,7 @@ import { AuctionStateModel } from '@/models/AuctionState';
 import { TournamentModel } from '@/models/Tournament';
 import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
-import { triggerPlayerSold } from '@/lib/pusher-server';
+import { triggerPlayerSold, triggerClassCompleted } from '@/lib/pusher-server';
 import { getMinClassBasePrice } from '@/lib/playerClassUtils';
 
 // POST /api/auction/sell - Sell the current player to the winning team
@@ -138,6 +138,37 @@ export async function POST(request: NextRequest) {
       tournamentId,
       isSold: false,
     });
+
+    // Check if the active class is now complete after this sale
+    const activeClass = (auctionState as any).currentAuctionClass as string | null;
+    if (activeClass) {
+      const remainingInClass = await PlayerModel.countDocuments({
+        tournamentId,
+        playerClass: activeClass,
+        isSold: { $ne: true },
+        isUnsold: { $ne: true },
+      });
+      if (remainingInClass === 0) {
+        const finalState = await AuctionStateModel.findOneAndUpdate(
+          { tournamentId },
+          {
+            $push: { completedClasses: activeClass },
+            $set: { currentAuctionClass: null },
+          },
+          { new: true }
+        ).lean();
+        try {
+          await triggerClassCompleted(tournamentId, {
+            completedClassCode: activeClass,
+            completedClasses: (finalState as any)?.completedClasses ?? [activeClass],
+            auctionState: finalState as any,
+            message: `${activeClass} class auction completed`,
+          });
+        } catch (pusherError) {
+          console.error('[sell] triggerClassCompleted failed:', pusherError);
+        }
+      }
+    }
 
     // Trigger Pusher event
     try {

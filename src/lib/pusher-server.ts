@@ -20,6 +20,8 @@ import type {
   AuctionUndoEvent,
   PlayerMarkedUnsoldEvent,
   AuctionStateUpdateEvent,
+  ClassSelectedEvent,
+  ClassCompletedEvent,
   OverlaySettingsEvent,
   WheelSpinEvent,
 } from '@/types/pusher-events';
@@ -228,6 +230,26 @@ export async function triggerWheelSpin(
   data: Omit<WheelSpinEvent, 'tournamentId' | 'timestamp'>
 ): Promise<void> {
   return triggerAuctionEvent(tournamentId, 'overlay:wheel-spin', data);
+}
+
+/**
+ * Helper: Trigger auction:class-selected event
+ */
+export async function triggerClassSelected(
+  tournamentId: string,
+  data: Omit<ClassSelectedEvent, 'tournamentId' | 'timestamp'>
+): Promise<void> {
+  return triggerAuctionEvent(tournamentId, 'auction:class-selected', data);
+}
+
+/**
+ * Helper: Trigger auction:class-completed event
+ */
+export async function triggerClassCompleted(
+  tournamentId: string,
+  data: Omit<ClassCompletedEvent, 'tournamentId' | 'timestamp'>
+): Promise<void> {
+  return triggerAuctionEvent(tournamentId, 'auction:class-completed', data);
 }
 
 /**

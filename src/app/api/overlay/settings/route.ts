@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { tournamentId, size, tickerMode, displayMode, hidePremiumCard, customTickerLine1, customTickerLine2, soldMessagePosition, hideTickerCustom, hideTickerFullscreen } = await request.json();
+    const { tournamentId, size, tickerMode, displayMode, hidePremiumCard, customTickerLine1, customTickerLine2, soldMessagePosition, hideTickerCustom, hideTickerFullscreen, teamWiseTeamId } = await request.json();
 
     if (!tournamentId) {
       return NextResponse.json({ error: 'Missing tournamentId' }, { status: 400 });
@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
       soldMessagePosition: soldMessagePosition ?? 'bottom-right',
       hideTickerCustom: hideTickerCustom ?? false,
       hideTickerFullscreen: hideTickerFullscreen ?? false,
+      teamWiseTeamId: teamWiseTeamId ?? null,
     });
 
     return NextResponse.json({ ok: true });

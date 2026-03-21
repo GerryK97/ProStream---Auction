@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { PlayerModel } from '@/models/Player';
-import { triggerPlayerMarkedUnsold } from '@/lib/pusher-server';
+import { triggerPlayerMarkedUnsold, triggerClassCompleted } from '@/lib/pusher-server';
 
 // POST /api/auction/mark-unsold - Mark the current player as explicitly unsold and reset auction state
 export async function POST(request: NextRequest) {
@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
     // Find the current auction state to get which player is up for auction
     const auctionState = await AuctionStateModel.findOne({ tournamentId }).lean();
     const currentPlayerId = (auctionState as any)?.currentPlayerId;
+    const activeClass = (auctionState as any)?.currentAuctionClass as string | null;
 
     if (!currentPlayerId) {
       return NextResponse.json(
@@ -57,6 +58,36 @@ export async function POST(request: NextRequest) {
       },
       { new: true }
     ).lean();
+
+    // Check if the active class is now complete after marking this player unsold
+    if (activeClass) {
+      const remainingInClass = await PlayerModel.countDocuments({
+        tournamentId,
+        playerClass: activeClass,
+        isSold: { $ne: true },
+        isUnsold: { $ne: true },
+      });
+      if (remainingInClass === 0) {
+        const finalState = await AuctionStateModel.findOneAndUpdate(
+          { tournamentId },
+          {
+            $push: { completedClasses: activeClass },
+            $set: { currentAuctionClass: null },
+          },
+          { new: true }
+        ).lean();
+        try {
+          await triggerClassCompleted(tournamentId, {
+            completedClassCode: activeClass,
+            completedClasses: (finalState as any)?.completedClasses ?? [activeClass],
+            auctionState: finalState as any,
+            message: `${activeClass} class auction completed`,
+          });
+        } catch (pusherError) {
+          console.error('[mark-unsold] triggerClassCompleted failed:', pusherError);
+        }
+      }
+    }
 
     // Broadcast a targeted event — just the updated player + auction state
     // (avoids full-state payload that can exceed Pusher's message size limit)

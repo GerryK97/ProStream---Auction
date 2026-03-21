@@ -28,6 +28,8 @@ import type {
   AuctionUndoEvent,
   PlayerMarkedUnsoldEvent,
   AuctionStateUpdateEvent,
+  ClassSelectedEvent,
+  ClassCompletedEvent,
 } from '@/types/pusher-events';
 
 /** Channel that overlays always subscribe to for wake/sleep signals */
@@ -49,6 +51,7 @@ interface UsePusherAuctionReturn {
   error: string | null;
   setPlayerUnsold: (playerId: string) => void;
   setPlayerAvailable: (playerId: string) => void;
+  updatePlayerAndTeams: (player: Player, teams: Team[]) => void;
 }
 
 interface AuctionStateType {
@@ -71,10 +74,13 @@ type AuctionAction =
   | { type: 'AUCTION_UNDO'; data: AuctionUndoEvent }
   | { type: 'PLAYER_MARKED_UNSOLD'; data: PlayerMarkedUnsoldEvent }
   | { type: 'STATE_UPDATE'; data: AuctionStateUpdateEvent }
+  | { type: 'CLASS_SELECTED'; data: ClassSelectedEvent }
+  | { type: 'CLASS_COMPLETED'; data: ClassCompletedEvent }
   | { type: 'SET_ERROR'; error: string }
   | { type: 'CLEAR_ERROR' }
   | { type: 'SET_PLAYER_UNSOLD'; playerId: string }
-  | { type: 'SET_PLAYER_AVAILABLE'; playerId: string };
+  | { type: 'SET_PLAYER_AVAILABLE'; playerId: string }
+  | { type: 'UPDATE_PLAYER_AND_TEAMS'; player: Player; teams: Team[] };
 import { EMPTY_AUCTION_STATE } from '@/lib/auctionDefaults';
 
 const auctionReducer = (state: AuctionStateType, action: AuctionAction): AuctionStateType => {
@@ -204,6 +210,20 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         error: null,
       };
 
+    case 'CLASS_SELECTED':
+      return {
+        ...state,
+        auctionState: action.data.auctionState,
+        error: null,
+      };
+
+    case 'CLASS_COMPLETED':
+      return {
+        ...state,
+        auctionState: action.data.auctionState,
+        error: null,
+      };
+
     case 'SET_PLAYER_UNSOLD':
       return {
         ...state,
@@ -219,6 +239,14 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         players: state.players.map((p) =>
           p._id === action.playerId ? { ...p, isUnsold: false, isSold: false } : p
         ),
+        error: null,
+      };
+
+    case 'UPDATE_PLAYER_AND_TEAMS':
+      return {
+        ...state,
+        players: state.players.map((p) => p._id === action.player._id ? action.player : p),
+        teams: action.teams,
         error: null,
       };
 
@@ -444,6 +472,14 @@ export function usePusherAuction(
         dispatch({ type: 'STATE_UPDATE', data });
       });
 
+      channel.bind('auction:class-selected', (data: ClassSelectedEvent) => {
+        dispatch({ type: 'CLASS_SELECTED', data });
+      });
+
+      channel.bind('auction:class-completed', (data: ClassCompletedEvent) => {
+        dispatch({ type: 'CLASS_COMPLETED', data });
+      });
+
       const handleConnectionStateChange = (states: { current: string }) => {
         setIsConnected(states.current === 'connected');
         if (states.current === 'connected' || states.current === 'unavailable' || states.current === 'failed') {
@@ -471,6 +507,8 @@ export function usePusherAuction(
           channelRef.current.unbind('auction:undo');
           channelRef.current.unbind('auction:player-unsold');
           channelRef.current.unbind('auction:state-update');
+          channelRef.current.unbind('auction:class-selected');
+          channelRef.current.unbind('auction:class-completed');
           pusher.unsubscribe(channelName);
           channelRef.current = null;
         }
@@ -491,6 +529,10 @@ export function usePusherAuction(
     dispatch({ type: 'SET_PLAYER_AVAILABLE', playerId });
   }, []);
 
+  const updatePlayerAndTeams = useCallback((player: Player, teams: Team[]) => {
+    dispatch({ type: 'UPDATE_PLAYER_AND_TEAMS', player, teams });
+  }, []);
+
   return {
     tournament: state.tournament,
     auctionState: state.auctionState,
@@ -500,5 +542,6 @@ export function usePusherAuction(
     error: state.error,
     setPlayerUnsold,
     setPlayerAvailable,
+    updatePlayerAndTeams,
   };
 }
