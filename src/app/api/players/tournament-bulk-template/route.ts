@@ -140,7 +140,7 @@ export async function GET(request: NextRequest) {
     instructions.push(
       { Step: '', Instruction: '' },
       { Step: 'Tournament', Instruction: tournament.name },
-      { Step: 'Positions', Instruction: 'Batsman, Bowler, All-rounder, Wicket-keeper' },
+      { Step: 'Positions', Instruction: 'Batsman, Bowler, All-rounder, Batting All-rounder, Bowling All-rounder, Wicket-keeper, Wicket Keeper Batsman' },
     );
 
     if (playerClasses.length > 0) {
