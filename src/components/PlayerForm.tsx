@@ -7,7 +7,15 @@ import ImageUpload from './ImageUpload';
 import { PlusIcon } from './icons';
 import { getSortedClasses } from '@/lib/playerClassUtils';
 
-const PLAYER_POSITIONS = ['Batsman', 'Bowler', 'All-rounder', 'Wicket-keeper'];
+const PLAYER_POSITIONS = [
+    'Batsman',
+    'Bowler',
+    'All-rounder',
+    'Batting All-rounder',
+    'Bowling All-rounder',
+    'Wicket-keeper',
+    'Wicket Keeper Batsman',
+];
 
 interface PlayerFormProps {
     tournaments: Tournament[];
