@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
     // Build sample rows to illustrate the expected format
     const sampleRows = [
       {
+        'Player No': '001',
         'Name': 'John Smith',
         'Position': 'Batsman',
         'Current Club': 'Mumbai FC',
@@ -41,6 +42,7 @@ export async function GET(request: NextRequest) {
         ...(playerClasses.length > 0 ? { 'Player Class': playerClasses[0] || '' } : {}),
       },
       {
+        'Player No': '002',
         'Name': 'Alex Johnson',
         'Position': 'Bowler',
         'Current Club': 'Delhi Tigers',
@@ -54,6 +56,7 @@ export async function GET(request: NextRequest) {
     const emptyRowCount = 20;
     for (let i = 0; i < emptyRowCount; i++) {
       sampleRows.push({
+        'Player No': '',
         'Name': '',
         'Position': '',
         'Current Club': '',
@@ -68,9 +71,11 @@ export async function GET(request: NextRequest) {
 
     // Column widths
     const columnWidths: Array<{ wch: number }> = [
+      { wch: 12 }, // Player No
       { wch: 25 }, // Name
       { wch: 18 }, // Position
       { wch: 30 }, // Current Club
+      { wch: 8  }, // Age
       { wch: 15 }, // Add (Yes/No)
     ];
     if (playerClasses.length > 0) {
@@ -79,8 +84,8 @@ export async function GET(request: NextRequest) {
     worksheet['!cols'] = columnWidths;
 
     // Determine column letters
-    const addColLetter = 'D';
-    const classColLetter = 'E';
+    const addColLetter = 'F';
+    const classColLetter = 'G';
     const totalRows = sampleRows.length + 1;
 
     if (!worksheet['!dataValidation']) {
@@ -119,7 +124,7 @@ export async function GET(request: NextRequest) {
     // Instructions sheet
     const instructions: Array<{ Step: number | string; Instruction: string }> = [
       { Step: 1, Instruction: 'Fill in player details in the "Players" sheet. The first two rows are examples — replace them with real data.' },
-      { Step: 2, Instruction: 'Required columns: Name, Position, Current Club, Add (Yes/No)' },
+      { Step: 2, Instruction: 'Required columns: Name, Position, Current Club, Add (Yes/No). Optional: Player No (e.g. 001, 002)' },
       { Step: 3, Instruction: 'Set "Add (Yes/No)" to "Yes" for rows you want to import. Rows set to "No" will be skipped.' },
     ];
 

@@ -9,6 +9,7 @@ import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
 
 interface ExcelRow {
+  'Player No'?: string | number;
   'Name'?: string;
   'Position'?: string;
   'Current Club'?: string;
@@ -107,6 +108,7 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
+      const playerNo = row['Player No'] !== undefined && row['Player No'] !== '' ? String(row['Player No']).trim() : undefined;
       const playerName = row['Name']?.toString().trim();
       const position = row['Position']?.toString().trim();
       const currentClub = row['Current Club']?.toString().trim();
@@ -149,7 +151,7 @@ export async function POST(request: NextRequest) {
 
       try {
         await playerDB.create(
-          { name: playerName, position, currentClub, age, playerClass: playerClass || undefined, tournamentId },
+          { ...(playerNo ? { playerNo } : {}), name: playerName, position, currentClub, age, playerClass: playerClass || undefined, tournamentId },
           user.userId
         );
         result.imported++;

@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     if (!canPerformAction(user.role, 'create', 'player')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const body = await request.json();
-    const { name, position, currentClub, photoURL, secondaryImageURL, playerClass, age, tournamentId, isIconic, winningTeamId } = body;
+    const { playerNo, name, position, currentClub, photoURL, secondaryImageURL, playerClass, age, tournamentId, isIconic, winningTeamId } = body;
 
     if (!name || !tournamentId) {
       return NextResponse.json({ error: 'name and tournamentId are required' }, { status: 400 });
@@ -108,6 +108,7 @@ export async function POST(request: NextRequest) {
     if (!hasAccess) return NextResponse.json({ error: 'Access denied to this tournament' }, { status: 403 });
 
     const newPlayerData: any = {
+      ...(playerNo ? { playerNo } : {}),
       name,
       position,
       currentClub,

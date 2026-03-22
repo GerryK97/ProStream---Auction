@@ -29,6 +29,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
     const isEditMode = !!editPlayer;
 
     const [tournamentId, setTournamentId] = useState(editPlayer?.tournamentId ?? defaultTournamentId);
+    const [playerNo, setPlayerNo] = useState(editPlayer?.playerNo ?? '');
     const [name, setName] = useState(editPlayer?.name ?? '');
     const [position, setPosition] = useState(editPlayer?.position ?? '');
     const [currentClub, setCurrentClub] = useState(editPlayer?.currentClub ?? '');
@@ -114,6 +115,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                     method: 'PUT',
                     headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        playerNo: playerNo.trim() || undefined,
                         name, position, currentClub,
                         photoURL: photoURL || undefined,
                         secondaryImageURL: secondaryImageURL || undefined,
@@ -128,6 +130,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                     method: 'POST',
                     headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        playerNo: playerNo.trim() || undefined,
                         name, position, currentClub,
                         photoURL: photoURL || undefined,
                         secondaryImageURL: secondaryImageURL || undefined,
@@ -177,6 +180,11 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                     </select>
                 </div>
             )}
+
+            <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Player No <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(optional)</span></label>
+                <input type="text" value={playerNo} onChange={(e) => setPlayerNo(e.target.value)} placeholder="e.g., 001" className="w-full rounded-md p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
+            </div>
 
             <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Player Name</label>
