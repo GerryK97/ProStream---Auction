@@ -255,7 +255,7 @@ export const playerDB = {
   ): Promise<Player> => {
     await connectToDatabase();
     const playerId = await generateTournamentPlayerId();
-    const playerNo = await generatePlayerNo(data.tournamentId);
+    const playerNo = (data as any).playerNo || await generatePlayerNo(data.tournamentId);
     const newPlayer: Player = {
       _id: playerId,
       playerNo,
