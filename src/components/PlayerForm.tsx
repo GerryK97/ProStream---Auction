@@ -77,32 +77,6 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
         fetchTeams();
     }, [tournamentId]);
 
-    const handlePhotoUploaded = async (url: string) => {
-        if (!isEditMode) return;
-        try {
-            await fetch(`/api/players/${editPlayer!._id}`, {
-                method: 'PUT',
-                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, position, currentClub, photoURL: url, playerClass: playerClass || undefined, age: age ? Number(age) : undefined }),
-            });
-        } catch (err) {
-            console.error('Failed to auto-save player photo:', err);
-        }
-    };
-
-    const handleSecondaryPhotoUploaded = async (url: string) => {
-        if (!isEditMode) return;
-        try {
-            await fetch(`/api/players/${editPlayer!._id}`, {
-                method: 'PUT',
-                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ secondaryImageURL: url }),
-            });
-        } catch (err) {
-            console.error('Failed to auto-save secondary image:', err);
-        }
-    };
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name || !position || !currentClub || !tournamentId) return;
@@ -155,42 +129,46 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
             {error && (
-                <div className="rounded-md p-3 text-sm" style={{ color: 'var(--status-danger)', background: 'color-mix(in oklab, var(--status-danger) 12%, transparent)', border: '1px solid color-mix(in oklab, var(--status-danger) 40%, transparent)' }}>
+                <div className="col-span-2 rounded-md p-3 text-sm" style={{ color: 'var(--status-danger)', background: 'color-mix(in oklab, var(--status-danger) 12%, transparent)', border: '1px solid color-mix(in oklab, var(--status-danger) 40%, transparent)' }}>
                     {error}
                 </div>
             )}
 
-            {isEditMode ? (
-                <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Tournament</label>
-                    <p className="rounded-md p-2 text-sm" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-tertiary)' }}>
-                        {selectedTournament?.name ?? tournamentId}
-                    </p>
-                </div>
-            ) : (
-                <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Tournament</label>
-                    <select value={tournamentId} onChange={(e) => handleTournamentChange(e.target.value)} required className="w-full rounded-md p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}>
-                        <option value="">Select Tournament</option>
-                        {tournaments.map(t => (
-                            <option key={t._id} value={t._id}>{t.name} ({t.year})</option>
-                        ))}
-                    </select>
-                </div>
-            )}
+            {/* Tournament — full width */}
+            <div className="col-span-2">
+                {isEditMode ? (
+                    <>
+                        <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Tournament</label>
+                        <p className="rounded-md p-2 text-sm" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-tertiary)' }}>
+                            {selectedTournament?.name ?? tournamentId}
+                        </p>
+                    </>
+                ) : (
+                    <>
+                        <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Tournament</label>
+                        <select value={tournamentId} onChange={(e) => handleTournamentChange(e.target.value)} required className="w-full rounded-md p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}>
+                            <option value="">Select Tournament</option>
+                            {tournaments.map(t => (
+                                <option key={t._id} value={t._id}>{t.name} ({t.year})</option>
+                            ))}
+                        </select>
+                    </>
+                )}
+            </div>
 
+            {/* Player No | Player Name */}
             <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Player No <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(optional)</span></label>
                 <input type="text" value={playerNo} onChange={(e) => setPlayerNo(e.target.value)} placeholder="e.g., 001" className="w-full rounded-md p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
             </div>
-
             <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Player Name</label>
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)} required className="w-full rounded-md p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
             </div>
 
+            {/* Position | Current Club */}
             <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Position</label>
                 <select value={position} onChange={(e) => setPosition(e.target.value)} required className="w-full rounded-md p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}>
@@ -198,18 +176,17 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                     {PLAYER_POSITIONS.map(pos => <option key={pos} value={pos}>{pos}</option>)}
                 </select>
             </div>
-
             <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Current Club</label>
                 <input type="text" value={currentClub} onChange={(e) => setCurrentClub(e.target.value)} required placeholder="e.g., Mumbai Indians" className="w-full rounded-md p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
             </div>
 
+            {/* Age | Player Class */}
             <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Age <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(optional)</span></label>
                 <input type="number" min="1" max="99" value={age} onChange={(e) => setAge(e.target.value)} placeholder="Leave blank if not applicable" className="w-full rounded-md p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
             </div>
-
-            {useClasses && selectedTournament && (
+            {useClasses && selectedTournament ? (
                 <div>
                     <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Player Class</label>
                     <select value={playerClass} onChange={(e) => setPlayerClass(e.target.value)} required className="w-full rounded-md p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}>
@@ -221,15 +198,15 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                         ))}
                     </select>
                 </div>
-            )}
+            ) : <div />}
 
-            {/* Iconic Player Selection */}
+            {/* Iconic Player — full width, conditional */}
             {tournamentId && (
-                <div className="rounded-md p-4 space-y-3" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}>
+                <div className="col-span-2 rounded-md p-4 space-y-3" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}>
                     <label className="flex items-center gap-2 cursor-pointer">
-                        <input 
-                            type="checkbox" 
-                            checked={isIconic} 
+                        <input
+                            type="checkbox"
+                            checked={isIconic}
                             onChange={(e) => {
                                 setIsIconic(e.target.checked);
                                 if (!e.target.checked) setWinningTeamId('');
@@ -241,7 +218,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                             Is Iconic Player?
                         </span>
                     </label>
-                    
+
                     {isIconic && (
                         <div className="pt-2">
                             <label className="block text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--brand-primary)' }}>
@@ -252,11 +229,11 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                             ) : teams.length === 0 ? (
                                 <div className="text-sm" style={{ color: 'var(--status-warning)' }}>No teams available in this tournament.</div>
                             ) : (
-                                <select 
-                                    value={winningTeamId} 
-                                    onChange={(e) => setWinningTeamId(e.target.value)} 
+                                <select
+                                    value={winningTeamId}
+                                    onChange={(e) => setWinningTeamId(e.target.value)}
                                     required={isIconic}
-                                    className="w-full rounded-md p-2" 
+                                    className="w-full rounded-md p-2"
                                     style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--brand-primary)', color: 'var(--text-primary)' }}
                                 >
                                     <option value="">Select Team</option>
@@ -273,6 +250,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                 </div>
             )}
 
+            {/* Player Photo | Secondary Image */}
             <ImageUpload
                 value={photoURL}
                 onChange={setPhotoURL}
@@ -282,9 +260,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                 previewClassName="w-16 h-16"
                 previewShape="circle"
                 id="player-photo-form"
-                onUploadComplete={handlePhotoUploaded}
             />
-
             <ImageUpload
                 value={secondaryImageURL}
                 onChange={setSecondaryImageURL}
@@ -294,11 +270,11 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                 previewClassName="w-16 h-9"
                 previewShape="square"
                 id="player-secondary-image-form"
-                onUploadComplete={handleSecondaryPhotoUploaded}
                 cropAspect={16 / 9}
             />
 
-            <div className="pt-2 flex justify-end gap-3">
+            {/* Buttons — full width */}
+            <div className="col-span-2 pt-2 flex justify-end gap-3">
                 <button type="button" onClick={onCancel} className="font-bold py-2 px-4 rounded-lg transition-colors hover:opacity-80" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}>Cancel</button>
                 <button type="submit" disabled={saving} className="inline-flex items-center gap-2 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:opacity-80 disabled:opacity-60" style={{ backgroundColor: 'var(--brand-primary)' }}>
                     {isEditMode ? (
