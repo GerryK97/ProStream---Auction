@@ -25,6 +25,9 @@ function PlayersManagePage() {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [bulkDeleting, setBulkDeleting] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [noImageOnly, setNoImageOnly] = useState(false);
+    const [statusFilters, setStatusFilters] = useState<Set<string>>(new Set());
 
     const fetchPlayers = useCallback(async () => {
         if (!selectedTournamentId) { setPlayers([]); return; }
@@ -39,8 +42,8 @@ function PlayersManagePage() {
         }
     }, [selectedTournamentId, refreshTrigger]);
 
-    // Clear selection when tournament changes
-    useEffect(() => { setSelectedIds(new Set()); }, [selectedTournamentId]);
+    // Clear selection and filters when tournament changes
+    useEffect(() => { setSelectedIds(new Set()); setSearchQuery(''); setNoImageOnly(false); setStatusFilters(new Set()); }, [selectedTournamentId]);
 
     useEffect(() => { fetchPlayers(); }, [fetchPlayers]);
 
@@ -82,12 +85,42 @@ function PlayersManagePage() {
         });
     };
 
-    const toggleSelectAll = () => {
-        if (selectedIds.size === players.length) {
-            setSelectedIds(new Set());
-        } else {
-            setSelectedIds(new Set(players.map(p => p._id)));
+    const filteredPlayers = players.filter(p => {
+        const q = searchQuery.trim().toLowerCase();
+        if (q) {
+            const nameMatch = p.name.toLowerCase().includes(q);
+            const noMatch = (p.playerNo || '').toLowerCase().includes(q);
+            if (!nameMatch && !noMatch) return false;
         }
+        if (noImageOnly && p.photoURL && !p.photoURL.startsWith('data:')) return false;
+        if (statusFilters.size > 0) {
+            const status = p.isSold ? 'sold' : p.isUnsold ? 'unsold' : 'available';
+            if (!statusFilters.has(status)) return false;
+        }
+        return true;
+    });
+
+    const isFiltered = searchQuery.trim() !== '' || noImageOnly || statusFilters.size > 0;
+
+    const toggleStatusFilter = (status: string) => {
+        setStatusFilters(prev => {
+            const next = new Set(prev);
+            next.has(status) ? next.delete(status) : next.add(status);
+            return next;
+        });
+    };
+
+    const toggleSelectAll = () => {
+        const allVisibleSelected = filteredPlayers.length > 0 && filteredPlayers.every(p => selectedIds.has(p._id));
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (allVisibleSelected) {
+                filteredPlayers.forEach(p => next.delete(p._id));
+            } else {
+                filteredPlayers.forEach(p => next.add(p._id));
+            }
+            return next;
+        });
     };
 
     const handleBulkDelete = async () => {
@@ -155,7 +188,11 @@ function PlayersManagePage() {
                 <div className="rounded-lg p-6 setup-panel">
                     <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                         <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-                            Players {!loadingPlayers && <span className="text-sm font-normal" style={{ color: 'var(--text-tertiary)' }}>({players.length})</span>}
+                            Players {!loadingPlayers && (
+                                <span className="text-sm font-normal" style={{ color: 'var(--text-tertiary)' }}>
+                                    ({isFiltered ? `${filteredPlayers.length} of ${players.length}` : players.length})
+                                </span>
+                            )}
                         </h2>
                         <div className="flex gap-2 flex-wrap items-center">
                             {selectedIds.size > 0 && (
@@ -203,22 +240,86 @@ function PlayersManagePage() {
                         </div>
                     ) : (
                         <>
+                            {/* Filter bar */}
+                            <div className="space-y-2 mb-3">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <div className="relative flex-1 min-w-48">
+                                        <input
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={e => setSearchQuery(e.target.value)}
+                                            placeholder="Search by name or player no..."
+                                            className="w-full rounded-md pl-8 pr-8 py-2 text-sm"
+                                            style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
+                                        />
+                                        <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ color: 'var(--text-tertiary)' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
+                                        </svg>
+                                        {searchQuery && (
+                                            <button type="button" onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-sm leading-none hover:opacity-70" style={{ color: 'var(--text-tertiary)' }}>×</button>
+                                        )}
+                                    </div>
+                                    <label className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-md text-sm font-medium select-none" style={{ backgroundColor: noImageOnly ? 'color-mix(in oklab, var(--brand-primary) 15%, var(--surface-elevated))' : 'var(--surface-elevated)', border: `1px solid ${noImageOnly ? 'var(--brand-primary)' : 'var(--border-primary)'}`, color: noImageOnly ? 'var(--brand-primary)' : 'var(--text-secondary)' }}>
+                                        <input type="checkbox" checked={noImageOnly} onChange={e => setNoImageOnly(e.target.checked)} className="w-3.5 h-3.5" style={{ accentColor: 'var(--brand-primary)' }} />
+                                        No photo only
+                                    </label>
+                                    {isFiltered && (
+                                        <button type="button" onClick={() => { setSearchQuery(''); setNoImageOnly(false); setStatusFilters(new Set()); }} className="px-3 py-2 rounded-md text-sm font-medium hover:opacity-70" style={{ color: 'var(--text-tertiary)', border: '1px solid var(--border-primary)' }}>
+                                            Clear all
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    <span className="text-xs font-medium self-center" style={{ color: 'var(--text-tertiary)' }}>Status:</span>
+                                    {([
+                                        { key: 'available', label: 'Available', color: 'var(--status-success)' },
+                                        { key: 'sold', label: 'Sold', color: 'var(--status-danger)' },
+                                        { key: 'unsold', label: 'Unsold', color: 'var(--status-warning)' },
+                                    ] as const).map(({ key, label, color }) => {
+                                        const active = statusFilters.has(key);
+                                        return (
+                                            <button
+                                                key={key}
+                                                type="button"
+                                                onClick={() => toggleStatusFilter(key)}
+                                                className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all select-none"
+                                                style={{
+                                                    backgroundColor: active ? `color-mix(in oklab, ${color} 20%, var(--surface-elevated))` : 'var(--surface-elevated)',
+                                                    border: `1px solid ${active ? color : 'var(--border-primary)'}`,
+                                                    color: active ? color : 'var(--text-secondary)',
+                                                }}
+                                            >
+                                                {active && <span className="mr-1">✓</span>}{label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
                             {/* Select All row */}
                             <div className="flex items-center gap-3 px-3 py-2 mb-1 rounded-md" style={{ backgroundColor: 'var(--surface-elevated)' }}>
                                 <input
                                     type="checkbox"
-                                    checked={players.length > 0 && selectedIds.size === players.length}
-                                    ref={el => { if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < players.length; }}
+                                    checked={filteredPlayers.length > 0 && filteredPlayers.every(p => selectedIds.has(p._id))}
+                                    ref={el => {
+                                        if (el) {
+                                            const visibleSelected = filteredPlayers.filter(p => selectedIds.has(p._id)).length;
+                                            el.indeterminate = visibleSelected > 0 && visibleSelected < filteredPlayers.length;
+                                        }
+                                    }}
                                     onChange={toggleSelectAll}
                                     className="w-4 h-4 cursor-pointer"
                                     aria-label="Select all players"
                                 />
                                 <span className="text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>
-                                    {selectedIds.size > 0 ? `${selectedIds.size} of ${players.length} selected` : 'Select all'}
+                                    {selectedIds.size > 0 ? `${selectedIds.size} of ${players.length} selected` : isFiltered ? `Showing ${filteredPlayers.length} of ${players.length}` : 'Select all'}
                                 </span>
                             </div>
+                            {filteredPlayers.length === 0 ? (
+                                <p className="text-center py-8 text-sm" style={{ color: 'var(--text-secondary)' }}>No players match the current filters.</p>
+                            ) : (
                             <ul className="space-y-3">
-                                {players.map(player => (
+                                {filteredPlayers.map(player => (
                                     <li key={player._id} className="flex items-center justify-between p-3 rounded-md" style={{ backgroundColor: selectedIds.has(player._id) ? 'color-mix(in oklab, var(--status-danger) 8%, var(--surface-card))' : 'var(--surface-card)', border: selectedIds.has(player._id) ? '1px solid color-mix(in oklab, var(--status-danger) 30%, transparent)' : '1px solid transparent' }}>
                                         <div className="flex items-center gap-3">
                                             <input
@@ -260,6 +361,7 @@ function PlayersManagePage() {
                                     </li>
                                 ))}
                             </ul>
+                            )}
                         </>
                     )}
                 </div>

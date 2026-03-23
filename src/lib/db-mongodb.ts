@@ -263,7 +263,7 @@ export const playerDB = {
       name: data.name,
       position: data.position,
       currentClub: data.currentClub,
-      photoURL: data.photoURL || `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23374151'/><text x='50' y='55' font-family='sans-serif' font-size='12' fill='%23F3F4F6' text-anchor='middle'>No Image</text></svg>`,
+      ...(data.photoURL && { photoURL: data.photoURL }),
       ...(data.secondaryImageURL && { secondaryImageURL: data.secondaryImageURL }),
       playerClass: data.playerClass,
       ...(data.age !== undefined && { age: data.age }),
