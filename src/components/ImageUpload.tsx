@@ -275,6 +275,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           {/* Action buttons */}
           <div style={{ display: 'flex', gap: 12 }}>
             <button
+              type="button"
               onClick={cancelCrop}
               style={{
                 padding: '9px 24px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)',
@@ -284,6 +285,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               Cancel
             </button>
             <button
+              type="button"
               onClick={handleCropConfirm}
               style={{
                 padding: '9px 24px', borderRadius: 8, border: 'none',
