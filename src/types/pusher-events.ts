@@ -185,6 +185,8 @@ export interface OverlaySettingsEvent extends BasePusherEvent {
   hideTickerCustom?: boolean;
   hideTickerFullscreen?: boolean;
   teamWiseTeamId?: string | null;
+  bidCardTop?: number;
+  bidCardLeft?: number;
 }
 
 /**
