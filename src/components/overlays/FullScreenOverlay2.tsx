@@ -368,6 +368,12 @@ function FullScreenOverlay2Content({
   const prevAuctionStatusRef = useRef<string | null>(null);
   const toastTimersRef = useRef<{ exit: ReturnType<typeof setTimeout> | null; clear: ReturnType<typeof setTimeout> | null }>({ exit: null, clear: null });
 
+  // Waiting-for-next-player state (shown after sold toast clears)
+  const [waitingForNextPlayer, setWaitingForNextPlayer] = useState(false);
+  const [waitingExiting, setWaitingExiting] = useState(false);
+  const soldPlayerIdRef = useRef<string | undefined>(undefined);
+  const waitingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Bid pop animation
   const [bidPopping, setBidPopping] = useState(false);
   const prevBidRef = useRef(auctionState.currentBid);
@@ -403,7 +409,14 @@ function FullScreenOverlay2Content({
         setPanelExiting(false);
       }, 1500);
       return () => clearTimeout(t);
-    } else if (prev === 'sold-summary' || prev === 'team-summary' || prev === 'team-wise-summary' || prev === 'top10-summary' || prev === 'wheel-spin' || prev === 'resting') {
+    } else if (prev === 'wheel-spin') {
+      setSummaryExiting(true);
+      const t = setTimeout(() => {
+        setActiveMode(incoming);
+        setSummaryExiting(false);
+      }, 500);
+      return () => clearTimeout(t);
+    } else if (prev === 'sold-summary' || prev === 'team-summary' || prev === 'team-wise-summary' || prev === 'top10-summary' || prev === 'resting') {
       setSummaryExiting(true);
       const t = setTimeout(() => {
         setActiveMode(incoming);
@@ -434,24 +447,39 @@ function FullScreenOverlay2Content({
       if (currentPlayer && winningTeam) {
         if (toastTimersRef.current.exit)  clearTimeout(toastTimersRef.current.exit);
         if (toastTimersRef.current.clear) clearTimeout(toastTimersRef.current.clear);
+        if (waitingTimerRef.current) clearTimeout(waitingTimerRef.current);
+        soldPlayerIdRef.current = currentPlayer._id;
         setSoldToast({ player: currentPlayer, team: winningTeam, price });
         setToastExiting(false);
+        setWaitingForNextPlayer(false);
+        setWaitingExiting(false);
+        toastTimersRef.current.exit  = setTimeout(() => setToastExiting(true), 4400);
+        toastTimersRef.current.clear = setTimeout(() => { setSoldToast(null); setToastExiting(false); }, 5000);
+        // After toast clears, transition to waiting-for-next-player state
+        waitingTimerRef.current = setTimeout(() => { setWaitingForNextPlayer(true); setWaitingExiting(false); }, 5000);
       }
     }
     prevAuctionStatusRef.current = status;
   }, [auctionState.currentAuctionStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Dismiss sold message when a new player is selected
+  // Dismiss sold toast / waiting state when a new player is selected
   useEffect(() => {
-    if (!soldToast) return;
-    if (currentPlayer && currentPlayer._id !== soldToast.player._id) {
-      if (toastTimersRef.current.exit)  clearTimeout(toastTimersRef.current.exit);
-      if (toastTimersRef.current.clear) clearTimeout(toastTimersRef.current.clear);
-      setToastExiting(true);
-      toastTimersRef.current.clear = setTimeout(() => {
-        setSoldToast(null);
-        setToastExiting(false);
-      }, 600);
+    if (!soldToast && !waitingForNextPlayer) return;
+    if (currentPlayer && currentPlayer._id !== soldPlayerIdRef.current) {
+      // Cancel waiting timer if new player arrives before 5 s
+      if (waitingTimerRef.current) clearTimeout(waitingTimerRef.current);
+      // Exit waiting state if already showing
+      if (waitingForNextPlayer) {
+        setWaitingExiting(true);
+        setTimeout(() => { setWaitingForNextPlayer(false); setWaitingExiting(false); }, 600);
+      }
+      // Dismiss toast
+      if (soldToast) {
+        if (toastTimersRef.current.exit)  clearTimeout(toastTimersRef.current.exit);
+        if (toastTimersRef.current.clear) clearTimeout(toastTimersRef.current.clear);
+        setToastExiting(true);
+        toastTimersRef.current.clear = setTimeout(() => { setSoldToast(null); setToastExiting(false); }, 600);
+      }
     }
   }, [currentPlayer?._id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -601,10 +629,12 @@ function FullScreenOverlay2Content({
             className={panelExiting ? 'fs2-panel-exit' : 'fs2-panel-enter'}
             style={{ position: 'absolute', inset: 0, transformOrigin: 'center center' }}
           >
-            <SecondaryImagePanel
-              currentPlayer={currentPlayer}
-              tournament={tournament}
-            />
+            {!waitingForNextPlayer && (
+              <SecondaryImagePanel
+                currentPlayer={currentPlayer}
+                tournament={tournament}
+              />
+            )}
             {/* Current Bid card — top-right, overlaid on the image */}
             {(() => {
               const isBidding = auctionState.currentAuctionStatus === 'Bidding';
@@ -618,15 +648,15 @@ function FullScreenOverlay2Content({
                   className={isBidding ? 'fs2-bid-card-active' : ''}
                   style={{
                     position: 'absolute',
-                    right: 24,
-                    top: 160,
+                    left: effectiveSettings.bidCardLeft,
+                    top: effectiveSettings.bidCardTop,
                     width: 320,
                     background: 'rgba(0,0,0,0.55)',
                     backdropFilter: 'blur(12px)',
                     border: '1px solid var(--overlay-border-accent-subtle)',
                     borderRadius: 14,
                     padding: '16px 24px 20px 24px',
-                    display: 'flex',
+                    display: waitingForNextPlayer ? 'none' : 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: 6,
@@ -686,6 +716,16 @@ function FullScreenOverlay2Content({
           customLine1={effectiveSettings.customTickerLine1}
           customLine2={effectiveSettings.customTickerLine2}
         />}
+
+        {/* ── Waiting for next player (post-sale resting state) ── */}
+        {waitingForNextPlayer && (activeMode === 'standard' || activeMode === 'custom-ticker') && (
+          <div
+            className={waitingExiting ? 'fs2-summary-exit' : 'animate-fade-in'}
+            style={{ position: 'absolute', inset: 0, zIndex: 6 }}
+          >
+            <RestingTimeOverlay tournament={tournament} overrideLabel="Waiting for Next Player" />
+          </div>
+        )}
 
         {/* Sold message toast */}
         {soldToast && (

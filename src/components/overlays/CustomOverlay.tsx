@@ -782,31 +782,34 @@ function CustomOverlayContent({
               showStatsSection={false}
             />
 
-            {/* ── SOLD stamp — sits on top of card, no layout changes ── */}
+            {/* ── SOLD stamp — between jersey badge and player name, below image ── */}
             {auctionState.currentAuctionStatus === 'Sold' && (
               <div style={{
-                position: 'absolute', inset: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                position: 'absolute', left: 0, right: 0,
+                top: 500,
+                transform: 'translateY(-50%)',
+                display: 'flex', justifyContent: 'center',
                 pointerEvents: 'none',
+                zIndex: 10,
               }}>
                 <div
                   className="animate-stamp-seal"
                   style={{
-                    border: '7px solid var(--overlay-color-danger)',
-                    borderRadius: 14,
-                    padding: '10px 30px',
-                    background: 'rgba(var(--overlay-color-danger-rgb), 0.08)',
-                    boxShadow: '0 0 0 3px rgba(var(--overlay-color-danger-rgb),0.25), inset 0 0 24px rgba(var(--overlay-color-danger-rgb),0.1)',
+                    border: '6px solid var(--overlay-color-danger)',
+                    borderRadius: 12,
+                    padding: '8px 26px',
+                    background: 'rgba(var(--overlay-color-danger-rgb), 0.10)',
+                    boxShadow: '0 0 0 3px rgba(var(--overlay-color-danger-rgb),0.25), inset 0 0 20px rgba(var(--overlay-color-danger-rgb),0.1)',
                   }}
                 >
                   <span style={{
                     fontFamily: "'Bebas Neue', cursive",
-                    fontSize: 100,
+                    fontSize: 80,
                     color: 'var(--overlay-color-danger)',
-                    letterSpacing: 14,
+                    letterSpacing: 12,
                     lineHeight: 1,
                     display: 'block',
-                    textShadow: '0 0 30px rgba(var(--overlay-color-danger-rgb),0.6)',
+                    textShadow: '0 0 28px rgba(var(--overlay-color-danger-rgb),0.6)',
                   }}>
                     SOLD
                   </span>

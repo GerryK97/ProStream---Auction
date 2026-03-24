@@ -98,7 +98,8 @@ export async function POST(request: NextRequest) {
     }
 
     // In team bidding mode, validate that the submitted amount equals the next preset bid
-    if ((tournament as any).biddingMode === 'team') {
+    // (Team-role users only — admins/Tournament roles can set custom amounts)
+    if ((tournament as any).biddingMode === 'team' && user.role === 'Team') {
       const bidIncrements = (tournament as any).bidIncrements ?? [];
       const expectedBid = getNextTeamBid(bidIncrements, auctionState.currentBid, actualBasePrice);
       if (amount !== expectedBid) {

@@ -6,6 +6,7 @@ import '../../styles/animations.css';
 
 interface RestingTimeOverlayProps {
     tournament: Tournament | null;
+    overrideLabel?: string;
 }
 
 const CANVAS_W = 1920;
@@ -17,7 +18,7 @@ const COIN_SIZE = 300;
 const FONT_HEADING = "'Bebas Neue', cursive";
 const FONT_BODY = "'Rajdhani', sans-serif";
 
-const RestingTimeOverlay: React.FC<RestingTimeOverlayProps> = ({ tournament }) => {
+const RestingTimeOverlay: React.FC<RestingTimeOverlayProps> = ({ tournament, overrideLabel }) => {
     const fallbackLabel = tournament?.name?.slice(0, 2).toUpperCase() ?? 'PS';
 
     return (
@@ -100,7 +101,7 @@ const RestingTimeOverlay: React.FC<RestingTimeOverlayProps> = ({ tournament }) =
                     textTransform: 'uppercase',
                     textShadow: '0 0 20px rgba(var(--overlay-text-bright-rgb, 203,213,225),0.3)',
                 }}>
-                    {tournament?.name ?? 'PROSTREAM AUCTION'}
+                    {overrideLabel ?? tournament?.name ?? 'PROSTREAM AUCTION'}
                 </div>
 
             </div>

@@ -20,6 +20,8 @@ export interface OverlaySettings {
     hideTickerCustom: boolean;
     hideTickerFullscreen: boolean;
     teamWiseTeamId: string | null;
+    bidCardTop: number;
+    bidCardLeft: number;
 }
 
 const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
@@ -33,6 +35,8 @@ const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
     hideTickerCustom: false,
     hideTickerFullscreen: false,
     teamWiseTeamId: null,
+    bidCardTop: 160,
+    bidCardLeft: 1576,
 };
 
 interface OverlayWrapperProps {
@@ -147,6 +151,8 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
                 hideTickerCustom: data.hideTickerCustom ?? false,
                 hideTickerFullscreen: data.hideTickerFullscreen ?? false,
                 teamWiseTeamId: data.teamWiseTeamId ?? null,
+                bidCardTop: data.bidCardTop ?? 160,
+                bidCardLeft: data.bidCardLeft ?? 1576,
             });
         });
 

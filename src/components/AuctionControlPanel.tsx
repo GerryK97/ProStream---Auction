@@ -275,7 +275,7 @@ const CurrentAuctionPanel: React.FC<{
     setBiddingTeamId: (id: string) => void;
     auctionState: any;
     onBid: (amount: number, teamId?: string) => void;
-    onCorrectBid: (amount: number) => void;
+    onCorrectBid: (amount: number, teamId?: string) => void;
     onSell: () => void;
     onReset: () => void;
     onMarkUnsold: () => void;
@@ -418,7 +418,10 @@ const CurrentAuctionPanel: React.FC<{
                         style={isCorrection ? { borderColor: '#FB923C', color: '#000000' } : { color: '#000000' }}
                     />
                     <button
-                        onClick={() => isCorrection ? onCorrectBid(bidAmount) : onBid(bidAmount)}
+                        onClick={() => {
+                            const teamId = tournament.biddingMode === 'team' ? biddingTeamId : undefined;
+                            isCorrection ? onCorrectBid(bidAmount, teamId) : onBid(bidAmount, teamId);
+                        }}
                         disabled={isSold || isSubmitting || bidAmount <= 0}
                         className="text-sm px-4 py-1.5 shrink-0 rounded-md font-bold transition-colors disabled:opacity-50"
                         style={{
@@ -429,6 +432,11 @@ const CurrentAuctionPanel: React.FC<{
                         {isSubmitting ? '...' : isCorrection ? 'Correct' : 'Set'}
                     </button>
                 </div>
+                {tournament.biddingMode === 'team' && biddingTeamId && (
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                        Team: {teams.find(t => t._id === biddingTeamId)?.name ?? '—'}
+                    </p>
+                )}
             </div>
 
             {/* Finalize section */}
@@ -911,6 +919,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const [soldMessagePosition, setSoldMessagePosition] = useState<'bottom-right' | 'bottom-left' | 'top-right' | 'top-left'>('bottom-right');
     const [hideTickerCustom, setHideTickerCustom] = useState(false);
     const [hideTickerFullscreen, setHideTickerFullscreen] = useState(false);
+    const [bidCardTop, setBidCardTop] = useState(160);
+    const [bidCardLeft, setBidCardLeft] = useState(1576);
 
     // Refs to always read latest values inside the auto-switch effect without re-triggering it
     const tickerModeRef = useRef(tickerMode);
@@ -922,6 +932,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const soldMessagePositionRef = useRef(soldMessagePosition);
     const hideTickerCustomRef = useRef(hideTickerCustom);
     const hideTickerFullscreenRef = useRef(hideTickerFullscreen);
+    const bidCardTopRef = useRef(bidCardTop);
+    const bidCardLeftRef = useRef(bidCardLeft);
     tickerModeRef.current = tickerMode;
     autoSwitchDurationRef.current = autoSwitchDuration;
     displayModeRef.current = displayMode;
@@ -930,6 +942,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     customTickerLine1Ref.current = customTickerLine1;
     customTickerLine2Ref.current = customTickerLine2;
     soldMessagePositionRef.current = soldMessagePosition;
+    bidCardTopRef.current = bidCardTop;
+    bidCardLeftRef.current = bidCardLeft;
 
     const sendOverlaySettings = async (
         size: 'large' | 'small',
@@ -946,7 +960,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             await fetch('/api/overlay/settings', {
                 method: 'POST',
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tournamentId, size, tickerMode: mode, displayMode: dm, hidePremiumCard: hideCard, customTickerLine1: line1, customTickerLine2: line2, soldMessagePosition: soldMsgPos, hideTickerCustom: hideTickerCustomRef.current, hideTickerFullscreen: hideTickerFullscreenRef.current, teamWiseTeamId: teamWiseTeamIdRef.current }),
+                body: JSON.stringify({ tournamentId, size, tickerMode: mode, displayMode: dm, hidePremiumCard: hideCard, customTickerLine1: line1, customTickerLine2: line2, soldMessagePosition: soldMsgPos, hideTickerCustom: hideTickerCustomRef.current, hideTickerFullscreen: hideTickerFullscreenRef.current, teamWiseTeamId: teamWiseTeamIdRef.current, bidCardTop: bidCardTopRef.current, bidCardLeft: bidCardLeftRef.current }),
             });
         } catch { /* non-critical */ }
     };
@@ -1379,13 +1393,13 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                     headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                     body: JSON.stringify({ tournamentId, playerId: winnerId }),
                 }).catch(() => {});
-                // Reset overlay to standard after hold period (3s)
+                // Reset overlay to standard after hold period (1s)
                 resetTimerRef.current = setTimeout(async () => {
                     setDisplayMode('standard');
                     displayModeRef.current = 'standard';
                     setIsSpinning(false);
                     await sendOverlaySettings(overlaySize, tickerMode, 'standard');
-                }, 3000);
+                }, 1000);
             }, 8200);
         } catch {
             setIsSpinning(false);
@@ -1500,13 +1514,13 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         }
     };
 
-    const handleCorrectBid = async (amount: number) => {
+    const handleCorrectBid = async (amount: number, teamId?: string) => {
         if (!liveTournament) return;
         try {
             const response = await fetch('/api/auction/bid/correct', {
                 method: 'POST',
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tournamentId: liveTournament._id, amount }),
+                body: JSON.stringify({ tournamentId: liveTournament._id, amount, teamId }),
             });
             if (!response.ok) {
                 const data = await response.json();
@@ -2122,7 +2136,34 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                             </select>
                             <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Toast corner position</span>
                         </div>
-                        {/* Row 4: Resting Time */}
+                        {/* Row 4: Bid Card Position (Screen 2 only) */}
+                        <div className="flex items-center gap-3 mt-4 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border-primary)' }}>
+                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Bid Card Position:</span>
+                            <label className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                                Top
+                                <input
+                                    type="number"
+                                    value={bidCardTop}
+                                    onChange={e => setBidCardTop(Number(e.target.value))}
+                                    onBlur={() => sendOverlaySettings(overlaySize, tickerMode)}
+                                    className="w-20 rounded-md px-2 py-1.5 text-sm"
+                                    style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', outline: 'none' }}
+                                />
+                            </label>
+                            <label className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                                Left
+                                <input
+                                    type="number"
+                                    value={bidCardLeft}
+                                    onChange={e => setBidCardLeft(Number(e.target.value))}
+                                    onBlur={() => sendOverlaySettings(overlaySize, tickerMode)}
+                                    className="w-20 rounded-md px-2 py-1.5 text-sm"
+                                    style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', outline: 'none' }}
+                                />
+                            </label>
+                            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Canvas px · 1920×1080 (Screen 2 only)</span>
+                        </div>
+                        {/* Row 5: Resting Time */}
                         <div className="flex items-center gap-3 mt-4 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border-primary)' }}>
                             {/* Resting Time */}
                             <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Resting Time:</span>
