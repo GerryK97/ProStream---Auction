@@ -160,9 +160,24 @@ function BoughtPlayerRow({ player }: { player: Player }) {
 function PendingPlayerRow({ player, tournament }: { player: Player; tournament: Tournament | null }) {
     const classConfig = getClassConfig(tournament, player.playerClass);
     const basePrice = getClassBasePrice(tournament, player);
+    const initials = player.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase();
     return (
         <div className="flex items-center gap-3 py-3 px-4 border-b last:border-b-0"
              style={{ borderColor: 'var(--overlay-border-accent-subtle)' }}>
+            <div className="w-10 h-10 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center"
+                 style={{
+                     background: 'var(--overlay-bg-photo)',
+                     border: '1.5px solid var(--overlay-border-accent-subtle)',
+                 }}>
+                {player.photoURL ? (
+                    <img src={player.photoURL} alt={player.name} className="w-full h-full object-cover" />
+                ) : (
+                    <span className="text-xs font-bold"
+                          style={{ color: 'var(--overlay-text-muted)', fontFamily: "'Rajdhani', sans-serif" }}>
+                        {initials}
+                    </span>
+                )}
+            </div>
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-semibold"
@@ -393,10 +408,12 @@ export default function TeamOwnerOverlay({ tournamentId }: { tournamentId: strin
                       style={{ color: 'var(--overlay-color-primary)', fontFamily: "'Rajdhani', sans-serif" }}>
                     {tournament?.name ?? 'Loading...'}
                 </span>
-                <span className="ml-auto text-xs flex-shrink-0"
-                      style={{ color: 'var(--overlay-text-muted)', fontFamily: "'Rajdhani', sans-serif" }}>
-                    Team Dashboard
-                </span>
+                <a href="/" target="_blank" rel="noopener noreferrer"
+                   className="ml-auto flex-shrink-0"
+                   style={{ opacity: 0.8, lineHeight: 0 }}
+                   title="ProStream">
+                    <img src="https://res.cloudinary.com/diitsd6nz/image/upload/v1760794476/ProSteam_logo_h9pb8b.png" alt="ProStream" className="h-7 w-auto object-contain" />
+                </a>
             </div>
 
             <TeamOwnerDashboard
