@@ -38,8 +38,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get auction state
-    const auctionState = await AuctionStateModel.findOne({ tournamentId });
+    // Fetch auction state and tournament in parallel
+    const [auctionState, tournament] = await Promise.all([
+      AuctionStateModel.findOne({ tournamentId }),
+      TournamentModel.findOne({ _id: tournamentId }).lean(),
+    ]);
+
     if (!auctionState) {
       return NextResponse.json(
         { error: 'Auction state not found for this tournament' },
@@ -48,7 +52,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate tournament is live
-    const tournament = await TournamentModel.findOne({ _id: tournamentId }).lean();
     if (!tournament || (tournament as any).status !== 'Live') {
       return NextResponse.json(
         { error: 'Auction is not live' },
@@ -119,37 +122,31 @@ export async function POST(request: NextRequest) {
 
     const previousBid = auctionState.currentBid;
 
-    const updatedState = await AuctionStateModel.findOneAndUpdate(
-      { tournamentId },
-      {
-        $set: {
-          currentBid: amount,
-          currentAuctionStatus: 'Bidding',
+    // Parallelize the state update and team lookup
+    const [updatedState, winningTeam] = await Promise.all([
+      AuctionStateModel.findOneAndUpdate(
+        { tournamentId },
+        {
+          $set: {
+            currentBid: amount,
+            currentAuctionStatus: 'Bidding',
+          },
+          $push: { history: newBid },
         },
-        $push: { history: newBid },
-      },
-      { new: true }
-    ).lean();
+        { new: true }
+      ).lean(),
+      teamId ? TeamModel.findById(teamId).lean() : Promise.resolve(null),
+    ]);
 
-    // Get winning team if teamId provided
-    let winningTeam = null;
-    if (teamId) {
-      winningTeam = await TeamModel.findById(teamId).lean();
-    }
-
-    // Trigger Pusher event
-    try {
-      await triggerBidPlaced(tournamentId, {
-        auctionState: updatedState as any,
-        currentPlayer: player as any,
-        winningTeam: winningTeam as any,
-        currentBid: amount,
-        previousBid,
-        message: `New bid placed: ${amount.toLocaleString()}`,
-      });
-    } catch (pusherError) {
-      console.error('Failed to trigger Pusher event:', pusherError);
-    }
+    // Fire-and-forget Pusher — respond immediately, event broadcasts in background
+    void triggerBidPlaced(tournamentId, {
+      auctionState: updatedState as any,
+      currentPlayer: player as any,
+      winningTeam: winningTeam as any,
+      currentBid: amount,
+      previousBid,
+      message: `New bid placed: ${amount.toLocaleString()}`,
+    }).catch(err => console.error('Failed to trigger Pusher event:', err));
 
     return NextResponse.json(updatedState);
   } catch (error) {

@@ -76,21 +76,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Pusher error: ${msg}` }, { status: 500 });
     }
 
-    // Switch overlays to wheel-spin display mode
-    try {
-      await triggerOverlaySettings(tournamentId, {
-        size: 'large',
-        tickerMode: 'sold',
-        displayMode: 'wheel-spin',
-        hidePremiumCard: false,
-        customTickerLine1: '',
-        customTickerLine2: '',
-        soldMessagePosition: 'bottom-right',
-      });
-    } catch (pusherError) {
-      console.error('[spin] triggerOverlaySettings failed:', pusherError);
-      // Non-fatal — wheel-spin event already sent
-    }
+    // Switch overlays to wheel-spin display mode — fire-and-forget, non-fatal
+    void triggerOverlaySettings(tournamentId, {
+      size: 'large',
+      tickerMode: 'sold',
+      displayMode: 'wheel-spin',
+      hidePremiumCard: false,
+      customTickerLine1: '',
+      customTickerLine2: '',
+      soldMessagePosition: 'bottom-right',
+    }).catch(err => console.error('[spin] triggerOverlaySettings failed:', err));
 
     return NextResponse.json({ ok: true, winnerId, winnerIndex, playerCount: players.length });
   } catch (error) {

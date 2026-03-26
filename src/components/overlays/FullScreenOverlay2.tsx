@@ -473,12 +473,12 @@ function FullScreenOverlay2Content({
         setWaitingExiting(true);
         setTimeout(() => { setWaitingForNextPlayer(false); setWaitingExiting(false); }, 600);
       }
-      // Dismiss toast
+      // Dismiss toast immediately — no exit animation needed when next player is arriving
       if (soldToast) {
         if (toastTimersRef.current.exit)  clearTimeout(toastTimersRef.current.exit);
         if (toastTimersRef.current.clear) clearTimeout(toastTimersRef.current.clear);
-        setToastExiting(true);
-        toastTimersRef.current.clear = setTimeout(() => { setSoldToast(null); setToastExiting(false); }, 600);
+        setSoldToast(null);
+        setToastExiting(false);
       }
     }
   }, [currentPlayer?._id]); // eslint-disable-line react-hooks/exhaustive-deps
