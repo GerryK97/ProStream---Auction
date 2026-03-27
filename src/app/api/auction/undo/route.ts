@@ -108,18 +108,14 @@ export async function POST(request: NextRequest) {
         ).lean();
       }
 
-      // Trigger Pusher event
-      try {
-        await triggerAuctionUndo(tournamentId, {
-          restoredPlayer: restoredPlayer as any,
-          updatedTeam: updatedTeam as any,
-          refundedAmount: finalPrice,
-          auctionState: auctionState as any,
-          message: 'Last sale undone successfully',
-        });
-      } catch (pusherError) {
-        console.error('Failed to trigger Pusher event:', pusherError);
-      }
+      // Fire-and-forget Pusher — respond immediately, event broadcasts in background
+      void triggerAuctionUndo(tournamentId, {
+        restoredPlayer: restoredPlayer as any,
+        updatedTeam: updatedTeam as any,
+        refundedAmount: finalPrice,
+        auctionState: auctionState as any,
+        message: 'Last sale undone successfully',
+      }).catch(err => console.error('Failed to trigger Pusher event:', err));
 
       return NextResponse.json({
         message: 'Last sale undone successfully',
@@ -140,18 +136,14 @@ export async function POST(request: NextRequest) {
 
       const auctionState = await AuctionStateModel.findOne({ tournamentId }).lean();
 
-      // Use targeted small-payload event (avoids Pusher's ~10KB limit)
-      try {
-        await triggerAuctionUndo(tournamentId, {
-          restoredPlayer: restoredPlayer as any,
-          updatedTeam: null,
-          refundedAmount: 0,
-          auctionState: auctionState as any,
-          message: 'Unsold marking reversed',
-        });
-      } catch (pusherError) {
-        console.error('Failed to trigger Pusher event:', pusherError);
-      }
+      // Fire-and-forget Pusher — respond immediately, event broadcasts in background
+      void triggerAuctionUndo(tournamentId, {
+        restoredPlayer: restoredPlayer as any,
+        updatedTeam: null,
+        refundedAmount: 0,
+        auctionState: auctionState as any,
+        message: 'Unsold marking reversed',
+      }).catch(err => console.error('Failed to trigger Pusher event:', err));
 
       return NextResponse.json({
         message: 'Unsold marking reversed successfully',

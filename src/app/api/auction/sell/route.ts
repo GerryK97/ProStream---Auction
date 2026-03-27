@@ -20,8 +20,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get auction state
-    const auctionState = await AuctionStateModel.findOne({ tournamentId });
+    // Fetch auction state, team, and tournament in parallel
+    const [auctionState, team, tournament] = await Promise.all([
+      AuctionStateModel.findOne({ tournamentId }),
+      TeamModel.findOne({ _id: teamId }).lean(),
+      TournamentModel.findOne({ _id: tournamentId }).lean(),
+    ]);
+
     if (!auctionState) {
       return NextResponse.json(
         { error: 'Auction state not found for this tournament' },
@@ -38,7 +43,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate team exists
-    const team = await TeamModel.findOne({ _id: teamId }).lean();
     if (!team) {
       return NextResponse.json(
         { error: 'Team not found' },
@@ -55,7 +59,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate tournament is live
-    const tournament = await TournamentModel.findOne({ _id: tournamentId }).lean();
     if (!tournament || (tournament as any).status !== 'Live') {
       return NextResponse.json(
         { error: 'Auction is not live' },
@@ -133,57 +136,43 @@ export async function POST(request: NextRequest) {
       { new: true }
     ).lean();
 
-    // Count remaining unsold players
-    const remainingPlayers = await PlayerModel.countDocuments({
-      tournamentId,
-      isSold: false,
-    });
+    // Count remaining players — run both countDocuments in parallel
+    const activeClass = (auctionState as any).currentAuctionClass as string | null;
+    const [remainingPlayers, remainingInClass] = await Promise.all([
+      PlayerModel.countDocuments({ tournamentId, isSold: false }),
+      activeClass
+        ? PlayerModel.countDocuments({ tournamentId, playerClass: activeClass, isSold: { $ne: true }, isUnsold: { $ne: true } })
+        : Promise.resolve(1), // sentinel — non-zero means class not complete
+    ]);
 
     // Check if the active class is now complete after this sale
-    const activeClass = (auctionState as any).currentAuctionClass as string | null;
-    if (activeClass) {
-      const remainingInClass = await PlayerModel.countDocuments({
-        tournamentId,
-        playerClass: activeClass,
-        isSold: { $ne: true },
-        isUnsold: { $ne: true },
-      });
-      if (remainingInClass === 0) {
-        const finalState = await AuctionStateModel.findOneAndUpdate(
-          { tournamentId },
-          {
-            $push: { completedClasses: activeClass },
-            $set: { currentAuctionClass: null },
-          },
-          { new: true }
-        ).lean();
-        try {
-          await triggerClassCompleted(tournamentId, {
-            completedClassCode: activeClass,
-            completedClasses: (finalState as any)?.completedClasses ?? [activeClass],
-            auctionState: finalState as any,
-            message: `${activeClass} class auction completed`,
-          });
-        } catch (pusherError) {
-          console.error('[sell] triggerClassCompleted failed:', pusherError);
-        }
-      }
+    if (activeClass && remainingInClass === 0) {
+      const finalState = await AuctionStateModel.findOneAndUpdate(
+        { tournamentId },
+        {
+          $push: { completedClasses: activeClass },
+          $set: { currentAuctionClass: null },
+        },
+        { new: true }
+      ).lean();
+      void triggerClassCompleted(tournamentId, {
+        completedClassCode: activeClass,
+        completedClasses: (finalState as any)?.completedClasses ?? [activeClass],
+        auctionState: finalState as any,
+        message: `${activeClass} class auction completed`,
+      }).catch(err => console.error('[sell] triggerClassCompleted failed:', err));
     }
 
-    // Trigger Pusher event
-    try {
-      await triggerPlayerSold(tournamentId, {
-        soldPlayer: updatedPlayer as any,
-        winningTeam: updatedTeam as any,
-        finalPrice: currentBid,
-        remainingPlayers,
-        remainingBudget: (updatedTeam as any).currentBalance,
-        auctionState: updatedState as any,
-        message: `${(updatedPlayer as any).name} sold to ${(updatedTeam as any).name} for ${currentBid.toLocaleString()}`,
-      });
-    } catch (pusherError) {
-      console.error('Failed to trigger Pusher event:', pusherError);
-    }
+    // Fire-and-forget Pusher — respond immediately, event broadcasts in background
+    void triggerPlayerSold(tournamentId, {
+      soldPlayer: updatedPlayer as any,
+      winningTeam: updatedTeam as any,
+      finalPrice: currentBid,
+      remainingPlayers,
+      remainingBudget: (updatedTeam as any).currentBalance,
+      auctionState: updatedState as any,
+      message: `${(updatedPlayer as any).name} sold to ${(updatedTeam as any).name} for ${currentBid.toLocaleString()}`,
+    }).catch(err => console.error('Failed to trigger Pusher event:', err));
 
     return NextResponse.json({
       auctionState: updatedState,

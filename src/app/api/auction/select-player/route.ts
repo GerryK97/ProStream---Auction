@@ -19,8 +19,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get auction state
-    const auctionState = await AuctionStateModel.findOne({ tournamentId });
+    // Fetch auction state and player in parallel
+    const [auctionState, player] = await Promise.all([
+      AuctionStateModel.findOne({ tournamentId }),
+      PlayerModel.findOne({ _id: playerId, tournamentId, isSold: false }).lean(),
+    ]);
+
     if (!auctionState) {
       return NextResponse.json(
         { error: 'Auction state not found for this tournament' },
@@ -36,13 +40,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate player exists and is not sold
-    const player = await PlayerModel.findOne({
-      _id: playerId,
-      tournamentId,
-      isSold: false
-    }).lean();
-
     if (!player) {
       return NextResponse.json(
         { error: 'Player not found or already sold' },
@@ -50,36 +47,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update auction state with new player
-    const updatedState = await AuctionStateModel.findOneAndUpdate(
-      { tournamentId },
-      {
-        $set: {
-          currentPlayerId: playerId,
-          currentBid: 0,
-          winningTeamId: null,
-          currentAuctionStatus: 'Pending',
-          history: [],
+    // Update auction state and fetch tournament in parallel
+    const [updatedState, tournament] = await Promise.all([
+      AuctionStateModel.findOneAndUpdate(
+        { tournamentId },
+        {
+          $set: {
+            currentPlayerId: playerId,
+            currentBid: 0,
+            winningTeamId: null,
+            currentAuctionStatus: 'Pending',
+            history: [],
+          },
         },
-      },
-      { new: true }
-    ).lean();
+        { new: true }
+      ).lean(),
+      TournamentModel.findById(tournamentId).lean(),
+    ]);
 
-    // Get tournament for base price using strategy-based calculation
-    const tournament = await TournamentModel.findById(tournamentId).lean();
     const basePrice = getClassBasePrice(tournament as any, player as any);
 
-    // Trigger Pusher event
-    try {
-      await triggerPlayerSelected(tournamentId, {
-        currentPlayer: player as any,
-        basePrice,
-        auctionState: updatedState as any,
-        message: `Player ${(player as any).name} selected for auction`,
-      });
-    } catch (pusherError) {
-      console.error('Failed to trigger Pusher event:', pusherError);
-    }
+    // Fire-and-forget Pusher — respond immediately, event broadcasts in background
+    void triggerPlayerSelected(tournamentId, {
+      currentPlayer: player as any,
+      basePrice,
+      auctionState: updatedState as any,
+      message: `Player ${(player as any).name} selected for auction`,
+    }).catch(err => console.error('Failed to trigger Pusher event:', err));
 
     return NextResponse.json(updatedState);
   } catch (error) {
