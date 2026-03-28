@@ -65,6 +65,13 @@ const tournamentSchema = new Schema<Tournament>(
       ],
       default: [],
     },
+    playerProfileFields: {
+      type: {
+        showAge:    { type: Boolean, default: false },
+        statFields: { type: [{ key: String, label: String }], default: [] },
+      },
+      default: () => ({ showAge: false, statFields: [] }),
+    },
   },
   {
     timestamps: true,

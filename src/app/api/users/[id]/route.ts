@@ -101,15 +101,6 @@ export async function PUT(
       );
     }
 
-    const user = await User.findById(id);
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
     const {
       username,
       email,
@@ -122,15 +113,15 @@ export async function PUT(
       plan,
     } = await request.json();
 
-    // Update fields
-    if (username) user.username = username.toLowerCase();
-    if (email) user.email = email.toLowerCase();
-    if (password) user.passwordHash = await hashPassword(password);
-    if (role) user.role = role;
-    if (status) user.status = status;
-    if (assignedTournaments) user.assignedTournaments = assignedTournaments;
-    if (assignedTeams) user.assignedTeams = assignedTeams;
-    if (assignedPlayer !== undefined) user.assignedPlayer = assignedPlayer;
+    const updateDoc: Record<string, any> = {};
+    if (username)                          updateDoc.username             = username.toLowerCase();
+    if (email)                             updateDoc.email                = email.toLowerCase();
+    if (password)                          updateDoc.passwordHash         = await hashPassword(password);
+    if (role)                              updateDoc.role                 = role;
+    if (status)                            updateDoc.status               = status;
+    if (assignedTournaments !== undefined) updateDoc.assignedTournaments  = assignedTournaments;
+    if (assignedTeams !== undefined)       updateDoc.assignedTeams        = assignedTeams;
+    if (assignedPlayer !== undefined)      updateDoc.assignedPlayer       = assignedPlayer;
     if (plan) {
       const allowedPlans = ['Free', 'Standard', 'Offer'];
       if (!allowedPlans.includes(plan)) {
@@ -139,20 +130,28 @@ export async function PUT(
           { status: 400 }
         );
       }
-      (user as any).plan = plan;
+      updateDoc.plan = plan;
     }
-    await user.save();
+
+    const updatedUser = await User.findByIdAndUpdate(id, { $set: updateDoc }, { new: true });
+
+    if (!updatedUser) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json(
       {
         success: true,
         message: 'User updated successfully',
         user: {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-          status: user.status,
+          id: updatedUser._id,
+          username: updatedUser.username,
+          email: updatedUser.email,
+          role: updatedUser.role,
+          status: updatedUser.status,
         },
       },
       { status: 200 }
