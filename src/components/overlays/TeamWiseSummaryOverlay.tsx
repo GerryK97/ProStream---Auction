@@ -18,7 +18,7 @@ const CANVAS_W = 1920;
 const CANVAS_H = 1080;
 const PANEL_LEFT = 230;
 const PANEL_WIDTH = 1460;
-const HEADER_H = 160;        // taller than normal heading to fit logo + name
+const HEADER_H = 160;
 const SEPARATOR_H = 2;
 const ROW_AREA_TOP_PAD = 24;
 const ROW_BOTTOM_PAD = 24;
@@ -28,7 +28,8 @@ const PILL_H = 53;
 const AVATAR_SIZE = 70;
 const AVATAR_OVERLAP = (AVATAR_SIZE - PILL_H) / 2; // 8.5
 const ROW_SPACING = 80;
-const TEAM_DURATION = 8000;
+const PLAYERS_PER_PAGE = 10;
+const PAGE_DURATION = 6000; // ms per page/team slide
 
 const FONT_HEADING = "'Bebas Neue', cursive";
 const FONT_ROW = "'Rajdhani', sans-serif";
@@ -41,6 +42,7 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
     filterTeamId = null,
 }) => {
     const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
+    const [currentPage, setCurrentPage] = useState(0);
 
     // Build teams that have at least one sold player, sorted by player count desc
     const allTeamsWithPlayers = teams
@@ -53,31 +55,59 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
         .filter(({ soldPlayers }) => soldPlayers.length > 0)
         .sort((a, b) => b.soldPlayers.length - a.soldPlayers.length);
 
-    // When a specific team is selected, show only that team (no cycling)
+    // When a specific team is selected, show only that team
     const teamsWithPlayers = filterTeamId
         ? allTeamsWithPlayers.filter(({ team }) => team._id === filterTeamId)
         : allTeamsWithPlayers;
 
     const totalTeams = teamsWithPlayers.length;
 
-    useEffect(() => {
-        // No cycling when a specific team is pinned
-        if (totalTeams <= 1 || filterTeamId) return;
-        const timer = setInterval(() => {
-            setCurrentTeamIndex(prev => (prev + 1) % totalTeams);
-        }, TEAM_DURATION);
-        return () => clearInterval(timer);
-    }, [totalTeams, filterTeamId]);
+    const { team: currentTeam, soldPlayers: allCurrentPlayers } =
+        teamsWithPlayers[currentTeamIndex] ?? { team: null, soldPlayers: [] };
 
-    // Reset to first team when filter or team composition changes
+    const totalPages = Math.max(1, Math.ceil(allCurrentPlayers.length / PLAYERS_PER_PAGE));
+
+    // Reset page when team changes or filter changes
+    useEffect(() => {
+        setCurrentPage(0);
+    }, [currentTeamIndex, filterTeamId]);
+
+    // Reset to first team+page when composition changes
     useEffect(() => {
         setCurrentTeamIndex(0);
+        setCurrentPage(0);
     }, [totalTeams, filterTeamId]);
 
-    if (!tournament || totalTeams === 0) return null;
+    // Auto-advance: pages first, then teams
+    useEffect(() => {
+        if (totalTeams === 0) return;
+        // Only 1 team with 1 page — nothing to cycle
+        if (totalTeams === 1 && totalPages === 1) return;
 
-    const { team: currentTeam, soldPlayers: currentPlayers } = teamsWithPlayers[currentTeamIndex];
-    const teamTotal = currentPlayers.reduce((sum, p) => sum + (p.finalPrice || 0), 0);
+        const timer = setInterval(() => {
+            setCurrentPage(prevPage => {
+                const nextPage = prevPage + 1;
+                if (nextPage < totalPages) {
+                    // More pages in this team
+                    return nextPage;
+                }
+                // Last page of this team — advance team (unless single-team mode)
+                if (!filterTeamId && totalTeams > 1) {
+                    setCurrentTeamIndex(prevTeam => (prevTeam + 1) % totalTeams);
+                }
+                return 0;
+            });
+        }, PAGE_DURATION);
+
+        return () => clearInterval(timer);
+    }, [totalTeams, totalPages, filterTeamId]);
+
+    if (!tournament || totalTeams === 0 || !currentTeam) return null;
+
+    // Slice players for current page
+    const pageStart = currentPage * PLAYERS_PER_PAGE;
+    const currentPlayers = allCurrentPlayers.slice(pageStart, pageStart + PLAYERS_PER_PAGE);
+    const teamTotal = allCurrentPlayers.reduce((sum, p) => sum + (p.finalPrice || 0), 0);
     const rowCount = currentPlayers.length;
     const contentH = HEADER_H + SEPARATOR_H + ROW_AREA_TOP_PAD + rowCount * ROW_SPACING + ROW_BOTTOM_PAD;
     const panelTop = Math.round((CANVAS_H - contentH) / 2);
@@ -190,11 +220,16 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
                             letterSpacing: 2,
                             marginTop: 4,
                         }}>
-                            {currentPlayers.length} PLAYER{currentPlayers.length !== 1 ? 'S' : ''}&nbsp;·&nbsp;TOTAL {formatCurrency(teamTotal)}
+                            {allCurrentPlayers.length} PLAYER{allCurrentPlayers.length !== 1 ? 'S' : ''}&nbsp;·&nbsp;TOTAL {formatCurrency(teamTotal)}
+                            {totalPages > 1 && (
+                                <span style={{ marginLeft: 16, opacity: 0.7 }}>
+                                    PAGE {currentPage + 1}/{totalPages}
+                                </span>
+                            )}
                         </div>
                     </div>
 
-                    {/* Team pagination dots */}
+                    {/* Pagination indicators: team dots (multi-team) or page dots (single-team multi-page) */}
                     {totalTeams > 1 && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                             {teamsWithPlayers.map((_, i) => (
@@ -203,6 +238,19 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
                                     height: 8,
                                     borderRadius: 4,
                                     background: i === currentTeamIndex ? 'var(--overlay-color-primary)' : 'var(--overlay-border-accent-subtle)',
+                                    transition: 'all 0.3s ease',
+                                }} />
+                            ))}
+                        </div>
+                    )}
+                    {totalTeams === 1 && totalPages > 1 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                            {Array.from({ length: totalPages }).map((_, i) => (
+                                <div key={i} style={{
+                                    width: i === currentPage ? 24 : 8,
+                                    height: 8,
+                                    borderRadius: 4,
+                                    background: i === currentPage ? 'var(--overlay-color-primary)' : 'var(--overlay-border-accent-subtle)',
                                     transition: 'all 0.3s ease',
                                 }} />
                             ))}
@@ -228,7 +276,7 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
                     const initials = player.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
                     return (
-                        <React.Fragment key={`${currentTeamIndex}-${player._id}`}>
+                        <React.Fragment key={`${currentTeamIndex}-${currentPage}-${player._id}`}>
                             {/* Animated row wrapper */}
                             <div style={{
                                 position: 'absolute',

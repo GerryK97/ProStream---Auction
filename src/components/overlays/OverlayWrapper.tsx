@@ -22,6 +22,8 @@ export interface OverlaySettings {
     teamWiseTeamId: string | null;
     bidCardTop: number;
     bidCardLeft: number;
+    hideTeamCards: boolean;
+    teamCardSize: 'small' | 'medium' | 'large';
 }
 
 const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
@@ -37,6 +39,8 @@ const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
     teamWiseTeamId: null,
     bidCardTop: 160,
     bidCardLeft: 1576,
+    hideTeamCards: false,
+    teamCardSize: 'large',
 };
 
 interface OverlayWrapperProps {
@@ -153,6 +157,8 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
                 teamWiseTeamId: data.teamWiseTeamId ?? null,
                 bidCardTop: data.bidCardTop ?? 160,
                 bidCardLeft: data.bidCardLeft ?? 1576,
+                hideTeamCards: data.hideTeamCards ?? false,
+                teamCardSize: data.teamCardSize ?? 'large',
             });
         });
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { PlayerModel } from '@/models/Player';
 import { AuctionStateModel } from '@/models/AuctionState';
-import { triggerWheelSpin, triggerOverlaySettings } from '@/lib/pusher-server';
+import { triggerWheelSpin } from '@/lib/pusher-server';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
 
@@ -75,17 +75,6 @@ export async function POST(request: NextRequest) {
       const msg = pusherError instanceof Error ? pusherError.message : String(pusherError);
       return NextResponse.json({ error: `Pusher error: ${msg}` }, { status: 500 });
     }
-
-    // Switch overlays to wheel-spin display mode — fire-and-forget, non-fatal
-    void triggerOverlaySettings(tournamentId, {
-      size: 'large',
-      tickerMode: 'sold',
-      displayMode: 'wheel-spin',
-      hidePremiumCard: false,
-      customTickerLine1: '',
-      customTickerLine2: '',
-      soldMessagePosition: 'bottom-right',
-    }).catch(err => console.error('[spin] triggerOverlaySettings failed:', err));
 
     return NextResponse.json({ ok: true, winnerId, winnerIndex, playerCount: players.length });
   } catch (error) {

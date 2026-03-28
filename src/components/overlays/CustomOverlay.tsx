@@ -559,9 +559,6 @@ function TeamCardsPanel({ teams, tournament, currentBid }: { teams: Team[]; tour
     <div
       className={animClass}
       style={{
-        position: 'absolute',
-        left: 1490,
-        top: 160,
         width: 400,
         display: 'flex',
         flexDirection: 'column',
@@ -832,8 +829,18 @@ function CustomOverlayContent({
         )}
 
         {/* ── Team Cards Panel ── (standard + custom-ticker modes) */}
-        {(visibleMode === 'standard' || visibleMode === 'custom-ticker') && (
-          <TeamCardsPanel teams={teams} tournament={tournament} currentBid={auctionState.currentBid ?? 0} />
+        {(visibleMode === 'standard' || visibleMode === 'custom-ticker') && !overlaySettings.hideTeamCards && (
+          <div style={{
+            position: 'absolute',
+            left: 1490,
+            top: 160,
+            transformOrigin: 'top right',
+            transform: overlaySettings.teamCardSize === 'small'  ? 'scale(0.65)'
+                     : overlaySettings.teamCardSize === 'medium' ? 'scale(0.8)'
+                     : 'scale(1)',
+          }}>
+            <TeamCardsPanel teams={teams} tournament={tournament} currentBid={auctionState.currentBid ?? 0} />
+          </div>
         )}
 
         {/* ── Ticker component ── */}

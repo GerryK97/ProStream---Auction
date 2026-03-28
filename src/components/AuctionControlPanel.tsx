@@ -921,6 +921,14 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const [hideTickerFullscreen, setHideTickerFullscreen] = useState(false);
     const [bidCardTop, setBidCardTop] = useState(160);
     const [bidCardLeft, setBidCardLeft] = useState(1576);
+    const [hideTeamCards, setHideTeamCards] = useState(false);
+    const hideTeamCardsRef = useRef(false);
+    const [teamCardSize, setTeamCardSize] = useState<'small' | 'medium' | 'large'>('large');
+    const teamCardSizeRef = useRef<'small' | 'medium' | 'large'>('large');
+    const [showTeamSizeMenu, setShowTeamSizeMenu] = useState(false);
+    const [showHideTickerMenu, setShowHideTickerMenu] = useState(false);
+    const [showBidCardMenu, setShowBidCardMenu] = useState(false);
+    const [showSoldMessageMenu, setShowSoldMessageMenu] = useState(false);
 
     // Refs to always read latest values inside the auto-switch effect without re-triggering it
     const tickerModeRef = useRef(tickerMode);
@@ -960,7 +968,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             await fetch('/api/overlay/settings', {
                 method: 'POST',
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tournamentId, size, tickerMode: mode, displayMode: dm, hidePremiumCard: hideCard, customTickerLine1: line1, customTickerLine2: line2, soldMessagePosition: soldMsgPos, hideTickerCustom: hideTickerCustomRef.current, hideTickerFullscreen: hideTickerFullscreenRef.current, teamWiseTeamId: teamWiseTeamIdRef.current, bidCardTop: bidCardTopRef.current, bidCardLeft: bidCardLeftRef.current }),
+                body: JSON.stringify({ tournamentId, size, tickerMode: mode, displayMode: dm, hidePremiumCard: hideCard, customTickerLine1: line1, customTickerLine2: line2, soldMessagePosition: soldMsgPos, hideTickerCustom: hideTickerCustomRef.current, hideTickerFullscreen: hideTickerFullscreenRef.current, teamWiseTeamId: teamWiseTeamIdRef.current, bidCardTop: bidCardTopRef.current, bidCardLeft: bidCardLeftRef.current, hideTeamCards: hideTeamCardsRef.current, teamCardSize: teamCardSizeRef.current }),
             });
         } catch { /* non-critical */ }
     };
@@ -1371,6 +1379,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         setIsSpinning(true);
         setDisplayMode('wheel-spin');
         displayModeRef.current = 'wheel-spin';
+        // Broadcast wheel-spin mode with all current settings preserved (bidCardTop/Left, hideTeamCards, etc.)
+        await sendOverlaySettings(overlaySize, tickerMode, 'wheel-spin');
         try {
             const res = await fetch('/api/overlay/spin', {
                 method: 'POST',
@@ -1894,6 +1904,90 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                                     Card hidden on OBS overlay
                                 </span>
                             )}
+                            {/* Divider */}
+                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
+                            {/* Team Cards visibility */}
+                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Team Cards:</span>
+                            <button
+                                onClick={() => {
+                                    const next = !hideTeamCards;
+                                    setHideTeamCards(next);
+                                    hideTeamCardsRef.current = next;
+                                    sendOverlaySettings(overlaySize, tickerMode);
+                                }}
+                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
+                                style={{
+                                    backgroundColor: hideTeamCards ? 'var(--status-danger)' : 'var(--surface-elevated)',
+                                    color: hideTeamCards ? '#fff' : 'var(--text-secondary)',
+                                    border: `1px solid ${hideTeamCards ? 'var(--status-danger)' : 'var(--border-primary)'}`,
+                                }}
+                            >
+                                <span>{hideTeamCards ? 'Hidden' : 'Visible'}</span>
+                                {hideTeamCards && <span className="w-2 h-2 rounded-full bg-red-300 animate-pulse" />}
+                            </button>
+                            {/* Team Card size — gear icon with dropdown */}
+                            <div style={{ position: 'relative' }}>
+                                <button
+                                    onClick={() => setShowTeamSizeMenu(v => !v)}
+                                    title={`Card size: ${teamCardSize}`}
+                                    className="flex items-center justify-center w-8 h-8 rounded-md transition-all"
+                                    style={{
+                                        backgroundColor: showTeamSizeMenu ? 'var(--brand-primary)' : 'var(--surface-elevated)',
+                                        color: showTeamSizeMenu ? '#fff' : 'var(--text-secondary)',
+                                        border: `1px solid ${showTeamSizeMenu ? 'var(--brand-primary)' : 'var(--border-primary)'}`,
+                                    }}
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="12" cy="12" r="3"/>
+                                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                                    </svg>
+                                </button>
+                                {showTeamSizeMenu && (
+                                    <>
+                                        {/* Backdrop to close on outside click */}
+                                        <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => setShowTeamSizeMenu(false)} />
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '110%',
+                                            left: '50%',
+                                            transform: 'translateX(-50%)',
+                                            zIndex: 11,
+                                            background: 'var(--surface-elevated)',
+                                            border: '1px solid var(--border-primary)',
+                                            borderRadius: 8,
+                                            overflow: 'hidden',
+                                            minWidth: 90,
+                                            boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+                                        }}>
+                                            {(['small', 'medium', 'large'] as const).map(s => (
+                                                <button
+                                                    key={s}
+                                                    onClick={() => {
+                                                        setTeamCardSize(s);
+                                                        teamCardSizeRef.current = s;
+                                                        sendOverlaySettings(overlaySize, tickerMode);
+                                                        setShowTeamSizeMenu(false);
+                                                    }}
+                                                    style={{
+                                                        display: 'block',
+                                                        width: '100%',
+                                                        padding: '7px 14px',
+                                                        textAlign: 'left',
+                                                        fontSize: 13,
+                                                        fontWeight: 600,
+                                                        background: teamCardSize === s ? 'var(--brand-primary)' : 'transparent',
+                                                        color: teamCardSize === s ? '#fff' : 'var(--text-secondary)',
+                                                        border: 'none',
+                                                        cursor: 'pointer',
+                                                    }}
+                                                >
+                                                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         </div>
                         <div className="flex items-center gap-3 flex-wrap">
                             <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Ticker Option:</span>
@@ -1936,7 +2030,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                             </button>
                             <button
                                 onClick={() => setShowTickerModal(true)}
-                                className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-semibold transition-all"
+                                className="flex items-center justify-center w-8 h-8 rounded-md transition-all"
                                 style={{
                                     backgroundColor: 'var(--surface-elevated)',
                                     color: 'var(--text-secondary)',
@@ -1944,50 +2038,93 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                                 }}
                                 title="Edit Custom Ticker lines"
                             >
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-                                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="3"/>
+                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                                 </svg>
-                                Edit
                             </button>
                             {/* Divider */}
                             <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
-                            {/* Hide Ticker */}
+                            {/* Hide Ticker — gear icon with dropdown */}
                             <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Hide Ticker:</span>
-                            <button
-                                onClick={() => {
-                                    const next = !hideTickerCustom;
-                                    setHideTickerCustom(next);
-                                    hideTickerCustomRef.current = next;
-                                    sendOverlaySettings(overlaySize, tickerMode);
-                                }}
-                                className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-semibold transition-all"
-                                style={{
-                                    backgroundColor: hideTickerCustom ? 'var(--status-danger)' : 'var(--surface-elevated)',
-                                    color: hideTickerCustom ? '#fff' : 'var(--text-secondary)',
-                                    border: `1px solid ${hideTickerCustom ? 'var(--status-danger)' : 'var(--border-primary)'}`,
-                                }}
-                                title="Hide ticker on Custom Overlay (Screen 1)"
-                            >
-                                Screen 1
-                            </button>
-                            <button
-                                onClick={() => {
-                                    const next = !hideTickerFullscreen;
-                                    setHideTickerFullscreen(next);
-                                    hideTickerFullscreenRef.current = next;
-                                    sendOverlaySettings(overlaySize, tickerMode);
-                                }}
-                                className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-semibold transition-all"
-                                style={{
-                                    backgroundColor: hideTickerFullscreen ? 'var(--status-danger)' : 'var(--surface-elevated)',
-                                    color: hideTickerFullscreen ? '#fff' : 'var(--text-secondary)',
-                                    border: `1px solid ${hideTickerFullscreen ? 'var(--status-danger)' : 'var(--border-primary)'}`,
-                                }}
-                                title="Hide ticker on FullScreen Overlays (Screen 2)"
-                            >
-                                Screen 2
-                            </button>
+                            <div style={{ position: 'relative' }}>
+                                <button
+                                    onClick={() => setShowHideTickerMenu(v => !v)}
+                                    title="Hide ticker per screen"
+                                    className="flex items-center justify-center w-8 h-8 rounded-md transition-all"
+                                    style={{
+                                        backgroundColor: (hideTickerCustom || hideTickerFullscreen)
+                                            ? 'var(--status-danger)'
+                                            : showHideTickerMenu ? 'var(--brand-primary)' : 'var(--surface-elevated)',
+                                        color: (hideTickerCustom || hideTickerFullscreen) || showHideTickerMenu ? '#fff' : 'var(--text-secondary)',
+                                        border: `1px solid ${(hideTickerCustom || hideTickerFullscreen) ? 'var(--status-danger)' : showHideTickerMenu ? 'var(--brand-primary)' : 'var(--border-primary)'}`,
+                                    }}
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="12" cy="12" r="3"/>
+                                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                                    </svg>
+                                </button>
+                                {showHideTickerMenu && (
+                                    <>
+                                        <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => setShowHideTickerMenu(false)} />
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '110%',
+                                            left: '50%',
+                                            transform: 'translateX(-50%)',
+                                            zIndex: 11,
+                                            background: 'var(--surface-elevated)',
+                                            border: '1px solid var(--border-primary)',
+                                            borderRadius: 8,
+                                            overflow: 'hidden',
+                                            minWidth: 110,
+                                            boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+                                        }}>
+                                            <button
+                                                onClick={() => {
+                                                    const next = !hideTickerCustom;
+                                                    setHideTickerCustom(next);
+                                                    hideTickerCustomRef.current = next;
+                                                    sendOverlaySettings(overlaySize, tickerMode);
+                                                }}
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                    width: '100%', padding: '7px 14px', gap: 8,
+                                                    fontSize: 13, fontWeight: 600,
+                                                    background: hideTickerCustom ? 'rgba(239,68,68,0.15)' : 'transparent',
+                                                    color: hideTickerCustom ? '#f87171' : 'var(--text-secondary)',
+                                                    border: 'none', cursor: 'pointer',
+                                                }}
+                                                title="Hide ticker on Custom Overlay"
+                                            >
+                                                <span>Screen 1</span>
+                                                {hideTickerCustom && <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />}
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    const next = !hideTickerFullscreen;
+                                                    setHideTickerFullscreen(next);
+                                                    hideTickerFullscreenRef.current = next;
+                                                    sendOverlaySettings(overlaySize, tickerMode);
+                                                }}
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                    width: '100%', padding: '7px 14px', gap: 8,
+                                                    fontSize: 13, fontWeight: 600,
+                                                    background: hideTickerFullscreen ? 'rgba(239,68,68,0.15)' : 'transparent',
+                                                    color: hideTickerFullscreen ? '#f87171' : 'var(--text-secondary)',
+                                                    border: 'none', cursor: 'pointer',
+                                                }}
+                                                title="Hide ticker on FullScreen Overlay"
+                                            >
+                                                <span>Screen 2</span>
+                                                {hideTickerFullscreen && <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />}
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         </div>
                         {/* Row 2: Player Summary · Team Summary · Top 10 Sold · Custom Ticker */}
                         <div className="flex items-center gap-3 mt-4 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border-primary)' }}>
@@ -2110,58 +2247,111 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                                 </span>
                             )}
                         </div>
-                        {/* Row 3: Sold Message position */}
-                        <div className="flex items-center gap-3 mt-4 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border-primary)' }}>
-                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Sold Message:</span>
-                            <select
-                                value={soldMessagePosition}
-                                onChange={e => {
-                                    const pos = e.target.value as typeof soldMessagePosition;
-                                    setSoldMessagePosition(pos);
-                                    sendOverlaySettings(overlaySize, tickerMode, displayMode, hidePremiumCard, customTickerLine1, customTickerLine2, pos);
-                                }}
-                                className="px-3 py-1.5 rounded-md text-sm font-semibold transition-all"
-                                style={{
-                                    backgroundColor: 'var(--surface-elevated)',
-                                    color: 'var(--text-primary)',
-                                    border: '1px solid var(--border-primary)',
-                                    cursor: 'pointer',
-                                    outline: 'none',
-                                }}
-                            >
-                                <option value="bottom-right">▼ Right · Bottom</option>
-                                <option value="bottom-left">▼ Left · Bottom</option>
-                                <option value="top-right">▲ Right · Top</option>
-                                <option value="top-left">▲ Left · Top</option>
-                            </select>
-                            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Toast corner position</span>
-                        </div>
-                        {/* Row 4: Bid Card Position (Screen 2 only) */}
-                        <div className="flex items-center gap-3 mt-4 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border-primary)' }}>
-                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Bid Card Position:</span>
-                            <label className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                                Top
-                                <input
-                                    type="number"
-                                    value={bidCardTop}
-                                    onChange={e => setBidCardTop(Number(e.target.value))}
-                                    onBlur={() => sendOverlaySettings(overlaySize, tickerMode)}
-                                    className="w-20 rounded-md px-2 py-1.5 text-sm"
-                                    style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', outline: 'none' }}
-                                />
-                            </label>
-                            <label className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                                Left
-                                <input
-                                    type="number"
-                                    value={bidCardLeft}
-                                    onChange={e => setBidCardLeft(Number(e.target.value))}
-                                    onBlur={() => sendOverlaySettings(overlaySize, tickerMode)}
-                                    className="w-20 rounded-md px-2 py-1.5 text-sm"
-                                    style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', outline: 'none' }}
-                                />
-                            </label>
-                            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Canvas px · 1920×1080 (Screen 2 only)</span>
+                        {/* Location Setting sub-section */}
+                        <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--border-primary)' }}>
+                            <span className="text-xs font-bold uppercase tracking-wider mb-3 block" style={{ color: 'var(--text-muted)' }}>Location Setting</span>
+                            <div className="flex items-center gap-4 flex-wrap">
+                                {/* Sold Message */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Sold Message:</span>
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setShowSoldMessageMenu(v => !v)}
+                                            className="flex items-center justify-center w-8 h-8 rounded-md transition-all"
+                                            title="Sold message position"
+                                            style={{
+                                                backgroundColor: showSoldMessageMenu ? 'var(--brand-primary)' : 'var(--surface-elevated)',
+                                                color: showSoldMessageMenu ? '#fff' : 'var(--text-secondary)',
+                                                border: `1px solid ${showSoldMessageMenu ? 'var(--brand-primary)' : 'var(--border-primary)'}`,
+                                            }}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+                                        </button>
+                                        {showSoldMessageMenu && (
+                                            <>
+                                                <div className="fixed inset-0" style={{ zIndex: 10 }} onClick={() => setShowSoldMessageMenu(false)} />
+                                                <div className="absolute left-0 mt-1 rounded-lg shadow-xl p-2 flex flex-col gap-1 min-w-max" style={{ zIndex: 11, backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)', top: '100%' }}>
+                                                    {([
+                                                        { value: 'bottom-right', label: '▼ Right · Bottom' },
+                                                        { value: 'bottom-left', label: '▼ Left · Bottom' },
+                                                        { value: 'top-right', label: '▲ Right · Top' },
+                                                        { value: 'top-left', label: '▲ Left · Top' },
+                                                    ] as const).map(opt => (
+                                                        <button
+                                                            key={opt.value}
+                                                            onClick={() => {
+                                                                setSoldMessagePosition(opt.value);
+                                                                soldMessagePositionRef.current = opt.value;
+                                                                sendOverlaySettings(overlaySize, tickerMode, displayMode, hidePremiumCard, customTickerLine1, customTickerLine2, opt.value);
+                                                                setShowSoldMessageMenu(false);
+                                                            }}
+                                                            className="px-3 py-1.5 rounded-md text-sm font-semibold text-left transition-all"
+                                                            style={{
+                                                                backgroundColor: soldMessagePosition === opt.value ? 'var(--brand-primary)' : 'transparent',
+                                                                color: soldMessagePosition === opt.value ? '#fff' : 'var(--text-secondary)',
+                                                            }}
+                                                        >
+                                                            {opt.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                                {/* Divider */}
+                                <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
+                                {/* Bid Card Position */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Bid Card Position:</span>
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setShowBidCardMenu(v => !v)}
+                                            className="flex items-center justify-center w-8 h-8 rounded-md transition-all"
+                                            title="Bid card position"
+                                            style={{
+                                                backgroundColor: showBidCardMenu ? 'var(--brand-primary)' : 'var(--surface-elevated)',
+                                                color: showBidCardMenu ? '#fff' : 'var(--text-secondary)',
+                                                border: `1px solid ${showBidCardMenu ? 'var(--brand-primary)' : 'var(--border-primary)'}`,
+                                            }}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+                                        </button>
+                                        {showBidCardMenu && (
+                                            <>
+                                                <div className="fixed inset-0" style={{ zIndex: 10 }} onClick={() => setShowBidCardMenu(false)} />
+                                                <div className="absolute left-0 mt-1 rounded-lg shadow-xl p-3 flex flex-col gap-3 min-w-max" style={{ zIndex: 11, backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)', top: '100%' }}>
+                                                    <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                                                        <span className="w-8 text-right font-semibold">Top</span>
+                                                        <input
+                                                            type="number"
+                                                            value={bidCardTop}
+                                                            onChange={e => setBidCardTop(Number(e.target.value))}
+                                                            onBlur={() => sendOverlaySettings(overlaySize, tickerMode)}
+                                                            className="w-24 rounded-md px-2 py-1.5 text-sm"
+                                                            style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', outline: 'none' }}
+                                                        />
+                                                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>px</span>
+                                                    </label>
+                                                    <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                                                        <span className="w-8 text-right font-semibold">Left</span>
+                                                        <input
+                                                            type="number"
+                                                            value={bidCardLeft}
+                                                            onChange={e => setBidCardLeft(Number(e.target.value))}
+                                                            onBlur={() => sendOverlaySettings(overlaySize, tickerMode)}
+                                                            className="w-24 rounded-md px-2 py-1.5 text-sm"
+                                                            style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', outline: 'none' }}
+                                                        />
+                                                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>px</span>
+                                                    </label>
+                                                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>1920×1080 canvas (Screen 2 only)</span>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         {/* Row 5: Resting Time */}
                         <div className="flex items-center gap-3 mt-4 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border-primary)' }}>
