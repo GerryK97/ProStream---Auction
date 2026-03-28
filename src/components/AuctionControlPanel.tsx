@@ -2247,105 +2247,111 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                                 </span>
                             )}
                         </div>
-                        {/* Row 3: Sold Message position */}
-                        <div className="flex items-center gap-3 mt-4 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border-primary)' }}>
-                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Sold Message:</span>
-                            <div className="relative">
-                                <button
-                                    onClick={() => setShowSoldMessageMenu(v => !v)}
-                                    className="flex items-center justify-center w-8 h-8 rounded-md transition-all"
-                                    title="Sold message position"
-                                    style={{
-                                        backgroundColor: showSoldMessageMenu ? 'var(--brand-primary)' : 'var(--surface-elevated)',
-                                        color: showSoldMessageMenu ? '#fff' : 'var(--text-secondary)',
-                                        border: `1px solid ${showSoldMessageMenu ? 'var(--brand-primary)' : 'var(--border-primary)'}`,
-                                    }}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
-                                </button>
-                                {showSoldMessageMenu && (
-                                    <>
-                                        <div className="fixed inset-0" style={{ zIndex: 10 }} onClick={() => setShowSoldMessageMenu(false)} />
-                                        <div className="absolute left-0 mt-1 rounded-lg shadow-xl p-2 flex flex-col gap-1 min-w-max" style={{ zIndex: 11, backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)', top: '100%' }}>
-                                            {([
-                                                { value: 'bottom-right', label: '▼ Right · Bottom' },
-                                                { value: 'bottom-left', label: '▼ Left · Bottom' },
-                                                { value: 'top-right', label: '▲ Right · Top' },
-                                                { value: 'top-left', label: '▲ Left · Top' },
-                                            ] as const).map(opt => (
-                                                <button
-                                                    key={opt.value}
-                                                    onClick={() => {
-                                                        setSoldMessagePosition(opt.value);
-                                                        soldMessagePositionRef.current = opt.value;
-                                                        sendOverlaySettings(overlaySize, tickerMode, displayMode, hidePremiumCard, customTickerLine1, customTickerLine2, opt.value);
-                                                        setShowSoldMessageMenu(false);
-                                                    }}
-                                                    className="px-3 py-1.5 rounded-md text-sm font-semibold text-left transition-all"
-                                                    style={{
-                                                        backgroundColor: soldMessagePosition === opt.value ? 'var(--brand-primary)' : 'transparent',
-                                                        color: soldMessagePosition === opt.value ? '#fff' : 'var(--text-secondary)',
-                                                    }}
-                                                >
-                                                    {opt.label}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </>
-                                )}
+                        {/* Location Setting sub-section */}
+                        <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--border-primary)' }}>
+                            <span className="text-xs font-bold uppercase tracking-wider mb-3 block" style={{ color: 'var(--text-muted)' }}>Location Setting</span>
+                            <div className="flex items-center gap-4 flex-wrap">
+                                {/* Sold Message */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Sold Message:</span>
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setShowSoldMessageMenu(v => !v)}
+                                            className="flex items-center justify-center w-8 h-8 rounded-md transition-all"
+                                            title="Sold message position"
+                                            style={{
+                                                backgroundColor: showSoldMessageMenu ? 'var(--brand-primary)' : 'var(--surface-elevated)',
+                                                color: showSoldMessageMenu ? '#fff' : 'var(--text-secondary)',
+                                                border: `1px solid ${showSoldMessageMenu ? 'var(--brand-primary)' : 'var(--border-primary)'}`,
+                                            }}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+                                        </button>
+                                        {showSoldMessageMenu && (
+                                            <>
+                                                <div className="fixed inset-0" style={{ zIndex: 10 }} onClick={() => setShowSoldMessageMenu(false)} />
+                                                <div className="absolute left-0 mt-1 rounded-lg shadow-xl p-2 flex flex-col gap-1 min-w-max" style={{ zIndex: 11, backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)', top: '100%' }}>
+                                                    {([
+                                                        { value: 'bottom-right', label: '▼ Right · Bottom' },
+                                                        { value: 'bottom-left', label: '▼ Left · Bottom' },
+                                                        { value: 'top-right', label: '▲ Right · Top' },
+                                                        { value: 'top-left', label: '▲ Left · Top' },
+                                                    ] as const).map(opt => (
+                                                        <button
+                                                            key={opt.value}
+                                                            onClick={() => {
+                                                                setSoldMessagePosition(opt.value);
+                                                                soldMessagePositionRef.current = opt.value;
+                                                                sendOverlaySettings(overlaySize, tickerMode, displayMode, hidePremiumCard, customTickerLine1, customTickerLine2, opt.value);
+                                                                setShowSoldMessageMenu(false);
+                                                            }}
+                                                            className="px-3 py-1.5 rounded-md text-sm font-semibold text-left transition-all"
+                                                            style={{
+                                                                backgroundColor: soldMessagePosition === opt.value ? 'var(--brand-primary)' : 'transparent',
+                                                                color: soldMessagePosition === opt.value ? '#fff' : 'var(--text-secondary)',
+                                                            }}
+                                                        >
+                                                            {opt.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                                {/* Divider */}
+                                <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
+                                {/* Bid Card Position */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Bid Card Position:</span>
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setShowBidCardMenu(v => !v)}
+                                            className="flex items-center justify-center w-8 h-8 rounded-md transition-all"
+                                            title="Bid card position"
+                                            style={{
+                                                backgroundColor: showBidCardMenu ? 'var(--brand-primary)' : 'var(--surface-elevated)',
+                                                color: showBidCardMenu ? '#fff' : 'var(--text-secondary)',
+                                                border: `1px solid ${showBidCardMenu ? 'var(--brand-primary)' : 'var(--border-primary)'}`,
+                                            }}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+                                        </button>
+                                        {showBidCardMenu && (
+                                            <>
+                                                <div className="fixed inset-0" style={{ zIndex: 10 }} onClick={() => setShowBidCardMenu(false)} />
+                                                <div className="absolute left-0 mt-1 rounded-lg shadow-xl p-3 flex flex-col gap-3 min-w-max" style={{ zIndex: 11, backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)', top: '100%' }}>
+                                                    <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                                                        <span className="w-8 text-right font-semibold">Top</span>
+                                                        <input
+                                                            type="number"
+                                                            value={bidCardTop}
+                                                            onChange={e => setBidCardTop(Number(e.target.value))}
+                                                            onBlur={() => sendOverlaySettings(overlaySize, tickerMode)}
+                                                            className="w-24 rounded-md px-2 py-1.5 text-sm"
+                                                            style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', outline: 'none' }}
+                                                        />
+                                                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>px</span>
+                                                    </label>
+                                                    <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                                                        <span className="w-8 text-right font-semibold">Left</span>
+                                                        <input
+                                                            type="number"
+                                                            value={bidCardLeft}
+                                                            onChange={e => setBidCardLeft(Number(e.target.value))}
+                                                            onBlur={() => sendOverlaySettings(overlaySize, tickerMode)}
+                                                            className="w-24 rounded-md px-2 py-1.5 text-sm"
+                                                            style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', outline: 'none' }}
+                                                        />
+                                                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>px</span>
+                                                    </label>
+                                                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>1920×1080 canvas (Screen 2 only)</span>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
-                            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Toast corner position</span>
-                        </div>
-                        {/* Row 4: Bid Card Position (Screen 2 only) */}
-                        <div className="flex items-center gap-3 mt-4 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border-primary)' }}>
-                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Bid Card Position:</span>
-                            <div className="relative">
-                                <button
-                                    onClick={() => setShowBidCardMenu(v => !v)}
-                                    className="flex items-center justify-center w-8 h-8 rounded-md transition-all"
-                                    title="Bid card position"
-                                    style={{
-                                        backgroundColor: showBidCardMenu ? 'var(--brand-primary)' : 'var(--surface-elevated)',
-                                        color: showBidCardMenu ? '#fff' : 'var(--text-secondary)',
-                                        border: `1px solid ${showBidCardMenu ? 'var(--brand-primary)' : 'var(--border-primary)'}`,
-                                    }}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
-                                </button>
-                                {showBidCardMenu && (
-                                    <>
-                                        <div className="fixed inset-0" style={{ zIndex: 10 }} onClick={() => setShowBidCardMenu(false)} />
-                                        <div className="absolute left-0 mt-1 rounded-lg shadow-xl p-3 flex flex-col gap-3 min-w-max" style={{ zIndex: 11, backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)', top: '100%' }}>
-                                            <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                                                <span className="w-8 text-right font-semibold">Top</span>
-                                                <input
-                                                    type="number"
-                                                    value={bidCardTop}
-                                                    onChange={e => setBidCardTop(Number(e.target.value))}
-                                                    onBlur={() => sendOverlaySettings(overlaySize, tickerMode)}
-                                                    className="w-24 rounded-md px-2 py-1.5 text-sm"
-                                                    style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', outline: 'none' }}
-                                                />
-                                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>px</span>
-                                            </label>
-                                            <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                                                <span className="w-8 text-right font-semibold">Left</span>
-                                                <input
-                                                    type="number"
-                                                    value={bidCardLeft}
-                                                    onChange={e => setBidCardLeft(Number(e.target.value))}
-                                                    onBlur={() => sendOverlaySettings(overlaySize, tickerMode)}
-                                                    className="w-24 rounded-md px-2 py-1.5 text-sm"
-                                                    style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', outline: 'none' }}
-                                                />
-                                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>px</span>
-                                            </label>
-                                            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>1920×1080 canvas (Screen 2 only)</span>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Canvas px · Screen 2 only</span>
                         </div>
                         {/* Row 5: Resting Time */}
                         <div className="flex items-center gap-3 mt-4 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border-primary)' }}>
