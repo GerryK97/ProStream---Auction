@@ -37,6 +37,9 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
     const [secondaryImageURL, setSecondaryImageURL] = useState(editPlayer?.secondaryImageURL ?? '');
     const [playerClass, setPlayerClass] = useState(editPlayer?.playerClass ?? '');
     const [age, setAge] = useState<string>(editPlayer?.age !== undefined ? String(editPlayer.age) : '');
+    const [stats, setStats] = useState<Record<string, string>>(
+        editPlayer?.stats ? Object.fromEntries(Object.entries(editPlayer.stats).map(([k, v]) => [k, String(v)])) : {}
+    );
     const [isIconic, setIsIconic] = useState<boolean>(editPlayer?.isIconic ?? false);
     const [winningTeamId, setWinningTeamId] = useState<string>(editPlayer?.winningTeamId ?? '');
     const [teams, setTeams] = useState<Team[]>([]);
@@ -46,6 +49,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
 
     const selectedTournament = tournaments.find(t => t._id === tournamentId);
     const useClasses = selectedTournament?.usePlayerClasses && selectedTournament.playerClasses?.length;
+    const ppf = selectedTournament?.playerProfileFields;
 
     const handleTournamentChange = (id: string) => {
         setTournamentId(id);
@@ -95,6 +99,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                         secondaryImageURL: secondaryImageURL || undefined,
                         playerClass: playerClass || undefined,
                         age: age ? Number(age) : undefined,
+                        stats: Object.keys(stats).length > 0 ? stats : undefined,
                         isIconic,
                         winningTeamId: isIconic ? winningTeamId : undefined
                     }),
@@ -110,6 +115,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                         secondaryImageURL: secondaryImageURL || undefined,
                         playerClass: playerClass || undefined,
                         age: age ? Number(age) : undefined,
+                        stats: Object.keys(stats).length > 0 ? stats : undefined,
                         tournamentId,
                         isIconic,
                         winningTeamId: isIconic ? winningTeamId : undefined
@@ -182,10 +188,12 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
             </div>
 
             {/* Age | Player Class */}
-            <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Age <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(optional)</span></label>
-                <input type="number" min="1" max="99" value={age} onChange={(e) => setAge(e.target.value)} placeholder="Leave blank if not applicable" className="w-full rounded-md p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
-            </div>
+            {ppf?.showAge ? (
+                <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Age <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(optional)</span></label>
+                    <input type="number" min="1" max="99" value={age} onChange={(e) => setAge(e.target.value)} placeholder="Leave blank if not applicable" className="w-full rounded-md p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
+                </div>
+            ) : <div />}
             {useClasses && selectedTournament ? (
                 <div>
                     <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Player Class</label>
@@ -199,6 +207,27 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                     </select>
                 </div>
             ) : <div />}
+
+            {/* Stat Fields — conditional on tournament config */}
+            {ppf && ppf.statFields.length > 0 && (
+                <div className="col-span-2 grid grid-cols-2 gap-4">
+                    {ppf.statFields.map(sf => (
+                        <div key={sf.key}>
+                            <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                                {sf.label} <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(optional)</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={stats[sf.key] ?? ''}
+                                onChange={e => setStats(prev => ({ ...prev, [sf.key]: e.target.value }))}
+                                placeholder={`Enter ${sf.label.toLowerCase()}`}
+                                className="w-full rounded-md p-2"
+                                style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
+                            />
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {/* Iconic Player — full width, conditional */}
             {tournamentId && (

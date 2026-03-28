@@ -19,6 +19,7 @@ const playerSchema = new Schema<Player>(
     finalPrice: { type: Number },
     winningTeamId: { type: String },
     isIconic: { type: Boolean, default: false },
+    stats: { type: Map, of: Schema.Types.Mixed },
   },
   {
     timestamps: true,

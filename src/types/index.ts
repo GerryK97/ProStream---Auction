@@ -1,5 +1,15 @@
 export type BasePriceStrategy = 'tournament-level' | 'player-class-based';
 
+export interface StatFieldDef {
+  key: string;    // slug, e.g. 'matches_played'
+  label: string;  // display label, e.g. 'Matches Played'
+}
+
+export interface PlayerProfileFieldsConfig {
+  showAge: boolean;
+  statFields: StatFieldDef[]; // up to 4
+}
+
 export interface PlayerClassConfig {
   code: string;           // Short code (user-defined, e.g., "PT", "AR-A", "BATB")
   name: string;           // e.g., "Platinum", "Gold", "Silver", "Bronze"
@@ -31,6 +41,7 @@ export interface Tournament {
   overlayPalette?: string; // e.g. 'default', 'ocean', 'crimson'
   biddingMode?: 'direct' | 'team'; // 'direct' = typed input (default), 'team' = per-team bid buttons
   bidIncrements?: BidIncrementRange[]; // Ordered list of price ranges and their increment steps
+  playerProfileFields?: PlayerProfileFieldsConfig; // Optional player data fields enabled for this tournament
 }
 
 export interface Team {
@@ -63,6 +74,7 @@ export interface Player {
   finalPrice?: number;
   winningTeamId?: string;
   isIconic?: boolean;
+  stats?: Record<string, string | number>; // keys match tournament's playerProfileFields.statFields[].key
 }
 
 export interface AuctionState {

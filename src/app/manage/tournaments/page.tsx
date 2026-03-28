@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { Tournament, BidIncrementRange } from '@/types';
+import { Tournament, BidIncrementRange, StatFieldDef } from '@/types';
 import { getAuthHeaders } from '@/lib/api-client';
 import DeleteButton from '@/components/shared/DeleteButton';
 import ImageUpload from '@/components/ImageUpload';
@@ -23,6 +23,7 @@ const EMPTY_FORM = {
   playerClasses: [] as ClassRow[],
   biddingMode: 'direct' as 'direct' | 'team',
   bidIncrements: [] as BidIncrementRange[],
+  playerProfileFields: { showAge: false, statFields: [] as StatFieldDef[] },
 };
 
 function generateCodes(classes: ClassRow[]): string[] {
@@ -103,6 +104,7 @@ function TournamentsManagePage() {
       })),
       biddingMode: t.biddingMode ?? 'direct',
       bidIncrements: t.bidIncrements ?? [],
+      playerProfileFields: t.playerProfileFields ?? { showAge: false, statFields: [] },
     });
     setShowCreate(true);
   };
@@ -165,6 +167,15 @@ function TournamentsManagePage() {
         : [],
       biddingMode: form.biddingMode,
       bidIncrements: form.biddingMode === 'team' ? sortedIncrements : [],
+      playerProfileFields: {
+        showAge: form.playerProfileFields.showAge,
+        statFields: form.playerProfileFields.statFields
+          .filter(sf => sf.label.trim())
+          .map(sf => ({
+            label: sf.label.trim(),
+            key: sf.label.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''),
+          })),
+      },
     };
   };
 
@@ -627,6 +638,72 @@ function TournamentsManagePage() {
                       </div>
                     </div>
                   )}
+                </div>
+
+                {/* Player Profile Fields */}
+                <div className="border border-gray-700 rounded-lg p-4 space-y-4">
+                  <div>
+                    <p className="text-sm font-medium text-white">Player Profile Fields</p>
+                    <p className="text-xs text-gray-400 mt-1">Select which optional fields appear in the player form and on the Screen 1 overlay.</p>
+                  </div>
+
+                  {/* Age toggle */}
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.playerProfileFields.showAge}
+                      onChange={e => setForm(f => ({ ...f, playerProfileFields: { ...f.playerProfileFields, showAge: e.target.checked } }))}
+                      className="w-4 h-4 accent-blue-500"
+                    />
+                    <div>
+                      <p className="text-sm text-white font-medium">Show Age field</p>
+                      <p className="text-xs text-gray-400">Adds Age input to player form and overlay card</p>
+                    </div>
+                  </label>
+
+                  {/* Stat fields */}
+                  <div className="space-y-2 pt-3 border-t border-gray-700">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-cyan-300">
+                        Stat Fields ({form.playerProfileFields.statFields.length}/4)
+                      </p>
+                      <button
+                        type="button"
+                        disabled={form.playerProfileFields.statFields.length >= 4}
+                        onClick={() => setForm(f => ({ ...f, playerProfileFields: { ...f.playerProfileFields, statFields: [...f.playerProfileFields.statFields, { label: '', key: '' }] } }))}
+                        className="px-3 py-1 bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 text-white rounded text-xs font-medium"
+                      >
+                        + Add Stat
+                      </button>
+                    </div>
+                    {form.playerProfileFields.statFields.length === 0 && (
+                      <p className="text-xs text-gray-500 italic">No stat fields. Click &quot;+ Add Stat&quot; to add custom stats (e.g. Matches, Runs, Wickets).</p>
+                    )}
+                    <div className="space-y-2">
+                      {form.playerProfileFields.statFields.map((sf, i) => (
+                        <div key={i} className="flex items-center gap-2 bg-gray-700/50 rounded-lg p-2">
+                          <input
+                            type="text"
+                            value={sf.label}
+                            onChange={e => setForm(f => {
+                              const updated = f.playerProfileFields.statFields.map((s, j) => j === i ? { ...s, label: e.target.value } : s);
+                              return { ...f, playerProfileFields: { ...f.playerProfileFields, statFields: updated } };
+                            })}
+                            placeholder="e.g. Matches, Runs, Goals"
+                            className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-white text-sm focus:outline-none focus:border-cyan-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setForm(f => ({ ...f, playerProfileFields: { ...f.playerProfileFields, statFields: f.playerProfileFields.statFields.filter((_, j) => j !== i) } }))}
+                            className="shrink-0 text-gray-400 hover:text-red-400 text-lg leading-none px-1"
+                            title="Remove stat"
+                          >
+                            &times;
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 

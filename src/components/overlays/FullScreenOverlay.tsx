@@ -514,47 +514,65 @@ function PlayerAuctionPanel({
         </div>
       </div>
 
-      {/* AGE row */}
-      <div style={{ ...labelStyle, left: 880, top: 362 }}>Age</div>
-      <div style={{ position: 'absolute', left: 880, top: 396, ...valueStyle }}>
-        {hasPlayer ? (currentPlayer!.age ?? '—') : '—'}
-      </div>
+      {/* Dynamic field rows: Age (optional), Position, custom Stats (optional) */}
+      {(() => {
+        const ppf = tournament?.playerProfileFields;
+        const fields: Array<{ label: string; value: string | number }> = [];
+        if (ppf?.showAge)
+          fields.push({ label: 'Age', value: hasPlayer ? (currentPlayer!.age ?? '—') : '—' });
+        fields.push({ label: 'Position', value: hasPlayer ? (currentPlayer!.position || '—') : '—' });
+        (ppf?.statFields ?? []).slice(0, 2).forEach(sf =>
+          fields.push({ label: sf.label, value: hasPlayer ? ((currentPlayer!.stats as any)?.[sf.key] ?? '—') : '—' })
+        );
 
-      {/* Thin divider */}
-      <div style={{ position: 'absolute', left: 880, top: 476, width: 960, height: 1, background: 'var(--overlay-border-light)' }} />
+        const FIELD_START_Y = 362;
+        const FIELD_SLOT_H = 116;
+        const classTop = FIELD_START_Y + fields.length * FIELD_SLOT_H + 14;
 
-      {/* POSITION row */}
-      <div style={{ ...labelStyle, left: 880, top: 498 }}>Position</div>
-      <div style={{ position: 'absolute', left: 880, top: 532, ...valueStyle }}>
-        {hasPlayer ? (currentPlayer!.position || '—') : '—'}
-      </div>
+        return (
+          <>
+            {fields.map((f, i) => {
+              const top = FIELD_START_Y + i * FIELD_SLOT_H;
+              return (
+                <React.Fragment key={f.label}>
+                  <div style={{ ...labelStyle, left: 880, top }}>{f.label}</div>
+                  <div style={{ position: 'absolute', left: 880, top: top + 34, ...valueStyle }}>{f.value}</div>
+                  {i < fields.length - 1 && (
+                    <div style={{ position: 'absolute', left: 880, top: top + 90, width: 960, height: 1, background: 'var(--overlay-border-light)' }} />
+                  )}
+                </React.Fragment>
+              );
+            })}
 
-      {/* Thin divider */}
-      <div style={{ position: 'absolute', left: 880, top: 622, width: 960, height: 1, background: 'var(--overlay-border-light)' }} />
+            {/* Divider before class */}
+            <div style={{ position: 'absolute', left: 880, top: classTop - 10, width: 960, height: 1, background: 'var(--overlay-border-light)' }} />
 
-      {/* CLASS row */}
-      <div style={{ ...labelStyle, left: 880, top: 644 }}>Class</div>
-      {hasPlayer && currentPlayer!.playerClass ? (
-        <div style={{
-          position: 'absolute',
-          left: 880,
-          top: 678,
-          background: classColor,
-          color: '#fff',
-          fontSize: 34,
-          fontFamily: '"Inconsolata", monospace',
-          fontWeight: 700,
-          padding: '6px 24px',
-          borderRadius: 10,
-          letterSpacing: 4,
-          boxShadow: `0 0 20px ${classColor}66`,
-          textTransform: 'uppercase',
-        }}>
-          {currentPlayer!.playerClass}
-        </div>
-      ) : (
-        <div style={{ position: 'absolute', left: 880, top: 678, ...valueStyle }}>—</div>
-      )}
+            {/* CLASS row */}
+            <div style={{ ...labelStyle, left: 880, top: classTop + 6 }}>Class</div>
+            {hasPlayer && currentPlayer!.playerClass ? (
+              <div style={{
+                position: 'absolute',
+                left: 880,
+                top: classTop + 40,
+                background: classColor,
+                color: '#fff',
+                fontSize: 34,
+                fontFamily: '"Inconsolata", monospace',
+                fontWeight: 700,
+                padding: '6px 24px',
+                borderRadius: 10,
+                letterSpacing: 4,
+                boxShadow: `0 0 20px ${classColor}66`,
+                textTransform: 'uppercase',
+              }}>
+                {currentPlayer!.playerClass}
+              </div>
+            ) : (
+              <div style={{ position: 'absolute', left: 880, top: classTop + 40, ...valueStyle }}>—</div>
+            )}
+          </>
+        );
+      })()}
 
 
       {/* Decorative corner bracket — top right */}
