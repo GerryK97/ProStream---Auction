@@ -67,10 +67,12 @@ const tournamentSchema = new Schema<Tournament>(
     },
     playerProfileFields: {
       type: {
-        showAge:    { type: Boolean, default: false },
-        statFields: { type: [{ key: String, label: String }], default: [] },
+        showAge:          { type: Boolean, default: false },
+        showBattingStyle: { type: Boolean, default: false },
+        showBowlingStyle: { type: Boolean, default: false },
+        statFields:       { type: [{ key: String, label: String }], default: [] },
       },
-      default: () => ({ showAge: false, statFields: [] }),
+      default: () => ({ showAge: false, showBattingStyle: false, showBowlingStyle: false, statFields: [] }),
     },
   },
   {

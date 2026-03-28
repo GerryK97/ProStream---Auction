@@ -521,6 +521,10 @@ function PlayerAuctionPanel({
         if (ppf?.showAge)
           fields.push({ label: 'Age', value: hasPlayer ? (currentPlayer!.age ?? '—') : '—' });
         fields.push({ label: 'Position', value: hasPlayer ? (currentPlayer!.position || '—') : '—' });
+        if (ppf?.showBattingStyle)
+          fields.push({ label: 'Batting Style', value: hasPlayer ? (currentPlayer!.battingStyle || '—') : '—' });
+        if (ppf?.showBowlingStyle)
+          fields.push({ label: 'Bowling Style', value: hasPlayer ? (currentPlayer!.bowlingStyle || '—') : '—' });
         (ppf?.statFields ?? []).slice(0, 2).forEach(sf =>
           fields.push({ label: sf.label, value: hasPlayer ? ((currentPlayer!.stats as any)?.[sf.key] ?? '—') : '—' })
         );
