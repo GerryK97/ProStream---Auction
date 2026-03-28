@@ -187,6 +187,8 @@ export interface OverlaySettingsEvent extends BasePusherEvent {
   teamWiseTeamId?: string | null;
   bidCardTop?: number;
   bidCardLeft?: number;
+  hideTeamCards?: boolean;
+  teamCardSize?: 'small' | 'medium' | 'large';
 }
 
 /**

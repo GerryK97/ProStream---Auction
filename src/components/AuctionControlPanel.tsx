@@ -921,6 +921,10 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const [hideTickerFullscreen, setHideTickerFullscreen] = useState(false);
     const [bidCardTop, setBidCardTop] = useState(160);
     const [bidCardLeft, setBidCardLeft] = useState(1576);
+    const [hideTeamCards, setHideTeamCards] = useState(false);
+    const hideTeamCardsRef = useRef(false);
+    const [teamCardSize, setTeamCardSize] = useState<'small' | 'medium' | 'large'>('large');
+    const teamCardSizeRef = useRef<'small' | 'medium' | 'large'>('large');
 
     // Refs to always read latest values inside the auto-switch effect without re-triggering it
     const tickerModeRef = useRef(tickerMode);
@@ -960,7 +964,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             await fetch('/api/overlay/settings', {
                 method: 'POST',
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tournamentId, size, tickerMode: mode, displayMode: dm, hidePremiumCard: hideCard, customTickerLine1: line1, customTickerLine2: line2, soldMessagePosition: soldMsgPos, hideTickerCustom: hideTickerCustomRef.current, hideTickerFullscreen: hideTickerFullscreenRef.current, teamWiseTeamId: teamWiseTeamIdRef.current, bidCardTop: bidCardTopRef.current, bidCardLeft: bidCardLeftRef.current }),
+                body: JSON.stringify({ tournamentId, size, tickerMode: mode, displayMode: dm, hidePremiumCard: hideCard, customTickerLine1: line1, customTickerLine2: line2, soldMessagePosition: soldMsgPos, hideTickerCustom: hideTickerCustomRef.current, hideTickerFullscreen: hideTickerFullscreenRef.current, teamWiseTeamId: teamWiseTeamIdRef.current, bidCardTop: bidCardTopRef.current, bidCardLeft: bidCardLeftRef.current, hideTeamCards: hideTeamCardsRef.current, teamCardSize: teamCardSizeRef.current }),
             });
         } catch { /* non-critical */ }
     };
@@ -1894,6 +1898,46 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                                     Card hidden on OBS overlay
                                 </span>
                             )}
+                            {/* Divider */}
+                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
+                            {/* Team Cards visibility */}
+                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Team Cards:</span>
+                            <button
+                                onClick={() => {
+                                    const next = !hideTeamCards;
+                                    setHideTeamCards(next);
+                                    hideTeamCardsRef.current = next;
+                                    sendOverlaySettings(overlaySize, tickerMode);
+                                }}
+                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
+                                style={{
+                                    backgroundColor: hideTeamCards ? 'var(--status-danger)' : 'var(--surface-elevated)',
+                                    color: hideTeamCards ? '#fff' : 'var(--text-secondary)',
+                                    border: `1px solid ${hideTeamCards ? 'var(--status-danger)' : 'var(--border-primary)'}`,
+                                }}
+                            >
+                                <span>{hideTeamCards ? 'Hidden' : 'Visible'}</span>
+                                {hideTeamCards && <span className="w-2 h-2 rounded-full bg-red-300 animate-pulse" />}
+                            </button>
+                            {/* Team Card size buttons */}
+                            {(['small', 'medium', 'large'] as const).map(s => (
+                                <button
+                                    key={s}
+                                    onClick={() => {
+                                        setTeamCardSize(s);
+                                        teamCardSizeRef.current = s;
+                                        sendOverlaySettings(overlaySize, tickerMode);
+                                    }}
+                                    className="px-3 py-1.5 rounded-md text-sm font-semibold capitalize transition-all"
+                                    style={{
+                                        backgroundColor: teamCardSize === s ? 'var(--brand-primary)' : 'var(--surface-elevated)',
+                                        color: teamCardSize === s ? '#fff' : 'var(--text-secondary)',
+                                        border: `1px solid ${teamCardSize === s ? 'var(--brand-primary)' : 'var(--border-primary)'}`,
+                                    }}
+                                >
+                                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                                </button>
+                            ))}
                         </div>
                         <div className="flex items-center gap-3 flex-wrap">
                             <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Ticker Option:</span>
