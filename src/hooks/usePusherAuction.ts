@@ -173,11 +173,21 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         player._id === action.data.restoredPlayer._id ? action.data.restoredPlayer : player
       );
 
-      const updatedTeams = action.data.updatedTeam
-        ? state.teams.map((team) =>
-            team._id === action.data.updatedTeam!._id ? action.data.updatedTeam! : team
-          )
-        : state.teams;
+      let updatedTeams = state.teams;
+      if (action.data.updatedTeam) {
+        const serverTeam = action.data.updatedTeam;
+        const restoredId = action.data.restoredPlayer._id;
+        updatedTeams = state.teams.map((team) => {
+          if (team._id !== serverTeam._id) return team;
+          // Use server's team data but guarantee the restored player is removed from
+          // playersPurchased. Safety net: if $pull silently failed and the server's
+          // updatedTeam still contains the player, the client state shows the correct count.
+          const playersPurchased = (serverTeam.playersPurchased ?? []).filter(
+            (id: string) => id !== restoredId
+          );
+          return { ...serverTeam, playersPurchased };
+        });
+      }
 
       return {
         ...state,

@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
         { _id: winningTeamId },
         {
           $inc: { currentBalance: finalPrice },
-          $pull: { playersPurchased: playerId },
+          $pull: { playersPurchased: String(playerId) },
         },
         { new: true }
       ).lean();
