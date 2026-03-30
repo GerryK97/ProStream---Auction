@@ -347,17 +347,17 @@ function BidInfoPanel({
 
 // ─── Team Card ────────────────────────────────────────────────────────────────
 
-function TeamCard({ team, tournament, currentBid }: { team: Team; tournament: Tournament | null; currentBid: number }) {
+function TeamCard({ team, tournament, currentBid, players }: { team: Team; tournament: Tournament | null; currentBid: number; players: Player[] }) {
   const spent = (team.initialBudget ?? 0) - (team.currentBalance ?? 0);
   const balance = team.currentBalance ?? 0;
   const initial = team.initialBudget ?? 1;
   const barPct = Math.min(100, Math.max(0, (spent / initial) * 100));
-  const playersBought = team.playersPurchased?.length ?? 0;
+  const playersBought = players.filter(p => p.isSold && String(p.winningTeamId) === String(team._id)).length;
   const squadSize = tournament?.squadSize ?? '—';
   const initials = (team.shortCode || team.name).slice(0, 2).toUpperCase();
 
   // Max bid calculation — mirrors AuctionControlPanel logic
-  const _playersPurchased = team.playersPurchased?.length ?? 0;
+  const _playersPurchased = playersBought;
   const _squadSize = tournament?.squadSize ?? 0;
   const _basePrice = tournament?.basePricePerPlayer ?? 0;
   const _remainingPlayers = _squadSize - _playersPurchased;
@@ -527,7 +527,7 @@ function TeamCard({ team, tournament, currentBid }: { team: Team; tournament: To
 
 // ─── Team Cards Panel (with auto-rotation) ────────────────────────────────────
 
-function TeamCardsPanel({ teams, tournament, currentBid }: { teams: Team[]; tournament: Tournament | null; currentBid: number }) {
+function TeamCardsPanel({ teams, tournament, currentBid, players }: { teams: Team[]; tournament: Tournament | null; currentBid: number; players: Player[] }) {
   const PAGE_SIZE = 4;
   const pages = Math.ceil(teams.length / PAGE_SIZE);
   const [pageIndex, setPageIndex] = useState(0);
@@ -567,7 +567,7 @@ function TeamCardsPanel({ teams, tournament, currentBid }: { teams: Team[]; tour
       }}
     >
       {currentPage.map(team => (
-        <TeamCard key={team._id} team={team} tournament={tournament} currentBid={currentBid} />
+        <TeamCard key={team._id} team={team} tournament={tournament} currentBid={currentBid} players={players} />
       ))}
     </div>
   );
@@ -839,7 +839,7 @@ function CustomOverlayContent({
                      : overlaySettings.teamCardSize === 'medium' ? 'scale(0.8)'
                      : 'scale(1)',
           }}>
-            <TeamCardsPanel teams={teams} tournament={tournament} currentBid={auctionState.currentBid ?? 0} />
+            <TeamCardsPanel teams={teams} tournament={tournament} currentBid={auctionState.currentBid ?? 0} players={players} />
           </div>
         )}
 
