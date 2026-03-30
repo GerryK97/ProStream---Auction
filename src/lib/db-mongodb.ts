@@ -250,7 +250,7 @@ export const playerDB = {
   },
 
   create: async (
-    data: { name: string; position?: string; currentClub?: string; photoURL?: string; secondaryImageURL?: string; playerClass?: string; age?: number; tournamentId: string },
+    data: { name: string; position?: string; currentClub?: string; photoURL?: string; secondaryImageURL?: string; playerClass?: string; age?: number; battingStyle?: string; bowlingStyle?: string; stats?: Record<string, any>; tournamentId: string },
     createdBy?: string
   ): Promise<Player> => {
     await connectToDatabase();
@@ -267,6 +267,9 @@ export const playerDB = {
       ...(data.secondaryImageURL && { secondaryImageURL: data.secondaryImageURL }),
       playerClass: data.playerClass,
       ...(data.age !== undefined && { age: data.age }),
+      ...(data.battingStyle && { battingStyle: data.battingStyle }),
+      ...(data.bowlingStyle && { bowlingStyle: data.bowlingStyle }),
+      ...(data.stats && Object.keys(data.stats).length > 0 && { stats: data.stats }),
       isSold: false,
       ...(createdBy && { createdBy }),
     };

@@ -525,12 +525,19 @@ function PlayerAuctionPanel({
           fields.push({ label: 'Batting Style', value: hasPlayer ? (currentPlayer!.battingStyle || '—') : '—' });
         if (ppf?.showBowlingStyle)
           fields.push({ label: 'Bowling Style', value: hasPlayer ? (currentPlayer!.bowlingStyle || '—') : '—' });
-        (ppf?.statFields ?? []).slice(0, 2).forEach(sf =>
+        (ppf?.statFields ?? []).forEach(sf =>
           fields.push({ label: sf.label, value: hasPlayer ? ((currentPlayer!.stats as any)?.[sf.key] ?? '—') : '—' })
         );
 
         const FIELD_START_Y = 362;
-        const FIELD_SLOT_H = 116;
+        // Available height = 1080 - 362 - 108 (class area + buffer)
+        const AVAILABLE_H = 610;
+        const FIELD_SLOT_H = fields.length > 0
+          ? Math.max(76, Math.min(116, Math.floor(AVAILABLE_H / fields.length)))
+          : 116;
+        const valueOffset   = Math.round(FIELD_SLOT_H * 0.29); // proportional to original 34/116
+        const dividerOffset = Math.round(FIELD_SLOT_H * 0.78); // proportional to original 90/116
+        const valueFontSize = Math.max(34, Math.round(50 * (FIELD_SLOT_H / 116)));
         const classTop = FIELD_START_Y + fields.length * FIELD_SLOT_H + 14;
 
         return (
@@ -540,39 +547,41 @@ function PlayerAuctionPanel({
               return (
                 <React.Fragment key={f.label}>
                   <div style={{ ...labelStyle, left: 880, top }}>{f.label}</div>
-                  <div style={{ position: 'absolute', left: 880, top: top + 34, ...valueStyle }}>{f.value}</div>
+                  <div style={{ position: 'absolute', left: 880, top: top + valueOffset, ...valueStyle, fontSize: valueFontSize }}>{f.value}</div>
                   {i < fields.length - 1 && (
-                    <div style={{ position: 'absolute', left: 880, top: top + 90, width: 960, height: 1, background: 'var(--overlay-border-light)' }} />
+                    <div style={{ position: 'absolute', left: 880, top: top + dividerOffset, width: 960, height: 1, background: 'var(--overlay-border-light)' }} />
                   )}
                 </React.Fragment>
               );
             })}
 
-            {/* Divider before class */}
-            <div style={{ position: 'absolute', left: 880, top: classTop - 10, width: 960, height: 1, background: 'var(--overlay-border-light)' }} />
-
-            {/* CLASS row */}
-            <div style={{ ...labelStyle, left: 880, top: classTop + 6 }}>Class</div>
-            {hasPlayer && currentPlayer!.playerClass ? (
-              <div style={{
-                position: 'absolute',
-                left: 880,
-                top: classTop + 40,
-                background: classColor,
-                color: '#fff',
-                fontSize: 34,
-                fontFamily: '"Inconsolata", monospace',
-                fontWeight: 700,
-                padding: '6px 24px',
-                borderRadius: 10,
-                letterSpacing: 4,
-                boxShadow: `0 0 20px ${classColor}66`,
-                textTransform: 'uppercase',
-              }}>
-                {currentPlayer!.playerClass}
-              </div>
-            ) : (
-              <div style={{ position: 'absolute', left: 880, top: classTop + 40, ...valueStyle }}>—</div>
+            {/* CLASS row — only when tournament uses player classes */}
+            {tournament?.usePlayerClasses && (tournament?.playerClasses?.length ?? 0) > 0 && (
+              <>
+                <div style={{ position: 'absolute', left: 880, top: classTop - 10, width: 960, height: 1, background: 'var(--overlay-border-light)' }} />
+                <div style={{ ...labelStyle, left: 880, top: classTop + 6 }}>Class</div>
+                {hasPlayer && currentPlayer!.playerClass ? (
+                  <div style={{
+                    position: 'absolute',
+                    left: 880,
+                    top: classTop + 40,
+                    background: classColor,
+                    color: '#fff',
+                    fontSize: 34,
+                    fontFamily: '"Inconsolata", monospace',
+                    fontWeight: 700,
+                    padding: '6px 24px',
+                    borderRadius: 10,
+                    letterSpacing: 4,
+                    boxShadow: `0 0 20px ${classColor}66`,
+                    textTransform: 'uppercase',
+                  }}>
+                    {currentPlayer!.playerClass}
+                  </div>
+                ) : (
+                  <div style={{ position: 'absolute', left: 880, top: classTop + 40, ...valueStyle }}>—</div>
+                )}
+              </>
             )}
           </>
         );
