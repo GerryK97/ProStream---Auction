@@ -17,6 +17,24 @@ const PLAYER_POSITIONS = [
     'Wicket Keeper Batsman',
 ];
 
+const BATTING_STYLES = [
+    'Right-handed',
+    'Left-handed',
+];
+
+const BOWLING_STYLES = [
+    'Right-arm Fast',
+    'Right-arm Medium-fast',
+    'Right-arm Medium',
+    'Right-arm Off-spin',
+    'Left-arm Fast',
+    'Left-arm Medium-fast',
+    'Left-arm Medium',
+    'Left-arm Orthodox',
+    'Left-arm Chinaman',
+    'Leg-spin',
+];
+
 interface PlayerFormProps {
     tournaments: Tournament[];
     defaultTournamentId?: string;
@@ -40,6 +58,8 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
     const [stats, setStats] = useState<Record<string, string>>(
         editPlayer?.stats ? Object.fromEntries(Object.entries(editPlayer.stats).map(([k, v]) => [k, String(v)])) : {}
     );
+    const [battingStyle, setBattingStyle] = useState(editPlayer?.battingStyle ?? '');
+    const [bowlingStyle, setBowlingStyle] = useState(editPlayer?.bowlingStyle ?? '');
     const [isIconic, setIsIconic] = useState<boolean>(editPlayer?.isIconic ?? false);
     const [winningTeamId, setWinningTeamId] = useState<string>(editPlayer?.winningTeamId ?? '');
     const [teams, setTeams] = useState<Team[]>([]);
@@ -99,6 +119,8 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                         secondaryImageURL: secondaryImageURL || undefined,
                         playerClass: playerClass || undefined,
                         age: age ? Number(age) : undefined,
+                        battingStyle: battingStyle || undefined,
+                        bowlingStyle: bowlingStyle || undefined,
                         stats: Object.keys(stats).length > 0 ? stats : undefined,
                         isIconic,
                         winningTeamId: isIconic ? winningTeamId : undefined
@@ -115,6 +137,8 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                         secondaryImageURL: secondaryImageURL || undefined,
                         playerClass: playerClass || undefined,
                         age: age ? Number(age) : undefined,
+                        battingStyle: battingStyle || undefined,
+                        bowlingStyle: bowlingStyle || undefined,
                         stats: Object.keys(stats).length > 0 ? stats : undefined,
                         tournamentId,
                         isIconic,
@@ -204,6 +228,26 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                                 {cls.icon} {cls.name} {cls.basePrice ? `(${cls.basePrice.toLocaleString()})` : ''}
                             </option>
                         ))}
+                    </select>
+                </div>
+            ) : <div />}
+
+            {/* Batting Style | Bowling Style — conditional on tournament config */}
+            {ppf?.showBattingStyle ? (
+                <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Batting Style <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(optional)</span></label>
+                    <select value={battingStyle} onChange={(e) => setBattingStyle(e.target.value)} className="w-full rounded-md p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}>
+                        <option value="">Select Batting Style</option>
+                        {BATTING_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                </div>
+            ) : <div />}
+            {ppf?.showBowlingStyle ? (
+                <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Bowling Style <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(optional)</span></label>
+                    <select value={bowlingStyle} onChange={(e) => setBowlingStyle(e.target.value)} className="w-full rounded-md p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}>
+                        <option value="">Select Bowling Style</option>
+                        {BOWLING_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                 </div>
             ) : <div />}

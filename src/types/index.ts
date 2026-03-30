@@ -7,6 +7,8 @@ export interface StatFieldDef {
 
 export interface PlayerProfileFieldsConfig {
   showAge: boolean;
+  showBattingStyle: boolean;
+  showBowlingStyle: boolean;
   statFields: StatFieldDef[]; // up to 4
 }
 
@@ -74,6 +76,8 @@ export interface Player {
   finalPrice?: number;
   winningTeamId?: string;
   isIconic?: boolean;
+  battingStyle?: string;
+  bowlingStyle?: string;
   stats?: Record<string, string | number>; // keys match tournament's playerProfileFields.statFields[].key
 }
 

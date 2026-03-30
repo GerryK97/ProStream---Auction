@@ -23,7 +23,7 @@ const EMPTY_FORM = {
   playerClasses: [] as ClassRow[],
   biddingMode: 'direct' as 'direct' | 'team',
   bidIncrements: [] as BidIncrementRange[],
-  playerProfileFields: { showAge: false, statFields: [] as StatFieldDef[] },
+  playerProfileFields: { showAge: false, showBattingStyle: false, showBowlingStyle: false, statFields: [] as StatFieldDef[] },
 };
 
 function generateCodes(classes: ClassRow[]): string[] {
@@ -104,7 +104,7 @@ function TournamentsManagePage() {
       })),
       biddingMode: t.biddingMode ?? 'direct',
       bidIncrements: t.bidIncrements ?? [],
-      playerProfileFields: t.playerProfileFields ?? { showAge: false, statFields: [] },
+      playerProfileFields: t.playerProfileFields ?? { showAge: false, showBattingStyle: false, showBowlingStyle: false, statFields: [] },
     });
     setShowCreate(true);
   };
@@ -169,6 +169,8 @@ function TournamentsManagePage() {
       bidIncrements: form.biddingMode === 'team' ? sortedIncrements : [],
       playerProfileFields: {
         showAge: form.playerProfileFields.showAge,
+        showBattingStyle: form.playerProfileFields.showBattingStyle,
+        showBowlingStyle: form.playerProfileFields.showBowlingStyle,
         statFields: form.playerProfileFields.statFields
           .filter(sf => sf.label.trim())
           .map(sf => ({
@@ -658,6 +660,34 @@ function TournamentsManagePage() {
                     <div>
                       <p className="text-sm text-white font-medium">Show Age field</p>
                       <p className="text-xs text-gray-400">Adds Age input to player form and overlay card</p>
+                    </div>
+                  </label>
+
+                  {/* Batting Style toggle */}
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.playerProfileFields.showBattingStyle}
+                      onChange={e => setForm(f => ({ ...f, playerProfileFields: { ...f.playerProfileFields, showBattingStyle: e.target.checked } }))}
+                      className="w-4 h-4 accent-blue-500"
+                    />
+                    <div>
+                      <p className="text-sm text-white font-medium">Show Batting Style field</p>
+                      <p className="text-xs text-gray-400">Adds Batting Style dropdown to player form and overlay card</p>
+                    </div>
+                  </label>
+
+                  {/* Bowling Style toggle */}
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.playerProfileFields.showBowlingStyle}
+                      onChange={e => setForm(f => ({ ...f, playerProfileFields: { ...f.playerProfileFields, showBowlingStyle: e.target.checked } }))}
+                      className="w-4 h-4 accent-blue-500"
+                    />
+                    <div>
+                      <p className="text-sm text-white font-medium">Show Bowling Style field</p>
+                      <p className="text-xs text-gray-400">Adds Bowling Style dropdown to player form and overlay card</p>
                     </div>
                   </label>
 
