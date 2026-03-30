@@ -555,31 +555,33 @@ function PlayerAuctionPanel({
               );
             })}
 
-            {/* Divider before class */}
-            <div style={{ position: 'absolute', left: 880, top: classTop - 10, width: 960, height: 1, background: 'var(--overlay-border-light)' }} />
-
-            {/* CLASS row */}
-            <div style={{ ...labelStyle, left: 880, top: classTop + 6 }}>Class</div>
-            {hasPlayer && currentPlayer!.playerClass ? (
-              <div style={{
-                position: 'absolute',
-                left: 880,
-                top: classTop + 40,
-                background: classColor,
-                color: '#fff',
-                fontSize: 34,
-                fontFamily: '"Inconsolata", monospace',
-                fontWeight: 700,
-                padding: '6px 24px',
-                borderRadius: 10,
-                letterSpacing: 4,
-                boxShadow: `0 0 20px ${classColor}66`,
-                textTransform: 'uppercase',
-              }}>
-                {currentPlayer!.playerClass}
-              </div>
-            ) : (
-              <div style={{ position: 'absolute', left: 880, top: classTop + 40, ...valueStyle }}>—</div>
+            {/* CLASS row — only when tournament uses player classes */}
+            {tournament?.usePlayerClasses && (tournament?.playerClasses?.length ?? 0) > 0 && (
+              <>
+                <div style={{ position: 'absolute', left: 880, top: classTop - 10, width: 960, height: 1, background: 'var(--overlay-border-light)' }} />
+                <div style={{ ...labelStyle, left: 880, top: classTop + 6 }}>Class</div>
+                {hasPlayer && currentPlayer!.playerClass ? (
+                  <div style={{
+                    position: 'absolute',
+                    left: 880,
+                    top: classTop + 40,
+                    background: classColor,
+                    color: '#fff',
+                    fontSize: 34,
+                    fontFamily: '"Inconsolata", monospace',
+                    fontWeight: 700,
+                    padding: '6px 24px',
+                    borderRadius: 10,
+                    letterSpacing: 4,
+                    boxShadow: `0 0 20px ${classColor}66`,
+                    textTransform: 'uppercase',
+                  }}>
+                    {currentPlayer!.playerClass}
+                  </div>
+                ) : (
+                  <div style={{ position: 'absolute', left: 880, top: classTop + 40, ...valueStyle }}>—</div>
+                )}
+              </>
             )}
           </>
         );
