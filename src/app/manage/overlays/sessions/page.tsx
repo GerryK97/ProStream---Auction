@@ -43,6 +43,7 @@ function SessionsPage() {
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
   // Revoke state
+  const [confirmingRevoke, setConfirmingRevoke] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
   const [revokeError, setRevokeError] = useState<string | null>(null);
 
@@ -92,7 +93,7 @@ function SessionsPage() {
   };
 
   const handleRevoke = async (token: string) => {
-    if (!confirm('Revoke this session? The active overlay will disconnect immediately.')) return;
+    setConfirmingRevoke(null);
     setRevoking(token);
     setRevokeError(null);
     try {
@@ -280,14 +281,34 @@ function SessionsPage() {
                               );
                             })}
                           </div>
-                          <button
-                            onClick={() => handleRevoke(session._id)}
-                            disabled={revoking === session._id}
-                            className="px-3 py-1.5 rounded text-xs font-semibold disabled:opacity-50"
-                            style={{ backgroundColor: '#7f1d1d', color: '#fca5a5', border: '1px solid #991b1b' }}
-                          >
-                            {revoking === session._id ? 'Revoking…' : 'Revoke'}
-                          </button>
+                          {confirmingRevoke === session._id ? (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleRevoke(session._id)}
+                                disabled={revoking === session._id}
+                                className="px-3 py-1.5 rounded text-xs font-semibold disabled:opacity-50"
+                                style={{ backgroundColor: '#991b1b', color: '#fca5a5', border: '1px solid #b91c1c' }}
+                              >
+                                {revoking === session._id ? 'Revoking…' : 'Yes, Revoke'}
+                              </button>
+                              <button
+                                onClick={() => setConfirmingRevoke(null)}
+                                className="px-2 py-1.5 rounded text-xs"
+                                style={{ color: 'var(--text-tertiary)', border: '1px solid var(--border-primary)' }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmingRevoke(session._id)}
+                              disabled={revoking === session._id}
+                              className="px-3 py-1.5 rounded text-xs font-semibold disabled:opacity-50"
+                              style={{ backgroundColor: '#7f1d1d', color: '#fca5a5', border: '1px solid #991b1b' }}
+                            >
+                              Revoke
+                            </button>
+                          )}
                         </div>
                       </div>
                     </li>
@@ -334,14 +355,34 @@ function SessionsPage() {
                               );
                             })}
                           </div>
-                          <button
-                            onClick={() => handleRevoke(session._id)}
-                            disabled={revoking === session._id}
-                            className="px-3 py-1.5 rounded text-xs font-semibold disabled:opacity-50"
-                            style={{ backgroundColor: '#7f1d1d', color: '#fca5a5', border: '1px solid #991b1b' }}
-                          >
-                            {revoking === session._id ? 'Revoking…' : 'Revoke'}
-                          </button>
+                          {confirmingRevoke === session._id ? (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleRevoke(session._id)}
+                                disabled={revoking === session._id}
+                                className="px-3 py-1.5 rounded text-xs font-semibold disabled:opacity-50"
+                                style={{ backgroundColor: '#991b1b', color: '#fca5a5', border: '1px solid #b91c1c' }}
+                              >
+                                {revoking === session._id ? 'Revoking…' : 'Yes, Revoke'}
+                              </button>
+                              <button
+                                onClick={() => setConfirmingRevoke(null)}
+                                className="px-2 py-1.5 rounded text-xs"
+                                style={{ color: 'var(--text-tertiary)', border: '1px solid var(--border-primary)' }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmingRevoke(session._id)}
+                              disabled={revoking === session._id}
+                              className="px-3 py-1.5 rounded text-xs font-semibold disabled:opacity-50"
+                              style={{ backgroundColor: '#7f1d1d', color: '#fca5a5', border: '1px solid #991b1b' }}
+                            >
+                              Revoke
+                            </button>
+                          )}
                         </div>
                       </div>
                     </li>
