@@ -15,10 +15,10 @@ interface OverlaySession {
 }
 
 const OVERLAY_TYPES = [
-  { label: 'Full Screen', path: '' },
-  { label: 'Custom', path: '/custom' },
-  { label: 'Full Screen 2', path: '/fullscreen2' },
-  { label: 'Team Owner', path: '/team-owner' },
+  { label: 'Full Screen', copyLabel: 'Full Screen', path: '' },
+  { label: 'Custom', copyLabel: 'OBS', path: '/custom' },
+  { label: 'Full Screen 2', copyLabel: 'Full Screen 2', path: '/fullscreen2' },
+  { label: 'Team Owner', copyLabel: 'Team Owner Link', path: '/team-owner' },
 ] as const;
 
 function buildOverlayUrl(tournamentId: string, overlayPath: string, token: string): string {
@@ -117,6 +117,47 @@ function SessionsPage() {
       await navigator.clipboard.writeText(text);
       setCopiedUrl(text);
       setTimeout(() => setCopiedUrl(null), 2000);
+    } catch {
+      // ignore
+    }
+  };
+
+  const [copiedAll, setCopiedAll] = useState<string | null>(null);
+
+  const copyAllUrls = async (session: OverlaySession) => {
+    const urls = OVERLAY_TYPES.map(type =>
+      `${type.copyLabel} : ${buildOverlayUrl(session.tournamentId, type.path, session._id)}`
+    ).join('\n');
+    const text = `🎙️ ProStream Overlay URLs — ${session.label}
+${'─'.repeat(60)}
+${urls}
+
+${'─'.repeat(60)}
+📺 OBS SETUP INSTRUCTIONS
+
+1. Open OBS Studio and click + in the Sources panel.
+2. Select "Browser" as the source type.
+3. Paste one of the URLs above into the URL field.
+4. Set Width: 1920 and Height: 1080.
+5. Tick "Shutdown source when not visible".
+6. Tick "Refresh browser when scene becomes active".
+7. Click OK. The overlay will go live once the tournament
+   is set to Live status.
+
+💡 Tips:
+• Use the Full Screen or Full Screen 2 URL for a standalone
+  full-screen overlay scene.
+• Use the Custom (OBS) URL as a transparent browser source
+  layered over your game or video capture at 1920×1080.
+• Use the Team Owner Link to share with team owners —
+  it's mobile-friendly and works in any browser.
+• Append &debug=true to any URL to show a live connection
+  status panel in the top-right corner.
+${'─'.repeat(60)}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedAll(session._id);
+      setTimeout(() => setCopiedAll(null), 2000);
     } catch {
       // ignore
     }
@@ -261,6 +302,18 @@ function SessionsPage() {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <div className="flex gap-1 flex-wrap justify-end">
+                            <button
+                              onClick={() => copyAllUrls(session)}
+                              title="Copy all overlay URLs"
+                              className="px-2 py-1 rounded text-xs font-medium transition-colors"
+                              style={{
+                                backgroundColor: copiedAll === session._id ? '#16a34a' : 'rgba(79,70,229,0.12)',
+                                color: copiedAll === session._id ? '#fff' : 'var(--brand-primary)',
+                                border: '1px solid var(--brand-primary)',
+                              }}
+                            >
+                              {copiedAll === session._id ? '✓ Copied All' : '⧉ Copy All'}
+                            </button>
                             {OVERLAY_TYPES.map(type => {
                               const url = buildOverlayUrl(session.tournamentId, type.path, session._id);
                               const copied = copiedUrl === url;
@@ -335,6 +388,18 @@ function SessionsPage() {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <div className="flex gap-1 flex-wrap justify-end">
+                            <button
+                              onClick={() => copyAllUrls(session)}
+                              title="Copy all overlay URLs"
+                              className="px-2 py-1 rounded text-xs font-medium transition-colors"
+                              style={{
+                                backgroundColor: copiedAll === session._id ? '#16a34a' : 'rgba(79,70,229,0.12)',
+                                color: copiedAll === session._id ? '#fff' : 'var(--brand-primary)',
+                                border: '1px solid var(--brand-primary)',
+                              }}
+                            >
+                              {copiedAll === session._id ? '✓ Copied All' : '⧉ Copy All'}
+                            </button>
                             {OVERLAY_TYPES.map(type => {
                               const url = buildOverlayUrl(session.tournamentId, type.path, session._id);
                               const copied = copiedUrl === url;
