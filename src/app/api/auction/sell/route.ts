@@ -69,8 +69,13 @@ export async function POST(request: NextRequest) {
     // Validate bid does not exceed team's max affordable bid (reserve budget for remaining squad slots)
     const squadSize = (tournament as any)?.squadSize ?? 0;
     const basePrice = getMinClassBasePrice(tournament as any);
-    const playersPurchased = (team as any).playersPurchased?.length ?? 0;
-    const squadRemainingPlayers = squadSize - playersPurchased;
+    // Use a live Player count — always accurate, unaffected by playersPurchased array drift
+    const playersBought = await PlayerModel.countDocuments({
+      tournamentId,
+      isSold: true,
+      winningTeamId: String(teamId),
+    });
+    const squadRemainingPlayers = squadSize - playersBought;
     const maxBid = squadRemainingPlayers <= 1
       ? ((team as any).currentBalance ?? 0)
       : Math.max(0, ((team as any).currentBalance ?? 0) - (squadRemainingPlayers - 1) * basePrice);
@@ -85,6 +90,12 @@ export async function POST(request: NextRequest) {
     }
 
     const { currentPlayerId, currentBid } = auctionState;
+
+    // Idempotency guard — prevent double-submit from selling the same player twice
+    const alreadySold = await PlayerModel.exists({ _id: currentPlayerId, isSold: true });
+    if (alreadySold) {
+      return NextResponse.json({ error: 'Player is already sold' }, { status: 409 });
+    }
 
     // Update player to sold
     // Explicit updatedAt ensures reliable timestamp comparison in the undo route
@@ -113,7 +124,7 @@ export async function POST(request: NextRequest) {
       { _id: teamId },
       {
         $inc: { currentBalance: -currentBid },
-        $push: { playersPurchased: currentPlayerId },
+        $addToSet: { playersPurchased: String(currentPlayerId) },
       },
       { new: true }
     ).lean();
