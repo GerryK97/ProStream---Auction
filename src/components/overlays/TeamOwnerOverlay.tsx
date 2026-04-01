@@ -383,7 +383,7 @@ export default function TeamOwnerOverlay({ tournamentId }: { tournamentId: strin
     const searchParams = useSearchParams();
     const urlToken = searchParams.get('token') ?? undefined;
 
-    const { tournament, players, teams, isConnected } = usePusherAuction(tournamentId, undefined, urlToken);
+    const { tournament, players, teams, isConnected, isRevoked } = usePusherAuction(tournamentId, undefined, urlToken);
 
     // Derive palette CSS vars — same logic as OverlayWrapper
     const theme = tournament?.overlayTheme || 'standard';
@@ -391,6 +391,17 @@ export default function TeamOwnerOverlay({ tournamentId }: { tournamentId: strin
     const activePalette = OVERLAY_PALETTES[theme]?.find(p => p.id === paletteId)
         || OVERLAY_PALETTES[theme]?.[0]
         || { cssVars: {} };
+
+    if (isRevoked) {
+        return (
+            <div className="min-h-screen w-full flex items-center justify-center bg-black">
+                <div className="text-center">
+                    <p className="text-gray-500 text-lg font-medium">Access Revoked</p>
+                    <p className="text-gray-700 text-sm mt-1">Contact your administrator</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div
