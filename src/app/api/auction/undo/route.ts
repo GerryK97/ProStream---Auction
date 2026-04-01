@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Unsell the player
+      // Unsell the player first — must happen before balance recalculation
       const restoredPlayer = await PlayerModel.findOneAndUpdate(
         { _id: playerId },
         {
@@ -79,11 +79,21 @@ export async function POST(request: NextRequest) {
         { new: true }
       ).lean();
 
-      // Refund the team
+      // Derive correct balance from source of truth — idempotent, immune to $inc drift.
+      // The player is already un-sold above, so this sum excludes the refunded player.
+      const teamDoc = await TeamModel.findById(winningTeamId).lean();
+      const totalSpentAgg = await PlayerModel.aggregate([
+        { $match: { tournamentId, isSold: true, winningTeamId: String(winningTeamId) } },
+        { $group: { _id: null, total: { $sum: '$finalPrice' } } },
+      ]);
+      const totalSpent = totalSpentAgg[0]?.total ?? 0;
+      const newBalance = (teamDoc as any).initialBudget - totalSpent;
+
+      // Refund the team with derived balance
       const updatedTeam = await TeamModel.findOneAndUpdate(
         { _id: winningTeamId },
         {
-          $inc: { currentBalance: finalPrice },
+          $set: { currentBalance: newBalance },
           $pull: { playersPurchased: String(playerId) },
         },
         { new: true }

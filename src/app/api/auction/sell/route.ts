@@ -91,16 +91,11 @@ export async function POST(request: NextRequest) {
 
     const { currentPlayerId, currentBid } = auctionState;
 
-    // Idempotency guard — prevent double-submit from selling the same player twice
-    const alreadySold = await PlayerModel.exists({ _id: currentPlayerId, isSold: true });
-    if (alreadySold) {
-      return NextResponse.json({ error: 'Player is already sold' }, { status: 409 });
-    }
-
-    // Update player to sold
-    // Explicit updatedAt ensures reliable timestamp comparison in the undo route
+    // Atomic idempotency guard — filter includes isSold: false so only one concurrent
+    // request can ever succeed. If null, another request already sold this player.
+    // Explicit updatedAt ensures reliable timestamp comparison in the undo route.
     const updatedPlayer = await PlayerModel.findOneAndUpdate(
-      { _id: currentPlayerId },
+      { _id: currentPlayerId, isSold: false },
       {
         $set: {
           isSold: true,
@@ -113,17 +108,22 @@ export async function POST(request: NextRequest) {
     ).lean();
 
     if (!updatedPlayer) {
-      return NextResponse.json(
-        { error: 'Player not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Player is already sold' }, { status: 409 });
     }
+
+    // Derive correct balance from source of truth — idempotent, immune to $inc drift
+    const totalSpentAgg = await PlayerModel.aggregate([
+      { $match: { tournamentId, isSold: true, winningTeamId: String(teamId) } },
+      { $group: { _id: null, total: { $sum: '$finalPrice' } } },
+    ]);
+    const totalSpent = totalSpentAgg[0]?.total ?? 0;
+    const newBalance = (team as any).initialBudget - totalSpent;
 
     // Update team balance and players purchased
     const updatedTeam = await TeamModel.findOneAndUpdate(
       { _id: teamId },
       {
-        $inc: { currentBalance: -currentBid },
+        $set: { currentBalance: newBalance },
         $addToSet: { playersPurchased: String(currentPlayerId) },
       },
       { new: true }
