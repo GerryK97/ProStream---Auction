@@ -42,19 +42,24 @@ export async function POST(request: NextRequest) {
     if (!payload) return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
     if (!isAdmin(payload.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const { tournamentId, label } = await request.json();
-    if (!tournamentId || !label?.trim()) {
-      return NextResponse.json({ error: 'Missing required fields: tournamentId, label' }, { status: 400 });
+    const { tournamentId } = await request.json();
+    if (!tournamentId) {
+      return NextResponse.json({ error: 'Missing required field: tournamentId' }, { status: 400 });
     }
 
     const tournament = await TournamentModel.findById(tournamentId).lean();
     if (!tournament) return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
 
+    const label = `${(tournament as any).name} · ${new Date().toLocaleString('en-GB', {
+      day: 'numeric', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    })}`;
+
     const sessionToken = randomUUID();
     const session = await OverlaySessionModel.create({
       _id: sessionToken,
       tournamentId,
-      label: label.trim(),
+      label,
       createdBy: payload.userId,
       isActive: true,
     });

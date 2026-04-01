@@ -1,13 +1,38 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useTournamentContext } from '@/contexts/TournamentContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { getAuthHeaders } from '@/lib/api-client';
 import StepsProgress from '@/components/shared/StepsProgress';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { OVERLAY_PALETTES } from '@/config/overlayPalettes';
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+interface OverlaySession {
+  _id: string;
+  tournamentId: string;
+  label: string;
+  isActive: boolean;
+  createdAt: string;
+  revokedAt?: string;
+}
+
+const OVERLAY_TYPES = [
+  { label: 'Full Screen', path: '' },
+  { label: 'Custom', path: '/custom' },
+  { label: 'Full Screen 2', path: '/fullscreen2' },
+  { label: 'Team Owner', path: '/team-owner' },
+] as const;
+
+function buildOverlayUrl(tournamentId: string, overlayPath: string, token: string): string {
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  return `${origin}/overlays/${tournamentId}${overlayPath}?token=${token}`;
+}
+
+// ── Theme definitions ────────────────────────────────────────────────────────
 
 const THEMES = [
   {
@@ -63,6 +88,8 @@ const THEMES = [
   },
 ];
 
+// ── Page ─────────────────────────────────────────────────────────────────────
+
 export default function OutputPage() {
   const router = useRouter();
   const { selectedTournamentId, selectedTournament, setTournaments, tournaments, setSelectedTournamentId, refreshTournaments } = useTournamentContext();
@@ -72,29 +99,119 @@ export default function OutputPage() {
   // OBS setup instructions toggle
   const [showSetup, setShowSetup] = useState(false);
 
+  // Sessions state
+  const [sessions, setSessions] = useState<OverlaySession[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+  const [sessionsError, setSessionsError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [justCreated, setJustCreated] = useState<OverlaySession | null>(null);
+  const [revoking, setRevoking] = useState<string | null>(null);
+  const [revokeError, setRevokeError] = useState<string | null>(null);
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+  const [showRevoked, setShowRevoked] = useState(false);
+
   const currentTheme = selectedTournament?.overlayTheme ?? 'standard';
   const currentPalette = selectedTournament?.overlayPalette ?? 'default';
   const availablePalettes = OVERLAY_PALETTES[currentTheme] || [];
 
+  // ── Sessions data fetching ──────────────────────────────────────────────
+
+  const fetchSessions = useCallback(async () => {
+    if (!selectedTournamentId) { setSessions([]); return; }
+    setLoadingSessions(true);
+    setSessionsError(null);
+    try {
+      const res = await fetch(`/api/overlay/sessions?tournamentId=${selectedTournamentId}`, {
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) throw new Error('Failed to fetch sessions');
+      const data = await res.json();
+      setSessions(data.sessions ?? []);
+    } catch (err: any) {
+      setSessionsError(err.message);
+    } finally {
+      setLoadingSessions(false);
+    }
+  }, [selectedTournamentId]);
+
+  useEffect(() => {
+    fetchSessions();
+    setJustCreated(null);
+    setCreateError(null);
+  }, [fetchSessions]);
+
+  // ── Session actions ─────────────────────────────────────────────────────
+
+  const handleCreate = async () => {
+    if (!selectedTournamentId) return;
+    setCreating(true);
+    setCreateError(null);
+    try {
+      const res = await fetch('/api/overlay/sessions', {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournamentId: selectedTournamentId }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setCreateError(data.error || 'Failed to create session'); return; }
+      setJustCreated(data.session);
+      await fetchSessions();
+    } catch {
+      setCreateError('An error occurred');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleRevoke = async (sessionToken: string) => {
+    if (!confirm('Revoke this session? The active overlay will disconnect immediately.')) return;
+    setRevoking(sessionToken);
+    setRevokeError(null);
+    try {
+      const res = await fetch(`/api/overlay/sessions/${sessionToken}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok) { setRevokeError(data.error || 'Failed to revoke'); return; }
+      if (justCreated?._id === sessionToken) setJustCreated(null);
+      await fetchSessions();
+    } catch {
+      setRevokeError('An error occurred');
+    } finally {
+      setRevoking(null);
+    }
+  };
+
+  const copyToClipboard = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedUrl(url);
+      setTimeout(() => setCopiedUrl(null), 2000);
+    } catch {
+      // ignore
+    }
+  };
+
+  const activeSessions = sessions.filter(s => s.isActive);
+  const revokedSessions = sessions.filter(s => !s.isActive);
+  const formatDate = (iso: string) => new Date(iso).toLocaleString();
+
+  // ── Theme / palette actions ─────────────────────────────────────────────
+
   async function selectTheme(themeId: string) {
     if (!selectedTournamentId || themeId === currentTheme) return;
-
-    // Optimistic UI update
     setTournaments(prev => prev.map(t =>
       t._id === selectedTournamentId ? { ...t, overlayTheme: themeId as 'standard' | 'premium' | 'neon', overlayPalette: 'default' } : t
     ));
-
     setSaving(true);
     try {
       await fetch(`/api/tournaments/${selectedTournamentId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ overlayTheme: themeId, overlayPalette: 'default' }),
       });
-
       await refreshTournaments();
     } finally {
       setSaving(false);
@@ -103,28 +220,23 @@ export default function OutputPage() {
 
   async function selectPalette(paletteId: string) {
     if (!selectedTournamentId || paletteId === currentPalette) return;
-
-    // Optimistic UI update
     setTournaments(prev => prev.map(t =>
       t._id === selectedTournamentId ? { ...t, overlayPalette: paletteId } : t
     ));
-
     setSaving(true);
     try {
       await fetch(`/api/tournaments/${selectedTournamentId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ overlayPalette: paletteId }),
       });
-
       await refreshTournaments();
     } finally {
       setSaving(false);
     }
   }
+
+  // ── Render ──────────────────────────────────────────────────────────────
 
   return (
     <ProtectedRoute allowedRoles={['Admin']}>
@@ -138,7 +250,7 @@ export default function OutputPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Overlay Setup</h1>
         <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          Choose a theme for your OBS overlay. One URL covers your entire auction broadcast.
+          Choose a theme and manage OBS session URLs for your auction broadcast.
         </p>
       </div>
 
@@ -214,7 +326,6 @@ export default function OutputPage() {
             {availablePalettes.map(palette => {
               const isSelected = currentPalette === palette.id;
               const swatchBg = (palette.cssVars as any)['--overlay-color-primary'] || (palette.cssVars as any)['--overlay-bg-panel'];
-
               return (
                 <button
                   key={palette.id}
@@ -241,33 +352,166 @@ export default function OutputPage() {
         </div>
       )}
 
-      {/* OBS Sessions callout */}
-      <div
-        className="rounded-xl border p-5 mb-8 flex items-start gap-4"
-        style={{ backgroundColor: 'rgba(79,70,229,0.06)', borderColor: 'var(--brand-primary)' }}
-      >
-        <div className="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(79,70,229,0.15)' }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5" style={{ color: 'var(--brand-primary)' }}>
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-            <path d="M7 11V7a5 5 0 0110 0v4" />
-          </svg>
+      {/* ── OBS Sessions ──────────────────────────────────────────────────── */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>OBS Sessions</h2>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              Each session generates a unique URL. Revoke any session to instantly disconnect that OBS source.
+            </p>
+          </div>
+          {selectedTournamentId && (
+            <button
+              onClick={handleCreate}
+              disabled={creating}
+              className="shrink-0 px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 transition-all"
+              style={{ backgroundColor: 'var(--brand-primary)', color: '#fff' }}
+            >
+              {creating ? 'Creating…' : '+ Create Session'}
+            </button>
+          )}
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm mb-1" style={{ color: 'var(--text-primary)' }}>Ready to go live?</p>
-          <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
-            Use <strong>OBS Sessions</strong> to generate overlay URLs. Each session gets a unique token you can revoke at any time — without affecting other active overlays.
+
+        {!selectedTournamentId ? (
+          <p className="text-sm py-4 text-center rounded-lg" style={{ color: 'var(--text-muted)', border: '1px dashed var(--border-primary)' }}>
+            Select a tournament above to manage sessions.
           </p>
-          <Link
-            href="/manage/overlays/sessions"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 hover:opacity-90"
-            style={{ backgroundColor: 'var(--brand-primary)', color: '#fff' }}
-          >
-            Go to OBS Sessions
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-          </Link>
-        </div>
+        ) : (
+          <div className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--border-primary)' }}>
+
+            {/* Just-created URL prompt */}
+            {justCreated && (
+              <div className="p-4 space-y-3" style={{ backgroundColor: 'rgba(79,70,229,0.08)', borderBottom: '1px solid var(--brand-primary)' }}>
+                <p className="text-sm font-semibold" style={{ color: 'var(--brand-primary)' }}>
+                  Session created — copy your overlay URLs:
+                </p>
+                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{justCreated.label}</p>
+                {OVERLAY_TYPES.map(type => {
+                  const url = buildOverlayUrl(selectedTournamentId, type.path, justCreated._id);
+                  const copied = copiedUrl === url;
+                  return (
+                    <div key={type.path} className="flex items-center gap-2">
+                      <span className="text-xs w-28 shrink-0" style={{ color: 'var(--text-tertiary)' }}>{type.label}</span>
+                      <code className="flex-1 text-xs truncate rounded px-2 py-1 font-mono" style={{ backgroundColor: 'var(--surface-card)', color: 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}>
+                        {url}
+                      </code>
+                      <button
+                        onClick={() => copyToClipboard(url)}
+                        className="shrink-0 px-3 py-1 rounded text-xs font-medium transition-colors"
+                        style={{
+                          backgroundColor: copied ? '#16a34a' : 'var(--surface-card)',
+                          color: copied ? '#fff' : 'var(--text-secondary)',
+                          border: '1px solid var(--border-primary)',
+                        }}
+                      >
+                        {copied ? 'Copied!' : 'Copy'}
+                      </button>
+                    </div>
+                  );
+                })}
+                <button onClick={() => setJustCreated(null)} className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  Dismiss
+                </button>
+              </div>
+            )}
+
+            {createError && (
+              <p className="px-4 py-2 text-red-400 text-sm" style={{ borderBottom: '1px solid var(--border-primary)' }}>{createError}</p>
+            )}
+
+            {/* Active sessions list */}
+            {loadingSessions ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2" style={{ borderColor: 'var(--brand-primary)' }} />
+              </div>
+            ) : sessionsError ? (
+              <p className="p-4 text-red-400 text-sm">{sessionsError}</p>
+            ) : activeSessions.length === 0 ? (
+              <p className="p-6 text-center text-sm" style={{ color: 'var(--text-tertiary)' }}>
+                No active sessions. Click "+ Create Session" to generate overlay URLs.
+              </p>
+            ) : (
+              <ul className="divide-y" style={{ borderColor: 'var(--border-primary)' }}>
+                {activeSessions.map(session => (
+                  <li key={session._id} className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{session.label}</p>
+                        <p className="text-xs mt-0.5 font-mono" style={{ color: 'var(--text-tertiary)' }}>
+                          Token: {session._id.slice(0, 8)}…
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                        {OVERLAY_TYPES.map(type => {
+                          const url = buildOverlayUrl(selectedTournamentId, type.path, session._id);
+                          const copied = copiedUrl === url;
+                          return (
+                            <button
+                              key={type.path}
+                              onClick={() => copyToClipboard(url)}
+                              title={`Copy ${type.label} URL`}
+                              className="px-2 py-1 rounded text-xs transition-colors"
+                              style={{
+                                backgroundColor: copied ? '#16a34a' : 'var(--surface-elevated)',
+                                color: copied ? '#fff' : 'var(--text-secondary)',
+                                border: '1px solid var(--border-primary)',
+                              }}
+                            >
+                              {copied ? '✓' : '⧉'} {type.label}
+                            </button>
+                          );
+                        })}
+                        <button
+                          onClick={() => handleRevoke(session._id)}
+                          disabled={revoking === session._id}
+                          className="px-3 py-1.5 rounded text-xs font-semibold disabled:opacity-50"
+                          style={{ backgroundColor: '#7f1d1d', color: '#fca5a5', border: '1px solid #991b1b' }}
+                        >
+                          {revoking === session._id ? 'Revoking…' : 'Revoke'}
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {revokeError && (
+              <p className="px-4 pb-3 text-red-400 text-sm">{revokeError}</p>
+            )}
+
+            {/* Revoked history */}
+            {revokedSessions.length > 0 && (
+              <div style={{ borderTop: '1px solid var(--border-primary)' }}>
+                <button
+                  onClick={() => setShowRevoked(v => !v)}
+                  className="w-full flex items-center justify-between px-4 py-3 text-left"
+                >
+                  <span className="text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>
+                    Revoked Sessions ({revokedSessions.length})
+                  </span>
+                  <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{showRevoked ? '▲ Hide' : '▼ Show'}</span>
+                </button>
+                {showRevoked && (
+                  <ul className="divide-y" style={{ borderColor: 'var(--border-primary)', borderTop: '1px solid var(--border-primary)' }}>
+                    {revokedSessions.map(session => (
+                      <li key={session._id} className="px-4 py-3 flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-xs line-through" style={{ color: 'var(--text-tertiary)' }}>{session.label}</p>
+                          <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+                            {session.revokedAt && `Revoked ${formatDate(session.revokedAt)}`}
+                          </p>
+                        </div>
+                        <span className="text-xs px-2 py-0.5 rounded shrink-0" style={{ backgroundColor: '#7f1d1d22', color: '#f87171' }}>Revoked</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* OBS Setup Instructions (collapsible) */}
@@ -296,7 +540,7 @@ export default function OutputPage() {
               </li>
               <li className="flex gap-3">
                 <span className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ backgroundColor: 'var(--brand-primary)' }}>2</span>
-                <span>Go to <strong>Manage → OBS Sessions</strong>, create a session, and copy the overlay URL into OBS.</span>
+                <span>Click <strong>+ Create Session</strong> above, then copy the overlay URL into OBS.</span>
               </li>
               <li className="flex gap-3">
                 <span className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ backgroundColor: 'var(--brand-primary)' }}>3</span>

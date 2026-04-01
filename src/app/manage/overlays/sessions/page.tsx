@@ -33,8 +33,6 @@ function SessionsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Create form
-  const [newLabel, setNewLabel] = useState('');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -73,20 +71,18 @@ function SessionsPage() {
     setCreateError(null);
   }, [fetchSessions]);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedTournamentId || !newLabel.trim()) return;
+  const handleCreate = async () => {
+    if (!selectedTournamentId) return;
     setCreating(true);
     setCreateError(null);
     try {
       const res = await fetch('/api/overlay/sessions', {
         method: 'POST',
         headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tournamentId: selectedTournamentId, label: newLabel.trim() }),
+        body: JSON.stringify({ tournamentId: selectedTournamentId }),
       });
       const data = await res.json();
       if (!res.ok) { setCreateError(data.error || 'Failed to create session'); return; }
-      setNewLabel('');
       setJustCreated(data.session);
       await fetchSessions();
     } catch {
@@ -164,26 +160,20 @@ function SessionsPage() {
         <>
           {/* Create session */}
           <div className="rounded-lg p-5" style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)' }}>
-            <h2 className="text-base font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Create New Session</h2>
-            <form onSubmit={handleCreate} className="flex gap-3">
-              <input
-                type="text"
-                placeholder='Label e.g. "OBS Main", "Backup Stream"'
-                value={newLabel}
-                onChange={e => setNewLabel(e.target.value)}
-                required
-                className="flex-1 rounded-md px-3 py-2 text-sm"
-                style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
-              />
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Create New Session</h2>
               <button
-                type="submit"
-                disabled={creating || !newLabel.trim()}
+                onClick={handleCreate}
+                disabled={creating}
                 className="px-4 py-2 rounded-md text-sm font-semibold disabled:opacity-50"
                 style={{ backgroundColor: 'var(--brand-primary)', color: '#fff' }}
               >
-                {creating ? 'Creating…' : '+ Create'}
+                {creating ? 'Creating…' : '+ Create Session'}
               </button>
-            </form>
+            </div>
+            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+              Sessions are labelled automatically with the tournament name and creation time.
+            </p>
             {createError && <p className="text-red-400 text-sm mt-2">{createError}</p>}
 
             {/* URL copy prompt after creation */}
