@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { Tournament, Player, Team } from '@/types';
 import { OVERLAY_PALETTES } from '@/config/overlayPalettes';
-import { getClassBasePrice, getClassConfig } from '@/lib/playerClassUtils';
+import { getClassBasePrice, getClassConfig, getMinClassBasePrice } from '@/lib/playerClassUtils';
 
 const formatCurrency = (amount: number) => amount.toLocaleString('en-IN');
 
@@ -252,16 +252,19 @@ function TeamOwnerDashboard({ tournament, players, teams, isConnected, tournamen
 
     const pendingPlayers = players.filter(p => !p.isSold && !p.isUnsold);
 
-    const playersPurchasedCount = selectedTeam?.playersPurchased?.length ?? 0;
+    // Use live players array — always accurate, unaffected by playersPurchased array drift
+    const playersPurchasedCount = selectedTeam
+        ? players.filter(p => p.isSold && String(p.winningTeamId) === String(selectedTeam._id)).length
+        : 0;
     const squadSize = tournament?.squadSize ?? 0;
     const remainingSlots = Math.max(0, squadSize - playersPurchasedCount);
     const currentBalance = selectedTeam?.currentBalance ?? 0;
-    const basePricePerPlayer = tournament?.basePricePerPlayer ?? 0;
+    const basePrice = getMinClassBasePrice(tournament);
 
     // Max bid: with one slot left spend everything; otherwise reserve base price per remaining slot
     const maxBid = remainingSlots <= 1
         ? currentBalance
-        : Math.max(0, currentBalance - (remainingSlots - 1) * basePricePerPlayer);
+        : Math.max(0, currentBalance - (remainingSlots - 1) * basePrice);
 
     const isSquadFull = remainingSlots === 0;
 
