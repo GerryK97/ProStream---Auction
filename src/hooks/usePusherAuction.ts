@@ -48,6 +48,7 @@ interface UsePusherAuctionReturn {
   players: Player[];
   teams: Team[];
   isConnected: boolean;
+  isRevoked: boolean;
   error: string | null;
   setPlayerUnsold: (playerId: string) => void;
   setPlayerAvailable: (playerId: string) => void;
@@ -287,6 +288,7 @@ export function usePusherAuction(
   const isOverlayMode = !!overlayToken;
 
   const [isConnected, setIsConnected] = useState(false);
+  const [isRevoked, setIsRevoked] = useState(false);
   // In non-overlay mode start as true so Effect 4 fires immediately on mount.
   const [connectTournamentChannel, setConnectTournamentChannel] = useState(!isOverlayMode);
 
@@ -392,9 +394,18 @@ export function usePusherAuction(
       }
     });
 
+    wakeChannel.bind('overlay:revoke', (data: { token: string }) => {
+      if (overlayToken && data.token === overlayToken) {
+        console.log('[usePusherAuction] Overlay session revoked via wake channel');
+        setIsRevoked(true);
+        pusher.disconnect();
+      }
+    });
+
     return () => {
       wakeChannel.unbind('auction:wake');
       wakeChannel.unbind('auction:sleep');
+      wakeChannel.unbind('overlay:revoke');
       pusher.unsubscribe(WAKE_CHANNEL);
     };
   }, [tournamentId, isOverlayMode]);
@@ -490,6 +501,14 @@ export function usePusherAuction(
         dispatch({ type: 'CLASS_COMPLETED', data });
       });
 
+      channel.bind('overlay:revoke', (data: { token: string }) => {
+        if (overlayToken && data.token === overlayToken) {
+          console.log('[usePusherAuction] Overlay session revoked via tournament channel');
+          setIsRevoked(true);
+          pusher.disconnect();
+        }
+      });
+
       const handleConnectionStateChange = (states: { current: string }) => {
         setIsConnected(states.current === 'connected');
         if (states.current === 'connected' || states.current === 'unavailable' || states.current === 'failed') {
@@ -519,6 +538,7 @@ export function usePusherAuction(
           channelRef.current.unbind('auction:state-update');
           channelRef.current.unbind('auction:class-selected');
           channelRef.current.unbind('auction:class-completed');
+          channelRef.current.unbind('overlay:revoke');
           pusher.unsubscribe(channelName);
           channelRef.current = null;
         }
@@ -549,6 +569,7 @@ export function usePusherAuction(
     players: state.players,
     teams: state.teams,
     isConnected,
+    isRevoked,
     error: state.error,
     setPlayerUnsold,
     setPlayerAvailable,

@@ -280,6 +280,24 @@ export async function triggerSleep(tournamentId: string): Promise<void> {
 }
 
 /**
+ * Revoke an overlay session — fires overlay:revoke on both channels so the
+ * active OBS browser source disconnects immediately.
+ */
+export async function triggerOverlayRevoke(tournamentId: string, token: string): Promise<void> {
+  try {
+    const pusher = getPusherInstance();
+    const payload = { token, timestamp: Date.now() };
+    await Promise.all([
+      pusher.trigger(`tournament-${tournamentId}`, 'overlay:revoke', payload),
+      pusher.trigger(WAKE_CHANNEL, 'overlay:revoke', payload),
+    ]);
+    console.log(`[Pusher] overlay:revoke sent for session ${token.slice(0, 8)}…`);
+  } catch (error) {
+    console.error('[Pusher] Error sending overlay:revoke:', error);
+  }
+}
+
+/**
  * Test Pusher connection
  */
 export async function testPusherConnection(): Promise<boolean> {

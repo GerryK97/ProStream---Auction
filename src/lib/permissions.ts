@@ -37,6 +37,9 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
   // User management (Admin only)
   { path: '/users', allowedRoles: ['Admin'] },
 
+  // Overlay session manager (Admin only)
+  { path: '/manage/overlays/sessions', allowedRoles: ['Admin'] },
+
   // InvoiceIt routes
   { path: '/invoiceit', allowedRoles: ['Admin', 'Tournament', 'MasterManager'] },
   { path: '/invoiceit/', allowedRoles: ['Admin', 'Tournament', 'MasterManager'] },

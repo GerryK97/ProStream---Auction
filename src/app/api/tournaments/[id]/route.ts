@@ -3,7 +3,7 @@ import { tournamentDB } from '@/lib/db-mongodb';
 import { PlayerClassConfig } from '@/types';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction, canAccessTournament } from '@/lib/permissions';
-import { validateOverlayToken, getOverlayTokenFromRequest } from '@/lib/overlay-auth';
+import { validateOverlayToken, validateOverlaySessionToken, getOverlayTokenFromRequest } from '@/lib/overlay-auth';
 
 /**
  * Validate player class codes
@@ -44,7 +44,10 @@ export async function GET(
   try {
     // Overlay token auth — allows OBS browser sources to read tournament data without JWT
     const overlayToken = getOverlayTokenFromRequest(request);
-    const isOverlayAuth = overlayToken && validateOverlayToken(overlayToken);
+    const isOverlayAuth = overlayToken && (
+      validateOverlayToken(overlayToken) ||
+      await validateOverlaySessionToken(overlayToken)
+    );
 
     // Authenticate user
     const user = await getUserFromRequest(request);

@@ -123,6 +123,7 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
         players,
         teams,
         isConnected,
+        isRevoked,
     } = usePusherAuction(liveTournamentId, undefined, urlToken ?? undefined);
 
     const currentPlayer = players.find(p => p._id === auctionState.currentPlayerId);
@@ -177,6 +178,18 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
             // Don't unsubscribe the channel here — usePusherAuction owns it
         };
     }, [liveTournamentId, tournament?.status]);
+
+    // Revoked state — shown when admin revokes this session
+    if (isRevoked) {
+        return (
+            <div className="w-full h-full flex items-center justify-center bg-black">
+                <div className="text-center">
+                    <p className="text-gray-500 text-lg font-medium">Access Revoked</p>
+                    <p className="text-gray-700 text-sm mt-1">Contact your administrator</p>
+                </div>
+            </div>
+        );
+    }
 
     // Error state - visible on transparent background
     if (error) {
