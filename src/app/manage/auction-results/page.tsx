@@ -44,7 +44,7 @@ function AuctionResultsPage() {
     const [teams, setTeams] = useState<Team[]>([]);
     const [loadingPlayers, setLoadingPlayers] = useState(false);
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
-    const [searchTerm, setSearchTerm] = useState('');
+    const [teamFilter, setTeamFilter] = useState<string>('');
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     // Edit modal
@@ -54,6 +54,7 @@ function AuctionResultsPage() {
 
     const fetchData = useCallback(async () => {
         if (!selectedTournamentId) { setPlayers([]); setTeams([]); return; }
+        setTeamFilter('');
         setLoadingPlayers(true);
         try {
             const [playersRes, teamsRes] = await Promise.all([
@@ -117,10 +118,10 @@ function AuctionResultsPage() {
     const totalSpent = soldPlayers.reduce((sum, p) => sum + (p.finalPrice || 0), 0);
     const teamMap = Object.fromEntries(teams.map(t => [t._id, t]));
 
-    // Filtered + searched list
+    // Filtered list
     const filteredPlayers = players
         .filter(p => statusFilter === 'All' || getPlayerStatus(p) === statusFilter)
-        .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p._id.toLowerCase().includes(searchTerm.toLowerCase()))
+        .filter(p => teamFilter === '' || p.winningTeamId === teamFilter)
         .sort((a, b) => a._id.localeCompare(b._id));
 
     return (
@@ -173,14 +174,6 @@ function AuctionResultsPage() {
 
                     {/* Filters */}
                     <div className="flex flex-wrap gap-3 mb-4">
-                        <input
-                            type="text"
-                            placeholder="Search by name or ID..."
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            className="flex-1 min-w-[180px] rounded-md px-3 py-2 text-sm"
-                            style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
-                        />
                         <select
                             value={statusFilter}
                             onChange={e => setStatusFilter(e.target.value as StatusFilter)}
@@ -208,7 +201,25 @@ function AuctionResultsPage() {
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr style={{ borderBottom: '1px solid var(--border-primary)' }}>
-                                        {['#', 'Player ID', 'Name', 'Status', 'Team', 'Sold Amount', ''].map(col => (
+                                        {['#', 'Player No', 'Name', 'Status'].map(col => (
+                                            <th key={col} className="text-left py-2 px-3 font-semibold text-xs uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
+                                                {col}
+                                            </th>
+                                        ))}
+                                        <th className="text-left py-2 px-3">
+                                            <select
+                                                value={teamFilter}
+                                                onChange={e => setTeamFilter(e.target.value)}
+                                                className="text-xs font-semibold uppercase tracking-wide rounded px-2 py-1 cursor-pointer"
+                                                style={{ backgroundColor: teamFilter ? 'var(--brand-primary)' : 'transparent', color: teamFilter ? '#fff' : 'var(--text-tertiary)', border: '1px solid ' + (teamFilter ? 'var(--brand-primary)' : 'var(--border-primary)') }}
+                                            >
+                                                <option value="">All Teams</option>
+                                                {teams.map(t => (
+                                                    <option key={t._id} value={t._id}>{t.name}</option>
+                                                ))}
+                                            </select>
+                                        </th>
+                                        {['Sold Amount', ''].map(col => (
                                             <th key={col} className="text-left py-2 px-3 font-semibold text-xs uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
                                                 {col}
                                             </th>
@@ -226,7 +237,7 @@ function AuctionResultsPage() {
                                                 className="hover:bg-white/5 transition-colors"
                                             >
                                                 <td className="py-3 px-3 text-xs" style={{ color: 'var(--text-tertiary)' }}>{index + 1}</td>
-                                                <td className="py-3 px-3 font-mono text-xs" style={{ color: 'var(--text-tertiary)' }}>{player._id}</td>
+                                                <td className="py-3 px-3 font-mono text-xs" style={{ color: 'var(--text-tertiary)' }}>{(player as any).playerNo ?? '—'}</td>
                                                 <td className="py-3 px-3 font-semibold" style={{ color: 'var(--text-primary)' }}>{player.name}</td>
                                                 <td className="py-3 px-3"><StatusBadge status={status} /></td>
                                                 <td className="py-3 px-3" style={{ color: 'var(--text-secondary)' }}>

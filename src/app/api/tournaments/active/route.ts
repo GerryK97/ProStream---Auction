@@ -52,16 +52,9 @@ export async function GET(request: NextRequest) {
     if (user!.role === 'Admin') {
       // Query already set to find any active tournament
     }
-    // Tournament role sees ONLY active tournaments they created
-    else if (user!.role === 'Tournament') {
-      query.createdBy = user!.userId;
-    }
-    // Other roles see active tournaments they created OR assigned to them
+    // All non-admin roles see only tournaments explicitly assigned to them
     else {
-      query.$or = [
-        { createdBy: user!.userId },
-        { _id: { $in: user!.assignedTournaments || [] } },
-      ];
+      query._id = { $in: user!.assignedTournaments || [] };
     }
 
     // Find tournament with Live or Stopped status (scoped by user)

@@ -80,12 +80,9 @@ export const tournamentDB = {
       return await TournamentModel.find().lean() as any;
     }
 
-    // All non-admin roles: tournaments created by user OR assigned to user
+    // All non-admin roles: only tournaments explicitly assigned to user
     const tournaments = await TournamentModel.find({
-      $or: [
-        { createdBy: userId },
-        { _id: { $in: assignedTournaments } },
-      ],
+      _id: { $in: assignedTournaments },
     }).lean() as any;
 
     return tournaments;

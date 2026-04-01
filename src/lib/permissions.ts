@@ -199,8 +199,9 @@ export function shouldAutoApproveRole(role: UserRole): boolean {
  * Check if user can access a tournament
  * User can access if:
  * - User is Admin (can access all)
- * - User created the tournament (createdBy === userId)
- * - Tournament is assigned to user (in assignedTournaments)
+ * - Tournament is explicitly assigned to user (in assignedTournaments)
+ *
+ * Note: createdBy no longer grants access — admin must explicitly assign the tournament.
  */
 export function canAccessTournament(
   userId: string,
@@ -211,13 +212,8 @@ export function canAccessTournament(
   // Admin can access all tournaments
   if (userRole === 'Admin') return true;
 
-  // User can access if they created it
-  if (tournament.createdBy === userId) return true;
-
-  // User can access if it's assigned to them
-  if (assignedTournaments.includes(tournament._id)) return true;
-
-  return false;
+  // User can access only if explicitly assigned
+  return assignedTournaments.includes(tournament._id);
 }
 
 /**
