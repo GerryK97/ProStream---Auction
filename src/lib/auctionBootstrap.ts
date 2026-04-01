@@ -104,16 +104,9 @@ export async function getAuctionBootstrapData(
     if (userRole === 'Admin') {
       // Query already set to find any active tournament
     }
-    // Tournament role sees ONLY active tournaments they created
-    else if (userRole === 'Tournament') {
-      query.createdBy = userId;
-    }
-    // Other roles see active tournaments they created OR assigned to them
+    // All non-admin roles see only tournaments explicitly assigned to them
     else {
-      query.$or = [
-        { createdBy: userId },
-        { _id: { $in: assignedTournaments || [] } },
-      ];
+      query._id = { $in: assignedTournaments || [] };
     }
 
     tournamentDoc = (await TournamentModel.findOne(query)

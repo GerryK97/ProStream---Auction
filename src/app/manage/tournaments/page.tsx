@@ -7,6 +7,7 @@ import { Tournament, BidIncrementRange, StatFieldDef } from '@/types';
 import { getAuthHeaders } from '@/lib/api-client';
 import DeleteButton from '@/components/shared/DeleteButton';
 import ImageUpload from '@/components/ImageUpload';
+import { useAuth } from '@/contexts/AuthContext';
 
 type ClassRow = { name: string; color: string; basePrice: number; code?: string };
 
@@ -41,6 +42,7 @@ function generateCodes(classes: ClassRow[]): string[] {
 
 function TournamentsManagePage() {
   const router = useRouter();
+  const { user: currentUser } = useAuth();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +53,7 @@ function TournamentsManagePage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [pendingAccessNotice, setPendingAccessNotice] = useState(false);
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
@@ -196,6 +199,7 @@ function TournamentsManagePage() {
       if (!res.ok) { setCreateError(data.error || 'Failed to create tournament'); return; }
       setTournaments(prev => [data, ...prev]);
       closeModal();
+      if (currentUser?.role !== 'Admin') setPendingAccessNotice(true);
     } catch {
       setCreateError('An error occurred while creating the tournament');
     } finally {
@@ -273,6 +277,15 @@ function TournamentsManagePage() {
           </div>
         )}
 
+        {pendingAccessNotice && (
+          <div className="bg-yellow-900/30 border border-yellow-700 rounded-lg p-4 flex items-start justify-between gap-3 mb-2">
+            <p className="text-yellow-200 text-sm">
+              <strong>Tournament created.</strong> It will be visible to you once an Admin grants you access.
+            </p>
+            <button onClick={() => setPendingAccessNotice(false)} className="text-yellow-400 hover:text-white shrink-0 text-lg leading-none">&times;</button>
+          </div>
+        )}
+
         {error && (
           <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 text-red-300">
             {error}
@@ -325,6 +338,15 @@ function TournamentsManagePage() {
                   >
                     {['Live', 'Stopped'].includes(t.status) ? 'Control Room' : 'Setup →'}
                   </button>
+                  {currentUser?.role === 'Admin' && (
+                    <button
+                      onClick={() => router.push(`/manage/tournaments/${t._id}/access`)}
+                      className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm"
+                      title="Manage user access"
+                    >
+                      Access
+                    </button>
+                  )}
                   <button
                     onClick={() => openEdit(t)}
                     className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm"
