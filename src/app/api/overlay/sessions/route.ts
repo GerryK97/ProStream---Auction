@@ -18,9 +18,9 @@ export async function GET(request: NextRequest) {
     if (!isAdmin(payload.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const tournamentId = request.nextUrl.searchParams.get('tournamentId');
-    if (!tournamentId) return NextResponse.json({ error: 'Missing tournamentId' }, { status: 400 });
 
-    const sessions = await OverlaySessionModel.find({ tournamentId })
+    const query = tournamentId ? { tournamentId } : {};
+    const sessions = await OverlaySessionModel.find(query)
       .sort({ createdAt: -1 })
       .lean();
 
