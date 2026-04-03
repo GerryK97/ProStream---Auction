@@ -16,7 +16,7 @@ import Modal from './Modal';
 
 const formatCurrency = (amount: number) => amount.toLocaleString();
 
-interface ClassStat {
+export interface ClassStat {
     code: string;
     name: string;
     color: string;
@@ -30,7 +30,7 @@ interface ClassStat {
     isCompleted: boolean;
 }
 
-const ClassManagerPanel: React.FC<{
+export const ClassManagerPanel: React.FC<{
     classStats: ClassStat[];
     onSelectClass: (code: string) => void;
     onClearClass: () => void;
@@ -75,7 +75,7 @@ const ClassManagerPanel: React.FC<{
     );
 };
 
-const AvailablePlayersPanel: React.FC<{
+export const AvailablePlayersPanel: React.FC<{
     players: Player[];
     tournament: Tournament | null;
     onSelectPlayer: (id: string) => void;
@@ -174,7 +174,8 @@ const TeamBiddingPanel: React.FC<{
     setBiddingTeamId: (id: string) => void;
     onBid: (amount: number, teamId: string) => void;
     isSold: boolean;
-}> = ({ teams, players, tournament, auctionState, currentPlayer, biddingTeamId, setBiddingTeamId, onBid, isSold }) => {
+    isMobile?: boolean;
+}> = ({ teams, players, tournament, auctionState, currentPlayer, biddingTeamId, setBiddingTeamId, onBid, isSold, isMobile }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { currentBid } = auctionState;
     const basePrice = getClassBasePrice(tournament, currentPlayer ?? null);
@@ -208,8 +209,8 @@ const TeamBiddingPanel: React.FC<{
                 </div>
             </div>
 
-            {/* Compact team buttons — 3-column, no scroll */}
-            <div className="grid grid-cols-3 gap-1.5">
+            {/* Compact team buttons — 2-column on mobile, 3-column on desktop */}
+            <div className={`grid gap-1.5 ${isMobile ? 'grid-cols-2' : 'grid-cols-3'}`}>
                 {teams.map(team => {
                     const maxBid = calcMaxBid(team);
                     const canAfford = maxBid >= nextBidAmount;
@@ -227,7 +228,7 @@ const TeamBiddingPanel: React.FC<{
                                 try { await onBid(nextBidAmount, team._id); }
                                 finally { setIsSubmitting(false); }
                             }}
-                            className="flex flex-row items-center gap-1.5 py-2 px-2 rounded-lg transition-all"
+                            className={`flex flex-row items-center gap-1.5 rounded-lg transition-all ${isMobile ? 'py-3 px-3' : 'py-2 px-2'}`}
                             style={{
                                 background: !canAfford
                                     ? 'rgba(239,68,68,0.08)'
@@ -246,7 +247,7 @@ const TeamBiddingPanel: React.FC<{
                             <img
                                 src={imageOptimizers.teamThumbnail(team.logoURL)}
                                 alt={team.name}
-                                className="w-9 h-9 rounded-full object-cover shrink-0"
+                                className={`rounded-full object-cover shrink-0 ${isMobile ? 'w-11 h-11' : 'w-9 h-9'}`}
                                 loading="lazy"
                             />
                             <div className="flex flex-col items-start min-w-0">
@@ -266,7 +267,7 @@ const TeamBiddingPanel: React.FC<{
     );
 };
 
-const CurrentAuctionPanel: React.FC<{
+export const CurrentAuctionPanel: React.FC<{
     currentPlayer: Player | undefined;
     tournament: Tournament | null;
     teams: Team[];
@@ -281,7 +282,8 @@ const CurrentAuctionPanel: React.FC<{
     onMarkUnsold: () => void;
     onSpinWheel: () => void;
     isSpinning: boolean;
-}> = ({ currentPlayer, tournament, teams, players, biddingTeamId, setBiddingTeamId, auctionState, onBid, onCorrectBid, onSell, onReset, onMarkUnsold, onSpinWheel, isSpinning }) => {
+    isMobile?: boolean;
+}> = ({ currentPlayer, tournament, teams, players, biddingTeamId, setBiddingTeamId, auctionState, onBid, onCorrectBid, onSell, onReset, onMarkUnsold, onSpinWheel, isSpinning, isMobile }) => {
     const [bidAmount, setBidAmount] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -335,7 +337,7 @@ const CurrentAuctionPanel: React.FC<{
     const statusColor = currentAuctionStatus === 'Bidding' ? 'text-yellow-400' : (isSold ? 'text-green-400' : 'text-[var(--text-tertiary)]');
 
     return (
-        <div className="rounded-lg p-4 border border-[var(--border-primary)] flex flex-col gap-3 shrink-0" style={{ backgroundColor: 'var(--surface-secondary)' }}>
+        <div className={`rounded-lg border border-[var(--border-primary)] flex flex-col ${isMobile ? 'flex-1 min-h-0 overflow-hidden p-3 gap-2' : 'p-4 gap-3 shrink-0'}`} style={{ backgroundColor: 'var(--surface-secondary)' }}>
             {/* Player info bar */}
             <div className="flex items-center gap-3 p-3 rounded-lg shrink-0" style={{ backgroundColor: 'var(--surface-elevated)' }}>
                 <img
@@ -369,17 +371,18 @@ const CurrentAuctionPanel: React.FC<{
                     setBiddingTeamId={setBiddingTeamId}
                     onBid={(amount, teamId) => { setBiddingTeamId(teamId); return onBid(amount, teamId); }}
                     isSold={isSold}
+                    isMobile={isMobile}
                 />
             ) : (
             <div className="shrink-0">
                 <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--text-tertiary)' }}>Quick Bid</p>
-                <div className="grid grid-cols-6 gap-1.5">
+                <div className={`grid gap-1.5 ${isMobile ? 'grid-cols-3' : 'grid-cols-6'}`}>
                     {bidIncrements.map(inc => (
                         <button
                             key={inc}
                             onClick={() => handleQuickBid(inc)}
                             disabled={isSold || isSubmitting}
-                            className="py-3 rounded-md text-sm font-bold transition-colors disabled:opacity-40"
+                            className={`rounded-md font-bold transition-colors disabled:opacity-40 ${isMobile ? 'py-2.5 text-sm' : 'py-3 text-sm'}`}
                             style={{
                                 border: '1.5px solid var(--brand-primary)',
                                 color: 'var(--brand-primary)',
@@ -413,7 +416,7 @@ const CurrentAuctionPanel: React.FC<{
                         value={bidAmount}
                         onChange={e => setBidAmount(parseInt(e.target.value, 10) || 0)}
                         disabled={isSold || isSubmitting}
-                        className="input-field flex-1 text-sm py-1.5 disabled:opacity-50"
+                        className={`input-field flex-1 disabled:opacity-50 ${isMobile ? 'text-sm py-2' : 'text-sm py-1.5'}`}
                         placeholder="Enter any amount"
                         style={isCorrection ? { borderColor: '#FB923C', color: '#000000' } : { color: '#000000' }}
                     />
@@ -423,7 +426,7 @@ const CurrentAuctionPanel: React.FC<{
                             isCorrection ? onCorrectBid(bidAmount, teamId) : onBid(bidAmount, teamId);
                         }}
                         disabled={isSold || isSubmitting || bidAmount <= 0}
-                        className="text-sm px-4 py-1.5 shrink-0 rounded-md font-bold transition-colors disabled:opacity-50"
+                        className={`shrink-0 rounded-md font-bold transition-colors disabled:opacity-50 ${isMobile ? 'text-sm px-4 py-2' : 'text-sm px-4 py-1.5'}`}
                         style={{
                             backgroundColor: isCorrection ? 'rgba(251,146,60,0.15)' : 'var(--surface-elevated)',
                             color: isCorrection ? '#FB923C' : 'var(--brand-primary)',
@@ -440,7 +443,7 @@ const CurrentAuctionPanel: React.FC<{
             </div>
 
             {/* Finalize section */}
-            <div className="border-t border-[var(--border-primary)] pt-3 flex flex-col gap-2 shrink-0">
+            <div className={`border-t border-[var(--border-primary)] flex flex-col gap-2 shrink-0 ${isMobile ? 'pt-2' : 'pt-3'}`}>
 
                 {/* Status */}
                 <div className="flex items-center justify-between">
@@ -455,7 +458,7 @@ const CurrentAuctionPanel: React.FC<{
                     value={biddingTeamId}
                     onChange={e => setBiddingTeamId(e.target.value)}
                     disabled={isSold || currentBid === 0}
-                    className="w-full border rounded-md px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-blue-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className={`w-full border rounded-md px-3 font-semibold focus:ring-2 focus:ring-blue-500 disabled:opacity-40 disabled:cursor-not-allowed ${isMobile ? 'py-2 text-sm' : 'py-2 text-sm'}`}
                     style={{ backgroundColor: 'var(--surface-card)', color: 'var(--text-primary)', borderColor: 'var(--border-primary)' }}>
                     {teams.map(t => (
                         <option key={t._id} value={t._id} style={{ backgroundColor: 'var(--surface-secondary)', color: 'var(--text-primary)' }}>
@@ -464,70 +467,134 @@ const CurrentAuctionPanel: React.FC<{
                     ))}
                 </select>
 
-                {/* Action buttons — one row */}
-                <div className="grid grid-cols-4 gap-2">
-                    <button
-                        onClick={onSell}
-                        disabled={isSold || currentBid === 0 || !biddingTeamId}
-                        className="py-3 rounded-lg text-sm font-black tracking-widest uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                        style={{
-                            background: isSold || currentBid === 0 || !biddingTeamId
-                                ? 'rgba(34,197,94,0.15)'
-                                : 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
-                            color: '#ffffff',
-                            border: '2px solid #16a34a',
-                            boxShadow: isSold || currentBid === 0 || !biddingTeamId ? 'none' : '0 0 16px rgba(22,163,74,0.35)',
-                            letterSpacing: 2,
-                        }}>
-                        {isSold ? '✓ Sold' : 'Sell'}
-                    </button>
-                    <button
-                        onClick={onReset}
-                        disabled={isSold}
-                        className="py-3 rounded-lg text-sm font-bold tracking-wide uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                        style={{
-                            background: 'rgba(220,38,38,0.1)',
-                            color: '#f87171',
-                            border: '1.5px solid rgba(220,38,38,0.4)',
-                        }}
-                        onMouseEnter={e => { if (!isSold) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(220,38,38,0.25)'; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(220,38,38,0.1)'; }}>
-                        Reset
-                    </button>
-                    <button
-                        onClick={onMarkUnsold}
-                        disabled={isSold}
-                        className="py-3 rounded-lg text-sm font-bold tracking-wide uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                        style={{
-                            background: 'rgba(251,146,60,0.1)',
-                            color: '#fb923c',
-                            border: '1.5px solid rgba(251,146,60,0.35)',
-                        }}
-                        onMouseEnter={e => { if (!isSold) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(251,146,60,0.25)'; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(251,146,60,0.1)'; }}>
-                        Unsold
-                    </button>
-                    <button
-                        onClick={onSpinWheel}
-                        disabled={isSpinning || auctionState.currentAuctionStatus === 'Bidding'}
-                        className="py-3 rounded-lg text-sm font-bold tracking-wide uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-                        style={{
-                            background: isSpinning ? 'rgba(124,58,237,0.25)' : 'rgba(124,58,237,0.1)',
-                            color: isSpinning ? '#c4b5fd' : '#a78bfa',
-                            border: `1.5px solid ${isSpinning ? 'rgba(124,58,237,0.6)' : 'rgba(124,58,237,0.35)'}`,
-                        }}
-                        onMouseEnter={e => { if (!isSpinning && auctionState.currentAuctionStatus !== 'Bidding') (e.currentTarget as HTMLButtonElement).style.background = 'rgba(124,58,237,0.25)'; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = isSpinning ? 'rgba(124,58,237,0.25)' : 'rgba(124,58,237,0.1)'; }}>
-                        {isSpinning ? 'Spinning…' : 'Spin'}
-                        {isSpinning && <span className="w-1.5 h-1.5 rounded-full bg-purple-300 animate-pulse" />}
-                    </button>
-                </div>
+                {/* Action buttons */}
+                {isMobile ? (
+                    <div className="flex flex-col gap-2">
+                        {/* Sell — full width, most prominent */}
+                        <button
+                            onClick={onSell}
+                            disabled={isSold || currentBid === 0 || !biddingTeamId}
+                            className="w-full py-2.5 rounded-lg text-sm font-black tracking-widest uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                            style={{
+                                background: isSold || currentBid === 0 || !biddingTeamId
+                                    ? 'rgba(34,197,94,0.15)'
+                                    : 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                                color: '#ffffff',
+                                border: '2px solid #16a34a',
+                                boxShadow: isSold || currentBid === 0 || !biddingTeamId ? 'none' : '0 0 16px rgba(22,163,74,0.35)',
+                                letterSpacing: 2,
+                            }}>
+                            {isSold ? '✓ Sold' : 'Sell'}
+                        </button>
+                        {/* Reset | Unsold | Spin — secondary row */}
+                        <div className="grid grid-cols-3 gap-2">
+                            <button
+                                onClick={onReset}
+                                disabled={isSold}
+                                className="py-2.5 rounded-lg text-sm font-bold tracking-wide uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                style={{
+                                    background: 'rgba(220,38,38,0.1)',
+                                    color: '#f87171',
+                                    border: '1.5px solid rgba(220,38,38,0.4)',
+                                }}
+                                onMouseEnter={e => { if (!isSold) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(220,38,38,0.25)'; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(220,38,38,0.1)'; }}>
+                                Reset
+                            </button>
+                            <button
+                                onClick={onMarkUnsold}
+                                disabled={isSold}
+                                className="py-2.5 rounded-lg text-sm font-bold tracking-wide uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                style={{
+                                    background: 'rgba(251,146,60,0.1)',
+                                    color: '#fb923c',
+                                    border: '1.5px solid rgba(251,146,60,0.35)',
+                                }}
+                                onMouseEnter={e => { if (!isSold) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(251,146,60,0.25)'; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(251,146,60,0.1)'; }}>
+                                Unsold
+                            </button>
+                            <button
+                                onClick={onSpinWheel}
+                                disabled={isSpinning || auctionState.currentAuctionStatus === 'Bidding'}
+                                className="py-2.5 rounded-lg text-sm font-bold tracking-wide uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                                style={{
+                                    background: isSpinning ? 'rgba(124,58,237,0.25)' : 'rgba(124,58,237,0.1)',
+                                    color: isSpinning ? '#c4b5fd' : '#a78bfa',
+                                    border: `1.5px solid ${isSpinning ? 'rgba(124,58,237,0.6)' : 'rgba(124,58,237,0.35)'}`,
+                                }}
+                                onMouseEnter={e => { if (!isSpinning && auctionState.currentAuctionStatus !== 'Bidding') (e.currentTarget as HTMLButtonElement).style.background = 'rgba(124,58,237,0.25)'; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = isSpinning ? 'rgba(124,58,237,0.25)' : 'rgba(124,58,237,0.1)'; }}>
+                                {isSpinning ? '…' : 'Spin'}
+                                {isSpinning && <span className="w-1.5 h-1.5 rounded-full bg-purple-300 animate-pulse" />}
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-4 gap-2">
+                        <button
+                            onClick={onSell}
+                            disabled={isSold || currentBid === 0 || !biddingTeamId}
+                            className="py-3 rounded-lg text-sm font-black tracking-widest uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                            style={{
+                                background: isSold || currentBid === 0 || !biddingTeamId
+                                    ? 'rgba(34,197,94,0.15)'
+                                    : 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                                color: '#ffffff',
+                                border: '2px solid #16a34a',
+                                boxShadow: isSold || currentBid === 0 || !biddingTeamId ? 'none' : '0 0 16px rgba(22,163,74,0.35)',
+                                letterSpacing: 2,
+                            }}>
+                            {isSold ? '✓ Sold' : 'Sell'}
+                        </button>
+                        <button
+                            onClick={onReset}
+                            disabled={isSold}
+                            className="py-3 rounded-lg text-sm font-bold tracking-wide uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                            style={{
+                                background: 'rgba(220,38,38,0.1)',
+                                color: '#f87171',
+                                border: '1.5px solid rgba(220,38,38,0.4)',
+                            }}
+                            onMouseEnter={e => { if (!isSold) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(220,38,38,0.25)'; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(220,38,38,0.1)'; }}>
+                            Reset
+                        </button>
+                        <button
+                            onClick={onMarkUnsold}
+                            disabled={isSold}
+                            className="py-3 rounded-lg text-sm font-bold tracking-wide uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                            style={{
+                                background: 'rgba(251,146,60,0.1)',
+                                color: '#fb923c',
+                                border: '1.5px solid rgba(251,146,60,0.35)',
+                            }}
+                            onMouseEnter={e => { if (!isSold) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(251,146,60,0.25)'; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(251,146,60,0.1)'; }}>
+                            Unsold
+                        </button>
+                        <button
+                            onClick={onSpinWheel}
+                            disabled={isSpinning || auctionState.currentAuctionStatus === 'Bidding'}
+                            className="py-3 rounded-lg text-sm font-bold tracking-wide uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                            style={{
+                                background: isSpinning ? 'rgba(124,58,237,0.25)' : 'rgba(124,58,237,0.1)',
+                                color: isSpinning ? '#c4b5fd' : '#a78bfa',
+                                border: `1.5px solid ${isSpinning ? 'rgba(124,58,237,0.6)' : 'rgba(124,58,237,0.35)'}`,
+                            }}
+                            onMouseEnter={e => { if (!isSpinning && auctionState.currentAuctionStatus !== 'Bidding') (e.currentTarget as HTMLButtonElement).style.background = 'rgba(124,58,237,0.25)'; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = isSpinning ? 'rgba(124,58,237,0.25)' : 'rgba(124,58,237,0.1)'; }}>
+                            {isSpinning ? 'Spinning…' : 'Spin'}
+                            {isSpinning && <span className="w-1.5 h-1.5 rounded-full bg-purple-300 animate-pulse" />}
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
 }
 
-const TeamsAndSoldPlayersPanel: React.FC<{
+export const TeamsAndSoldPlayersPanel: React.FC<{
     teams: Team[];
     soldPlayers: Player[];
     unsoldPlayers: Player[];
@@ -1763,6 +1830,9 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                         )}
                         <button onClick={() => setShowCompleteConfirm(true)} className="text-white font-bold py-2 px-4 rounded-lg transition-colors hover:opacity-80 text-sm" style={{ backgroundColor: 'var(--status-info)' }}>
                             ✓ Complete
+                        </button>
+                        <button onClick={() => window.location.href = '/manage/auction-mobile'} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm">
+                            📱 Mobile View
                         </button>
                     </div>
                 </div>
