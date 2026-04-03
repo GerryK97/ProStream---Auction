@@ -622,14 +622,14 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
                                             <p className="text-xs font-semibold text-orange-400">↓ Lower than current</p>
                                         )}
                                     </div>
-                                    <div className="flex gap-2">
+                                    <div className="flex flex-col gap-2">
                                         <input
                                             type="number"
                                             value={bidAmount || ''}
                                             onChange={e => setBidAmount(parseInt(e.target.value, 10) || 0)}
                                             disabled={isSold || isSubmitting}
                                             placeholder="Enter amount"
-                                            className="flex-1 rounded-xl px-4 py-3 text-base font-semibold outline-none disabled:opacity-50"
+                                            className="w-full rounded-xl px-4 py-3 text-base font-semibold outline-none disabled:opacity-50"
                                             style={{
                                                 backgroundColor: 'var(--surface-elevated)',
                                                 color: 'var(--text-primary)',
@@ -643,13 +643,13 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
                                                 else handleBid(bidAmount, teamId);
                                             }}
                                             disabled={isSold || isSubmitting || bidAmount <= 0}
-                                            className="px-5 py-3 rounded-xl font-bold text-base shrink-0 disabled:opacity-50"
+                                            className="w-full py-3 rounded-xl font-bold text-base disabled:opacity-50"
                                             style={{
                                                 backgroundColor: isCorrection ? 'rgba(251,146,60,0.15)' : 'var(--surface-elevated)',
                                                 color: isCorrection ? '#fb923c' : 'var(--brand-primary)',
                                                 border: `1.5px solid ${isCorrection ? '#fb923c' : 'var(--brand-primary)'}`,
                                             }}>
-                                            {isSubmitting ? '…' : isCorrection ? 'Fix' : 'Set'}
+                                            {isSubmitting ? '…' : isCorrection ? 'Fix Bid' : 'Set Bid'}
                                         </button>
                                     </div>
                                     {liveTournament.biddingMode === 'team' && biddingTeamId && (
