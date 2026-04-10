@@ -551,6 +551,15 @@ export function usePusherAuction(
     }
   }, [tournamentId, connectTournamentChannel]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ─── Effect 5: Re-fetch when overlay token hydrates (mobile SSR delay) ───────
+  // On mobile, useSearchParams may return null for the token on the first render.
+  // When the token becomes available after hydration, re-fetch so teams/players
+  // are loaded with proper authentication.
+  useEffect(() => {
+    if (!overlayToken || !tournamentId) return;
+    fetchInitialData();
+  }, [overlayToken, tournamentId, fetchInitialData]);
+
   const setPlayerUnsold = useCallback((playerId: string) => {
     dispatch({ type: 'SET_PLAYER_UNSOLD', playerId });
   }, []);
