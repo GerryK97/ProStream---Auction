@@ -24,6 +24,7 @@ export interface OverlaySettings {
     bidCardLeft: number;
     hideTeamCards: boolean;
     teamCardSize: 'small' | 'medium' | 'large';
+    teamCardPosition: 'top-right' | 'bottom-right';
 }
 
 const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
@@ -41,6 +42,7 @@ const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
     bidCardLeft: 1576,
     hideTeamCards: false,
     teamCardSize: 'large',
+    teamCardPosition: 'top-right',
 };
 
 interface OverlayWrapperProps {
@@ -160,6 +162,7 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
                 bidCardLeft: data.bidCardLeft ?? 1576,
                 hideTeamCards: data.hideTeamCards ?? false,
                 teamCardSize: data.teamCardSize ?? 'large',
+                teamCardPosition: data.teamCardPosition ?? 'top-right',
             });
         });
 

@@ -34,6 +34,7 @@ export interface Tournament {
   squadSize: number;
   basePricePerPlayer: number;
   logoURL?: string;
+  wheelCenterImageURL?: string;         // Image shown in the center of the Spin Wheel overlay
   createdBy?: string;                   // User ID who created the tournament
   status: 'Draft' | 'Completed' | 'Setup' | 'Pending' | 'Live' | 'Paused' | 'Stopped' | 'Archived';
   usePlayerClasses?: boolean;           // Toggle to enable/disable player classes

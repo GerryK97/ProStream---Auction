@@ -20,6 +20,7 @@ const EMPTY_FORM = {
   squadSize: 11,
   basePricePerPlayer: 50000,
   logoURL: '',
+  wheelCenterImageURL: '',
   basePriceStrategy: 'tournament-level' as 'tournament-level' | 'player-class-based',
   playerClasses: [] as ClassRow[],
   biddingMode: 'direct' as 'direct' | 'team',
@@ -98,6 +99,7 @@ function TournamentsManagePage() {
       squadSize: t.squadSize,
       basePricePerPlayer: t.basePricePerPlayer,
       logoURL: t.logoURL ?? '',
+      wheelCenterImageURL: t.wheelCenterImageURL ?? '',
       basePriceStrategy: t.basePriceStrategy ?? 'tournament-level',
       playerClasses: (t.playerClasses ?? []).map(cls => ({
         name: cls.name,
@@ -157,6 +159,7 @@ function TournamentsManagePage() {
       squadSize: form.squadSize,
       basePricePerPlayer: form.basePricePerPlayer,
       logoURL: form.logoURL.trim() || undefined,
+      wheelCenterImageURL: form.wheelCenterImageURL.trim() || undefined,
       basePriceStrategy: form.basePriceStrategy,
       usePlayerClasses: useClasses,
       playerClasses: useClasses
@@ -368,7 +371,7 @@ function TournamentsManagePage() {
       {/* Create / Edit Tournament Modal */}
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+          <div className="bg-gray-800 rounded-xl shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-5 border-b border-gray-700 shrink-0">
               <h2 className="text-lg font-semibold text-white">{isEditing ? 'Edit Tournament' : 'Create Tournament'}</h2>
               <button onClick={closeModal} className="text-gray-400 hover:text-white text-xl leading-none">&times;</button>
@@ -379,6 +382,9 @@ function TournamentsManagePage() {
                 {createError && (
                   <div className="bg-red-900/30 border border-red-700 rounded p-3 text-red-300 text-sm">{createError}</div>
                 )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+                <div className="space-y-5">
 
                 {/* Basic fields */}
                 <div className="grid grid-cols-2 gap-4">
@@ -451,6 +457,18 @@ function TournamentsManagePage() {
                       previewClassName="w-16 h-16"
                       previewShape="square"
                       id="tournament-logo-create"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <ImageUpload
+                      value={form.wheelCenterImageURL}
+                      onChange={url => setForm(f => ({ ...f, wheelCenterImageURL: url }))}
+                      folder="tournaments"
+                      label="Auctioner/Streamer Logo (optional)"
+                      placeholder="Auctioner/Streamer logo URL"
+                      previewClassName="w-16 h-16"
+                      previewShape="circle"
+                      id="tournament-wheel-center-create"
                     />
                   </div>
                 </div>
@@ -555,6 +573,9 @@ function TournamentsManagePage() {
                     </div>
                   )}
                 </div>
+
+                </div>
+                <div className="space-y-5">
 
                 {/* Bidding Mode */}
                 <div className="border border-gray-700 rounded-lg p-4 space-y-3">
@@ -756,6 +777,8 @@ function TournamentsManagePage() {
                       ))}
                     </div>
                   </div>
+                </div>
+                </div>
                 </div>
               </div>
 

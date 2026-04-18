@@ -21,6 +21,46 @@ const FONT_BODY = "'Rajdhani', sans-serif";
 const RestingTimeOverlay: React.FC<RestingTimeOverlayProps> = ({ tournament, overrideLabel }) => {
     const fallbackLabel = tournament?.name?.slice(0, 2).toUpperCase() ?? 'PS';
 
+    // Coin faces: front = tournament logo (fallback to streamer logo),
+    // back = streamer/auctioner logo (fallback to tournament logo).
+    // If both missing, both faces show the fallback letters.
+    const tournamentLogo = tournament?.logoURL ?? null;
+    const streamerLogo = tournament?.wheelCenterImageURL ?? null;
+    const frontSrc = tournamentLogo ?? streamerLogo;
+    const backSrc = streamerLogo ?? tournamentLogo;
+
+    const faceBase: React.CSSProperties = {
+        position: 'absolute',
+        inset: 0,
+        borderRadius: '50%',
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
+        background: 'linear-gradient(145deg, var(--overlay-bg-panel) 0%, var(--overlay-bg-fullscreen) 100%)',
+    };
+
+    const renderFace = (src: string | null, extraStyle?: React.CSSProperties) => (
+        <div style={{ ...faceBase, ...extraStyle }}>
+            {src ? (
+                <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+                <span style={{
+                    fontFamily: FONT_HEADING,
+                    fontSize: 110,
+                    color: 'var(--overlay-color-primary)',
+                    letterSpacing: 8,
+                    lineHeight: 1,
+                    display: 'block',
+                }}>
+                    {fallbackLabel}
+                </span>
+            )}
+        </div>
+    );
+
     return (
         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
             <div style={{ width: CANVAS_W, height: CANVAS_H, position: 'relative', overflow: 'hidden', flexShrink: 0,
@@ -51,7 +91,7 @@ const RestingTimeOverlay: React.FC<RestingTimeOverlayProps> = ({ tournament, ove
                 }} />
 
 
-                {/* ── Coin — glow + flip combined in one animation declaration ── */}
+                {/* ── Coin — pulseGlow on outer wrapper; inner flips in 3D with two faces ── */}
                 <div style={{
                     position: 'absolute',
                     left: CX - COIN_SIZE / 2,
@@ -59,31 +99,19 @@ const RestingTimeOverlay: React.FC<RestingTimeOverlayProps> = ({ tournament, ove
                     width: COIN_SIZE,
                     height: COIN_SIZE,
                     borderRadius: '50%',
-                    border: '5px solid var(--overlay-color-primary)',
-                    background: 'linear-gradient(145deg, var(--overlay-bg-panel) 0%, var(--overlay-bg-fullscreen) 100%)',
-                    overflow: 'hidden',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    // Combine both animations on the same element to avoid class-override conflict
-                    animation: 'coinFlip 3s linear infinite, pulseGlow 2.5s ease-in-out infinite',
+                    animation: 'pulseGlow 2.5s ease-in-out infinite',
                 }}>
-                    {tournament?.logoURL ? (
-                        <img
-                            src={tournament.logoURL}
-                            alt={tournament.name}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                    ) : (
-                        <span style={{
-                            fontFamily: FONT_HEADING,
-                            fontSize: 110,
-                            color: 'var(--overlay-color-primary)',
-                            letterSpacing: 8,
-                            lineHeight: 1,
-                            display: 'block',
-                        }}>
-                            {fallbackLabel}
-                        </span>
-                    )}
+                    <div style={{
+                        position: 'relative',
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: '50%',
+                        transformStyle: 'preserve-3d',
+                        animation: 'coinFlip 3s linear infinite',
+                    }}>
+                        {renderFace(frontSrc, { border: '5px solid var(--overlay-color-primary)' })}
+                        {renderFace(backSrc, { border: '5px solid var(--overlay-color-primary)', transform: 'rotateY(180deg)' })}
+                    </div>
                 </div>
 
                 {/* ── Tournament name ── */}

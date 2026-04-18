@@ -10,6 +10,7 @@ const tournamentSchema = new Schema<Tournament>(
     squadSize: { type: Number, required: true },
     basePricePerPlayer: { type: Number, required: true },
     logoURL: { type: String },
+    wheelCenterImageURL: { type: String },
     createdBy: { type: String, required: false }, // User ID who created the tournament
     status: {
       type: String,

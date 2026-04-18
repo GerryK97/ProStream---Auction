@@ -159,15 +159,15 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
     };
 
     return (
-        <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {error && (
-                <div className="col-span-2 rounded-md p-3 text-sm" style={{ color: 'var(--status-danger)', background: 'color-mix(in oklab, var(--status-danger) 12%, transparent)', border: '1px solid color-mix(in oklab, var(--status-danger) 40%, transparent)' }}>
+                <div className="col-span-full rounded-md p-3 text-sm" style={{ color: 'var(--status-danger)', background: 'color-mix(in oklab, var(--status-danger) 12%, transparent)', border: '1px solid color-mix(in oklab, var(--status-danger) 40%, transparent)' }}>
                     {error}
                 </div>
             )}
 
             {/* Tournament — full width */}
-            <div className="col-span-2">
+            <div className="col-span-full">
                 {isEditMode ? (
                     <>
                         <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Tournament</label>
@@ -254,7 +254,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
 
             {/* Stat Fields — conditional on tournament config */}
             {ppf && ppf.statFields.length > 0 && (
-                <div className="col-span-2 grid grid-cols-2 gap-4">
+                <div className="col-span-full grid grid-cols-2 gap-4">
                     {ppf.statFields.map(sf => (
                         <div key={sf.key}>
                             <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
@@ -275,7 +275,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
 
             {/* Iconic Player — full width, conditional */}
             {tournamentId && (
-                <div className="col-span-2 rounded-md p-4 space-y-3" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}>
+                <div className="col-span-full rounded-md p-4 space-y-3" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}>
                     <label className="flex items-center gap-2 cursor-pointer">
                         <input
                             type="checkbox"
@@ -347,7 +347,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
             />
 
             {/* Buttons — full width */}
-            <div className="col-span-2 pt-2 flex justify-end gap-3">
+            <div className="col-span-full pt-2 flex justify-end gap-3">
                 <button type="button" onClick={onCancel} className="font-bold py-2 px-4 rounded-lg transition-colors hover:opacity-80" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}>Cancel</button>
                 <button type="submit" disabled={saving} className="inline-flex items-center gap-2 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:opacity-80 disabled:opacity-60" style={{ backgroundColor: 'var(--brand-primary)' }}>
                     {isEditMode ? (
