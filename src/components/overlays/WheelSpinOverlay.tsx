@@ -12,6 +12,8 @@ const CX = 500;
 const CY = 500;
 const R  = 455;                   // wheel outer radius
 const R_LABEL = Math.round(R * 0.78); // label near outer rim
+const R_HUB = 120;                // center hub radius (holds optional image)
+const HUB_STROKE = 6;             // stroke width of the hub border
 
 // Color palette — cycles by segment index
 const SEGMENT_COLORS = [
@@ -34,7 +36,7 @@ function segmentPath(startDeg: number, endDeg: number): string {
 }
 
 const WheelSpinOverlay: React.FC<WheelSpinOverlayProps> = ({ data }) => {
-  const { players, winnerIndex, spinDurationMs } = data;
+  const { players, winnerIndex, spinDurationMs, centerImageURL } = data;
   const N = players.length;
   const segDeg = 360 / N;
 
@@ -191,22 +193,48 @@ const WheelSpinOverlay: React.FC<WheelSpinOverlayProps> = ({ data }) => {
                 </g>
               ))}
 
-              {/* Center hub */}
-              <circle cx={CX} cy={CY} r={52} fill="var(--overlay-bg-fullscreen, #0d1117)" stroke="var(--overlay-color-primary, #FFC919)" strokeWidth="4" />
+            </g>
+
+            {/* Center hub — rendered OUTSIDE the spinning group so the image stays upright */}
+            <defs>
+              <clipPath id="ws-hub-clip">
+                <circle cx={CX} cy={CY} r={R_HUB - HUB_STROKE} />
+              </clipPath>
+            </defs>
+            <circle
+              cx={CX}
+              cy={CY}
+              r={R_HUB}
+              fill="var(--overlay-bg-fullscreen, #0d1117)"
+              stroke="var(--overlay-color-primary, #FFC919)"
+              strokeWidth={HUB_STROKE}
+            />
+            {centerImageURL ? (
+              <image
+                href={centerImageURL}
+                x={CX - (R_HUB - HUB_STROKE)}
+                y={CY - (R_HUB - HUB_STROKE)}
+                width={(R_HUB - HUB_STROKE) * 2}
+                height={(R_HUB - HUB_STROKE) * 2}
+                clipPath="url(#ws-hub-clip)"
+                preserveAspectRatio="xMidYMid slice"
+              />
+            ) : (
               <text
-                x={CX} y={CY + 2}
+                x={CX}
+                y={CY + 4}
                 textAnchor="middle"
                 dominantBaseline="middle"
                 style={{
                   fontFamily: '"Bebas Neue", cursive',
-                  fontSize: 24,
+                  fontSize: 54,
                   fill: 'var(--overlay-color-primary, #FFC919)',
-                  letterSpacing: 3,
+                  letterSpacing: 6,
                 } as React.CSSProperties}
               >
                 SPIN
               </text>
-            </g>
+            )}
 
             {/* Fixed pointer — NOT inside the spinning group */}
             <g className="ws-pointer">

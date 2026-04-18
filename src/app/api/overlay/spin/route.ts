@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { PlayerModel } from '@/models/Player';
 import { AuctionStateModel } from '@/models/AuctionState';
+import { TournamentModel } from '@/models/Tournament';
 import { triggerWheelSpin } from '@/lib/pusher-server';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
@@ -27,7 +28,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Get current auction state to exclude the player already on stage and apply class filter
-    const auctionState = await AuctionStateModel.findOne({ tournamentId }).lean();
+    const [auctionState, tournament] = await Promise.all([
+      AuctionStateModel.findOne({ tournamentId }).lean(),
+      TournamentModel.findById(tournamentId).select('wheelCenterImageURL').lean(),
+    ]);
+    const centerImageURL = (tournament as any)?.wheelCenterImageURL as string | undefined;
     const currentPlayerId = (auctionState as any)?.currentPlayerId ?? null;
     const currentAuctionClass = (auctionState as any)?.currentAuctionClass ?? null;
 
@@ -69,7 +74,7 @@ export async function POST(request: NextRequest) {
 
     // Broadcast spin event — overlays animate to winner
     try {
-      await triggerWheelSpin(tournamentId, { players, winnerId, winnerIndex, spinDurationMs });
+      await triggerWheelSpin(tournamentId, { players, winnerId, winnerIndex, spinDurationMs, centerImageURL });
     } catch (pusherError) {
       console.error('[spin] triggerWheelSpin failed:', pusherError);
       const msg = pusherError instanceof Error ? pusherError.message : String(pusherError);

@@ -189,6 +189,7 @@ export interface OverlaySettingsEvent extends BasePusherEvent {
   bidCardLeft?: number;
   hideTeamCards?: boolean;
   teamCardSize?: 'small' | 'medium' | 'large';
+  teamCardPosition?: 'top-right' | 'bottom-right';
 }
 
 /**
@@ -208,6 +209,7 @@ export interface WheelSpinEvent extends BasePusherEvent {
   winnerId: string;
   winnerIndex: number;
   spinDurationMs: number;
+  centerImageURL?: string;
 }
 
 /**

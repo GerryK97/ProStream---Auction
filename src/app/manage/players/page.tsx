@@ -379,7 +379,7 @@ function PlayersManagePage() {
             )}
 
             {/* Add Player Modal */}
-            <Modal isOpen={isAddModalOpen} onClose={() => setAddModalOpen(false)} title="Add Player" size="2xl">
+            <Modal isOpen={isAddModalOpen} onClose={() => setAddModalOpen(false)} title="Add Player" size="4xl">
                 <PlayerForm
                     tournaments={tournaments}
                     defaultTournamentId={selectedTournamentId || ''}
@@ -389,7 +389,7 @@ function PlayersManagePage() {
             </Modal>
 
             {/* Edit Player Modal */}
-            <Modal isOpen={!!editingPlayer} onClose={() => setEditingPlayer(null)} title="Edit Player" size="2xl">
+            <Modal isOpen={!!editingPlayer} onClose={() => setEditingPlayer(null)} title="Edit Player" size="4xl">
                 {editingPlayer && (
                     <PlayerForm
                         tournaments={tournaments}

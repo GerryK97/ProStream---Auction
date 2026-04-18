@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { tournamentId, size, tickerMode, displayMode, hidePremiumCard, customTickerLine1, customTickerLine2, soldMessagePosition, hideTickerCustom, hideTickerFullscreen, teamWiseTeamId, bidCardTop, bidCardLeft, hideTeamCards, teamCardSize } = await request.json();
+    const { tournamentId, size, tickerMode, displayMode, hidePremiumCard, customTickerLine1, customTickerLine2, soldMessagePosition, hideTickerCustom, hideTickerFullscreen, teamWiseTeamId, bidCardTop, bidCardLeft, hideTeamCards, teamCardSize, teamCardPosition } = await request.json();
 
     if (!tournamentId) {
       return NextResponse.json({ error: 'Missing tournamentId' }, { status: 400 });
@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
       bidCardLeft: bidCardLeft ?? 1576,
       hideTeamCards: hideTeamCards ?? false,
       teamCardSize: teamCardSize ?? 'large',
+      teamCardPosition: teamCardPosition ?? 'top-right',
     });
 
     return NextResponse.json({ ok: true });

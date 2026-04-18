@@ -992,6 +992,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const hideTeamCardsRef = useRef(false);
     const [teamCardSize, setTeamCardSize] = useState<'small' | 'medium' | 'large'>('large');
     const teamCardSizeRef = useRef<'small' | 'medium' | 'large'>('large');
+    const [teamCardPosition, setTeamCardPosition] = useState<'top-right' | 'bottom-right'>('top-right');
+    const teamCardPositionRef = useRef<'top-right' | 'bottom-right'>('top-right');
     const [showTeamSizeMenu, setShowTeamSizeMenu] = useState(false);
     const [showHideTickerMenu, setShowHideTickerMenu] = useState(false);
     const [showBidCardMenu, setShowBidCardMenu] = useState(false);
@@ -1035,7 +1037,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             await fetch('/api/overlay/settings', {
                 method: 'POST',
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tournamentId, size, tickerMode: mode, displayMode: dm, hidePremiumCard: hideCard, customTickerLine1: line1, customTickerLine2: line2, soldMessagePosition: soldMsgPos, hideTickerCustom: hideTickerCustomRef.current, hideTickerFullscreen: hideTickerFullscreenRef.current, teamWiseTeamId: teamWiseTeamIdRef.current, bidCardTop: bidCardTopRef.current, bidCardLeft: bidCardLeftRef.current, hideTeamCards: hideTeamCardsRef.current, teamCardSize: teamCardSizeRef.current }),
+                body: JSON.stringify({ tournamentId, size, tickerMode: mode, displayMode: dm, hidePremiumCard: hideCard, customTickerLine1: line1, customTickerLine2: line2, soldMessagePosition: soldMsgPos, hideTickerCustom: hideTickerCustomRef.current, hideTickerFullscreen: hideTickerFullscreenRef.current, teamWiseTeamId: teamWiseTeamIdRef.current, bidCardTop: bidCardTopRef.current, bidCardLeft: bidCardLeftRef.current, hideTeamCards: hideTeamCardsRef.current, teamCardSize: teamCardSizeRef.current, teamCardPosition: teamCardPositionRef.current }),
             });
         } catch { /* non-critical */ }
     };
@@ -2057,6 +2059,34 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                                         </div>
                                     </>
                                 )}
+                            </div>
+                            {/* Team Card position — segmented toggle */}
+                            <div className="flex items-center rounded-md overflow-hidden" style={{ border: '1px solid var(--border-primary)' }}>
+                                {([
+                                    { value: 'top-right',    label: 'Top'    },
+                                    { value: 'bottom-right', label: 'Bottom' },
+                                ] as const).map(({ value, label }) => (
+                                    <button
+                                        key={value}
+                                        onClick={() => {
+                                            setTeamCardPosition(value);
+                                            teamCardPositionRef.current = value;
+                                            sendOverlaySettings(overlaySize, tickerMode);
+                                        }}
+                                        title={`Team cards position: ${label}`}
+                                        style={{
+                                            padding: '6px 10px',
+                                            fontSize: 12,
+                                            fontWeight: 600,
+                                            background: teamCardPosition === value ? 'var(--brand-primary)' : 'var(--surface-elevated)',
+                                            color: teamCardPosition === value ? '#fff' : 'var(--text-secondary)',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
                             </div>
                         </div>
                         <div className="flex items-center gap-3 flex-wrap">

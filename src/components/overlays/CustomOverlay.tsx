@@ -833,8 +833,9 @@ function CustomOverlayContent({
           <div style={{
             position: 'absolute',
             left: 1490,
-            top: 160,
-            transformOrigin: 'top right',
+            ...(overlaySettings.teamCardPosition === 'bottom-right'
+              ? { bottom: 160, transformOrigin: 'bottom right' }
+              : { top: 160, transformOrigin: 'top right' }),
             transform: overlaySettings.teamCardSize === 'small'  ? 'scale(0.65)'
                      : overlaySettings.teamCardSize === 'medium' ? 'scale(0.8)'
                      : 'scale(1)',
