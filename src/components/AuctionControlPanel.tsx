@@ -13,6 +13,7 @@ import { useTournamentContext } from '@/contexts/TournamentContext';
 import { useAuth } from '@/contexts/AuthContext';
 import TournamentSelector from './TournamentSelector';
 import Modal from './Modal';
+import OverlayControlsPanel from './overlay-controls/OverlayControlsPanel';
 
 const formatCurrency = (amount: number) => amount.toLocaleString();
 
@@ -1096,13 +1097,15 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     // Detect loading state: tournamentId is set but tournament data hasn't loaded yet
     const isLoading = liveTournamentId && !liveTournament && !pusherError;
 
-    // Auto-switch: when a new player is selected, show Large then shrink to Small after N seconds
+    // Auto-switch: when a new player is selected, show Large then shrink to Small after N seconds.
+    // Only active in standard mode — other display modes hide the player card, so the timer would
+    // silently flip overlaySize underneath a non-visible card.
     useEffect(() => {
         if (autoSwitchTimerRef.current) {
             clearTimeout(autoSwitchTimerRef.current);
             autoSwitchTimerRef.current = null;
         }
-        if (!autoSwitch || !auctionState.currentPlayerId) return;
+        if (!autoSwitch || !auctionState.currentPlayerId || displayMode !== 'standard' || hidePremiumCard) return;
 
         setOverlaySize('large');
         sendOverlaySettingsRef.current('large', tickerModeRef.current);
@@ -1113,7 +1116,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             autoSwitchTimerRef.current = null;
         }, autoSwitchDurationRef.current * 1000);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [auctionState.currentPlayerId, autoSwitch]);
+    }, [auctionState.currentPlayerId, autoSwitch, displayMode, hidePremiumCard]);
 
     // Cleanup timers on unmount
     useEffect(() => {
@@ -1890,685 +1893,53 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                         onSpinWheel={handleSpinWheel}
                         isSpinning={isSpinning}
                     />
-                    {/* Overlay Controls — spacious panel with room for future features */}
-                    <div className="rounded-lg p-5 border border-[var(--border-primary)] flex-1 min-h-0" style={{ backgroundColor: 'var(--surface-secondary)' }}>
-                        <h3 className="font-bold text-sm uppercase tracking-widest mb-4" style={{ color: 'var(--text-tertiary)' }}>Overlay Controls</h3>
-                        <div className="flex items-center gap-3 mb-4 flex-wrap">
-                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Player Card & Bid:</span>
-                            {(['large', 'small'] as const).map(s => (
-                                <button
-                                    key={s}
-                                    onClick={() => {
-                                        if (autoSwitchTimerRef.current) { clearTimeout(autoSwitchTimerRef.current); autoSwitchTimerRef.current = null; }
-                                        setOverlaySize(s);
-                                        sendOverlaySettings(s, tickerMode);
-                                    }}
-                                    className="px-4 py-1.5 rounded-md text-sm font-semibold capitalize transition-all"
-                                    style={{
-                                        backgroundColor: overlaySize === s ? 'var(--brand-primary)' : 'var(--surface-elevated)',
-                                        color: overlaySize === s ? '#fff' : 'var(--text-secondary)',
-                                        border: '1px solid var(--border-primary)',
-                                    }}>{s}</button>
-                            ))}
-                            {/* Divider */}
-                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
-                            {/* Auto Switch toggle */}
-                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Auto:</span>
-                            <button
-                                onClick={() => {
-                                    const next = !autoSwitch;
-                                    setAutoSwitch(next);
-                                    if (!next && autoSwitchTimerRef.current) {
-                                        clearTimeout(autoSwitchTimerRef.current);
-                                        autoSwitchTimerRef.current = null;
-                                    }
-                                }}
-                                className="text-xs px-3 py-1.5 rounded-md font-semibold transition-all"
-                                style={{
-                                    backgroundColor: autoSwitch ? 'var(--brand-primary)' : 'var(--surface-elevated)',
-                                    color: autoSwitch ? '#fff' : 'var(--text-muted)',
-                                    border: `1px solid ${autoSwitch ? 'var(--brand-primary)' : 'var(--border-primary)'}`,
-                                }}
-                            >{autoSwitch ? 'ON' : 'OFF'}</button>
-                            {/* Duration — only shown when Auto Switch is ON */}
-                            {autoSwitch && (
-                                <>
-                                    <input
-                                        type="number"
-                                        min={1}
-                                        max={60}
-                                        value={autoSwitchDuration}
-                                        onChange={e => setAutoSwitchDuration(Math.max(1, Math.min(60, Number(e.target.value))))}
-                                        className="w-14 text-center text-xs px-2 py-1.5 rounded-md border"
-                                        style={{
-                                            backgroundColor: 'var(--surface-elevated)',
-                                            borderColor: 'var(--border-primary)',
-                                            color: 'var(--text-primary)',
-                                        }}
-                                    />
-                                    <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>sec</span>
-                                </>
-                            )}
-                            {/* Divider */}
-                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
-                            {/* Player Card visibility toggle */}
-                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Player Card:</span>
-                            <button
-                                onClick={() => {
-                                    const next = !hidePremiumCard;
-                                    setHidePremiumCard(next);
-                                    sendOverlaySettings(overlaySize, tickerMode, displayMode, next);
-                                }}
-                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
-                                style={{
-                                    backgroundColor: hidePremiumCard ? 'var(--status-danger)' : 'var(--surface-elevated)',
-                                    color: hidePremiumCard ? '#fff' : 'var(--text-secondary)',
-                                    border: `1px solid ${hidePremiumCard ? 'var(--status-danger)' : 'var(--border-primary)'}`,
-                                }}
-                            >
-                                <span>{hidePremiumCard ? 'Hidden' : 'Visible'}</span>
-                                {hidePremiumCard && (
-                                    <span className="w-2 h-2 rounded-full bg-red-300 animate-pulse" />
-                                )}
-                            </button>
-                            {hidePremiumCard && (
-                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                                    Card hidden on OBS overlay
-                                </span>
-                            )}
-                            {/* Divider */}
-                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
-                            {/* Team Cards visibility */}
-                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Team Cards:</span>
-                            <button
-                                onClick={() => {
-                                    const next = !hideTeamCards;
-                                    setHideTeamCards(next);
-                                    hideTeamCardsRef.current = next;
-                                    sendOverlaySettings(overlaySize, tickerMode);
-                                }}
-                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
-                                style={{
-                                    backgroundColor: hideTeamCards ? 'var(--status-danger)' : 'var(--surface-elevated)',
-                                    color: hideTeamCards ? '#fff' : 'var(--text-secondary)',
-                                    border: `1px solid ${hideTeamCards ? 'var(--status-danger)' : 'var(--border-primary)'}`,
-                                }}
-                            >
-                                <span>{hideTeamCards ? 'Hidden' : 'Visible'}</span>
-                                {hideTeamCards && <span className="w-2 h-2 rounded-full bg-red-300 animate-pulse" />}
-                            </button>
-                            {/* Team Card size — gear icon with dropdown */}
-                            <div style={{ position: 'relative' }}>
-                                <button
-                                    onClick={() => setShowTeamSizeMenu(v => !v)}
-                                    title={`Card size: ${teamCardSize}`}
-                                    className="flex items-center justify-center w-8 h-8 rounded-md transition-all"
-                                    style={{
-                                        backgroundColor: showTeamSizeMenu ? 'var(--brand-primary)' : 'var(--surface-elevated)',
-                                        color: showTeamSizeMenu ? '#fff' : 'var(--text-secondary)',
-                                        border: `1px solid ${showTeamSizeMenu ? 'var(--brand-primary)' : 'var(--border-primary)'}`,
-                                    }}
-                                >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <circle cx="12" cy="12" r="3"/>
-                                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                                    </svg>
-                                </button>
-                                {showTeamSizeMenu && (
-                                    <>
-                                        {/* Backdrop to close on outside click */}
-                                        <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => setShowTeamSizeMenu(false)} />
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: '110%',
-                                            left: '50%',
-                                            transform: 'translateX(-50%)',
-                                            zIndex: 11,
-                                            background: 'var(--surface-elevated)',
-                                            border: '1px solid var(--border-primary)',
-                                            borderRadius: 8,
-                                            overflow: 'hidden',
-                                            minWidth: 90,
-                                            boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
-                                        }}>
-                                            {(['small', 'medium', 'large'] as const).map(s => (
-                                                <button
-                                                    key={s}
-                                                    onClick={() => {
-                                                        setTeamCardSize(s);
-                                                        teamCardSizeRef.current = s;
-                                                        sendOverlaySettings(overlaySize, tickerMode);
-                                                        setShowTeamSizeMenu(false);
-                                                    }}
-                                                    style={{
-                                                        display: 'block',
-                                                        width: '100%',
-                                                        padding: '7px 14px',
-                                                        textAlign: 'left',
-                                                        fontSize: 13,
-                                                        fontWeight: 600,
-                                                        background: teamCardSize === s ? 'var(--brand-primary)' : 'transparent',
-                                                        color: teamCardSize === s ? '#fff' : 'var(--text-secondary)',
-                                                        border: 'none',
-                                                        cursor: 'pointer',
-                                                    }}
-                                                >
-                                                    {s.charAt(0).toUpperCase() + s.slice(1)}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                            {/* Team Card position — segmented toggle */}
-                            <div className="flex items-center rounded-md overflow-hidden" style={{ border: '1px solid var(--border-primary)' }}>
-                                {([
-                                    { value: 'top-right',    label: 'Top'    },
-                                    { value: 'bottom-right', label: 'Bottom' },
-                                ] as const).map(({ value, label }) => (
-                                    <button
-                                        key={value}
-                                        onClick={() => {
-                                            setTeamCardPosition(value);
-                                            teamCardPositionRef.current = value;
-                                            sendOverlaySettings(overlaySize, tickerMode);
-                                        }}
-                                        title={`Team cards position: ${label}`}
-                                        style={{
-                                            padding: '6px 10px',
-                                            fontSize: 12,
-                                            fontWeight: 600,
-                                            background: teamCardPosition === value ? 'var(--brand-primary)' : 'var(--surface-elevated)',
-                                            color: teamCardPosition === value ? '#fff' : 'var(--text-secondary)',
-                                            border: 'none',
-                                            cursor: 'pointer',
-                                        }}
-                                    >
-                                        {label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3 flex-wrap">
-                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Ticker Option:</span>
-                            {([
-                                { value: 'all',       label: 'All Players'       },
-                                { value: 'sold',      label: 'Sold Players'      },
-                                { value: 'available', label: 'Available Players' },
-                            ] as const).map(({ value, label }) => (
-                                <button
-                                    key={value}
-                                    onClick={() => { setTickerMode(value); sendOverlaySettings(overlaySize, value); }}
-                                    className="px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
-                                    style={{
-                                        backgroundColor: tickerMode === value ? 'var(--brand-primary)' : 'var(--surface-elevated)',
-                                        color: tickerMode === value ? '#fff' : 'var(--text-secondary)',
-                                        border: '1px solid var(--border-primary)',
-                                    }}>{label}</button>
-                            ))}
-                            {/* Divider */}
-                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
-                            {/* Custom Ticker */}
-                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Custom Ticker:</span>
-                            <button
-                                onClick={() => {
-                                    const next = displayMode === 'custom-ticker' ? 'standard' : 'custom-ticker';
-                                    setDisplayMode(next);
-                                    sendOverlaySettings(overlaySize, tickerMode, next);
-                                }}
-                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
-                                style={{
-                                    backgroundColor: displayMode === 'custom-ticker' ? '#0891B2' : 'var(--surface-elevated)',
-                                    color: displayMode === 'custom-ticker' ? '#fff' : 'var(--text-secondary)',
-                                    border: '1px solid var(--border-primary)',
-                                }}
-                            >
-                                <span>{displayMode === 'custom-ticker' ? 'Hide' : 'Show'}</span>
-                                {displayMode === 'custom-ticker' && (
-                                    <span className="w-2 h-2 rounded-full bg-cyan-300 animate-pulse" />
-                                )}
-                            </button>
-                            <button
-                                onClick={() => setShowTickerModal(true)}
-                                className="flex items-center justify-center w-8 h-8 rounded-md transition-all"
-                                style={{
-                                    backgroundColor: 'var(--surface-elevated)',
-                                    color: 'var(--text-secondary)',
-                                    border: '1px solid var(--border-primary)',
-                                }}
-                                title="Edit Custom Ticker lines"
-                            >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="12" cy="12" r="3"/>
-                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                                </svg>
-                            </button>
-                            {/* Divider */}
-                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
-                            {/* Hide Ticker — gear icon with dropdown */}
-                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Hide Ticker:</span>
-                            <div style={{ position: 'relative' }}>
-                                <button
-                                    onClick={() => setShowHideTickerMenu(v => !v)}
-                                    title="Hide ticker per screen"
-                                    className="flex items-center justify-center w-8 h-8 rounded-md transition-all"
-                                    style={{
-                                        backgroundColor: (hideTickerCustom || hideTickerFullscreen)
-                                            ? 'var(--status-danger)'
-                                            : showHideTickerMenu ? 'var(--brand-primary)' : 'var(--surface-elevated)',
-                                        color: (hideTickerCustom || hideTickerFullscreen) || showHideTickerMenu ? '#fff' : 'var(--text-secondary)',
-                                        border: `1px solid ${(hideTickerCustom || hideTickerFullscreen) ? 'var(--status-danger)' : showHideTickerMenu ? 'var(--brand-primary)' : 'var(--border-primary)'}`,
-                                    }}
-                                >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <circle cx="12" cy="12" r="3"/>
-                                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                                    </svg>
-                                </button>
-                                {showHideTickerMenu && (
-                                    <>
-                                        <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => setShowHideTickerMenu(false)} />
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: '110%',
-                                            left: '50%',
-                                            transform: 'translateX(-50%)',
-                                            zIndex: 11,
-                                            background: 'var(--surface-elevated)',
-                                            border: '1px solid var(--border-primary)',
-                                            borderRadius: 8,
-                                            overflow: 'hidden',
-                                            minWidth: 110,
-                                            boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
-                                        }}>
-                                            <button
-                                                onClick={() => {
-                                                    const next = !hideTickerCustom;
-                                                    setHideTickerCustom(next);
-                                                    hideTickerCustomRef.current = next;
-                                                    sendOverlaySettings(overlaySize, tickerMode);
-                                                }}
-                                                style={{
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                                    width: '100%', padding: '7px 14px', gap: 8,
-                                                    fontSize: 13, fontWeight: 600,
-                                                    background: hideTickerCustom ? 'rgba(239,68,68,0.15)' : 'transparent',
-                                                    color: hideTickerCustom ? '#f87171' : 'var(--text-secondary)',
-                                                    border: 'none', cursor: 'pointer',
-                                                }}
-                                                title="Hide ticker on Custom Overlay"
-                                            >
-                                                <span>Screen 1</span>
-                                                {hideTickerCustom && <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />}
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    const next = !hideTickerFullscreen;
-                                                    setHideTickerFullscreen(next);
-                                                    hideTickerFullscreenRef.current = next;
-                                                    sendOverlaySettings(overlaySize, tickerMode);
-                                                }}
-                                                style={{
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                                    width: '100%', padding: '7px 14px', gap: 8,
-                                                    fontSize: 13, fontWeight: 600,
-                                                    background: hideTickerFullscreen ? 'rgba(239,68,68,0.15)' : 'transparent',
-                                                    color: hideTickerFullscreen ? '#f87171' : 'var(--text-secondary)',
-                                                    border: 'none', cursor: 'pointer',
-                                                }}
-                                                title="Hide ticker on FullScreen Overlay"
-                                            >
-                                                <span>Screen 2</span>
-                                                {hideTickerFullscreen && <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />}
-                                            </button>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                        {/* Row 2: Player Summary · Team Summary · Top 10 Sold · Custom Ticker */}
-                        <div className="flex items-center gap-3 mt-4 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border-primary)' }}>
-                            {/* Player Summary */}
-                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Player Summary:</span>
-                            <button
-                                onClick={() => {
-                                    const next = displayMode === 'sold-summary' ? 'standard' : 'sold-summary';
-                                    setDisplayMode(next);
-                                    sendOverlaySettings(overlaySize, tickerMode, next);
-                                }}
-                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
-                                style={{
-                                    backgroundColor: displayMode === 'sold-summary' ? 'var(--brand-primary)' : 'var(--surface-elevated)',
-                                    color: displayMode === 'sold-summary' ? '#fff' : 'var(--text-secondary)',
-                                    border: '1px solid var(--border-primary)',
-                                }}
-                            >
-                                <span>Show</span>
-                                {displayMode === 'sold-summary' && (
-                                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                                )}
-                            </button>
-                            {/* Divider */}
-                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
-                            {/* Team Summary */}
-                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Team Summary:</span>
-                            <button
-                                onClick={() => {
-                                    const next = displayMode === 'team-summary' ? 'standard' : 'team-summary';
-                                    setDisplayMode(next);
-                                    sendOverlaySettings(overlaySize, tickerMode, next);
-                                }}
-                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
-                                style={{
-                                    backgroundColor: displayMode === 'team-summary' ? 'var(--brand-primary)' : 'var(--surface-elevated)',
-                                    color: displayMode === 'team-summary' ? '#fff' : 'var(--text-secondary)',
-                                    border: '1px solid var(--border-primary)',
-                                }}
-                            >
-                                <span>Show</span>
-                                {displayMode === 'team-summary' && (
-                                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                                )}
-                            </button>
-                            {/* Divider */}
-                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
-                            {/* Top 10 Sold */}
-                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Top 10 Sold:</span>
-                            <button
-                                onClick={() => {
-                                    const next = displayMode === 'top10-summary' ? 'standard' : 'top10-summary';
-                                    setDisplayMode(next);
-                                    sendOverlaySettings(overlaySize, tickerMode, next);
-                                }}
-                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
-                                style={{
-                                    backgroundColor: displayMode === 'top10-summary' ? '#D97706' : 'var(--surface-elevated)',
-                                    color: displayMode === 'top10-summary' ? '#fff' : 'var(--text-secondary)',
-                                    border: '1px solid var(--border-primary)',
-                                }}
-                            >
-                                <span>Show</span>
-                                {displayMode === 'top10-summary' && (
-                                    <span className="w-2 h-2 rounded-full bg-yellow-300 animate-pulse" />
-                                )}
-                            </button>
-                            {/* Divider */}
-                            <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
-                            {/* Team Wise Summary */}
-                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Team Wise:</span>
-                            <select
-                                value={teamWiseTeamId ?? ''}
-                                onChange={e => {
-                                    const val = e.target.value || null;
-                                    setTeamWiseTeamId(val);
-                                    teamWiseTeamIdRef.current = val;
-                                    if (displayMode === 'team-wise-summary') {
-                                        sendOverlaySettings(overlaySize, tickerMode, 'team-wise-summary');
-                                    }
-                                }}
-                                className="text-xs rounded-md px-2 py-1.5 font-semibold shrink-0"
-                                style={{
-                                    backgroundColor: 'var(--surface-elevated)',
-                                    color: 'var(--text-secondary)',
-                                    border: '1px solid var(--border-primary)',
-                                    outline: 'none',
-                                    maxWidth: 140,
-                                }}
-                            >
-                                <option value="">All Teams</option>
-                                {[...teams]
-                                    .sort((a, b) => a.name.localeCompare(b.name))
-                                    .map(t => (
-                                        <option key={t._id} value={t._id}>{t.name}</option>
-                                    ))
-                                }
-                            </select>
-                            <button
-                                onClick={() => {
-                                    const next = displayMode === 'team-wise-summary' ? 'standard' : 'team-wise-summary';
-                                    setDisplayMode(next);
-                                    sendOverlaySettings(overlaySize, tickerMode, next);
-                                }}
-                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
-                                style={{
-                                    backgroundColor: displayMode === 'team-wise-summary' ? 'var(--brand-primary)' : 'var(--surface-elevated)',
-                                    color: displayMode === 'team-wise-summary' ? '#fff' : 'var(--text-secondary)',
-                                    border: '1px solid var(--border-primary)',
-                                }}
-                            >
-                                <span>Show</span>
-                                {displayMode === 'team-wise-summary' && (
-                                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                                )}
-                            </button>
-                            {(displayMode === 'sold-summary' || displayMode === 'team-summary' || displayMode === 'team-wise-summary' || displayMode === 'top10-summary') && (
-                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                                    Player Card &amp; Teams hidden
-                                </span>
-                            )}
-                        </div>
-                        {/* Location Setting sub-section */}
-                        <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--border-primary)' }}>
-                            <span className="text-xs font-bold uppercase tracking-wider mb-3 block" style={{ color: 'var(--text-muted)' }}>Location Setting</span>
-                            <div className="flex items-center gap-4 flex-wrap">
-                                {/* Sold Message */}
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Sold Message:</span>
-                                    <div className="relative">
-                                        <button
-                                            onClick={() => setShowSoldMessageMenu(v => !v)}
-                                            className="flex items-center justify-center w-8 h-8 rounded-md transition-all"
-                                            title="Sold message position"
-                                            style={{
-                                                backgroundColor: showSoldMessageMenu ? 'var(--brand-primary)' : 'var(--surface-elevated)',
-                                                color: showSoldMessageMenu ? '#fff' : 'var(--text-secondary)',
-                                                border: `1px solid ${showSoldMessageMenu ? 'var(--brand-primary)' : 'var(--border-primary)'}`,
-                                            }}
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
-                                        </button>
-                                        {showSoldMessageMenu && (
-                                            <>
-                                                <div className="fixed inset-0" style={{ zIndex: 10 }} onClick={() => setShowSoldMessageMenu(false)} />
-                                                <div className="absolute left-0 mt-1 rounded-lg shadow-xl p-2 flex flex-col gap-1 min-w-max" style={{ zIndex: 11, backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)', top: '100%' }}>
-                                                    {([
-                                                        { value: 'bottom-right', label: '▼ Right · Bottom' },
-                                                        { value: 'bottom-left', label: '▼ Left · Bottom' },
-                                                        { value: 'top-right', label: '▲ Right · Top' },
-                                                        { value: 'top-left', label: '▲ Left · Top' },
-                                                    ] as const).map(opt => (
-                                                        <button
-                                                            key={opt.value}
-                                                            onClick={() => {
-                                                                setSoldMessagePosition(opt.value);
-                                                                soldMessagePositionRef.current = opt.value;
-                                                                sendOverlaySettings(overlaySize, tickerMode, displayMode, hidePremiumCard, customTickerLine1, customTickerLine2, opt.value);
-                                                                setShowSoldMessageMenu(false);
-                                                            }}
-                                                            className="px-3 py-1.5 rounded-md text-sm font-semibold text-left transition-all"
-                                                            style={{
-                                                                backgroundColor: soldMessagePosition === opt.value ? 'var(--brand-primary)' : 'transparent',
-                                                                color: soldMessagePosition === opt.value ? '#fff' : 'var(--text-secondary)',
-                                                            }}
-                                                        >
-                                                            {opt.label}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                                {/* Divider */}
-                                <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--border-primary)' }} />
-                                {/* Bid Card Position */}
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Bid Card Position:</span>
-                                    <div className="relative">
-                                        <button
-                                            onClick={() => setShowBidCardMenu(v => !v)}
-                                            className="flex items-center justify-center w-8 h-8 rounded-md transition-all"
-                                            title="Bid card position"
-                                            style={{
-                                                backgroundColor: showBidCardMenu ? 'var(--brand-primary)' : 'var(--surface-elevated)',
-                                                color: showBidCardMenu ? '#fff' : 'var(--text-secondary)',
-                                                border: `1px solid ${showBidCardMenu ? 'var(--brand-primary)' : 'var(--border-primary)'}`,
-                                            }}
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
-                                        </button>
-                                        {showBidCardMenu && (
-                                            <>
-                                                <div className="fixed inset-0" style={{ zIndex: 10 }} onClick={() => setShowBidCardMenu(false)} />
-                                                <div className="absolute left-0 mt-1 rounded-lg shadow-xl p-3 flex flex-col gap-3 min-w-max" style={{ zIndex: 11, backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)', top: '100%' }}>
-                                                    <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                                                        <span className="w-8 text-right font-semibold">Top</span>
-                                                        <input
-                                                            type="number"
-                                                            value={bidCardTop}
-                                                            onChange={e => setBidCardTop(Number(e.target.value))}
-                                                            onBlur={() => sendOverlaySettings(overlaySize, tickerMode)}
-                                                            className="w-24 rounded-md px-2 py-1.5 text-sm"
-                                                            style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', outline: 'none' }}
-                                                        />
-                                                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>px</span>
-                                                    </label>
-                                                    <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                                                        <span className="w-8 text-right font-semibold">Left</span>
-                                                        <input
-                                                            type="number"
-                                                            value={bidCardLeft}
-                                                            onChange={e => setBidCardLeft(Number(e.target.value))}
-                                                            onBlur={() => sendOverlaySettings(overlaySize, tickerMode)}
-                                                            className="w-24 rounded-md px-2 py-1.5 text-sm"
-                                                            style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', outline: 'none' }}
-                                                        />
-                                                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>px</span>
-                                                    </label>
-                                                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>1920×1080 canvas (Screen 2 only)</span>
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {/* Row 5: Resting Time */}
-                        <div className="flex items-center gap-3 mt-4 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border-primary)' }}>
-                            {/* Resting Time */}
-                            <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Resting Time:</span>
-                            <button
-                                onClick={() => {
-                                    const next = displayMode === 'resting' ? 'standard' : 'resting';
-                                    setDisplayMode(next);
-                                    sendOverlaySettings(overlaySize, tickerMode, next);
-                                }}
-                                className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all"
-                                style={{
-                                    backgroundColor: displayMode === 'resting' ? '#8B5CF6' : 'var(--surface-elevated)',
-                                    color: displayMode === 'resting' ? '#fff' : 'var(--text-secondary)',
-                                    border: '1px solid var(--border-primary)',
-                                }}
-                            >
-                                <span>Show</span>
-                                {displayMode === 'resting' && (
-                                    <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
-                                )}
-                            </button>
-                            {displayMode === 'resting' && (
-                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                                    Player Card &amp; Teams hidden
-                                </span>
-                            )}
-                        </div>
-                    </div>
+                    <OverlayControlsPanel
+                        displayMode={displayMode}
+                        setDisplayMode={setDisplayMode}
+                        overlaySize={overlaySize}
+                        setOverlaySize={setOverlaySize}
+                        hidePremiumCard={hidePremiumCard}
+                        setHidePremiumCard={setHidePremiumCard}
+                        autoSwitch={autoSwitch}
+                        setAutoSwitch={setAutoSwitch}
+                        autoSwitchDuration={autoSwitchDuration}
+                        setAutoSwitchDuration={setAutoSwitchDuration}
+                        autoSwitchTimerRef={autoSwitchTimerRef}
+                        hideTeamCards={hideTeamCards}
+                        setHideTeamCards={setHideTeamCards}
+                        hideTeamCardsRef={hideTeamCardsRef}
+                        teamCardSize={teamCardSize}
+                        setTeamCardSize={setTeamCardSize}
+                        teamCardSizeRef={teamCardSizeRef}
+                        teamCardPosition={teamCardPosition}
+                        setTeamCardPosition={setTeamCardPosition}
+                        teamCardPositionRef={teamCardPositionRef}
+                        tickerMode={tickerMode}
+                        setTickerMode={setTickerMode}
+                        hideTickerCustom={hideTickerCustom}
+                        setHideTickerCustom={setHideTickerCustom}
+                        hideTickerCustomRef={hideTickerCustomRef}
+                        hideTickerFullscreen={hideTickerFullscreen}
+                        setHideTickerFullscreen={setHideTickerFullscreen}
+                        hideTickerFullscreenRef={hideTickerFullscreenRef}
+                        customTickerLine1={customTickerLine1}
+                        setCustomTickerLine1={setCustomTickerLine1}
+                        customTickerLine2={customTickerLine2}
+                        setCustomTickerLine2={setCustomTickerLine2}
+                        teamWiseTeamId={teamWiseTeamId}
+                        setTeamWiseTeamId={setTeamWiseTeamId}
+                        teamWiseTeamIdRef={teamWiseTeamIdRef}
+                        teams={teams}
+                        soldMessagePosition={soldMessagePosition}
+                        setSoldMessagePosition={setSoldMessagePosition}
+                        soldMessagePositionRef={soldMessagePositionRef}
+                        bidCardTop={bidCardTop}
+                        setBidCardTop={setBidCardTop}
+                        bidCardLeft={bidCardLeft}
+                        setBidCardLeft={setBidCardLeft}
+                        sendOverlaySettings={sendOverlaySettings}
+                    />
                 </div>
-
-                {/* Custom Ticker Modal */}
-                {showTickerModal && (
-                    <div
-                        className="fixed inset-0 z-50 flex items-center justify-center"
-                        style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
-                        onClick={() => setShowTickerModal(false)}
-                    >
-                        <div
-                            className="rounded-xl p-6 w-full max-w-md shadow-2xl"
-                            style={{
-                                backgroundColor: 'var(--surface-secondary)',
-                                border: '1px solid var(--border-primary)',
-                            }}
-                            onClick={e => e.stopPropagation()}
-                        >
-                            <h3 className="text-lg font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
-                                Custom Ticker Lines
-                            </h3>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>
-                                        Line 1
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={customTickerLine1}
-                                        onChange={e => setCustomTickerLine1(e.target.value)}
-                                        placeholder="Enter line 1..."
-                                        className="w-full px-3 py-2 rounded-lg text-sm"
-                                        style={{
-                                            backgroundColor: 'var(--surface-elevated)',
-                                            border: '1px solid var(--border-primary)',
-                                            color: 'var(--text-primary)',
-                                            outline: 'none',
-                                        }}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>
-                                        Line 2
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={customTickerLine2}
-                                        onChange={e => setCustomTickerLine2(e.target.value)}
-                                        placeholder="Enter line 2..."
-                                        className="w-full px-3 py-2 rounded-lg text-sm"
-                                        style={{
-                                            backgroundColor: 'var(--surface-elevated)',
-                                            border: '1px solid var(--border-primary)',
-                                            color: 'var(--text-primary)',
-                                            outline: 'none',
-                                        }}
-                                    />
-                                </div>
-                            </div>
-                            <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
-                                If both lines have text, they will alternate every 5 seconds on the overlay.
-                            </p>
-                            <div className="flex gap-3 mt-5">
-                                <button
-                                    onClick={() => {
-                                        sendOverlaySettings(overlaySize, tickerMode, displayMode, hidePremiumCard, customTickerLine1, customTickerLine2);
-                                        setShowTickerModal(false);
-                                    }}
-                                    className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
-                                    style={{ backgroundColor: '#0891B2', color: '#fff' }}
-                                >
-                                    Update
-                                </button>
-                                <button
-                                    onClick={() => setShowTickerModal(false)}
-                                    className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
-                                    style={{
-                                        backgroundColor: 'var(--surface-elevated)',
-                                        color: 'var(--text-secondary)',
-                                        border: '1px solid var(--border-primary)',
-                                    }}
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
                 <div className="xl:col-span-2 h-full">
                     <TeamsAndSoldPlayersPanel
                         teams={teams}

@@ -117,50 +117,20 @@ export default function HomePage() {
     <div className="relative min-h-screen overflow-hidden" style={{ backgroundColor: 'var(--surface-primary)' }}>
       <Navigation />
 
-      <main className="relative z-10 flex flex-col gap-24 pb-16 pt-6 lg:pb-24">
+      <main className="relative z-10 flex flex-col gap-0 pb-16 pt-6 lg:pb-24">
         <Hero />
 
         {/* Features Section */}
         <section className="px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <div className="mx-auto max-w-3xl text-center">
-              <p className="text-sm font-semibold uppercase tracking-[0.5em]" style={{ color: 'color-mix(in oklab, var(--brand-secondary) 80%, transparent)' }}>
-                Product Suite
-              </p>
-              <h2 className="mt-3 text-3xl font-bold sm:text-4xl" style={{ color: 'var(--text-secondary)' }}>
-                Everything coaches and producers need
-              </h2>
-              <p className="mt-4 text-base sm:text-lg" style={{ color: 'var(--text-tertiary)' }}>
-                From auction control rooms to live streams, ProStream keeps every stakeholder aligned
-                while staying performant on any device.
-              </p>
-            </div>
-
-            <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
-              {highlights.map((highlight) => (
-                <FeatureCard
-                  key={highlight.title}
-                  icon={highlight.icon}
-                  title={highlight.title}
-                  description={highlight.description}
-                  href={highlight.href}
-                  color={highlight.color}
-                />
-              ))}
-            </div>
-          </div>
         </section>
 
         {/* Pricing Section */}
         <section className="px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="mx-auto max-w-3xl text-center">
-              <p className="text-sm font-semibold uppercase tracking-[0.5em]" style={{ color: 'color-mix(in oklab, var(--brand-primary) 80%, transparent)' }}>
-                Pricing strategies
+              <p className="h-[45px] text-[50px] font-semibold uppercase tracking-[1px]" style={{ color: 'color-mix(in oklab, var(--brand-primary) 80%, transparent)' }}>
+                PRICING
               </p>
-              <h3 className="mt-3 text-3xl font-bold sm:text-4xl" style={{ color: 'var(--text-secondary)' }}>
-                Direct-only purchasing, tailored to your auction
-              </h3>
               <p className="mt-4 text-base sm:text-lg" style={{ color: 'var(--text-tertiary)' }}>
                 Every engagement is finalized by speaking with our producers so we can match overlays, staffing,
                 and delivery timelines to your broadcast stack. No self-serve checkout.
@@ -262,88 +232,6 @@ export default function HomePage() {
                   Talk with us
                 </a>
                 <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Direct-only purchases. Responses within one business day.</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Additional Info Section */}
-        <section className="px-4 py-16 sm:px-6 lg:px-8" style={{ backgroundColor: 'var(--surface-secondary)' }}>
-          <div className="mx-auto max-w-6xl">
-            <div className="text-center">
-              <h3 className="text-3xl font-bold sm:text-4xl" style={{ color: 'var(--text-secondary)' }}>Built for professionals</h3>
-              <p className="mt-4 text-base sm:text-lg" style={{ color: 'var(--text-tertiary)' }}>
-                Whether you are staging a domestic showcase or a televised mega auction, ProStream
-                keeps your data, budget rules, and broadcast overlays in sync.
-              </p>
-            </div>
-
-            <div className="mt-10 grid gap-6 text-left sm:grid-cols-3">
-              <div className="rounded-2xl p-6" style={{
-                borderColor: 'var(--border-primary)',
-                border: `1px solid var(--border-primary)`,
-                backgroundColor: 'var(--surface-elevated)'
-              }}>
-                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-full" style={{
-                  backgroundColor: 'color-mix(in oklab, var(--brand-primary) 10%, var(--surface-elevated))',
-                  color: 'var(--brand-primary)'
-                }}>
-                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <h4 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Live control room</h4>
-                <p className="mt-2 text-sm" style={{ color: 'var(--text-tertiary)' }}>
-                  Trigger timers, lock bids, and cut to overlays with a single tap from mobile or desktop.
-                </p>
-              </div>
-              <div className="rounded-2xl p-6" style={{
-                borderColor: 'var(--border-primary)',
-                border: `1px solid var(--border-primary)`,
-                backgroundColor: 'var(--surface-elevated)'
-              }}>
-                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-full" style={{
-                  backgroundColor: 'color-mix(in oklab, var(--brand-secondary) 10%, var(--surface-elevated))',
-                  color: 'var(--brand-secondary)'
-                }}>
-                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <h4 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Production overlays</h4>
-                <p className="mt-2 text-sm" style={{ color: 'var(--text-tertiary)' }}>
-                  Automatically render player cards, ticker crawls, and upcoming lots without manual edits.
-                </p>
-              </div>
-              <div className="rounded-2xl p-6" style={{
-                borderColor: 'var(--border-primary)',
-                border: `1px solid var(--border-primary)`,
-                backgroundColor: 'var(--surface-elevated)'
-              }}>
-                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-full" style={{
-                  backgroundColor: 'color-mix(in oklab, var(--accent-color) 10%, var(--surface-elevated))',
-                  color: 'var(--accent-color)'
-                }}>
-                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <h4 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Mobile dashboards</h4>
-                <p className="mt-2 text-sm" style={{ color: 'var(--text-tertiary)' }}>
-                  Auctioneers, analysts, and commentators stay aligned with adaptive views per role.
-                </p>
               </div>
             </div>
           </div>
