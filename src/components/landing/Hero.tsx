@@ -21,26 +21,13 @@ const Hero: React.FC = () => {
       }}>
         {/* Logo/Branding */}
         <div className="mb-10 space-y-4">
-          <p className="text-sm font-semibold uppercase tracking-[0.6em]" style={{ color: 'color-mix(in oklab, var(--brand-secondary) 90%, transparent)' }}>
-            Auction Platform
-          </p>
           <h1 className="text-[clamp(2.75rem,8vw,5rem)] font-black leading-tight">
             <span style={{ color: 'var(--brand-primary)' }}>Pro</span>
             <span style={{ color: 'var(--brand-secondary)' }}>Stream</span>
+            <span style={{ color: '#fff' }}> Auction</span>
           </h1>
           <div className="h-1 w-32 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary lg:mx-0 lg:w-40" />
         </div>
-
-        {/* Tagline */}
-        <h2 className="text-2xl font-bold sm:text-3xl lg:text-4xl" style={{ color: 'var(--text-primary)' }}>
-          Professional Auction Management System
-        </h2>
-
-        {/* Description */}
-        <p className="mt-4 text-base sm:text-lg lg:max-w-xl" style={{ color: 'var(--text-secondary)' }}>
-          Streamline cricket auctions with real-time bidding, deep team insights, and overlays that
-          keep spectators engaged across every screen.
-        </p>
 
         {/* CTA Buttons */}
         <div className="mt-10 flex w-full flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
@@ -73,26 +60,32 @@ const Hero: React.FC = () => {
           ) : (
             <>
               <button
+                onClick={() => router.push('/manage')}
+                className="w-full rounded-2xl px-8 py-3 text-lg font-semibold transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_0_0_2px_rgba(255,255,255,0.35),0_12px_30px_rgba(255,255,255,0.25)] sm:w-auto"
+                style={{
+                  border: 'none',
+                  borderImage: 'none',
+                  backgroundColor: 'var(--brand-primary)',
+                  backgroundImage: 'none',
+                  color: '#fff'
+                }}
+              >
+                Manage Tournament
+              </button>
+
+              <button
                 onClick={() => router.push('/auction')}
                 className="w-full rounded-2xl px-8 py-3 text-lg font-semibold shadow-lg transition hover:scale-[1.01] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:w-auto"
                 style={{
-                  backgroundColor: 'var(--brand-primary)',
+                  borderWidth: '1px',
+                  borderStyle: 'solid',
+                  borderColor: 'rgba(97, 97, 97, 1)',
+                  background: 'unset',
+                  backgroundColor: 'unset',
                   color: '#fff'
                 }}
               >
                 Start Auction
-              </button>
-
-              <button
-                onClick={() => router.push('/manage')}
-                className="w-full rounded-2xl px-8 py-3 text-lg font-semibold transition sm:w-auto"
-                style={{
-                  borderColor: 'var(--border-primary)',
-                  border: `1px solid var(--border-primary)`,
-                  color: 'var(--text-primary)'
-                }}
-              >
-                Manage Tournament
               </button>
             </>
           )}
