@@ -26,6 +26,7 @@ const MODES: ModeDef[] = [
     { value: 'team-summary',       label: 'Team Summary',     accent: 'var(--brand-primary)' },
     { value: 'top10-summary',      label: 'Top 10 Sold',      accent: '#D97706' },
     { value: 'team-wise-summary',  label: 'Team-wise',        accent: 'var(--brand-primary)' },
+    { value: 'team-wise-image',   label: 'Team Imagery',     accent: '#D97706' },
     { value: 'custom-ticker',      label: 'Custom Ticker',    accent: '#0891B2' },
     { value: 'resting',            label: 'Resting Time',     accent: 'var(--accent-color)' },
 ];
@@ -74,7 +75,7 @@ export default function DisplayModeTabs({
             </div>
 
             {/* Mode context row — mode-specific sub-controls */}
-            {displayMode === 'team-wise-summary' && (
+            {(displayMode === 'team-wise-summary' || displayMode === 'team-wise-image') && (
                 <div
                     className="mt-3 flex items-center gap-3 rounded-md px-3 py-2 flex-wrap"
                     style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}

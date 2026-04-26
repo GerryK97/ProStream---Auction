@@ -8,6 +8,7 @@ import SoldPlayersSummaryT2 from './SoldPlayersSummaryT2';
 import TeamSummaryT2 from './TeamSummaryT2';
 import Top10SummaryT2 from './Top10SummaryT2';
 import TeamWiseSummaryT2 from './TeamWiseSummaryT2';
+import TeamWiseImageT2 from './TeamWiseImageT2';
 import RestingTimeT2 from './RestingTimeT2';
 import SoldMessageToast from '../SoldMessageToast';
 import TickerT2Shared from './TickerT2Shared';
@@ -48,6 +49,7 @@ const T2_CARD_SIZES = {
     squadGap:         4,
     squadValueFs:     11,
     squadMutedFs:     9,
+    squadLabelFs:     7,
     pageGap:          6,
   },
   medium: {
@@ -69,6 +71,7 @@ const T2_CARD_SIZES = {
     squadGap:         4,
     squadValueFs:     12,
     squadMutedFs:     10,
+    squadLabelFs:     7,
     pageGap:          7,
   },
   large: {
@@ -82,14 +85,15 @@ const T2_CARD_SIZES = {
     nameFontSize:     13,
     codeFontSize:     11,
     dividerMb:        7,
-    labelFontSize:    8,
-    valueFontSize:    20,
+    labelFontSize:    11,
+    valueFontSize:    23,
     metricMb:         7,
     vertDivMargin:    '0 12px' as const,
     squadDividerMb:   6,
     squadGap:         5,
-    squadValueFs:     14,
-    squadMutedFs:     11,
+    squadValueFs:     17,
+    squadMutedFs:     14,
+    squadLabelFs:     11,
     pageGap:          8,
   },
 } as const;
@@ -125,18 +129,19 @@ function TeamCardT2({ team, tournament, currentBid, players, size = 'large' }: {
   const GREEN = '#22c55e';
   const RED   = '#ef4444';
   const MUTED = 'rgba(0,0,0,0.4)';
+  const METRIC_LABEL = 'rgba(0,0,0,0.8)';
 
   return (
     <div style={{
       width: '100%',
-      background: isExceeded ? 'rgba(239,68,68,0.04)' : '#ffffff',
+      background: '#ffffff',
       borderRadius: 8,
       border: isExceeded ? `1.5px solid ${RED}` : '1px solid rgba(0,0,0,0.07)',
       boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
       fontFamily: "'Varela Round', sans-serif",
       overflow: 'hidden',
       display: 'flex',
-      transition: 'border 0.3s, background 0.3s',
+      transition: 'border 0.3s',
     }}>
       {/* Gold left accent strip */}
       <div style={{ width: cfg.strip, background: GOLD, flexShrink: 0 }} />
@@ -171,7 +176,7 @@ function TeamCardT2({ team, tournament, currentBid, players, size = 'large' }: {
             }}>
               {team.name}
             </div>
-            <div style={{ fontSize: cfg.codeFontSize - 1, color: MUTED, marginTop: 2 }}>
+            <div style={{ fontSize: cfg.codeFontSize + 2, color: 'rgba(0,0,0,0.8)', marginTop: 2 }}>
               {team.shortCode}
             </div>
           </div>
@@ -183,7 +188,7 @@ function TeamCardT2({ team, tournament, currentBid, players, size = 'large' }: {
         {/* Metrics row: Balance | MaxBid */}
         <div style={{ display: 'flex', marginBottom: cfg.metricMb }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: cfg.labelFontSize, color: MUTED, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 }}>
+            <div style={{ fontSize: cfg.labelFontSize, color: METRIC_LABEL, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 }}>
               Balance
             </div>
             <div style={{ fontSize: cfg.valueFontSize, fontWeight: 700, color: GREEN, lineHeight: 1 }}>
@@ -192,7 +197,7 @@ function TeamCardT2({ team, tournament, currentBid, players, size = 'large' }: {
           </div>
           <div style={{ width: 1, background: 'rgba(0,0,0,0.07)', margin: cfg.vertDivMargin }} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: cfg.labelFontSize, color: MUTED, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 }}>
+            <div style={{ fontSize: cfg.labelFontSize, color: METRIC_LABEL, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 }}>
               Max Bid
             </div>
             <div style={{ fontSize: cfg.valueFontSize, fontWeight: 700, color: isExceeded ? RED : GOLD, lineHeight: 1 }}>
@@ -206,9 +211,9 @@ function TeamCardT2({ team, tournament, currentBid, players, size = 'large' }: {
 
         {/* Squad row */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: cfg.squadGap }}>
-          <span style={{ fontSize: cfg.labelFontSize, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>Squad</span>
-          <span style={{ fontSize: cfg.squadValueFs, fontWeight: 700, color: '#111' }}>{playerCount}</span>
-          <span style={{ fontSize: cfg.squadMutedFs, color: MUTED }}>/ {squadSize}</span>
+          <span style={{ fontSize: cfg.squadLabelFs, color: '#000', textTransform: 'uppercase', letterSpacing: 1, textShadow: 'none' }}>Squad</span>
+          <span style={{ fontSize: cfg.squadValueFs, fontWeight: 700, color: '#000', textShadow: 'none' }}>{playerCount}</span>
+          <span style={{ fontSize: cfg.squadMutedFs, color: '#000', textShadow: 'none' }}>/ {squadSize}</span>
         </div>
       </div>
     </div>
@@ -375,6 +380,11 @@ const CustomT2Content: React.FC<ContentProps> = ({
         {visibleMode === 'team-wise-summary' && (
           <div style={SUMMARY}>
             <TeamWiseSummaryT2 players={players} teams={teams} tournament={tournament} filterTeamId={overlaySettings.teamWiseTeamId} />
+          </div>
+        )}
+        {visibleMode === 'team-wise-image' && (
+          <div style={SUMMARY}>
+            <TeamWiseImageT2 players={players} teams={teams} tournament={tournament} filterTeamId={overlaySettings.teamWiseTeamId} />
           </div>
         )}
         {visibleMode === 'wheel-spin' && wheelSpinData && (
