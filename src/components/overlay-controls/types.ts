@@ -7,6 +7,7 @@ export type DisplayMode =
     | 'sold-summary'
     | 'team-summary'
     | 'team-wise-summary'
+    | 'team-wise-image'
     | 'resting'
     | 'top10-summary'
     | 'custom-ticker'

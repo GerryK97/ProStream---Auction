@@ -6,6 +6,7 @@ import SoldPlayersSummaryT2 from './SoldPlayersSummaryT2';
 import TeamSummaryT2 from './TeamSummaryT2';
 import Top10SummaryT2 from './Top10SummaryT2';
 import TeamWiseSummaryT2 from './TeamWiseSummaryT2';
+import TeamWiseImageT2 from './TeamWiseImageT2';
 import RestingTimeT2 from './RestingTimeT2';
 import SoldMessageFullScreen from '../SoldMessageFullScreen';
 import TickerT2Shared from './TickerT2Shared';
@@ -325,7 +326,7 @@ const FullScreenT2Content: React.FC<ContentProps> = ({
       setPanelExiting(true);
       const t = setTimeout(() => { setActiveMode(incoming); setPanelExiting(false); }, 1500);
       return () => clearTimeout(t);
-    } else if (prev === 'sold-summary' || prev === 'team-summary' || prev === 'team-wise-summary' || prev === 'top10-summary' || prev === 'wheel-spin' || prev === 'resting') {
+    } else if (prev === 'sold-summary' || prev === 'team-summary' || prev === 'team-wise-summary' || prev === 'team-wise-image' || prev === 'top10-summary' || prev === 'wheel-spin' || prev === 'resting') {
       setSummaryExiting(true);
       const t = setTimeout(() => { setActiveMode(incoming); setSummaryExiting(false); }, 1800);
       return () => clearTimeout(t);
@@ -463,6 +464,17 @@ const FullScreenT2Content: React.FC<ContentProps> = ({
         {activeMode === 'team-wise-summary' && (
           <div className={summaryExiting ? 't2fs-summary-exit' : ''} style={SUMMARY_AREA}>
             <TeamWiseSummaryT2
+              players={players} teams={teams} tournament={tournament}
+              filterTeamId={overlaySettings.teamWiseTeamId}
+              isExiting={summaryExiting}
+            />
+          </div>
+        )}
+
+        {/* Team-wise image grid */}
+        {activeMode === 'team-wise-image' && (
+          <div className={summaryExiting ? 't2fs-summary-exit' : ''} style={SUMMARY_AREA}>
+            <TeamWiseImageT2
               players={players} teams={teams} tournament={tournament}
               filterTeamId={overlaySettings.teamWiseTeamId}
               isExiting={summaryExiting}

@@ -6,6 +6,7 @@ import SoldPlayersSummaryT2 from './SoldPlayersSummaryT2';
 import TeamSummaryT2 from './TeamSummaryT2';
 import Top10SummaryT2 from './Top10SummaryT2';
 import TeamWiseSummaryT2 from './TeamWiseSummaryT2';
+import TeamWiseImageT2 from './TeamWiseImageT2';
 import RestingTimeT2 from './RestingTimeT2';
 import TickerT2Shared from './TickerT2Shared';
 import { AuctionState, Player, Team, Tournament } from '@/types';
@@ -191,6 +192,11 @@ const FullScreen2T2Content: React.FC<ContentProps> = ({
         {activeMode === 'team-wise-summary' && (
           <div style={{ ...SUMMARY, opacity: fadingOut ? 0 : 1, transition: 'opacity 0.4s' }}>
             <TeamWiseSummaryT2 players={players} teams={teams} tournament={tournament} filterTeamId={overlaySettings.teamWiseTeamId} isExiting={fadingOut} />
+          </div>
+        )}
+        {activeMode === 'team-wise-image' && (
+          <div style={{ ...SUMMARY, opacity: fadingOut ? 0 : 1, transition: 'opacity 0.4s' }}>
+            <TeamWiseImageT2 players={players} teams={teams} tournament={tournament} filterTeamId={overlaySettings.teamWiseTeamId} isExiting={fadingOut} />
           </div>
         )}
 

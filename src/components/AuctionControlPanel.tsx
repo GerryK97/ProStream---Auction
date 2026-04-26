@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import TournamentSelector from './TournamentSelector';
 import Modal from './Modal';
 import OverlayControlsPanel from './overlay-controls/OverlayControlsPanel';
+import type { DisplayMode } from './overlay-controls/types';
 
 const formatCurrency = (amount: number) => amount.toLocaleString();
 
@@ -971,7 +972,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     // Overlay control panel settings
     const [overlaySize, setOverlaySize] = useState<'large' | 'small'>('large');
     const [tickerMode, setTickerMode] = useState<'all' | 'sold' | 'available'>('all');
-    const [displayMode, setDisplayMode] = useState<'standard' | 'sold-summary' | 'team-summary' | 'team-wise-summary' | 'resting' | 'top10-summary' | 'custom-ticker' | 'wheel-spin'>('standard');
+    const [displayMode, setDisplayMode] = useState<DisplayMode>('standard');
     const [teamWiseTeamId, setTeamWiseTeamId] = useState<string | null>(null);
     const teamWiseTeamIdRef = useRef<string | null>(null);
     const [isSpinning, setIsSpinning] = useState(false);
@@ -1028,7 +1029,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const sendOverlaySettings = async (
         size: 'large' | 'small',
         mode: 'all' | 'sold' | 'available',
-        dm: 'standard' | 'sold-summary' | 'team-summary' | 'team-wise-summary' | 'resting' | 'top10-summary' | 'custom-ticker' | 'wheel-spin' = displayModeRef.current,
+        dm: DisplayMode = displayModeRef.current,
         hideCard: boolean = hidePremiumCardRef.current,
         line1: string = customTickerLine1Ref.current,
         line2: string = customTickerLine2Ref.current,
