@@ -13,12 +13,24 @@ interface PlayerCardOverlayProps {
 
 const formatCurrency = (amount: number) => amount.toLocaleString();
 
+const formatCompact = (amount: number): string => {
+    if (amount >= 100000) return `${(amount / 100000).toFixed(1)}L`;
+    if (amount >= 1000) return `${(amount / 1000).toFixed(0)}K`;
+    return `${amount}`;
+};
+
+const sizeConfig = {
+    small: { card: { width: 280, height: 160 }, photo: { right: 120, width: 540 }, diagonal: { left: 80, width: 60, height: 240 }, name: { top: 34, right: 82, fontSize: 13 }, dorsal: { top: 26, right: 4, fontSize: 38 }, stats: { top: 94 }, el1Right: 150, el2Right: 98, el3Right: 46, statFontSize: 10, valFontSize: 12 },
+    medium: { card: { width: 380, height: 210 }, photo: { right: 170, width: 740 }, diagonal: { left: 108, width: 80, height: 320 }, name: { top: 46, right: 112, fontSize: 17 }, dorsal: { top: 36, right: 5, fontSize: 50 }, stats: { top: 126 }, el1Right: 202, el2Right: 133, el3Right: 62, statFontSize: 12, valFontSize: 15 },
+    large: { card: { width: 480, height: 250 }, photo: { right: 220, width: 940 }, diagonal: { left: 136, width: 100, height: 400 }, name: { top: 56, right: 142, fontSize: 21 }, dorsal: { top: 44, right: 6, fontSize: 62 }, stats: { top: 156 }, el1Right: 256, el2Right: 168, el3Right: 78, statFontSize: 14, valFontSize: 18 },
+};
+
 const PlayerCardOverlay: React.FC<PlayerCardOverlayProps> = ({
     currentPlayer,
     tournament,
     auctionState,
     size = 'medium',
-    position = 'top'
+    position = 'top',
 }) => {
     const [previousBid, setPreviousBid] = useState<number>(0);
     const [bidPulseKey, setBidPulseKey] = useState<number>(0);
@@ -27,7 +39,6 @@ const PlayerCardOverlay: React.FC<PlayerCardOverlayProps> = ({
 
     const isBiddingLive = tournament?.status === 'Live' && currentPlayer;
 
-    // Detect bid changes and trigger pulse animation
     useEffect(() => {
         if (auctionState.currentBid !== previousBid && auctionState.currentBid > 0) {
             setBidPulseKey(prev => prev + 1);
@@ -35,7 +46,6 @@ const PlayerCardOverlay: React.FC<PlayerCardOverlayProps> = ({
         }
     }, [auctionState.currentBid, previousBid]);
 
-    // Detect sold status and trigger celebration animation
     useEffect(() => {
         if (auctionState.currentAuctionStatus === 'Sold' && previousStatus !== 'Sold') {
             setShowSoldAnimation(true);
@@ -44,109 +54,146 @@ const PlayerCardOverlay: React.FC<PlayerCardOverlayProps> = ({
         setPreviousStatus(auctionState.currentAuctionStatus);
     }, [auctionState.currentAuctionStatus, previousStatus]);
 
-    // Hide when no player selected
-    if (!currentPlayer || !isBiddingLive) {
-        return null;
-    }
+    if (!currentPlayer || !isBiddingLive) return null;
 
-    // Size configurations
-    const sizeConfig = {
-        small: {
-            container: 'p-4 gap-4',
-            image: 'w-20 h-20',
-            title: 'text-base',
-            name: 'text-3xl',
-            stat: 'text-xs',
-            statValue: 'text-sm',
-            bidLabel: 'text-sm',
-            bidAmount: 'text-4xl',
-            soldText: 'text-5xl'
-        },
-        medium: {
-            container: 'p-6 gap-6',
-            image: 'w-32 h-32',
-            title: 'text-xl',
-            name: 'text-5xl',
-            stat: 'text-sm',
-            statValue: 'text-lg',
-            bidLabel: 'text-xl',
-            bidAmount: 'text-6xl',
-            soldText: 'text-8xl'
-        },
-        large: {
-            container: 'p-8 gap-8',
-            image: 'w-40 h-40',
-            title: 'text-2xl',
-            name: 'text-6xl',
-            stat: 'text-base',
-            statValue: 'text-xl',
-            bidLabel: 'text-2xl',
-            bidAmount: 'text-7xl',
-            soldText: 'text-9xl'
-        }
-    };
-
-    const config = sizeConfig[size];
-
-    // Position configurations
     const positionClass = {
         top: 'justify-start pt-8',
         center: 'justify-center',
-        bottom: 'justify-end pb-8'
+        bottom: 'justify-end pb-8',
     };
 
-    return (
-        <div className={`w-full h-full flex ${positionClass[position]} items-center px-8`}>
-            <div className={`transition-all duration-500 ease-in-out ${isBiddingLive ? 'animate-slide-in-top' : 'opacity-0'}`}>
-                <div className={`${config.container} rounded-lg flex items-center border-2 border-cyan-500 relative ${showSoldAnimation ? 'animate-sold-celebration' : ''}`}>
-                    {/* Sold Overlay */}
-                    {showSoldAnimation && (
-                        <div className="absolute inset-0 bg-green-500/20 animate-sold-flash rounded-lg flex items-center justify-center">
-                            <div className={`${config.soldText} font-bold text-green-400 drop-shadow-[0_0_20px_rgba(34,197,94,1)]`}>SOLD!</div>
-                        </div>
-                    )}
+    const cfg = sizeConfig[size];
+    const photoUrl = currentPlayer.photoURL || tournament?.logoURL || '';
+    const dorsalText = currentPlayer.playerNo ? `#${currentPlayer.playerNo}` : (auctionState.currentBid > 0 ? formatCompact(auctionState.currentBid) : formatCompact(tournament?.basePricePerPlayer ?? 0));
+    const bidColor = auctionState.currentBid > 0 ? '#22c55e' : '#E7C403';
 
-                    <img
-                        src={currentPlayer.photoURL || tournament?.logoURL || ''}
-                        alt={currentPlayer.name}
-                        className={`${config.image} rounded-md border-4 border-cyan-500 shadow-lg ${!currentPlayer.photoURL && tournament?.logoURL ? 'object-contain' : 'object-cover'}`}
-                        style={!currentPlayer.photoURL && tournament?.logoURL ? { background: '#0d1220', padding: 4 } : undefined}
-                    />
-                    <div>
-                        <p className={`${config.title} text-cyan-400 font-semibold tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>ON THE BLOCK</p>
-                        <h2 className={`${config.name} font-extrabold tracking-tight text-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)]`}>{currentPlayer.name}</h2>
-                        <div className="flex gap-6 mt-2">
-                            <div>
-                                <p className={`${config.stat} text-neutral-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>Matches</p>
-                                <p className={`${config.statValue} font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>{(currentPlayer as any).stats?.matchesPlayed}</p>
-                            </div>
-                            <div>
-                                <p className={`${config.stat} text-neutral-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>Score</p>
-                                <p className={`${config.statValue} font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>{(currentPlayer as any).stats?.totalScore?.toLocaleString()}</p>
-                            </div>
-                            <div>
-                                <p className={`${config.stat} text-neutral-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>Wickets</p>
-                                <p className={`${config.statValue} font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>{(currentPlayer as any).stats?.totalWickets}</p>
-                            </div>
+    const stats = currentPlayer.stats ?? {};
+    const statKeys = Object.keys(stats).slice(0, 2);
+
+    return (
+        <>
+            <style>{`@import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');`}</style>
+            <div className={`w-full h-full flex ${positionClass[position]} items-center px-8`}>
+                <div className={`transition-all duration-500 ease-in-out ${isBiddingLive ? 'animate-slide-in-top' : 'opacity-0'}`}>
+                    <div style={{
+                        position: 'relative',
+                        backgroundColor: 'white',
+                        height: cfg.card.height,
+                        width: cfg.card.width,
+                        borderRadius: 6,
+                        overflow: 'hidden',
+                        fontFamily: "'Varela Round', sans-serif",
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+                    }}>
+                        {/* Player photo */}
+                        <div style={{
+                            position: 'absolute',
+                            left: 0,
+                            top: 0,
+                            width: cfg.card.width - cfg.photo.right,
+                            height: cfg.card.height,
+                            backgroundImage: `url("${photoUrl}")`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center top',
+                        }} />
+
+                        {/* Diagonal white separator */}
+                        <div style={{
+                            position: 'absolute',
+                            width: cfg.diagonal.width,
+                            height: cfg.diagonal.height,
+                            backgroundColor: 'white',
+                            left: cfg.diagonal.left,
+                            transform: 'rotate(15deg)',
+                            top: -40,
+                        }} />
+
+                        {/* Player name */}
+                        <div style={{
+                            zIndex: 10,
+                            width: 120,
+                            position: 'absolute',
+                            top: cfg.name.top,
+                            right: cfg.name.right,
+                            fontWeight: 'bold',
+                            fontSize: cfg.name.fontSize,
+                            lineHeight: 1.2,
+                            color: '#111',
+                            textTransform: 'uppercase',
+                        }}>
+                            {currentPlayer.name}
                         </div>
-                    </div>
-                    <div className="ml-auto text-right">
-                        <p className={`${config.bidLabel} text-white tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]`}>CURRENT BID</p>
-                        <p
-                            key={bidPulseKey}
-                            className={`${config.bidAmount} font-bold ${auctionState.currentBid > 0 ? 'text-green-400 animate-bid-pulse drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)]' : 'text-neutral-400 drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)]'}`}
-                        >
-                            {formatCurrency(auctionState.currentBid)}
-                        </p>
-                        {auctionState.currentBid === 0 && tournament && (
-                            <p className="text-sm text-neutral-300 mt-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                                Base: {formatCurrency(tournament.basePricePerPlayer)}
-                            </p>
+
+                        {/* Player class / position badge */}
+                        {(currentPlayer.playerClass || currentPlayer.position) && (
+                            <div style={{
+                                zIndex: 10,
+                                position: 'absolute',
+                                top: cfg.name.top + cfg.name.fontSize + 10,
+                                right: cfg.name.right,
+                                fontSize: cfg.statFontSize,
+                                color: 'rgba(0,0,0,0.45)',
+                                textTransform: 'uppercase',
+                                letterSpacing: 1,
+                            }}>
+                                {currentPlayer.playerClass || currentPlayer.position}
+                            </div>
+                        )}
+
+                        {/* Dorsal / jersey number */}
+                        <div style={{
+                            zIndex: 10,
+                            position: 'absolute',
+                            top: cfg.dorsal.top,
+                            right: cfg.dorsal.right,
+                            width: 100,
+                            color: '#E7C403',
+                            fontSize: cfg.dorsal.fontSize,
+                            fontWeight: 'bold',
+                            lineHeight: 1,
+                            textAlign: 'right',
+                        }}>
+                            {dorsalText}
+                        </div>
+
+                        {/* Bottom stats row */}
+                        {statKeys.length > 0 && (
+                            <>
+                                <div style={{ zIndex: 10, position: 'absolute', top: cfg.stats.top, right: cfg.el1Right, fontSize: cfg.statFontSize, color: 'rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
+                                    {statKeys[0]}<br />
+                                    <span style={{ color: '#111', fontSize: cfg.valFontSize, fontWeight: 600 }}>{stats[statKeys[0]]}</span>
+                                </div>
+                                {statKeys[1] && (
+                                    <div style={{ zIndex: 10, position: 'absolute', top: cfg.stats.top, right: cfg.el2Right, fontSize: cfg.statFontSize, color: 'rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
+                                        {statKeys[1]}<br />
+                                        <span style={{ color: '#111', fontSize: cfg.valFontSize, fontWeight: 600 }}>{stats[statKeys[1]]}</span>
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        {/* Current bid stat */}
+                        <div key={bidPulseKey} style={{ zIndex: 10, position: 'absolute', top: cfg.stats.top, right: cfg.el3Right, fontSize: cfg.statFontSize, color: 'rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
+                            {auctionState.currentBid > 0 ? 'Bid' : 'Base'}<br />
+                            <span style={{ color: bidColor, fontSize: cfg.valFontSize, fontWeight: 700 }}>
+                                {auctionState.currentBid > 0
+                                    ? formatCompact(auctionState.currentBid)
+                                    : formatCompact(tournament?.basePricePerPlayer ?? 0)}
+                            </span>
+                        </div>
+
+                        {/* Sold overlay */}
+                        {showSoldAnimation && (
+                            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(34,197,94,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+                                <div style={{ fontSize: cfg.dorsal.fontSize * 1.2, fontWeight: 'bold', color: '#22c55e', textShadow: '0 0 20px rgba(34,197,94,1)', letterSpacing: 4 }}>
+                                    SOLD!
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 };
 

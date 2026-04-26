@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import OverlayWrapper from './OverlayWrapper';
+import FullScreenT2Content from './theme2/FullScreenT2Content';
 import SoldPlayersSummaryOverlay from './SoldPlayersSummaryOverlay';
 import TeamSummaryOverlay from './TeamSummaryOverlay';
 import TeamWiseSummaryOverlay from './TeamWiseSummaryOverlay';
@@ -261,7 +262,7 @@ function TickerStrip({
   );
 }
 
-// ─── Player Auction Panel (new standard mode) ──────────────────────────────────
+// ─── Player Auction Panel — football card design ─────────────────────────────
 
 function PlayerAuctionPanel({
   currentPlayer,
@@ -295,307 +296,277 @@ function PlayerAuctionPanel({
   const classConfig = tournament?.playerClasses?.find(c => c.name === currentPlayer?.playerClass);
   const classColor = classConfig?.color ?? '#6B7280';
 
-  const labelStyle: React.CSSProperties = {
-    position: 'absolute',
-    fontSize: 26,
-    color: 'var(--overlay-text-dim)',
-    fontFamily: '"Graduate", cursive',
-    letterSpacing: 6,
-    textTransform: 'uppercase',
-    lineHeight: 1,
-  };
+  const photoUrl = hasPlayer
+    ? (currentPlayer!.photoURL || tournament?.logoURL || '')
+    : '';
+  const dorsalText = hasPlayer && currentPlayer!.playerNo ? `#${currentPlayer!.playerNo}` : '';
 
-  const valueStyle: React.CSSProperties = {
-    fontFamily: '"Inconsolata", monospace',
-    fontSize: 50,
-    color: 'var(--overlay-text-subtle)',
-    fontWeight: 400,
-    lineHeight: '70px',
-    letterSpacing: 4,
-  };
+  // Dynamic profile fields
+  const ppf = tournament?.playerProfileFields;
+  const fields: Array<{ label: string; value: string | number; color?: string }> = [];
+  if (ppf?.showAge)
+    fields.push({ label: 'Age', value: hasPlayer ? (currentPlayer!.age ?? '—') : '—' });
+  fields.push({ label: 'Position', value: hasPlayer ? (currentPlayer!.position || '—') : '—' });
+  if (ppf?.showBattingStyle)
+    fields.push({ label: 'Batting', value: hasPlayer ? (currentPlayer!.battingStyle || '—') : '—' });
+  if (ppf?.showBowlingStyle)
+    fields.push({ label: 'Bowling', value: hasPlayer ? (currentPlayer!.bowlingStyle || '—') : '—' });
+  (ppf?.statFields ?? []).forEach(sf =>
+    fields.push({ label: sf.label, value: hasPlayer ? ((currentPlayer!.stats as any)?.[sf.key] ?? '—') : '—' })
+  );
+  if (tournament?.usePlayerClasses && (tournament?.playerClasses?.length ?? 0) > 0) {
+    fields.push({ label: 'Class', value: hasPlayer ? (currentPlayer!.playerClass || '—') : '—', color: classColor });
+  }
+
+  // White panel geometry — diagonal left edge (≈15° slope matching reference design)
+  const PHOTO_LEFT = 72;
+  const PHOTO_TOP = 73;
+  const PHOTO_WIDTH = 730;
+  const PANEL_LEFT = 640;   // white panel starts here, overlapping photo edge
+  const PANEL_TOP = 73;
+  const PANEL_WIDTH = 1280; // 640 → 1920
+  const PANEL_HEIGHT = 929;
+  const DIAG_PX = 280;      // diagonal offset: top-left pushed right by 280px → ≈16° slope
+
+  // Content starts safely after the diagonal for the y position being used
+  const CONTENT_LEFT = DIAG_PX + 60; // 340px from panel left = x≈980 from canvas left
+
+  // Field rows
+  const FIELD_START_Y = 450;
+  const AVAILABLE_H = PANEL_HEIGHT - FIELD_START_Y - 30;
+  const FIELD_SLOT_H = fields.length > 0
+    ? Math.max(60, Math.min(100, Math.floor(AVAILABLE_H / fields.length)))
+    : 90;
+  const valueFontSize = Math.max(28, Math.round(42 * (FIELD_SLOT_H / 90)));
+
+  // Player name font size
+  const nameLen = hasPlayer ? currentPlayer!.name.length : 0;
+  const nameFontSize = nameLen > 18 ? 52 : nameLen > 12 ? 64 : 76;
 
   return (
     <>
       {/* ── Left photo panel ── */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 72,
-          top: 73,
-          width: 717,
-          height: 929,
-          borderRadius: 16,
-          overflow: 'hidden',
-          background: 'var(--overlay-bg-photo)',
-        }}
-      >
-        {hasPlayer && currentPlayer!.photoURL ? (
+      <div style={{
+        position: 'absolute',
+        left: PHOTO_LEFT,
+        top: PHOTO_TOP,
+        width: PHOTO_WIDTH,
+        height: PANEL_HEIGHT,
+        borderRadius: '16px 0 0 16px',
+        overflow: 'hidden',
+        background: 'var(--overlay-bg-photo, #0d1117)',
+      }}>
+        {photoUrl ? (
           <img
-            src={currentPlayer!.photoURL}
-            alt={currentPlayer!.name}
+            src={photoUrl}
+            alt={hasPlayer ? currentPlayer!.name : ''}
             style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
           />
-        ) : hasPlayer && tournament?.logoURL ? (
-          /* Player exists but no photo — show tournament logo */
-          <div style={{
-            width: '100%', height: '100%',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'var(--overlay-bg-photo-fallback)',
-          }}>
-            <img
-              src={tournament.logoURL}
-              alt={tournament.name}
-              style={{ width: 320, height: 320, objectFit: 'contain', opacity: 0.85 }}
-            />
-          </div>
         ) : (
-          /* No player at all */
           <div style={{
             width: '100%', height: '100%',
             display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            gap: 24,
+            alignItems: 'center', justifyContent: 'center', gap: 24,
           }}>
             <svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
             </svg>
-            <span style={{ color: 'rgba(255,255,255,0.18)', fontSize: 22, fontFamily: '"Inconsolata", monospace', letterSpacing: 3, textTransform: 'uppercase' }}>
+            <span style={{ color: 'rgba(255,255,255,0.18)', fontSize: 22, fontFamily: "'Varela Round', sans-serif", letterSpacing: 3, textTransform: 'uppercase' }}>
               Waiting for player…
             </span>
           </div>
         )}
+      </div>
 
-        {/* Bottom gradient overlay */}
-        <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, height: 250,
-          background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, transparent 100%)',
-          pointerEvents: 'none',
-        }} />
-
-        {/* Player class badge — bottom left */}
-        {hasPlayer && currentPlayer!.playerClass && (
+      {/* ── White right panel — diagonal left edge (clip-path) ── */}
+      <div style={{
+        position: 'absolute',
+        left: PANEL_LEFT,
+        top: PANEL_TOP,
+        width: PANEL_WIDTH,
+        height: PANEL_HEIGHT,
+        backgroundColor: 'white',
+        clipPath: `polygon(${DIAG_PX}px 0%, 100% 0%, 100% 100%, 0% 100%)`,
+        fontFamily: "'Varela Round', sans-serif",
+        boxShadow: '-12px 0 40px rgba(0,0,0,0.3)',
+        borderRadius: '0 16px 16px 0',
+      }}>
+        {/* Jersey / dorsal number — top right, large yellow */}
+        {dorsalText && (
           <div style={{
             position: 'absolute',
-            bottom: 32,
-            left: 28,
-            background: classColor,
-            color: '#fff',
-            fontSize: 22,
-            fontFamily: '"Graduate", cursive',
-            letterSpacing: 3,
-            padding: '8px 20px',
-            borderRadius: 8,
-            fontWeight: 700,
-            boxShadow: `0 0 24px ${classColor}88`,
-            textTransform: 'uppercase',
+            top: 20,
+            right: 36,
+            color: '#E7C403',
+            fontSize: 160,
+            fontWeight: 'bold',
+            lineHeight: 1,
+            letterSpacing: -6,
+            opacity: 0.92,
+            userSelect: 'none',
           }}>
-            {currentPlayer!.playerClass}
+            {dorsalText}
           </div>
         )}
 
-      </div>
-
-      {/* ── Gold vertical accent bar ── */}
-      <div style={{
-        position: 'absolute',
-        left: 855,
-        top: 73,
-        width: 5,
-        height: 929,
-        background: 'linear-gradient(180deg, var(--overlay-color-primary) 0%, rgba(var(--overlay-color-primary-rgb),0.08) 100%)',
-        borderRadius: 3,
-      }} />
-
-      {/* ── Right info panel ── */}
-
-      {/* Player Name — hero identity, top of right panel */}
-      <div style={{
-        position: 'absolute',
-        left: 880,
-        top: 98,
-        width: 700,
-        fontFamily: '"Inconsolata", monospace',
-        fontSize: 80,
-        color: 'var(--overlay-color-primary)',
-        fontWeight: 700,
-        lineHeight: '90px',
-        letterSpacing: 4,
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-        textShadow: '0 0 40px rgba(var(--overlay-color-primary-rgb),0.55), 0 0 80px rgba(var(--overlay-color-primary-rgb),0.2)',
-      }}>
-        {hasPlayer ? currentPlayer!.name : '—'}
-      </div>
-
-      {/* Base Price — compact reference, right side of name row */}
-      <div style={{ ...labelStyle, left: 1620, top: 98, fontSize: 18, letterSpacing: 5, width: 220, textAlign: 'right' }}>
-        Base Price
-      </div>
-      <div style={{
-        position: 'absolute',
-        left: 1620,
-        top: 120,
-        width: 220,
-        textAlign: 'right',
-        fontFamily: '"Inconsolata", monospace',
-        fontSize: 38,
-        color: 'var(--overlay-color-primary)',
-        fontWeight: 700,
-        letterSpacing: 2,
-        lineHeight: 1,
-      }}>
-        {hasPlayer ? basePrice.toLocaleString('en-IN') : '—'}
-      </div>
-
-      {/* Gold separator (below name) */}
-      <div style={{
-        position: 'absolute',
-        left: 880,
-        top: 200,
-        width: 960,
-        height: 3,
-        background: 'linear-gradient(90deg, var(--overlay-color-primary) 0%, rgba(var(--overlay-color-primary-rgb),0.08) 100%)',
-        borderRadius: 2,
-      }} />
-
-      {/* Current Bid — hero card */}
-      <div className={isBidding ? 'fs-bid-card-active' : ''} style={{
-        position: 'absolute',
-        left: 880,
-        top: 215,
-        width: 920,
-        height: 135,
-        background: 'rgba(var(--overlay-color-primary-rgb),0.05)',
-        border: '1px solid var(--overlay-border-accent-subtle)',
-        borderRadius: 12,
-        boxSizing: 'border-box',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-      }}>
+        {/* Player name */}
         <div style={{
-          fontFamily: '"Graduate", cursive',
-          fontSize: 20,
-          color: 'var(--overlay-color-primary)',
-          letterSpacing: 8,
+          position: 'absolute',
+          top: 70,
+          left: CONTENT_LEFT,
+          right: dorsalText ? 220 : 40,
+          fontSize: nameFontSize,
+          fontWeight: 'bold',
+          color: '#111',
           textTransform: 'uppercase',
-          lineHeight: 1,
+          lineHeight: 1.1,
         }}>
-          Current Bid
+          {hasPlayer ? currentPlayer!.name : '—'}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+
+        {/* Role / class tag below name */}
+        {hasPlayer && (currentPlayer!.playerClass || currentPlayer!.position) && (
+          <div style={{
+            position: 'absolute',
+            top: 70 + nameFontSize * 1.15 + 6,
+            left: CONTENT_LEFT,
+            fontSize: 20,
+            color: 'rgba(0,0,0,0.4)',
+            textTransform: 'uppercase',
+            letterSpacing: 4,
+          }}>
+            {currentPlayer!.playerClass
+              ? <span style={{ background: classColor, color: '#fff', padding: '3px 14px', borderRadius: 6, fontSize: 18, letterSpacing: 3 }}>{currentPlayer!.playerClass}</span>
+              : currentPlayer!.position
+            }
+          </div>
+        )}
+
+        {/* Horizontal divider */}
+        <div style={{
+          position: 'absolute',
+          top: 245,
+          left: CONTENT_LEFT - 20,
+          right: 40,
+          height: 2,
+          backgroundColor: 'rgba(0,0,0,0.08)',
+        }} />
+
+        {/* Base Price */}
+        <div style={{ position: 'absolute', top: 268, left: CONTENT_LEFT }}>
+          <div style={{ fontSize: 16, color: 'rgba(0,0,0,0.38)', letterSpacing: 5, textTransform: 'uppercase' }}>
+            Base Price
+          </div>
+          <div style={{ fontSize: 46, fontWeight: 700, color: '#888', lineHeight: 1.1, letterSpacing: -1 }}>
+            {hasPlayer ? basePrice.toLocaleString('en-IN') : '—'}
+          </div>
+        </div>
+
+        {/* Current Bid */}
+        <div style={{ position: 'absolute', top: 268, left: CONTENT_LEFT + 360 }}>
+          <div style={{ fontSize: 16, color: 'rgba(0,0,0,0.38)', letterSpacing: 5, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 8 }}>
+            Current Bid
+            {isBidding && (
+              <div className="fs-live-dot" style={{ width: 10, height: 10, borderRadius: '50%', background: '#22c55e', flexShrink: 0 }} />
+            )}
+          </div>
           <div
             className={`${isBidding ? 'fs-bid-active' : ''} ${bidPopping ? 'fs-bid-pop' : ''}`}
             style={{
-              fontFamily: '"Inconsolata", monospace',
               fontSize: 88,
-              color: 'var(--overlay-text-bright)',
               fontWeight: 700,
-              lineHeight: 1,
-              letterSpacing: 4,
+              color: isBidding ? '#22c55e' : '#111',
+              lineHeight: 1.05,
+              letterSpacing: -3,
             }}
           >
             {hasPlayer ? currentBid.toLocaleString('en-IN') : '—'}
           </div>
-          {isBidding && (
-            <div className="fs-live-dot" style={{
-              width: 16,
-              height: 16,
-              borderRadius: '50%',
-              background: 'var(--overlay-color-primary)',
-              flexShrink: 0,
-              alignSelf: 'center',
-              marginTop: 4,
-            }} />
-          )}
         </div>
-      </div>
 
-      {/* Dynamic field rows: Age (optional), Position, custom Stats (optional) */}
-      {(() => {
-        const ppf = tournament?.playerProfileFields;
-        const fields: Array<{ label: string; value: string | number }> = [];
-        if (ppf?.showAge)
-          fields.push({ label: 'Age', value: hasPlayer ? (currentPlayer!.age ?? '—') : '—' });
-        fields.push({ label: 'Position', value: hasPlayer ? (currentPlayer!.position || '—') : '—' });
-        if (ppf?.showBattingStyle)
-          fields.push({ label: 'Batting Style', value: hasPlayer ? (currentPlayer!.battingStyle || '—') : '—' });
-        if (ppf?.showBowlingStyle)
-          fields.push({ label: 'Bowling Style', value: hasPlayer ? (currentPlayer!.bowlingStyle || '—') : '—' });
-        (ppf?.statFields ?? []).forEach(sf =>
-          fields.push({ label: sf.label, value: hasPlayer ? ((currentPlayer!.stats as any)?.[sf.key] ?? '—') : '—' })
-        );
+        {/* Divider before field rows */}
+        <div style={{
+          position: 'absolute',
+          top: FIELD_START_Y - 18,
+          left: CONTENT_LEFT - 20,
+          right: 40,
+          height: 2,
+          backgroundColor: 'rgba(0,0,0,0.08)',
+        }} />
 
-        const FIELD_START_Y = 362;
-        // Available height = 1080 - 362 - 108 (class area + buffer)
-        const AVAILABLE_H = 610;
-        const FIELD_SLOT_H = fields.length > 0
-          ? Math.max(76, Math.min(116, Math.floor(AVAILABLE_H / fields.length)))
-          : 116;
-        const valueOffset   = Math.round(FIELD_SLOT_H * 0.29); // proportional to original 34/116
-        const dividerOffset = Math.round(FIELD_SLOT_H * 0.78); // proportional to original 90/116
-        const valueFontSize = Math.max(34, Math.round(50 * (FIELD_SLOT_H / 116)));
-        const classTop = FIELD_START_Y + fields.length * FIELD_SLOT_H + 14;
+        {/* Dynamic field rows */}
+        {fields.map((f, i) => {
+          const top = FIELD_START_Y + i * FIELD_SLOT_H;
+          // Safe left offset — at lower y-values the diagonal boundary is further right
+          const diagBoundary = DIAG_PX * (1 - top / PANEL_HEIGHT);
+          const safeLeft = Math.max(CONTENT_LEFT - 20, diagBoundary + 20);
+          return (
+            <React.Fragment key={f.label}>
+              <div style={{
+                position: 'absolute',
+                top,
+                left: safeLeft,
+                fontSize: 16,
+                color: 'rgba(0,0,0,0.38)',
+                letterSpacing: 4,
+                textTransform: 'uppercase',
+              }}>
+                {f.label}
+              </div>
+              <div style={{
+                position: 'absolute',
+                top: top + 24,
+                left: safeLeft,
+                fontSize: valueFontSize,
+                fontWeight: 700,
+                color: f.color ?? '#111',
+                lineHeight: 1,
+              }}>
+                {f.value}
+              </div>
+              {i < fields.length - 1 && (
+                <div style={{
+                  position: 'absolute',
+                  top: top + FIELD_SLOT_H - 6,
+                  left: safeLeft,
+                  right: 40,
+                  height: 1,
+                  backgroundColor: 'rgba(0,0,0,0.07)',
+                }} />
+              )}
+            </React.Fragment>
+          );
+        })}
 
-        return (
-          <>
-            {fields.map((f, i) => {
-              const top = FIELD_START_Y + i * FIELD_SLOT_H;
-              return (
-                <React.Fragment key={f.label}>
-                  <div style={{ ...labelStyle, left: 880, top }}>{f.label}</div>
-                  <div style={{ position: 'absolute', left: 880, top: top + valueOffset, ...valueStyle, fontSize: valueFontSize }}>{f.value}</div>
-                  {i < fields.length - 1 && (
-                    <div style={{ position: 'absolute', left: 880, top: top + dividerOffset, width: 960, height: 1, background: 'var(--overlay-border-light)' }} />
-                  )}
-                </React.Fragment>
-              );
-            })}
-
-            {/* CLASS row — only when tournament uses player classes */}
-            {tournament?.usePlayerClasses && (tournament?.playerClasses?.length ?? 0) > 0 && (
-              <>
-                <div style={{ position: 'absolute', left: 880, top: classTop - 10, width: 960, height: 1, background: 'var(--overlay-border-light)' }} />
-                <div style={{ ...labelStyle, left: 880, top: classTop + 6 }}>Class</div>
-                {hasPlayer && currentPlayer!.playerClass ? (
-                  <div style={{
-                    position: 'absolute',
-                    left: 880,
-                    top: classTop + 40,
-                    background: classColor,
-                    color: '#fff',
-                    fontSize: 34,
-                    fontFamily: '"Inconsolata", monospace',
-                    fontWeight: 700,
-                    padding: '6px 24px',
-                    borderRadius: 10,
-                    letterSpacing: 4,
-                    boxShadow: `0 0 20px ${classColor}66`,
-                    textTransform: 'uppercase',
-                  }}>
-                    {currentPlayer!.playerClass}
-                  </div>
-                ) : (
-                  <div style={{ position: 'absolute', left: 880, top: classTop + 40, ...valueStyle }}>—</div>
-                )}
-              </>
-            )}
-          </>
-        );
-      })()}
-
-
-      {/* Decorative corner bracket — top right */}
-      <div style={{ position: 'absolute', right: 72, top: 73, width: 60, height: 60, opacity: 0.25, pointerEvents: 'none' }}>
-        <div style={{ position: 'absolute', top: 0, right: 0, width: 60, height: 2, background: '#fff' }} />
-        <div style={{ position: 'absolute', top: 0, right: 0, width: 2, height: 60, background: '#fff' }} />
-      </div>
-      <div style={{ position: 'absolute', right: 72, bottom: 73, width: 60, height: 60, opacity: 0.25, pointerEvents: 'none' }}>
-        <div style={{ position: 'absolute', bottom: 0, right: 0, width: 60, height: 2, background: '#fff' }} />
-        <div style={{ position: 'absolute', bottom: 0, right: 0, width: 2, height: 60, background: '#fff' }} />
+        {/* SOLD stamp */}
+        {isSold && (
+          <div style={{
+            position: 'absolute',
+            top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 10,
+          }}>
+            <div className="animate-stamp-seal" style={{
+              border: '8px solid #ef4444',
+              borderRadius: 16,
+              padding: '14px 48px',
+              background: 'rgba(239,68,68,0.06)',
+            }}>
+              <span style={{
+                fontFamily: "'Varela Round', sans-serif",
+                fontSize: 110,
+                fontWeight: 700,
+                color: '#ef4444',
+                letterSpacing: 18,
+                lineHeight: 1,
+                display: 'block',
+              }}>
+                SOLD
+              </span>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
@@ -728,7 +699,7 @@ function FullScreenOverlayContent({
   return (
     <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative', background: 'linear-gradient(160deg, #0a0a14 0%, #111827 60%, #0d1117 100%)' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Concert+One&family=Coda+Caption:wght@800&family=Graduate&family=Inconsolata:wght@400;700&family=Rajdhani:wght@500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Concert+One&family=Coda+Caption:wght@800&family=Graduate&family=Inconsolata:wght@400;700&family=Rajdhani:wght@500;600;700&family=Varela+Round&display=swap');
         @keyframes fullscreenTickerScroll {
           0%   { transform: translateY(-50%) translateX(0); }
           100% { transform: translateY(-50%) translateX(-50%); }
@@ -903,18 +874,23 @@ export default function FullScreenOverlay({ tournamentId }: { tournamentId: stri
   return (
     <div className="w-screen h-screen overflow-hidden" style={{ background: 'var(--overlay-bg-fullscreen)' }}>
       <OverlayWrapper tournamentId={tournamentId}>
-        {({ soldPlayers, teams, players, currentPlayer, tournament, auctionState, overlaySettings, wheelSpinData }) => (
-          <FullScreenOverlayContent
-            soldPlayers={soldPlayers}
-            teams={teams}
-            players={players}
-            currentPlayer={currentPlayer}
-            tournament={tournament}
-            auctionState={auctionState}
-            overlaySettings={overlaySettings}
-            wheelSpinData={wheelSpinData}
-          />
-        )}
+        {(data) => {
+          if (data.tournament?.overlayTheme === 'theme2') {
+            return <FullScreenT2Content {...data} />;
+          }
+          return (
+            <FullScreenOverlayContent
+              soldPlayers={data.soldPlayers}
+              teams={data.teams}
+              players={data.players}
+              currentPlayer={data.currentPlayer}
+              tournament={data.tournament}
+              auctionState={data.auctionState}
+              overlaySettings={data.overlaySettings}
+              wheelSpinData={data.wheelSpinData}
+            />
+          );
+        }}
       </OverlayWrapper>
     </div>
   );

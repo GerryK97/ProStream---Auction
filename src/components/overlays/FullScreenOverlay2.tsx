@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import OverlayWrapper from './OverlayWrapper';
+import FullScreen2T2Content from './theme2/FullScreen2T2Content';
 import SoldPlayersSummaryOverlay from './SoldPlayersSummaryOverlay';
 import TeamSummaryOverlay from './TeamSummaryOverlay';
 import TeamWiseSummaryOverlay from './TeamWiseSummaryOverlay';
@@ -748,18 +749,23 @@ export default function FullScreenOverlay2({ tournamentId }: { tournamentId: str
   return (
     <div className="w-screen h-screen overflow-hidden" style={{ background: 'var(--overlay-bg-fullscreen)' }}>
       <OverlayWrapper tournamentId={tournamentId}>
-        {({ soldPlayers, teams, players, currentPlayer, tournament, auctionState, overlaySettings, wheelSpinData }) => (
-          <FullScreenOverlay2Content
-            soldPlayers={soldPlayers}
-            teams={teams}
-            players={players}
-            currentPlayer={currentPlayer}
-            tournament={tournament}
-            auctionState={auctionState}
-            overlaySettings={overlaySettings}
-            wheelSpinData={wheelSpinData}
-          />
-        )}
+        {(data) => {
+          if (data.tournament?.overlayTheme === 'theme2') {
+            return <FullScreen2T2Content {...data} />;
+          }
+          return (
+            <FullScreenOverlay2Content
+              soldPlayers={data.soldPlayers}
+              teams={data.teams}
+              players={data.players}
+              currentPlayer={data.currentPlayer}
+              tournament={data.tournament}
+              auctionState={data.auctionState}
+              overlaySettings={data.overlaySettings}
+              wheelSpinData={data.wheelSpinData}
+            />
+          );
+        }}
       </OverlayWrapper>
     </div>
   );

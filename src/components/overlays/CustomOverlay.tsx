@@ -2,7 +2,9 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import OverlayWrapper from './OverlayWrapper';
+import CustomT2Content from './theme2/CustomT2Content';
 import PremiumPlayerCardOverlay from './PremiumPlayerCardOverlay';
+import PlayerCardOverlay from './PlayerCardOverlay';
 import SoldPlayersSummaryOverlay from './SoldPlayersSummaryOverlay';
 import TeamSummaryOverlay from './TeamSummaryOverlay';
 import TeamWiseSummaryOverlay from './TeamWiseSummaryOverlay';
@@ -817,6 +819,25 @@ function CustomOverlayContent({
           </div>
         )}
 
+        {/* ── Player Card (football card design) ── (standard + custom-ticker modes) */}
+        {(visibleMode === 'standard' || visibleMode === 'custom-ticker') && !overlaySettings.hidePremiumCard && (
+          <div style={{
+            position: 'absolute',
+            left: 28,
+            bottom: 68,
+            width: overlaySettings.size === 'small' ? 344 : 444,
+            height: overlaySettings.size === 'small' ? 160 : 210,
+          }}>
+            <PlayerCardOverlay
+              currentPlayer={currentPlayer}
+              tournament={tournament}
+              auctionState={auctionState}
+              size={overlaySettings.size === 'small' ? 'small' : 'medium'}
+              position="center"
+            />
+          </div>
+        )}
+
         {/* ── Bid Info Panel ── (standard + custom-ticker modes) */}
         {/* Small: 60% scale, pills repositioned just above ticker */}
         {(visibleMode === 'standard' || visibleMode === 'custom-ticker') && (
@@ -887,18 +908,23 @@ export default function CustomOverlay({ tournamentId }: { tournamentId: string }
   return (
     <div className="w-screen h-screen overflow-hidden bg-transparent">
       <OverlayWrapper tournamentId={tournamentId}>
-        {({ soldPlayers, teams, players, currentPlayer, tournament, auctionState, overlaySettings, wheelSpinData }) => (
-          <CustomOverlayContent
-            soldPlayers={soldPlayers}
-            teams={teams}
-            players={players}
-            currentPlayer={currentPlayer}
-            tournament={tournament}
-            auctionState={auctionState}
-            overlaySettings={overlaySettings}
-            wheelSpinData={wheelSpinData}
-          />
-        )}
+        {(data) => {
+          if (data.tournament?.overlayTheme === 'theme2') {
+            return <CustomT2Content {...data} />;
+          }
+          return (
+            <CustomOverlayContent
+              soldPlayers={data.soldPlayers}
+              teams={data.teams}
+              players={data.players}
+              currentPlayer={data.currentPlayer}
+              tournament={data.tournament}
+              auctionState={data.auctionState}
+              overlaySettings={data.overlaySettings}
+              wheelSpinData={data.wheelSpinData}
+            />
+          );
+        }}
       </OverlayWrapper>
     </div>
   );
