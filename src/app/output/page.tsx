@@ -59,18 +59,33 @@ const THEMES = [
     available: true,
   },
   {
-    id: 'premium',
-    label: 'Premium',
-    description: 'Coming soon — rich glassmorphism design with animations.',
+    id: 'theme2' as const,
+    label: 'Theme 2',
+    description: 'Clean minimal design — flat layout, sharp typography, and understated animations.',
     preview: (
       <div
-        className="w-full aspect-video rounded-lg flex items-center justify-center text-white"
-        style={{ background: 'linear-gradient(135deg, #1a0533 0%, #3b0f6e 100%)' }}
+        className="w-full aspect-video rounded-lg overflow-hidden flex flex-col justify-between text-white text-xs"
+        style={{ background: '#0d1117', border: '1px solid rgba(248,250,252,0.1)' }}
       >
-        <span className="opacity-30 tracking-widest uppercase text-[10px]">Coming Soon</span>
+        <div className="flex flex-1 min-h-0">
+          <div className="w-1/3 h-full" style={{ background: '#0f172a', borderRight: '1px solid rgba(248,250,252,0.1)' }} />
+          <div className="flex-1 p-2 space-y-1.5">
+            <div className="font-bold text-sm tracking-tight truncate" style={{ color: '#f8fafc' }}>Player Name</div>
+            <div className="h-px w-full" style={{ background: 'rgba(248,250,252,0.15)' }} />
+            <div className="flex justify-between text-[10px]" style={{ color: 'rgba(248,250,252,0.5)' }}>
+              <span>BASE PRICE</span><span>CURRENT BID</span>
+            </div>
+            <div className="flex justify-between font-semibold" style={{ color: '#f8fafc' }}>
+              <span>20L</span><span>45L</span>
+            </div>
+          </div>
+        </div>
+        <div className="px-2 py-1 text-[9px] tracking-widest" style={{ background: '#0a0d12', color: 'rgba(248,250,252,0.3)', borderTop: '1px solid rgba(248,250,252,0.08)' }}>
+          ALL PLAYERS
+        </div>
       </div>
     ),
-    available: false,
+    available: true,
   },
   {
     id: 'neon',
@@ -244,7 +259,7 @@ ${'─'.repeat(60)}`;
   async function selectTheme(themeId: string) {
     if (!selectedTournamentId || themeId === currentTheme) return;
     setTournaments(prev => prev.map(t =>
-      t._id === selectedTournamentId ? { ...t, overlayTheme: themeId as 'standard' | 'premium' | 'neon', overlayPalette: 'default' } : t
+      t._id === selectedTournamentId ? { ...t, overlayTheme: themeId as 'standard' | 'premium' | 'neon' | 'theme2', overlayPalette: 'default' } : t
     ));
     setSaving(true);
     try {

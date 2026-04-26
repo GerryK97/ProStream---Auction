@@ -13,6 +13,7 @@ export type DisplayMode =
     | 'wheel-spin';
 export type TeamCardSize = 'small' | 'medium' | 'large';
 export type TeamCardPosition = 'top-right' | 'bottom-right';
+export type BidCardPosition = 'top' | 'right' | 'left';
 export type SoldMessagePosition = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
 
 export type SendOverlaySettings = (
@@ -78,6 +79,11 @@ export interface OverlayControlsProps {
     setTeamWiseTeamId: Dispatch<SetStateAction<string | null>>;
     teamWiseTeamIdRef: React.MutableRefObject<string | null>;
     teams: TeamOption[];
+
+    // Bid card position
+    bidCardPosition: BidCardPosition;
+    setBidCardPosition: Dispatch<SetStateAction<BidCardPosition>>;
+    bidCardPositionRef: React.MutableRefObject<BidCardPosition>;
 
     // Positioning
     soldMessagePosition: SoldMessagePosition;

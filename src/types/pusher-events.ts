@@ -190,6 +190,7 @@ export interface OverlaySettingsEvent extends BasePusherEvent {
   hideTeamCards?: boolean;
   teamCardSize?: 'small' | 'medium' | 'large';
   teamCardPosition?: 'top-right' | 'bottom-right';
+  bidCardPosition?: 'top' | 'right' | 'left';
 }
 
 /**

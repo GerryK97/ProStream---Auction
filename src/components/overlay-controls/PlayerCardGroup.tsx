@@ -1,5 +1,5 @@
 import React from 'react';
-import type { OverlaySize, SendOverlaySettings, TickerMode, DisplayMode } from './types';
+import type { OverlaySize, SendOverlaySettings, TickerMode, DisplayMode, BidCardPosition } from './types';
 
 interface PlayerCardGroupProps {
     overlaySize: OverlaySize;
@@ -13,6 +13,9 @@ interface PlayerCardGroupProps {
     autoSwitchTimerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
     tickerMode: TickerMode;
     displayMode: DisplayMode;
+    bidCardPosition: BidCardPosition;
+    setBidCardPosition: (p: BidCardPosition) => void;
+    bidCardPositionRef: React.MutableRefObject<BidCardPosition>;
     sendOverlaySettings: SendOverlaySettings;
 }
 
@@ -36,6 +39,9 @@ export default function PlayerCardGroup({
     autoSwitchTimerRef,
     tickerMode,
     displayMode,
+    bidCardPosition,
+    setBidCardPosition,
+    bidCardPositionRef,
     sendOverlaySettings,
 }: PlayerCardGroupProps) {
     const disabled = hidePremiumCard;
@@ -99,53 +105,82 @@ export default function PlayerCardGroup({
                     </div>
                 </div>
 
-                <div>
-                    <SectionLabel>Auto-switch size</SectionLabel>
-                    <div className="flex items-center gap-2 mt-1">
-                        <button
-                            onClick={() => {
-                                const next = !autoSwitch;
-                                setAutoSwitch(next);
-                                if (!next && autoSwitchTimerRef.current) {
-                                    clearTimeout(autoSwitchTimerRef.current);
-                                    autoSwitchTimerRef.current = null;
-                                }
-                            }}
-                            className="px-3 py-1.5 rounded-md text-xs font-semibold transition-all"
-                            style={{
-                                backgroundColor: autoSwitch ? 'var(--brand-primary)' : 'var(--surface-secondary)',
-                                color: autoSwitch ? '#fff' : 'var(--text-muted)',
-                                border: `1px solid ${autoSwitch ? 'var(--brand-primary)' : 'var(--border-primary)'}`,
-                                minWidth: 60,
-                            }}
-                        >
-                            {autoSwitch ? 'ON' : 'OFF'}
-                        </button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <SectionLabel>Switch</SectionLabel>
+                        <div className="flex items-center gap-2 mt-1">
+                            <button
+                                onClick={() => {
+                                    const next = !autoSwitch;
+                                    setAutoSwitch(next);
+                                    if (!next && autoSwitchTimerRef.current) {
+                                        clearTimeout(autoSwitchTimerRef.current);
+                                        autoSwitchTimerRef.current = null;
+                                    }
+                                }}
+                                className="px-3 py-1.5 rounded-md text-xs font-semibold transition-all"
+                                style={{
+                                    backgroundColor: autoSwitch ? 'var(--brand-primary)' : 'var(--surface-secondary)',
+                                    color: autoSwitch ? '#fff' : 'var(--text-muted)',
+                                    border: `1px solid ${autoSwitch ? 'var(--brand-primary)' : 'var(--border-primary)'}`,
+                                    minWidth: 60,
+                                }}
+                            >
+                                {autoSwitch ? 'ON' : 'OFF'}
+                            </button>
+                            {autoSwitch && (
+                                <>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        max={60}
+                                        value={autoSwitchDuration}
+                                        onChange={e => setAutoSwitchDuration(Math.max(1, Math.min(60, Number(e.target.value))))}
+                                        className="w-16 text-center text-xs px-2 py-1.5 rounded-md"
+                                        style={{
+                                            backgroundColor: 'var(--surface-secondary)',
+                                            border: '1px solid var(--border-primary)',
+                                            color: 'var(--text-primary)',
+                                            outline: 'none',
+                                        }}
+                                    />
+                                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>sec</span>
+                                </>
+                            )}
+                        </div>
                         {autoSwitch && (
-                            <>
-                                <input
-                                    type="number"
-                                    min={1}
-                                    max={60}
-                                    value={autoSwitchDuration}
-                                    onChange={e => setAutoSwitchDuration(Math.max(1, Math.min(60, Number(e.target.value))))}
-                                    className="w-16 text-center text-xs px-2 py-1.5 rounded-md"
-                                    style={{
-                                        backgroundColor: 'var(--surface-secondary)',
-                                        border: '1px solid var(--border-primary)',
-                                        color: 'var(--text-primary)',
-                                        outline: 'none',
-                                    }}
-                                />
-                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>sec</span>
-                            </>
+                            <p className="text-[10px] mt-1.5" style={{ color: 'var(--text-muted)' }}>
+                                Shrinks Large → Small after each new player
+                            </p>
                         )}
                     </div>
-                    {autoSwitch && (
-                        <p className="text-[10px] mt-1.5" style={{ color: 'var(--text-muted)' }}>
-                            Shrinks Large → Small after each new player
+
+                    <div>
+                        <SectionLabel>Bid Card Position</SectionLabel>
+                        <div className="flex items-center rounded-md overflow-hidden mt-1" style={{ border: '1px solid var(--border-primary)' }}>
+                            {(['top', 'left', 'right'] as const).map(pos => (
+                                <button
+                                    key={pos}
+                                    onClick={() => {
+                                        setBidCardPosition(pos);
+                                        bidCardPositionRef.current = pos;
+                                        sendOverlaySettings(overlaySize, tickerMode);
+                                    }}
+                                    className="flex-1 px-3 py-1.5 text-xs font-semibold capitalize transition-all"
+                                    style={{
+                                        backgroundColor: bidCardPosition === pos ? 'var(--brand-primary)' : 'var(--surface-secondary)',
+                                        color: bidCardPosition === pos ? '#fff' : 'var(--text-secondary)',
+                                        border: 'none',
+                                    }}
+                                >
+                                    {pos}
+                                </button>
+                            ))}
+                        </div>
+                        <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
+                            Only visible when a bid is active
                         </p>
-                    )}
+                    </div>
                 </div>
             </div>
         </div>

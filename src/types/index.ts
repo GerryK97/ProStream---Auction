@@ -40,7 +40,7 @@ export interface Tournament {
   usePlayerClasses?: boolean;           // Toggle to enable/disable player classes
   playerClasses?: PlayerClassConfig[];  // Custom player classes for this tournament
   basePriceStrategy?: BasePriceStrategy; // Strategy for determining base prices (default: 'tournament-level')
-  overlayTheme?: 'standard' | 'premium' | 'neon'; // Overlay theme for OBS browser source
+  overlayTheme?: 'standard' | 'premium' | 'neon' | 'theme2'; // Overlay theme for OBS browser source
   overlayPalette?: string; // e.g. 'default', 'ocean', 'crimson'
   biddingMode?: 'direct' | 'team'; // 'direct' = typed input (default), 'team' = per-team bid buttons
   bidIncrements?: BidIncrementRange[]; // Ordered list of price ranges and their increment steps

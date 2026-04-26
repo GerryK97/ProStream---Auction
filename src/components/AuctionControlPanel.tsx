@@ -995,6 +995,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const teamCardSizeRef = useRef<'small' | 'medium' | 'large'>('large');
     const [teamCardPosition, setTeamCardPosition] = useState<'top-right' | 'bottom-right'>('top-right');
     const teamCardPositionRef = useRef<'top-right' | 'bottom-right'>('top-right');
+    const [bidCardPosition, setBidCardPosition] = useState<'top' | 'right' | 'left'>('top');
+    const bidCardPositionRef = useRef<'top' | 'right' | 'left'>('top');
     const [showTeamSizeMenu, setShowTeamSizeMenu] = useState(false);
     const [showHideTickerMenu, setShowHideTickerMenu] = useState(false);
     const [showBidCardMenu, setShowBidCardMenu] = useState(false);
@@ -1038,7 +1040,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             await fetch('/api/overlay/settings', {
                 method: 'POST',
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tournamentId, size, tickerMode: mode, displayMode: dm, hidePremiumCard: hideCard, customTickerLine1: line1, customTickerLine2: line2, soldMessagePosition: soldMsgPos, hideTickerCustom: hideTickerCustomRef.current, hideTickerFullscreen: hideTickerFullscreenRef.current, teamWiseTeamId: teamWiseTeamIdRef.current, bidCardTop: bidCardTopRef.current, bidCardLeft: bidCardLeftRef.current, hideTeamCards: hideTeamCardsRef.current, teamCardSize: teamCardSizeRef.current, teamCardPosition: teamCardPositionRef.current }),
+                body: JSON.stringify({ tournamentId, size, tickerMode: mode, displayMode: dm, hidePremiumCard: hideCard, customTickerLine1: line1, customTickerLine2: line2, soldMessagePosition: soldMsgPos, hideTickerCustom: hideTickerCustomRef.current, hideTickerFullscreen: hideTickerFullscreenRef.current, teamWiseTeamId: teamWiseTeamIdRef.current, bidCardTop: bidCardTopRef.current, bidCardLeft: bidCardLeftRef.current, hideTeamCards: hideTeamCardsRef.current, teamCardSize: teamCardSizeRef.current, teamCardPosition: teamCardPositionRef.current, bidCardPosition: bidCardPositionRef.current }),
             });
         } catch { /* non-critical */ }
     };
@@ -1914,6 +1916,9 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                         teamCardPosition={teamCardPosition}
                         setTeamCardPosition={setTeamCardPosition}
                         teamCardPositionRef={teamCardPositionRef}
+                        bidCardPosition={bidCardPosition}
+                        setBidCardPosition={setBidCardPosition}
+                        bidCardPositionRef={bidCardPositionRef}
                         tickerMode={tickerMode}
                         setTickerMode={setTickerMode}
                         hideTickerCustom={hideTickerCustom}

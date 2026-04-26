@@ -30,6 +30,7 @@ export default function OverlayControlsPanel(props: OverlayControlsProps) {
         customTickerLine2, setCustomTickerLine2,
         teamWiseTeamId, setTeamWiseTeamId, teamWiseTeamIdRef,
         teams,
+        bidCardPosition, setBidCardPosition, bidCardPositionRef,
         soldMessagePosition, setSoldMessagePosition, soldMessagePositionRef,
         bidCardTop, setBidCardTop,
         bidCardLeft, setBidCardLeft,
@@ -85,6 +86,9 @@ export default function OverlayControlsPanel(props: OverlayControlsProps) {
                         autoSwitchTimerRef={autoSwitchTimerRef}
                         tickerMode={tickerMode}
                         displayMode={displayMode}
+                        bidCardPosition={bidCardPosition}
+                        setBidCardPosition={setBidCardPosition}
+                        bidCardPositionRef={bidCardPositionRef}
                         sendOverlaySettings={sendOverlaySettings}
                     />
                     <TeamCardsGroup
