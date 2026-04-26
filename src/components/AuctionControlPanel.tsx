@@ -1029,7 +1029,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const sendOverlaySettings = async (
         size: 'large' | 'small',
         mode: 'all' | 'sold' | 'available',
-        dm: 'standard' | 'sold-summary' | 'team-summary' | 'team-wise-summary' | 'resting' | 'top10-summary' | 'custom-ticker' | 'wheel-spin' = displayModeRef.current,
+        dm: DisplayMode = displayModeRef.current,
         hideCard: boolean = hidePremiumCardRef.current,
         line1: string = customTickerLine1Ref.current,
         line2: string = customTickerLine2Ref.current,
