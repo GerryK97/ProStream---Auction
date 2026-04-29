@@ -91,8 +91,8 @@ const TickerT2Shared: React.FC<TickerT2SharedProps> = ({
             }}>
               {[0, 1].map(offset => (
                 <div key={offset} style={{
-                  height: '50%', display: 'flex', alignItems: 'center',
-                  paddingLeft: 24, fontSize: 20, color: 'rgba(0,0,0,0.7)', whiteSpace: 'nowrap',
+                  height: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 20, color: 'rgba(0,0,0,0.7)', whiteSpace: 'nowrap',
                 }}>
                   {lines[(lineIndex + offset) % (lines.length || 1)] ?? ''}
                 </div>
