@@ -982,8 +982,12 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const [autoSwitch, setAutoSwitch] = useState(false);
     const [autoSwitchDuration, setAutoSwitchDuration] = useState(5);
     const autoSwitchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const [customTickerLine1, setCustomTickerLine1] = useState('');
-    const [customTickerLine2, setCustomTickerLine2] = useState('');
+    const [customTickerLine1, setCustomTickerLine1] = useState(() =>
+        typeof window !== 'undefined' ? (localStorage.getItem('customTickerLine1') ?? '') : ''
+    );
+    const [customTickerLine2, setCustomTickerLine2] = useState(() =>
+        typeof window !== 'undefined' ? (localStorage.getItem('customTickerLine2') ?? '') : ''
+    );
     const [showTickerModal, setShowTickerModal] = useState(false);
     const [soldMessagePosition, setSoldMessagePosition] = useState<'bottom-right' | 'bottom-left' | 'top-right' | 'top-left'>('bottom-right');
     const [hideTickerCustom, setHideTickerCustom] = useState(false);
@@ -996,7 +1000,10 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const teamCardSizeRef = useRef<'small' | 'medium' | 'large'>('large');
     const [teamCardPosition, setTeamCardPosition] = useState<'top-right' | 'bottom-right'>('top-right');
     const teamCardPositionRef = useRef<'top-right' | 'bottom-right'>('top-right');
-    const [bidCardPosition, setBidCardPosition] = useState<'top' | 'right' | 'left'>('top');
+    const [bidCardPosition, setBidCardPosition] = useState<'top' | 'right' | 'left'>(() => {
+        const saved = typeof window !== 'undefined' ? localStorage.getItem('bidCardPosition') : null;
+        return (saved === 'left' || saved === 'right' || saved === 'top') ? saved : 'top';
+    });
     const bidCardPositionRef = useRef<'top' | 'right' | 'left'>('top');
     const [showTeamSizeMenu, setShowTeamSizeMenu] = useState(false);
     const [showHideTickerMenu, setShowHideTickerMenu] = useState(false);
@@ -1023,6 +1030,10 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     customTickerLine1Ref.current = customTickerLine1;
     customTickerLine2Ref.current = customTickerLine2;
     soldMessagePositionRef.current = soldMessagePosition;
+
+    useEffect(() => { localStorage.setItem('customTickerLine1', customTickerLine1); }, [customTickerLine1]);
+    useEffect(() => { localStorage.setItem('customTickerLine2', customTickerLine2); }, [customTickerLine2]);
+    useEffect(() => { localStorage.setItem('bidCardPosition', bidCardPosition); }, [bidCardPosition]);
     bidCardTopRef.current = bidCardTop;
     bidCardLeftRef.current = bidCardLeft;
 

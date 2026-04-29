@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import WheelSpinOverlay from '../WheelSpinOverlay';
 import PlayerCardT2 from './PlayerCardT2';
 import CurrentBidT2 from './CurrentBidT2';
+import BasePriceCardT2 from './BasePriceCardT2';
 import SoldPlayersSummaryT2 from './SoldPlayersSummaryT2';
 import TeamSummaryT2 from './TeamSummaryT2';
 import Top10SummaryT2 from './Top10SummaryT2';
@@ -316,6 +317,8 @@ const CustomT2Content: React.FC<ContentProps> = ({
   const prevStatusRef = useRef<string | null>(null);
   const [playerKey, setPlayerKey] = useState(0);
   const prevPlayerIdRef = useRef<string | null>(null);
+  const [hidePlayerCards, setHidePlayerCards] = useState(false);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const incoming = overlaySettings.displayMode;
@@ -326,8 +329,17 @@ const CustomT2Content: React.FC<ContentProps> = ({
     if (currentPlayer?._id && currentPlayer._id !== prevPlayerIdRef.current) {
       setPlayerKey(k => k + 1);
       prevPlayerIdRef.current = currentPlayer._id;
+      setHidePlayerCards(false);
+      if (hideTimerRef.current) { clearTimeout(hideTimerRef.current); hideTimerRef.current = null; }
     }
   }, [currentPlayer?._id]);
+
+  useEffect(() => {
+    if (auctionState.currentAuctionStatus === 'Sold') {
+      hideTimerRef.current = setTimeout(() => setHidePlayerCards(true), 2000);
+    }
+    return () => { if (hideTimerRef.current) { clearTimeout(hideTimerRef.current); hideTimerRef.current = null; } };
+  }, [auctionState.currentAuctionStatus]);
 
   useEffect(() => {
     const up = () => setScale(Math.min(window.innerWidth / 1920, window.innerHeight / 1080));
@@ -403,7 +415,7 @@ const CustomT2Content: React.FC<ContentProps> = ({
               const containerWidth = isSmall ? 444 : 600;
               const cardHeight = isSmall ? 210 : 284;
               const halfWidth = containerWidth / 2;
-              const GAP = 16;
+              const GAP = 20;
               const bidPos = overlaySettings.bidCardPosition ?? 'top';
               const showPlayerArea = !overlaySettings.hidePremiumCard;
 
@@ -420,6 +432,9 @@ const CustomT2Content: React.FC<ContentProps> = ({
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: 8,
+                    opacity: hidePlayerCards ? 0 : 1,
+                    transition: 'opacity 0.4s ease',
+                    pointerEvents: hidePlayerCards ? 'none' : 'auto',
                   }}>
                     <CurrentBidT2
                       auctionState={auctionState}
@@ -442,6 +457,39 @@ const CustomT2Content: React.FC<ContentProps> = ({
                 );
               }
 
+              const playerCard = (
+                <div style={{ width: containerWidth, height: cardHeight, flexShrink: 0 }}>
+                  <PlayerCardT2
+                    currentPlayer={currentPlayer}
+                    tournament={tournament}
+                    auctionState={auctionState}
+                    size={cardSize}
+                    position="center"
+                  />
+                </div>
+              );
+
+              const currentBidCard = (
+                <CurrentBidT2
+                  auctionState={auctionState}
+                  teams={teams}
+                  tournament={tournament}
+                  currentPlayer={currentPlayer}
+                  size={cardSize}
+                  orientation="vertical"
+                  height={80}
+                />
+              );
+
+              const basePriceCard = (
+                <BasePriceCardT2
+                  tournament={tournament}
+                  currentPlayer={currentPlayer}
+                  size={cardSize}
+                  height={80}
+                />
+              );
+
               return (
                 <div style={{
                   position: 'absolute',
@@ -449,27 +497,16 @@ const CustomT2Content: React.FC<ContentProps> = ({
                   transform: 'translateX(-50%)',
                   bottom: 84,
                   display: 'flex',
-                  flexDirection: bidPos === 'left' ? 'row-reverse' : 'row',
+                  flexDirection: 'row',
                   alignItems: 'flex-end',
                   gap: GAP,
+                  opacity: hidePlayerCards ? 0 : 1,
+                  transition: 'opacity 0.4s ease',
+                  pointerEvents: hidePlayerCards ? 'none' : 'auto',
                 }}>
-                  <div style={{ width: containerWidth, height: cardHeight, flexShrink: 0 }}>
-                    <PlayerCardT2
-                      currentPlayer={currentPlayer}
-                      tournament={tournament}
-                      auctionState={auctionState}
-                      size={cardSize}
-                      position="center"
-                    />
-                  </div>
-                  <CurrentBidT2
-                    auctionState={auctionState}
-                    teams={teams}
-                    tournament={tournament}
-                    currentPlayer={currentPlayer}
-                    size={cardSize}
-                    orientation="vertical"
-                  />
+                  {bidPos === 'right' ? basePriceCard : currentBidCard}
+                  {playerCard}
+                  {bidPos === 'right' ? currentBidCard : basePriceCard}
                 </div>
               );
             })()}

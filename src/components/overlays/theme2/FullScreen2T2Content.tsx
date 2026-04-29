@@ -8,6 +8,7 @@ import Top10SummaryT2 from './Top10SummaryT2';
 import TeamWiseSummaryT2 from './TeamWiseSummaryT2';
 import TeamWiseImageT2 from './TeamWiseImageT2';
 import RestingTimeT2 from './RestingTimeT2';
+import SoldMessageToast from '../SoldMessageToast';
 import TickerT2Shared from './TickerT2Shared';
 import { AuctionState, Player, Team, Tournament } from '@/types';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
@@ -25,81 +26,68 @@ interface ContentProps {
   wheelSpinData: WheelSpinEvent | null;
 }
 
-// ─── Secondary image panel ─────────────────────────────────────────────────────
+// ─── Full-screen background image panel ───────────────────────────────────────
 
-function SecondaryImagePanel({ currentPlayer, tournament, auctionState }: {
+function ImagePanel({ currentPlayer, tournament }: {
   currentPlayer: Player | undefined;
   tournament: Tournament | null;
-  auctionState: AuctionState;
 }) {
   const hasPlayer = !!currentPlayer;
-  const isBidding = auctionState.currentAuctionStatus === 'Bidding';
-  const basePrice = hasPlayer ? getClassBasePrice(tournament, currentPlayer!) : 0;
-  const currentBid = auctionState.currentBid > 0 ? auctionState.currentBid : isBidding && hasPlayer ? basePrice : 0;
-  const imageSrc = currentPlayer?.secondaryImageURL || currentPlayer?.photoURL || null;
+  const imgSrc = currentPlayer?.secondaryImageURL || currentPlayer?.photoURL || null;
+
+  if (!hasPlayer) {
+    return (
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: 24,
+      }}>
+        <svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+        </svg>
+        <span style={{ color: 'rgba(255,255,255,0.18)', fontSize: 22, fontFamily: "'Varela Round', sans-serif", letterSpacing: 3, textTransform: 'uppercase' }}>
+          Waiting for player…
+        </span>
+      </div>
+    );
+  }
+
+  if (imgSrc) {
+    return (
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+        <img
+          src={imgSrc}
+          alt={currentPlayer!.name}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }}
+        />
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, height: 140,
+          background: 'linear-gradient(to bottom, transparent 0%, #0a0a14 100%)',
+          pointerEvents: 'none',
+        }} />
+      </div>
+    );
+  }
 
   return (
-    <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
-      {/* Secondary image — fills left */}
-      <div style={{
-        width: 1280, flexShrink: 0, position: 'relative',
-        backgroundColor: '#f3f4f6',
-        overflow: 'hidden',
-      }}>
-        {imageSrc ? (
-          <img src={imageSrc} alt={currentPlayer?.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
-        ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: 'rgba(0,0,0,0.35)', fontSize: 16, letterSpacing: 4, textTransform: 'uppercase' }}>Waiting for player…</span>
-          </div>
-        )}
-      </div>
-
-      {/* Right info strip */}
-      <div style={{
-        flex: 1, padding: '48px 40px',
-        display: 'flex', flexDirection: 'column', gap: 20,
-        fontFamily: "'Varela Round', sans-serif",
-        justifyContent: 'center',
-        backgroundColor: '#ffffff',
-        position: 'relative',
-        zIndex: 10,
-      }}>
-        <div style={{ fontSize: 11, letterSpacing: 4, textTransform: 'uppercase', color: 'rgba(0,0,0,0.45)' }}>
-          {tournament?.name ?? 'Auction'}
-        </div>
-        <div style={{
-          fontSize: 48, fontWeight: 700, color: '#111', lineHeight: 1,
-          textTransform: 'uppercase',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>
-          {hasPlayer ? currentPlayer!.name : '—'}
-        </div>
-        <div style={{ height: 1, background: 'rgba(0,0,0,0.08)' }} />
-        <div>
-          <div style={{ fontSize: 10, letterSpacing: 3, color: 'rgba(0,0,0,0.45)', textTransform: 'uppercase', marginBottom: 6 }}>Current Bid</div>
-          <div style={{ fontSize: 52, fontWeight: 700, color: '#22c55e', lineHeight: 1 }}>
-            {hasPlayer ? currentBid.toLocaleString('en-IN') : '—'}
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize: 10, letterSpacing: 3, color: 'rgba(0,0,0,0.45)', textTransform: 'uppercase', marginBottom: 6 }}>Base Price</div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: 'rgba(0,0,0,0.45)', lineHeight: 1 }}>
-            {hasPlayer ? basePrice.toLocaleString('en-IN') : '—'}
-          </div>
-        </div>
-        {isBidding && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', animation: 't2LiveDot2 1.2s ease-in-out infinite' }} />
-            <span style={{ fontSize: 10, letterSpacing: 3, textTransform: 'uppercase', color: 'rgba(0,0,0,0.45)' }}>Live</span>
-          </div>
-        )}
-      </div>
+    <div style={{
+      position: 'absolute', inset: 0,
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', gap: 24,
+      background: 'var(--overlay-bg-photo-fallback)',
+    }}>
+      {tournament?.logoURL ? (
+        <img src={tournament.logoURL} alt={tournament.name} style={{ width: 320, height: 320, objectFit: 'contain', opacity: 0.85 }} />
+      ) : (
+        <svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+        </svg>
+      )}
     </div>
   );
 }
 
-// ─── Main export ──────────────────────────────────────────────────────────────
+// ─── Main content ─────────────────────────────────────────────────────────────
 
 const FullScreen2T2Content: React.FC<ContentProps> = ({
   soldPlayers, teams, players, currentPlayer, tournament,
@@ -108,23 +96,71 @@ const FullScreen2T2Content: React.FC<ContentProps> = ({
   const [scale, setScale] = useState(1);
   const settings: OverlaySettings = { ...overlaySettings, size: 'large' };
 
+  // ── Mode transitions ──
   const [activeMode, setActiveMode] = useState(settings.displayMode);
-  const [fadingOut, setFadingOut] = useState(false);
+  const [panelExiting, setPanelExiting] = useState(false);
+  const [summaryExiting, setSummaryExiting] = useState(false);
   const prevModeRef = useRef(settings.displayMode);
 
+  // ── Sold toast ──
   const [soldToast, setSoldToast] = useState<{ player: Player; team: Team; price: number } | null>(null);
   const [toastExiting, setToastExiting] = useState(false);
   const prevStatusRef = useRef<string | null>(null);
+  const toastTimersRef = useRef<{ exit: ReturnType<typeof setTimeout> | null; clear: ReturnType<typeof setTimeout> | null }>({ exit: null, clear: null });
+
+  // ── Waiting-for-next-player ──
+  const [waitingForNextPlayer, setWaitingForNextPlayer] = useState(false);
+  const [waitingExiting, setWaitingExiting] = useState(false);
+  const soldPlayerIdRef = useRef<string | undefined>(undefined);
+  const waitingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Bid pop animation ──
+  const [bidPopping, setBidPopping] = useState(false);
+  const prevBidRef = useRef(auctionState.currentBid);
+
+  // Bid computation
+  const isBidding = auctionState.currentAuctionStatus === 'Bidding';
+  const hasPlayer = !!currentPlayer;
+  const basePrice = hasPlayer ? getClassBasePrice(tournament, currentPlayer!) : 0;
+  const currentBid = auctionState.currentBid > 0
+    ? auctionState.currentBid
+    : (isBidding && hasPlayer ? basePrice : 0);
+
+  // ── Effects ──
+
+  useEffect(() => {
+    if (auctionState.currentAuctionStatus === 'Bidding' && auctionState.currentBid !== prevBidRef.current) {
+      setBidPopping(true);
+      const t = setTimeout(() => setBidPopping(false), 300);
+      prevBidRef.current = auctionState.currentBid;
+      return () => clearTimeout(t);
+    }
+    prevBidRef.current = auctionState.currentBid;
+  }, [auctionState.currentBid, auctionState.currentAuctionStatus]);
 
   useEffect(() => {
     const incoming = settings.displayMode;
     const prev = prevModeRef.current;
     prevModeRef.current = incoming;
     if (prev === incoming) return;
-    if (incoming === 'wheel-spin') { setActiveMode('wheel-spin'); return; }
-    setFadingOut(true);
-    const t = setTimeout(() => { setActiveMode(incoming); setFadingOut(false); }, 400);
-    return () => clearTimeout(t);
+
+    if (prev === 'standard' || prev === 'custom-ticker') {
+      if (incoming === 'standard' || incoming === 'custom-ticker') { setActiveMode(incoming); return; }
+      if (incoming === 'wheel-spin') { setActiveMode('wheel-spin'); return; }
+      setPanelExiting(true);
+      const t = setTimeout(() => { setActiveMode(incoming); setPanelExiting(false); }, 1500);
+      return () => clearTimeout(t);
+    } else if (prev === 'wheel-spin') {
+      setSummaryExiting(true);
+      const t = setTimeout(() => { setActiveMode(incoming); setSummaryExiting(false); }, 500);
+      return () => clearTimeout(t);
+    } else if (prev === 'sold-summary' || prev === 'team-summary' || prev === 'team-wise-summary' || prev === 'top10-summary' || prev === 'resting') {
+      setSummaryExiting(true);
+      const t = setTimeout(() => { setActiveMode(incoming); setSummaryExiting(false); }, 1800);
+      return () => clearTimeout(t);
+    } else {
+      setActiveMode(incoming); setPanelExiting(false);
+    }
   }, [settings.displayMode]);
 
   useEffect(() => {
@@ -135,77 +171,233 @@ const FullScreen2T2Content: React.FC<ContentProps> = ({
   useEffect(() => {
     const status = auctionState.currentAuctionStatus;
     if (status === 'Sold' && prevStatusRef.current !== 'Sold') {
-      const winTeam = teams.find(t => t._id === currentPlayer?.winningTeamId);
-      const price = currentPlayer?.finalPrice ?? auctionState.currentBid;
-      if (currentPlayer && winTeam) { setSoldToast({ player: currentPlayer, team: winTeam, price }); setToastExiting(false); }
+      const winningTeam = teams.find(t => t._id === currentPlayer?.winningTeamId);
+      const price = currentPlayer?.finalPrice ?? (auctionState.currentBid || 0);
+      if (currentPlayer && winningTeam) {
+        if (toastTimersRef.current.exit) clearTimeout(toastTimersRef.current.exit);
+        if (toastTimersRef.current.clear) clearTimeout(toastTimersRef.current.clear);
+        if (waitingTimerRef.current) clearTimeout(waitingTimerRef.current);
+        soldPlayerIdRef.current = currentPlayer._id;
+        setSoldToast({ player: currentPlayer, team: winningTeam, price });
+        setToastExiting(false);
+        setWaitingForNextPlayer(false);
+        setWaitingExiting(false);
+        toastTimersRef.current.exit  = setTimeout(() => setToastExiting(true), 4400);
+        toastTimersRef.current.clear = setTimeout(() => { setSoldToast(null); setToastExiting(false); }, 5000);
+        waitingTimerRef.current      = setTimeout(() => { setWaitingForNextPlayer(true); setWaitingExiting(false); }, 5000);
+      }
     }
     prevStatusRef.current = status;
   }, [auctionState.currentAuctionStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!soldToast) return;
-    if (currentPlayer && currentPlayer._id !== soldToast.player._id) {
-      setToastExiting(true);
-      setTimeout(() => { setSoldToast(null); setToastExiting(false); }, 600);
+    if (!soldToast && !waitingForNextPlayer) return;
+    if (currentPlayer && currentPlayer._id !== soldPlayerIdRef.current) {
+      if (waitingTimerRef.current) clearTimeout(waitingTimerRef.current);
+      if (waitingForNextPlayer) {
+        setWaitingExiting(true);
+        setTimeout(() => { setWaitingForNextPlayer(false); setWaitingExiting(false); }, 600);
+      }
+      if (soldToast) {
+        if (toastTimersRef.current.exit)  clearTimeout(toastTimersRef.current.exit);
+        if (toastTimersRef.current.clear) clearTimeout(toastTimersRef.current.clear);
+        setSoldToast(null); setToastExiting(false);
+      }
     }
   }, [currentPlayer?._id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const SUMMARY = { position: 'absolute' as const, left: 100, top: 60, right: 100, bottom: 68, overflow: 'hidden' };
+  useEffect(() => {
+    if (settings.displayMode === 'wheel-spin') {
+      if (toastTimersRef.current.exit)  clearTimeout(toastTimersRef.current.exit);
+      if (toastTimersRef.current.clear) clearTimeout(toastTimersRef.current.clear);
+      setSoldToast(null); setToastExiting(false);
+    }
+  }, [settings.displayMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const SUMMARY_AREA = { position: 'absolute' as const, left: 100, top: 60, right: 100, bottom: 68, overflow: 'hidden' as const };
 
   return (
     <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative', background: 'transparent' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
-        @keyframes t2LiveDot2 {
-          0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
+
+        @keyframes t2fs2PanelEnter {
+          0%   { transform: scaleX(0)   scaleY(0.004); }
+          28%  { transform: scaleX(1)   scaleY(0.004); }
+          100% { transform: scaleX(1)   scaleY(1);     }
         }
+        @keyframes t2fs2PanelExit {
+          0%   { transform: scaleX(1)   scaleY(1);     }
+          65%  { transform: scaleX(1)   scaleY(0.004); }
+          100% { transform: scaleX(0)   scaleY(0.004); }
+        }
+        .t2fs2-panel-enter { animation: t2fs2PanelEnter 1.5s cubic-bezier(0.22,1,0.36,1) forwards; transform-origin: center center; }
+        .t2fs2-panel-exit  { animation: t2fs2PanelExit  1.5s ease-in forwards;                      transform-origin: center center; }
+
+        @keyframes t2fs2SummaryFadeOut {
+          from { opacity: 1; transform: scale(1);    }
+          to   { opacity: 0; transform: scale(0.97); }
+        }
+        .t2fs2-summary-exit { animation: t2fs2SummaryFadeOut 0.5s ease-in forwards; }
+
+        @keyframes t2fs2BidPop {
+          0%   { transform: scale(1);    }
+          40%  { transform: scale(1.08); }
+          100% { transform: scale(1);    }
+        }
+        .t2fs2-bid-pop { animation: t2fs2BidPop 0.3s ease-out forwards; }
+
+        @keyframes t2fs2LiveDot {
+          0%, 100% { opacity: 1;    transform: scale(1);    }
+          50%      { opacity: 0.35; transform: scale(0.65); }
+        }
+        .t2fs2-live-dot { animation: t2fs2LiveDot 1.2s ease-in-out infinite; }
+
+        @keyframes t2fs2BidCardPulse {
+          0%, 100% { box-shadow: 0 8px 32px rgba(0,0,0,0.45); }
+          50%      { box-shadow: 0 8px 32px rgba(0,0,0,0.45), 0 0 28px rgba(231,196,3,0.4); }
+        }
+        .t2fs2-bid-active { animation: t2fs2BidCardPulse 1.5s ease-in-out infinite; }
       `}</style>
 
+      {/* 1920×1080 canvas */}
       <div style={{
-        width: 1920, height: 1080, position: 'absolute', top: 0, left: 0,
-        transformOrigin: 'top left', transform: `scale(${scale})`,
+        width: 1920, height: 1080,
+        position: 'absolute', top: 0, left: 0,
+        transformOrigin: 'top left',
+        transform: `scale(${scale})`,
         background: 'transparent',
       }}>
-        {activeMode === 'wheel-spin' && wheelSpinData && (
-          <div style={{ position: 'absolute', inset: 0, zIndex: 10 }}><WheelSpinOverlay data={wheelSpinData} /></div>
-        )}
+
+        {/* Resting */}
         {activeMode === 'resting' && (
-          <div style={{ position: 'absolute', inset: 0, zIndex: 10, opacity: fadingOut ? 0 : 1, transition: 'opacity 0.4s' }}>
+          <div style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
             <RestingTimeT2 tournament={tournament} />
           </div>
         )}
+
+        {/* Sold summary */}
         {activeMode === 'sold-summary' && (
-          <div style={{ ...SUMMARY, opacity: fadingOut ? 0 : 1, transition: 'opacity 0.4s' }}>
-            <SoldPlayersSummaryT2 players={players} teams={teams} tournament={tournament} isExiting={fadingOut} />
+          <div className={summaryExiting ? 't2fs2-summary-exit' : ''} style={SUMMARY_AREA}>
+            <SoldPlayersSummaryT2 players={players} teams={teams} tournament={tournament} isExiting={summaryExiting} />
           </div>
         )}
+
+        {/* Team summary */}
         {activeMode === 'team-summary' && (
-          <div style={{ ...SUMMARY, opacity: fadingOut ? 0 : 1, transition: 'opacity 0.4s' }}>
-            <TeamSummaryT2 teams={teams} tournament={tournament} isExiting={fadingOut} />
+          <div className={summaryExiting ? 't2fs2-summary-exit' : ''} style={SUMMARY_AREA}>
+            <TeamSummaryT2 teams={teams} tournament={tournament} isExiting={summaryExiting} />
           </div>
         )}
+
+        {/* Top 10 */}
         {activeMode === 'top10-summary' && (
-          <div style={{ ...SUMMARY, opacity: fadingOut ? 0 : 1, transition: 'opacity 0.4s' }}>
-            <Top10SummaryT2 players={players} teams={teams} tournament={tournament} isExiting={fadingOut} />
+          <div className={summaryExiting ? 't2fs2-summary-exit' : ''} style={SUMMARY_AREA}>
+            <Top10SummaryT2 players={players} teams={teams} tournament={tournament} isExiting={summaryExiting} />
           </div>
         )}
+
+        {/* Team-wise summary */}
         {activeMode === 'team-wise-summary' && (
-          <div style={{ ...SUMMARY, opacity: fadingOut ? 0 : 1, transition: 'opacity 0.4s' }}>
-            <TeamWiseSummaryT2 players={players} teams={teams} tournament={tournament} filterTeamId={overlaySettings.teamWiseTeamId} isExiting={fadingOut} />
+          <div className={summaryExiting ? 't2fs2-summary-exit' : ''} style={SUMMARY_AREA}>
+            <TeamWiseSummaryT2 players={players} teams={teams} tournament={tournament} filterTeamId={overlaySettings.teamWiseTeamId} isExiting={summaryExiting} />
           </div>
         )}
+
+        {/* Team-wise image */}
         {activeMode === 'team-wise-image' && (
-          <div style={{ ...SUMMARY, opacity: fadingOut ? 0 : 1, transition: 'opacity 0.4s' }}>
-            <TeamWiseImageT2 players={players} teams={teams} tournament={tournament} filterTeamId={overlaySettings.teamWiseTeamId} isExiting={fadingOut} />
+          <div className={summaryExiting ? 't2fs2-summary-exit' : ''} style={SUMMARY_AREA}>
+            <TeamWiseImageT2 players={players} teams={teams} tournament={tournament} filterTeamId={overlaySettings.teamWiseTeamId} isExiting={summaryExiting} />
           </div>
         )}
 
+        {/* Wheel spin */}
+        {activeMode === 'wheel-spin' && wheelSpinData && (
+          <div className={summaryExiting ? 't2fs2-summary-exit' : ''} style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
+            <WheelSpinOverlay data={wheelSpinData} />
+          </div>
+        )}
+
+        {/* Standard / custom-ticker — image + bid card */}
         {(activeMode === 'standard' || activeMode === 'custom-ticker') && (
-          <div key={currentPlayer?._id ?? 'none'} style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 74, opacity: fadingOut ? 0 : 1, transition: 'opacity 0.4s' }}>
-            <SecondaryImagePanel currentPlayer={currentPlayer} tournament={tournament} auctionState={auctionState} />
+          <div
+            key={currentPlayer?._id ?? 'no-player'}
+            className={panelExiting ? 't2fs2-panel-exit' : 't2fs2-panel-enter'}
+            style={{ position: 'absolute', inset: 0, transformOrigin: 'center center' }}
+          >
+            {/* Full-screen background image */}
+            {!waitingForNextPlayer && (
+              <ImagePanel currentPlayer={currentPlayer} tournament={tournament} />
+            )}
+
+            {/* Current Bid card — T2 white/gold, positioned by overlay settings */}
+            <div
+              className={isBidding ? 't2fs2-bid-active' : ''}
+              style={{
+                position: 'absolute',
+                left: settings.bidCardLeft ?? 1576,
+                top: settings.bidCardTop ?? 160,
+                width: 300,
+                backgroundColor: '#ffffff',
+                borderRadius: 5,
+                overflow: 'hidden',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+                display: waitingForNextPlayer ? 'none' : 'flex',
+                flexDirection: 'row',
+                fontFamily: "'Varela Round', sans-serif",
+                zIndex: 5,
+              }}
+            >
+              {/* Gold left strip */}
+              <div style={{ width: 5, flexShrink: 0, backgroundColor: '#E7C403' }} />
+
+              {/* Content */}
+              <div style={{
+                flex: 1, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                padding: '20px 16px', gap: 8,
+              }}>
+                <span style={{
+                  fontSize: 13, letterSpacing: 2, textTransform: 'uppercase',
+                  color: 'rgba(0,0,0,0.45)',
+                }}>
+                  Current Bid
+                </span>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span
+                    className={bidPopping ? 't2fs2-bid-pop' : ''}
+                    style={{ fontSize: 56, fontWeight: 700, color: '#111', lineHeight: 1 }}
+                  >
+                    {hasPlayer ? currentBid.toLocaleString('en-IN') : '—'}
+                  </span>
+                  {isBidding && (
+                    <div className="t2fs2-live-dot" style={{
+                      width: 10, height: 10, borderRadius: '50%',
+                      backgroundColor: '#22c55e', flexShrink: 0,
+                    }} />
+                  )}
+                </div>
+
+                <div style={{ width: '60%', height: 1, backgroundColor: '#E7C403', opacity: 0.5 }} />
+
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                  <span style={{
+                    fontSize: 12, letterSpacing: 2, textTransform: 'uppercase',
+                    color: 'rgba(0,0,0,0.4)',
+                  }}>
+                    Base
+                  </span>
+                  <span style={{ fontSize: 28, fontWeight: 700, color: '#E7C403', lineHeight: 1 }}>
+                    {hasPlayer ? basePrice.toLocaleString('en-IN') : '—'}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
+        {/* Ticker */}
         {!settings.hideTickerFullscreen && (
           <TickerT2Shared
             soldPlayers={soldPlayers} players={players} teams={teams} tournament={tournament}
@@ -213,6 +405,27 @@ const FullScreen2T2Content: React.FC<ContentProps> = ({
             customMode={activeMode === 'custom-ticker'}
             customLine1={settings.customTickerLine1}
             customLine2={settings.customTickerLine2}
+          />
+        )}
+
+        {/* Waiting for next player */}
+        {waitingForNextPlayer && (activeMode === 'standard' || activeMode === 'custom-ticker') && (
+          <div
+            className={waitingExiting ? 't2fs2-summary-exit' : 'animate-fade-in'}
+            style={{ position: 'absolute', inset: 0, zIndex: 6 }}
+          >
+            <RestingTimeT2 tournament={tournament} />
+          </div>
+        )}
+
+        {/* Sold toast */}
+        {soldToast && (
+          <SoldMessageToast
+            player={soldToast.player}
+            team={soldToast.team}
+            finalPrice={soldToast.price}
+            exiting={toastExiting}
+            position={settings.soldMessagePosition ?? 'bottom-right'}
           />
         )}
       </div>

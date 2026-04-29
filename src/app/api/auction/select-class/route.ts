@@ -66,15 +66,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate class isn't already completed
-    const completedClasses: string[] = (auctionState as any).completedClasses ?? [];
-    if (completedClasses.includes(className)) {
-      return NextResponse.json(
-        { error: `Class "${className}" is already completed` },
-        { status: 400 }
-      );
-    }
-
     // Count available players in this class (player.playerClass stores the name)
     const playerCount = await PlayerModel.countDocuments({
       tournamentId,
@@ -82,6 +73,24 @@ export async function POST(request: NextRequest) {
       isSold: { $ne: true },
       isUnsold: { $ne: true },
     });
+
+    // Validate class completion using real availability.
+    // If completedClasses is stale but players are available again (undo/re-auction),
+    // auto-heal by removing the class from completedClasses.
+    const completedClasses: string[] = (auctionState as any).completedClasses ?? [];
+    if (completedClasses.includes(className)) {
+      if (playerCount === 0) {
+        return NextResponse.json(
+          { error: `Class "${className}" is already completed` },
+          { status: 400 }
+        );
+      }
+
+      await AuctionStateModel.findOneAndUpdate(
+        { tournamentId },
+        { $pull: { completedClasses: className } }
+      );
+    }
 
     // Store the class NAME in currentAuctionClass so it matches player.playerClass directly
     const updatedState = await AuctionStateModel.findOneAndUpdate(

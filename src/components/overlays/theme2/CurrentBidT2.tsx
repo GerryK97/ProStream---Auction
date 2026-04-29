@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AuctionState, Team, Tournament, Player } from '@/types';
 
 interface CurrentBidT2Props {
@@ -10,6 +10,7 @@ interface CurrentBidT2Props {
     currentPlayer: Player | undefined;
     size: 'small' | 'medium';
     orientation: 'horizontal' | 'vertical';
+    height?: number;
 }
 
 const formatCompact = (amount: number): string => {
@@ -44,13 +45,31 @@ const CurrentBidT2: React.FC<CurrentBidT2Props> = ({
     currentPlayer,
     size,
     orientation,
+    height,
 }) => {
     const isBiddingLive = tournament?.status === 'Live' && currentPlayer;
+    const isBidding = auctionState.currentAuctionStatus === 'Bidding';
+
+    const [bidPopping, setBidPopping] = useState(false);
+    const prevBidRef = useRef(auctionState.currentBid);
+
+    useEffect(() => {
+        if (auctionState.currentBid !== prevBidRef.current && auctionState.currentBid > 0) {
+            prevBidRef.current = auctionState.currentBid;
+            setBidPopping(true);
+            const t = setTimeout(() => setBidPopping(false), 350);
+            return () => clearTimeout(t);
+        }
+        prevBidRef.current = auctionState.currentBid;
+    }, [auctionState.currentBid]);
+
     if (!currentPlayer || !isBiddingLive) return null;
 
     const hasBid = auctionState.currentBid > 0;
     const cfg = bidCardConfig[size];
-    const dims = orientation === 'horizontal' ? cfg.horizontal : cfg.vertical;
+    const dims = orientation === 'horizontal'
+        ? cfg.horizontal
+        : { ...cfg.vertical, height: height ?? cfg.vertical.height };
     const teamName = hasBid && auctionState.winningTeamId
         ? teams.find(t => t._id === auctionState.winningTeamId)?.name ?? ''
         : '';
@@ -59,9 +78,27 @@ const CurrentBidT2: React.FC<CurrentBidT2Props> = ({
 
     return (
         <>
-            <style>{`@import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');`}</style>
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
+                @keyframes t2BidGlow {
+                    0%, 100% { box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 0 0 1.5px #E7C403; }
+                    50%       { box-shadow: 0 4px 24px rgba(0,0,0,0.18), 0 0 0 2.5px #E7C403, 0 0 18px rgba(231,196,3,0.45); }
+                }
+                @keyframes t2BidPop {
+                    0%   { transform: scale(1); }
+                    40%  { transform: scale(1.12); }
+                    100% { transform: scale(1); }
+                }
+                @keyframes t2LiveDot {
+                    0%, 100% { opacity: 1; transform: scale(1); }
+                    50%      { opacity: 0.35; transform: scale(0.6); }
+                }
+                .t2bid-glow   { animation: t2BidGlow 1.4s ease-in-out infinite; }
+                .t2bid-pop    { animation: t2BidPop 0.35s cubic-bezier(0.22,1,0.36,1) forwards; }
+                .t2bid-dot    { animation: t2LiveDot 1s ease-in-out infinite; }
+            `}</style>
             <div
-                className="animate-slide-in-top"
+                className={`animate-slide-in-top${isBidding ? ' t2bid-glow' : ''}`}
                 style={{
                     position: 'relative',
                     width: dims.width,
@@ -70,7 +107,7 @@ const CurrentBidT2: React.FC<CurrentBidT2Props> = ({
                     borderRadius: 5,
                     overflow: 'hidden',
                     fontFamily: "'Varela Round', sans-serif",
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                    boxShadow: isBidding ? undefined : '0 4px 16px rgba(0,0,0,0.12)',
                     display: 'flex',
                     flexDirection: 'row',
                 }}
@@ -88,24 +125,36 @@ const CurrentBidT2: React.FC<CurrentBidT2Props> = ({
                         paddingRight: 14,
                         gap: 12,
                     }}>
-                        <span style={{
-                            fontSize: cfg.labelFs,
-                            color: 'rgba(0,0,0,0.7)',
-                            textTransform: 'uppercase',
-                            letterSpacing: 1.5,
-                            whiteSpace: 'nowrap',
-                        }}>
-                            {label}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                            {isBidding && (
+                                <div className="t2bid-dot" style={{
+                                    width: 8, height: 8, borderRadius: '50%',
+                                    backgroundColor: '#22c55e', flexShrink: 0,
+                                }} />
+                            )}
+                            <span style={{
+                                fontSize: cfg.labelFs,
+                                color: 'rgba(0,0,0,0.7)',
+                                textTransform: 'uppercase',
+                                letterSpacing: 1.5,
+                                whiteSpace: 'nowrap',
+                            }}>
+                                {label}
+                            </span>
+                        </div>
 
-                        <span style={{
-                            fontSize: cfg.amountFs,
-                            fontWeight: 700,
-                            color: 'var(--brand-secondary)',
-                            lineHeight: 1,
-                            flex: 1,
-                            textAlign: 'center',
-                        }}>
+                        <span
+                            className={bidPopping ? 't2bid-pop' : ''}
+                            style={{
+                                fontSize: cfg.amountFs,
+                                fontWeight: 700,
+                                color: isBidding ? '#E7C403' : 'var(--brand-secondary)',
+                                lineHeight: 1,
+                                flex: 1,
+                                textAlign: 'center',
+                                transition: 'color 0.3s ease',
+                            }}
+                        >
                             {displayAmount}
                         </span>
 
@@ -116,7 +165,7 @@ const CurrentBidT2: React.FC<CurrentBidT2Props> = ({
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
-                                maxWidth: orientation === 'horizontal' ? 140 : undefined,
+                                maxWidth: 140,
                                 textAlign: 'right',
                                 textTransform: 'uppercase',
                                 letterSpacing: 0.5,
@@ -136,24 +185,36 @@ const CurrentBidT2: React.FC<CurrentBidT2Props> = ({
                         padding: '16px 12px',
                         gap: 6,
                     }}>
-                        <span style={{
-                            fontSize: cfg.labelFs,
-                            color: 'rgba(0, 0, 0, 1)',
-                            fontWeight: 500,
-                            textTransform: 'uppercase',
-                            letterSpacing: 1.5,
-                            textAlign: 'center',
-                        }}>
-                            {label}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {isBidding && (
+                                <div className="t2bid-dot" style={{
+                                    width: 8, height: 8, borderRadius: '50%',
+                                    backgroundColor: '#22c55e', flexShrink: 0,
+                                }} />
+                            )}
+                            <span style={{
+                                fontSize: cfg.labelFs,
+                                color: 'rgba(0, 0, 0, 1)',
+                                fontWeight: 500,
+                                textTransform: 'uppercase',
+                                letterSpacing: 1.5,
+                                textAlign: 'center',
+                            }}>
+                                {label}
+                            </span>
+                        </div>
 
-                        <span style={{
-                            fontSize: cfg.amountFs,
-                            fontWeight: 700,
-                            color: 'var(--brand-secondary)',
-                            lineHeight: 1,
-                            textAlign: 'center',
-                        }}>
+                        <span
+                            className={bidPopping ? 't2bid-pop' : ''}
+                            style={{
+                                fontSize: cfg.amountFs,
+                                fontWeight: 700,
+                                color: isBidding ? '#E7C403' : 'var(--brand-secondary)',
+                                lineHeight: 1,
+                                textAlign: 'center',
+                                transition: 'color 0.3s ease',
+                            }}
+                        >
                             {displayAmount}
                         </span>
 
