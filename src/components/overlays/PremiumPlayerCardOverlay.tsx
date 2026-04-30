@@ -136,7 +136,8 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
                     left: 0,
                     right: 0,
                     height: cfg.panelH,
-                    backgroundColor: 'white',
+                    background: 'var(--overlay-bg-panel)',
+                    border: '1.5px solid var(--overlay-border-light)',
                     // Top edge: right side at 0px (top of panel), left side at cfg.diag px — matches photo clip
                     clipPath: `polygon(0% ${cfg.diag}px, 100% 0%, 100% 100%, 0% 100%)`,
                 }}>
@@ -166,7 +167,7 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
                             right: dorsalText ? cfg.jerseyFs + 22 : 18,
                             fontSize: nameFontSize,
                             fontWeight: 'bold',
-                            color: '#111',
+                            color: 'var(--overlay-text-bright)',
                             textTransform: 'uppercase',
                             lineHeight: 1.15,
                         }}>
@@ -181,7 +182,7 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
                             top: cfg.diag + 10 + nameFontSize * 1.2 + 4,
                             left: 18,
                             fontSize: 11,
-                            color: 'rgba(0,0,0,0.42)',
+                            color: 'var(--overlay-color-primary)',
                             textTransform: 'uppercase',
                             letterSpacing: 2,
                         }}>
@@ -197,7 +198,7 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
                             left: 0,
                             right: 0,
                             height: cfg.statsH,
-                            borderTop: '1px solid rgba(0,0,0,0.09)',
+                            borderTop: '1px solid var(--overlay-border-light)',
                             display: 'flex',
                         }}>
                             {statEntries.map((s, i) => (
@@ -208,12 +209,12 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     gap: 2,
-                                    borderLeft: i > 0 ? '1px solid rgba(0,0,0,0.09)' : 'none',
+                                    borderLeft: i > 0 ? '1px solid var(--overlay-border-light)' : 'none',
                                 }}>
-                                    <div style={{ fontSize: 10, color: 'rgba(0,0,0,0.38)', textTransform: 'uppercase', letterSpacing: 1 }}>
+                                    <div style={{ fontSize: 10, color: 'var(--overlay-color-primary)', textTransform: 'uppercase', letterSpacing: 1 }}>
                                         {s.label}
                                     </div>
-                                    <div style={{ fontSize: 20, fontWeight: 700, color: '#111', lineHeight: 1 }}>
+                                    <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--overlay-text-bright)', lineHeight: 1 }}>
                                         {s.value ?? '—'}
                                     </div>
                                 </div>
