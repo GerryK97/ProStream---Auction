@@ -4,7 +4,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import OverlayWrapper from './OverlayWrapper';
 import CustomT2Content from './theme2/CustomT2Content';
 import PremiumPlayerCardOverlay from './PremiumPlayerCardOverlay';
-import PlayerCardOverlay from './PlayerCardOverlay';
 import SoldPlayersSummaryOverlay from './SoldPlayersSummaryOverlay';
 import TeamSummaryOverlay from './TeamSummaryOverlay';
 import TeamWiseSummaryOverlay from './TeamWiseSummaryOverlay';
@@ -816,25 +815,6 @@ function CustomOverlayContent({
               </div>
             )}
           </div>
-          </div>
-        )}
-
-        {/* ── Player Card (football card design) ── (standard + custom-ticker modes) */}
-        {(visibleMode === 'standard' || visibleMode === 'custom-ticker') && !overlaySettings.hidePremiumCard && (
-          <div style={{
-            position: 'absolute',
-            left: 28,
-            bottom: 68,
-            width: overlaySettings.size === 'small' ? 344 : 444,
-            height: overlaySettings.size === 'small' ? 160 : 210,
-          }}>
-            <PlayerCardOverlay
-              currentPlayer={currentPlayer}
-              tournament={tournament}
-              auctionState={auctionState}
-              size={overlaySettings.size === 'small' ? 'small' : 'medium'}
-              position="center"
-            />
           </div>
         )}
 
