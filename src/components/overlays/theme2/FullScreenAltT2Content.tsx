@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import WheelSpinOverlay from '../WheelSpinOverlay';
+import WheelSpinOverlay from '../shared/WheelSpinOverlay';
 import SoldPlayersSummaryT2 from './SoldPlayersSummaryT2';
 import TeamSummaryT2 from './TeamSummaryT2';
 import Top10SummaryT2 from './Top10SummaryT2';
 import TeamWiseSummaryT2 from './TeamWiseSummaryT2';
 import TeamWiseImageT2 from './TeamWiseImageT2';
 import RestingTimeT2 from './RestingTimeT2';
-import SoldMessageToast from '../SoldMessageToast';
+import SoldMessageToast from '../shared/SoldMessageToast';
 import TickerT2Shared from './TickerT2Shared';
 import { AuctionState, Player, Team, Tournament } from '@/types';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
@@ -89,7 +89,7 @@ function ImagePanel({ currentPlayer, tournament }: {
 
 // ─── Main content ─────────────────────────────────────────────────────────────
 
-const FullScreen2T2Content: React.FC<ContentProps> = ({
+const FullScreenAltT2Content: React.FC<ContentProps> = ({
   soldPlayers, teams, players, currentPlayer, tournament,
   auctionState, overlaySettings, wheelSpinData,
 }) => {
@@ -433,4 +433,4 @@ const FullScreen2T2Content: React.FC<ContentProps> = ({
   );
 };
 
-export default FullScreen2T2Content;
+export default FullScreenAltT2Content;

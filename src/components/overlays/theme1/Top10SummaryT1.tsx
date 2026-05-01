@@ -3,7 +3,7 @@
 import React from 'react';
 import { Player, Team, Tournament } from '@/types';
 
-interface Top10SummaryOverlayProps {
+interface Top10SummaryT1Props {
     players: Player[];
     teams: Team[];
     tournament: Tournament | null;
@@ -39,7 +39,7 @@ const RANK_COLORS: Record<number, string> = {
 };
 const getRankColor = (rank: number) => RANK_COLORS[rank] ?? '#475569';
 
-const Top10SummaryOverlay: React.FC<Top10SummaryOverlayProps> = ({
+const Top10SummaryT1: React.FC<Top10SummaryT1Props> = ({
     players,
     teams,
     isExiting = false,
@@ -364,4 +364,4 @@ const Top10SummaryOverlay: React.FC<Top10SummaryOverlayProps> = ({
     );
 };
 
-export default Top10SummaryOverlay;
+export default Top10SummaryT1;

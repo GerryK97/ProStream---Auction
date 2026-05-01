@@ -3,7 +3,7 @@
 import React from 'react';
 import { Player, Team } from '@/types';
 
-interface SoldMessageFullScreenProps {
+interface SoldMessageT1Props {
   player: Player;
   team: Team;
   finalPrice: number;
@@ -14,7 +14,7 @@ function formatPrice(amount: number): string {
   return amount.toLocaleString('en-IN');
 }
 
-const SoldMessageFullScreen: React.FC<SoldMessageFullScreenProps> = ({
+const SoldMessageT1: React.FC<SoldMessageT1Props> = ({
   player,
   team,
   finalPrice,
@@ -293,4 +293,4 @@ const SoldMessageFullScreen: React.FC<SoldMessageFullScreenProps> = ({
   </div>
 );
 
-export default SoldMessageFullScreen;
+export default SoldMessageT1;

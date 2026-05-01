@@ -37,7 +37,7 @@ function buildOverlayUrl(tournamentId: string, overlayPath: string, token: strin
 const THEMES = [
   {
     id: 'standard' as const,
-    label: 'Standard',
+    label: 'Theme 1',
     description: 'Clean dark gradient with team leaderboard, live bidding view, and sold banner.',
     preview: (
       <div

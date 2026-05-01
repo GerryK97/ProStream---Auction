@@ -30,6 +30,8 @@ export const OVERLAY_PALETTES: Record<string, OverlayPalette[]> = {
         '--overlay-border-light': 'rgba(255,255,255,0.15)',
         '--overlay-border-accent-strong': 'rgba(255,201,25,0.4)',
         '--overlay-border-accent-subtle': 'rgba(255,201,25,0.22)',
+        '--t1card-gradient-from': '#ff5411',
+        '--t1card-gradient-to': '#ffcc00',
       } as React.CSSProperties
     },
     {
@@ -56,32 +58,36 @@ export const OVERLAY_PALETTES: Record<string, OverlayPalette[]> = {
         '--overlay-border-light': 'rgba(255,255,255,0.15)',
         '--overlay-border-accent-strong': 'rgba(6,182,212,0.4)',
         '--overlay-border-accent-subtle': 'rgba(6,182,212,0.22)',
+        '--t1card-gradient-from': '#06b6d4',
+        '--t1card-gradient-to': '#0284c7',
       } as React.CSSProperties
     },
     {
-      id: 'crimson',
-      name: 'Crimson Night (Red/Black)',
+      id: 'amethyst',
+      name: 'Amethyst Night (Purple/Violet)',
       cssVars: {
-        '--overlay-color-primary': '#f43f5e', /* Rose 500 */
-        '--overlay-color-primary-rgb': '244, 63, 94',
-        '--overlay-color-secondary': '#be123c', /* Rose 700 */
-        '--overlay-color-success': '#00C54C',
-        '--overlay-color-danger': '#ef4444', 
-        '--overlay-bg-panel': 'linear-gradient(135deg, #1a0505, #4d0a0a)',
+        '--overlay-color-primary': '#c084fc',
+        '--overlay-color-primary-rgb': '192, 132, 252',
+        '--overlay-color-secondary': '#9333ea',
+        '--overlay-color-success': '#34d399',
+        '--overlay-color-danger': '#ef4444',
+        '--overlay-bg-panel': 'linear-gradient(135deg, #1a0a2e, #3b1a6b)',
         '--overlay-bg-danger': 'linear-gradient(135deg, #1a0808, #2d0f0f)',
-        '--overlay-bg-logo-pill': 'linear-gradient(270deg, #be123c 0%, #881337 74%)',
-        '--overlay-bg-ticker': 'rgba(20,5,5,0.92)',
-        '--overlay-bg-photo': '#240a0a',
-        '--overlay-bg-photo-fallback': '#1a0505',
-        '--overlay-bg-fullscreen': 'linear-gradient(160deg, #0a0505 0%, #1a0a0a 60%, #120505 100%)',
+        '--overlay-bg-logo-pill': 'linear-gradient(270deg, #9333ea 0%, #6d28d9 74%)',
+        '--overlay-bg-ticker': 'rgba(15,5,30,0.92)',
+        '--overlay-bg-photo': '#1a0d2e',
+        '--overlay-bg-photo-fallback': '#120820',
+        '--overlay-bg-fullscreen': 'linear-gradient(160deg, #0a0514 0%, #150a28 60%, #0d0820 100%)',
         '--overlay-text-bright': '#ffffff',
-        '--overlay-text-subtle': '#fecdd3', /* Rose 200 */
-        '--overlay-text-muted': 'rgba(255,255,255,0.45)',
-        '--overlay-text-dim': 'rgba(255,255,255,0.28)',
+        '--overlay-text-subtle': '#e9d5ff',
+        '--overlay-text-muted': 'rgba(233,213,255,0.45)',
+        '--overlay-text-dim': 'rgba(233,213,255,0.28)',
         '--overlay-text-dark': '#0d0d0d',
         '--overlay-border-light': 'rgba(255,255,255,0.15)',
-        '--overlay-border-accent-strong': 'rgba(244,63,94,0.4)',
-        '--overlay-border-accent-subtle': 'rgba(244,63,94,0.22)',
+        '--overlay-border-accent-strong': 'rgba(192,132,252,0.4)',
+        '--overlay-border-accent-subtle': 'rgba(192,132,252,0.22)',
+        '--t1card-gradient-from': '#c084fc',
+        '--t1card-gradient-to': '#9333ea',
       } as React.CSSProperties
     }
   ],

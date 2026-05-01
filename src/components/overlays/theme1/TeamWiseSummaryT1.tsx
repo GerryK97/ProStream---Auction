@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Player, Team, Tournament } from '@/types';
 
-interface TeamWiseSummaryOverlayProps {
+interface TeamWiseSummaryT1Props {
     players: Player[];
     teams: Team[];
     tournament: Tournament | null;
@@ -34,7 +34,7 @@ const PAGE_DURATION = 6000; // ms per page/team slide
 const FONT_HEADING = "'Bebas Neue', cursive";
 const FONT_ROW = "'Rajdhani', sans-serif";
 
-const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
+const TeamWiseSummaryT1: React.FC<TeamWiseSummaryT1Props> = ({
     players,
     teams,
     tournament,
@@ -412,4 +412,4 @@ const TeamWiseSummaryOverlay: React.FC<TeamWiseSummaryOverlayProps> = ({
     );
 };
 
-export default TeamWiseSummaryOverlay;
+export default TeamWiseSummaryT1;

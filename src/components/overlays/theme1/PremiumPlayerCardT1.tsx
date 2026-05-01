@@ -3,7 +3,7 @@
 import React from 'react';
 import { Player, Team, Tournament } from '@/types';
 
-interface PremiumPlayerCardOverlayProps {
+interface PremiumPlayerCardT1Props {
     currentPlayer: Player | undefined;
     tournament: Tournament | null;
     teams: Team[];
@@ -41,7 +41,7 @@ interface PremiumPlayerCardOverlayProps {
 const prettifyKey = (key: string) =>
     key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim();
 
-const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
+const PremiumPlayerCardT1: React.FC<PremiumPlayerCardT1Props> = ({
     currentPlayer,
     tournament,
     showJerseyNumber = true,
@@ -227,4 +227,4 @@ const PremiumPlayerCardOverlay: React.FC<PremiumPlayerCardOverlayProps> = ({
     );
 };
 
-export default PremiumPlayerCardOverlay;
+export default PremiumPlayerCardT1;

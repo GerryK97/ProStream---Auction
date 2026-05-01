@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import WheelSpinOverlay from '../WheelSpinOverlay';
+import WheelSpinOverlay from '../shared/WheelSpinOverlay';
 import SoldPlayersSummaryT2 from './SoldPlayersSummaryT2';
 import TeamSummaryT2 from './TeamSummaryT2';
 import Top10SummaryT2 from './Top10SummaryT2';
 import TeamWiseSummaryT2 from './TeamWiseSummaryT2';
 import TeamWiseImageT2 from './TeamWiseImageT2';
 import RestingTimeT2 from './RestingTimeT2';
-import SoldMessageFullScreen from '../SoldMessageFullScreen';
+import SoldMessageFullScreen from '../theme1/SoldMessageT1';
 import TickerT2Shared from './TickerT2Shared';
 import { AuctionState, Player, Team, Tournament } from '@/types';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
