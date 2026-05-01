@@ -9,13 +9,14 @@ interface Props {
   isExiting?: boolean;
 }
 
-const GOLD         = '#E7C403';
-const WHITE_BG     = '#ffffff';
-const TEXT_DARK    = '#111';
-const TEXT_MUTED   = 'rgba(0,0,0,0.4)';
-const TEXT_MUTED_L = 'rgba(0,0,0,0.5)';
+const GOLD         = 'var(--t2-accent)';
+const WHITE_BG     = 'var(--t2-bg-card)';
+const TEXT_DARK    = 'var(--t2-text-primary)';
+const TEXT_MUTED   = 'rgba(var(--t2-text-primary-rgb), 0.4)';
+const TEXT_MUTED_L = 'rgba(var(--t2-text-primary-rgb), 0.5)';
+const ON_ACCENT    = 'var(--t2-on-accent)';
 const GREEN        = '#22c55e';
-const GOLD_SEP     = 'rgba(231,196,3,0.5)';
+const GOLD_SEP     = 'rgba(var(--t2-accent-rgb), 0.5)';
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
@@ -206,8 +207,8 @@ const TeamSummaryT2: React.FC<Props> = ({ teams, tournament, isExiting = false }
               { label: 'TOTAL SPENT',  value: formatCurrency(totalSpent)  },
             ].map(stat => (
               <div key={stat.label} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-                <span style={{ fontSize: 11, letterSpacing: 3, color: TEXT_MUTED_L, textTransform: 'uppercase' }}>{stat.label}</span>
-                <span style={{ fontSize: 22, fontWeight: 700, color: TEXT_DARK }}>{stat.value}</span>
+                <span style={{ fontSize: 11, letterSpacing: 3, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase' }}>{stat.label}</span>
+                <span style={{ fontSize: 22, fontWeight: 700, color: ON_ACCENT }}>{stat.value}</span>
               </div>
             ))}
           </div>
@@ -224,7 +225,7 @@ function ColHeader({ children, style }: { children: React.ReactNode; style: Reac
       fontSize: 14,
       fontWeight: 700,
       letterSpacing: 2,
-      color: TEXT_DARK,
+      color: ON_ACCENT,
       textTransform: 'uppercase',
       ...style,
     }}>

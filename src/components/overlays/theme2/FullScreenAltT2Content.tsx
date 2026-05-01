@@ -255,7 +255,7 @@ const FullScreenAltT2Content: React.FC<ContentProps> = ({
 
         @keyframes t2fs2BidCardPulse {
           0%, 100% { box-shadow: 0 8px 32px rgba(0,0,0,0.45); }
-          50%      { box-shadow: 0 8px 32px rgba(0,0,0,0.45), 0 0 28px rgba(231,196,3,0.4); }
+          50%      { box-shadow: 0 8px 32px rgba(0,0,0,0.45), 0 0 28px rgba(var(--t2-accent-rgb), 0.4); }
         }
         .t2fs2-bid-active { animation: t2fs2BidCardPulse 1.5s ease-in-out infinite; }
       `}</style>
@@ -338,7 +338,7 @@ const FullScreenAltT2Content: React.FC<ContentProps> = ({
                 left: settings.bidCardLeft ?? 1576,
                 top: settings.bidCardTop ?? 160,
                 width: 300,
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--t2-bg-card)',
                 borderRadius: 5,
                 overflow: 'hidden',
                 boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
@@ -348,8 +348,8 @@ const FullScreenAltT2Content: React.FC<ContentProps> = ({
                 zIndex: 5,
               }}
             >
-              {/* Gold left strip */}
-              <div style={{ width: 5, flexShrink: 0, backgroundColor: '#E7C403' }} />
+              {/* Accent left strip */}
+              <div style={{ width: 5, flexShrink: 0, backgroundColor: 'var(--t2-accent)' }} />
 
               {/* Content */}
               <div style={{
@@ -359,7 +359,7 @@ const FullScreenAltT2Content: React.FC<ContentProps> = ({
               }}>
                 <span style={{
                   fontSize: 13, letterSpacing: 2, textTransform: 'uppercase',
-                  color: 'rgba(0,0,0,0.45)',
+                  color: 'rgba(var(--t2-text-primary-rgb), 0.45)',
                 }}>
                   Current Bid
                 </span>
@@ -367,7 +367,7 @@ const FullScreenAltT2Content: React.FC<ContentProps> = ({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span
                     className={bidPopping ? 't2fs2-bid-pop' : ''}
-                    style={{ fontSize: 56, fontWeight: 700, color: '#111', lineHeight: 1 }}
+                    style={{ fontSize: 56, fontWeight: 700, color: 'var(--t2-text-primary)', lineHeight: 1 }}
                   >
                     {hasPlayer ? currentBid.toLocaleString('en-IN') : '—'}
                   </span>
@@ -379,16 +379,16 @@ const FullScreenAltT2Content: React.FC<ContentProps> = ({
                   )}
                 </div>
 
-                <div style={{ width: '60%', height: 1, backgroundColor: '#E7C403', opacity: 0.5 }} />
+                <div style={{ width: '60%', height: 1, backgroundColor: 'var(--t2-accent)', opacity: 0.5 }} />
 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                   <span style={{
                     fontSize: 12, letterSpacing: 2, textTransform: 'uppercase',
-                    color: 'rgba(0,0,0,0.4)',
+                    color: 'rgba(var(--t2-text-primary-rgb), 0.4)',
                   }}>
                     Base
                   </span>
-                  <span style={{ fontSize: 28, fontWeight: 700, color: '#E7C403', lineHeight: 1 }}>
+                  <span style={{ fontSize: 28, fontWeight: 700, color: 'var(--t2-accent)', lineHeight: 1 }}>
                     {hasPlayer ? basePrice.toLocaleString('en-IN') : '—'}
                   </span>
                 </div>

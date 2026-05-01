@@ -29,7 +29,7 @@ const RestingTimeT2: React.FC<Props> = ({ tournament, overrideLabel, size = 'med
   const nameFontSize = Math.round(cardSize * 0.11);
 
   const logoFace = (logo: string | null, dark: boolean, fallback: string) => (
-    <div style={{ position: 'absolute', inset: 0, backgroundColor: dark ? '#1a1a1a' : '#ffffff' }}>
+    <div style={{ position: 'absolute', inset: 0, backgroundColor: dark ? '#1a1a1a' : 'var(--t2-bg-card)' }}>
       {/* Image fills the full square */}
       {logo ? (
         <img src={logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -37,7 +37,7 @@ const RestingTimeT2: React.FC<Props> = ({ tournament, overrideLabel, size = 'med
         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <span style={{
             fontSize: logoSize, fontWeight: 700,
-            color: dark ? '#E7C403' : '#1a1a1a',
+            color: dark ? 'var(--t2-accent)' : '#1a1a1a',
             letterSpacing: 4, textTransform: 'uppercase',
             fontFamily: "'Varela Round', sans-serif",
           }}>
@@ -57,7 +57,7 @@ const RestingTimeT2: React.FC<Props> = ({ tournament, overrideLabel, size = 'med
         <span style={{
           fontSize: nameFontSize,
           fontWeight: 700,
-          color: dark ? '#ffffff' : '#111111',
+          color: dark ? '#ffffff' : 'var(--t2-text-primary)',
           textTransform: 'uppercase',
           letterSpacing: 3,
           whiteSpace: 'nowrap',

@@ -126,18 +126,18 @@ function TeamCardT2({ team, tournament, currentBid, players, size = 'large' }: {
     : n >= 1000  ? `${(n / 1000).toFixed(0)}K`
     : `${n}`;
 
-  const GOLD  = '#E7C403';
+  const GOLD  = 'var(--t2-accent)';
   const GREEN = '#22c55e';
   const RED   = '#ef4444';
-  const MUTED = 'rgba(0,0,0,0.4)';
-  const METRIC_LABEL = 'rgba(0,0,0,0.8)';
+  const MUTED = 'rgba(var(--t2-text-primary-rgb), 0.4)';
+  const METRIC_LABEL = 'rgba(var(--t2-text-primary-rgb), 0.8)';
 
   return (
     <div style={{
       width: '100%',
-      background: '#ffffff',
+      background: 'var(--t2-bg-card)',
       borderRadius: 8,
-      border: isExceeded ? `1.5px solid ${RED}` : '1px solid rgba(0,0,0,0.07)',
+      border: isExceeded ? `1.5px solid ${RED}` : `1px solid var(--t2-border-subtle)`,
       boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
       fontFamily: "'Varela Round', sans-serif",
       overflow: 'hidden',
@@ -154,8 +154,8 @@ function TeamCardT2({ team, tournament, currentBid, players, size = 'large' }: {
           <div style={{
             width: cfg.logoSize, height: cfg.logoSize,
             borderRadius: cfg.logoRadius,
-            border: '1px solid rgba(231,196,3,0.3)',
-            background: 'rgba(231,196,3,0.05)',
+            border: '1px solid rgba(var(--t2-accent-rgb), 0.3)',
+            background: 'rgba(var(--t2-accent-rgb), 0.05)',
             overflow: 'hidden',
             flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -172,19 +172,19 @@ function TeamCardT2({ team, tournament, currentBid, players, size = 'large' }: {
           {/* Name + shortcode stacked */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
-              fontSize: cfg.nameFontSize, fontWeight: 700, color: '#111',
+              fontSize: cfg.nameFontSize, fontWeight: 700, color: 'var(--t2-text-primary)',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
               {team.name}
             </div>
-            <div style={{ fontSize: cfg.codeFontSize + 2, color: 'rgba(0,0,0,0.8)', marginTop: 2 }}>
+            <div style={{ fontSize: cfg.codeFontSize + 2, color: 'rgba(var(--t2-text-primary-rgb), 0.8)', marginTop: 2 }}>
               {team.shortCode}
             </div>
           </div>
         </div>
 
-        {/* Gold divider */}
-        <div style={{ height: 1, background: 'rgba(231,196,3,0.28)', marginBottom: cfg.dividerMb }} />
+        {/* Accent divider */}
+        <div style={{ height: 1, background: 'rgba(var(--t2-accent-rgb), 0.28)', marginBottom: cfg.dividerMb }} />
 
         {/* Metrics row: Balance | MaxBid */}
         <div style={{ display: 'flex', marginBottom: cfg.metricMb }}>
@@ -196,7 +196,7 @@ function TeamCardT2({ team, tournament, currentBid, players, size = 'large' }: {
               {fmt(balance)}
             </div>
           </div>
-          <div style={{ width: 1, background: 'rgba(0,0,0,0.07)', margin: cfg.vertDivMargin }} />
+          <div style={{ width: 1, background: 'var(--t2-border-subtle)', margin: cfg.vertDivMargin }} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: cfg.labelFontSize, color: METRIC_LABEL, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 }}>
               Max Bid
@@ -207,8 +207,8 @@ function TeamCardT2({ team, tournament, currentBid, players, size = 'large' }: {
           </div>
         </div>
 
-        {/* Subtle gold divider */}
-        <div style={{ height: 1, background: 'rgba(231,196,3,0.18)', marginBottom: cfg.squadDividerMb }} />
+        {/* Subtle accent divider */}
+        <div style={{ height: 1, background: 'rgba(var(--t2-accent-rgb), 0.18)', marginBottom: cfg.squadDividerMb }} />
 
         {/* Squad row */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: cfg.squadGap }}>
@@ -291,7 +291,7 @@ function TeamCardsPanelT2({ teams, tournament, currentBid, players, size = 'larg
               width: i === pageIndex ? 14 : 5,
               height: 5,
               borderRadius: 3,
-              background: i === pageIndex ? '#E7C403' : 'rgba(0,0,0,0.18)',
+              background: i === pageIndex ? 'var(--t2-accent)' : 'rgba(var(--t2-text-primary-rgb), 0.2)',
               transition: 'width 0.3s ease, background 0.3s ease',
             }} />
           ))}

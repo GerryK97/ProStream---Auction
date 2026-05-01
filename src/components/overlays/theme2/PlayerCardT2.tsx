@@ -105,7 +105,7 @@ const PlayerCardT2: React.FC<PlayerCardT2Props> = ({
                 <div className={`transition-all duration-500 ease-in-out ${isBiddingLive ? 'animate-slide-in-top' : 'opacity-0'}`}>
                     <div style={{
                         position: 'relative',
-                        backgroundColor: 'white',
+                        backgroundColor: 'var(--t2-bg-card)',
                         height: cfg.card.height,
                         width: cfg.card.width,
                         borderRadius: 5,
@@ -130,7 +130,7 @@ const PlayerCardT2: React.FC<PlayerCardT2Props> = ({
                             position: 'absolute',
                             width: cfg.diagonal.width,
                             height: cfg.diagonal.height,
-                            backgroundColor: 'white',
+                            backgroundColor: 'var(--t2-bg-card)',
                             left: cfg.diagonal.left,
                             transform: 'rotate(15deg)',
                             top: -40,
@@ -144,7 +144,7 @@ const PlayerCardT2: React.FC<PlayerCardT2Props> = ({
                             right: 0,
                             width: cfg.panelWidth,
                             height: cfg.card.height,
-                            backgroundColor: 'white',
+                            backgroundColor: 'var(--t2-bg-card)',
                             display: 'flex',
                             flexDirection: 'column',
                             paddingTop: 8,
@@ -156,15 +156,15 @@ const PlayerCardT2: React.FC<PlayerCardT2Props> = ({
                             {/* Row 1: Player No + Base/Bid price */}
                             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 4 }}>
                                 {currentPlayer.playerNo ? (
-                                    <div style={{ color: '#E7C403', fontSize: cfg.jerseyFs, fontWeight: 'bold', lineHeight: 1, flexShrink: 0, display: 'inline-block', transform: 'scaleY(1.3)', transformOrigin: 'top left' }}>
+                                    <div style={{ color: 'var(--t2-accent)', fontSize: cfg.jerseyFs, fontWeight: 'bold', lineHeight: 1, flexShrink: 0, display: 'inline-block', transform: 'scaleY(1.3)', transformOrigin: 'top left' }}>
                                         {currentPlayer.playerNo}
                                     </div>
                                 ) : <div />}
                                 <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-                                    <div style={{ fontSize: cfg.priceLabelFs, color: 'rgba(0,0,0,0.4)', lineHeight: 1.2 }}>
+                                    <div style={{ fontSize: cfg.priceLabelFs, color: 'rgba(var(--t2-text-primary-rgb), 0.4)', lineHeight: 1.2 }}>
                                         Base
                                     </div>
-                                    <div style={{ color: '#E7C403', fontSize: cfg.priceValueFs, fontWeight: 700, lineHeight: 1 }}>
+                                    <div style={{ color: 'var(--t2-accent)', fontSize: cfg.priceValueFs, fontWeight: 700, lineHeight: 1 }}>
                                         {formatCompact(tournament?.basePricePerPlayer ?? 0)}
                                     </div>
                                 </div>
@@ -180,7 +180,7 @@ const PlayerCardT2: React.FC<PlayerCardT2Props> = ({
                                     position: 'relative',
                                     left: -cfg.nameLeftOffset,
                                     fontSize: cfg.typeFontSize,
-                                    color: 'rgba(0,0,0,0.45)',
+                                    color: 'rgba(var(--t2-text-primary-rgb), 0.45)',
                                     textTransform: 'uppercase',
                                     letterSpacing: 1,
                                 }}>
@@ -195,7 +195,7 @@ const PlayerCardT2: React.FC<PlayerCardT2Props> = ({
                                 left: -cfg.nameLeftOffset,
                                 fontSize: cfg.nameFontSize,
                                 fontWeight: 'bold',
-                                color: '#111',
+                                color: 'var(--t2-text-primary)',
                                 textTransform: 'uppercase',
                                 lineHeight: 1.15,
                                 wordBreak: 'break-word',
@@ -208,9 +208,9 @@ const PlayerCardT2: React.FC<PlayerCardT2Props> = ({
                             {statKeys.length > 0 && (
                                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                                     {statKeys.slice(0, 2).map((key) => (
-                                        <div key={key} style={{ textAlign: 'center', fontSize: cfg.statFontSize, color: 'rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
+                                        <div key={key} style={{ textAlign: 'center', fontSize: cfg.statFontSize, color: 'rgba(var(--t2-text-primary-rgb), 0.4)', whiteSpace: 'nowrap' }}>
                                             {key}<br />
-                                            <span style={{ color: '#111', fontSize: cfg.valFontSize, fontWeight: 600 }}>{stats[key]}</span>
+                                            <span style={{ color: 'var(--t2-text-primary)', fontSize: cfg.valFontSize, fontWeight: 600 }}>{stats[key]}</span>
                                         </div>
                                     ))}
                                 </div>
