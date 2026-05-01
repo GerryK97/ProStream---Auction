@@ -1,4 +1,4 @@
-import TeamOwnerOverlay from '@/components/overlays/TeamOwnerOverlay';
+import TeamOwnerOverlay from '@/components/overlays/shared/TeamOwnerOverlay';
 
 export default async function TeamOwnerOverlayPage({
   params,

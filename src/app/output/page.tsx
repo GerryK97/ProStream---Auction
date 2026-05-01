@@ -37,7 +37,7 @@ function buildOverlayUrl(tournamentId: string, overlayPath: string, token: strin
 const THEMES = [
   {
     id: 'standard' as const,
-    label: 'Standard',
+    label: 'Theme 1',
     description: 'Clean dark gradient with team leaderboard, live bidding view, and sold banner.',
     preview: (
       <div
@@ -61,27 +61,41 @@ const THEMES = [
   {
     id: 'theme2' as const,
     label: 'Theme 2',
-    description: 'Clean minimal design — flat layout, sharp typography, and understated animations.',
+    description: 'Palette-driven design — distinct color worlds, sharp typography, and smooth animations.',
     preview: (
       <div
-        className="w-full aspect-video rounded-lg overflow-hidden flex flex-col justify-between text-white text-xs"
-        style={{ background: '#0d1117', border: '1px solid rgba(248,250,252,0.1)' }}
+        className="w-full aspect-video rounded-lg overflow-hidden flex flex-col justify-between text-xs"
+        style={{ background: '#080f1c', border: '1px solid rgba(59,130,246,0.25)' }}
       >
-        <div className="flex flex-1 min-h-0">
-          <div className="w-1/3 h-full" style={{ background: '#0f172a', borderRight: '1px solid rgba(248,250,252,0.1)' }} />
-          <div className="flex-1 p-2 space-y-1.5">
-            <div className="font-bold text-sm tracking-tight truncate" style={{ color: '#f8fafc' }}>Player Name</div>
-            <div className="h-px w-full" style={{ background: 'rgba(248,250,252,0.15)' }} />
-            <div className="flex justify-between text-[10px]" style={{ color: 'rgba(248,250,252,0.5)' }}>
-              <span>BASE PRICE</span><span>CURRENT BID</span>
-            </div>
-            <div className="flex justify-between font-semibold" style={{ color: '#f8fafc' }}>
-              <span>20L</span><span>45L</span>
+        <div className="flex flex-1 min-h-0 gap-2 p-2">
+          {/* Player card */}
+          <div className="flex rounded overflow-hidden flex-shrink-0" style={{ background: '#0f1829', width: '44%', border: '1px solid rgba(59,130,246,0.2)' }}>
+            <div style={{ width: 4, background: '#3b82f6', flexShrink: 0 }} />
+            <div className="flex-1 p-1.5 space-y-1">
+              <div className="font-bold text-[11px]" style={{ color: '#e2e8f0' }}>PLAYER NAME</div>
+              <div className="h-px" style={{ background: 'rgba(59,130,246,0.35)' }} />
+              <div className="flex justify-between text-[8px]" style={{ color: 'rgba(226,232,240,0.45)' }}>
+                <span>BASE</span><span>CURRENT BID</span>
+              </div>
+              <div className="flex justify-between font-semibold text-[10px]" style={{ color: '#3b82f6' }}>
+                <span>20L</span><span>45L</span>
+              </div>
             </div>
           </div>
+          {/* Team cards */}
+          <div className="flex flex-col gap-1 flex-1">
+            {['Team Alpha', 'Team Beta', 'Team Gamma'].map((t, i) => (
+              <div key={t} className="flex items-center rounded overflow-hidden" style={{ background: '#0f1829', border: '1px solid rgba(59,130,246,0.15)', flex: 1 }}>
+                <div style={{ width: 3, background: '#3b82f6', alignSelf: 'stretch' }} />
+                <span className="px-1.5 text-[8px] font-medium flex-1 truncate" style={{ color: '#e2e8f0' }}>{t}</span>
+                <span className="px-1.5 text-[8px]" style={{ color: 'rgba(226,232,240,0.45)' }}>₹{80 - i * 15}L</span>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="px-2 py-1 text-[9px] tracking-widest" style={{ background: '#0a0d12', color: 'rgba(248,250,252,0.3)', borderTop: '1px solid rgba(248,250,252,0.08)' }}>
-          ALL PLAYERS
+        <div className="px-2 py-1 text-[8px] tracking-widest flex items-center gap-1.5" style={{ background: '#0f1829', color: 'rgba(226,232,240,0.4)', borderTop: '3px solid #3b82f6' }}>
+          <span style={{ background: '#3b82f6', color: '#fff', padding: '0 6px', borderRadius: 2, fontWeight: 700 }}>PLAYERS</span>
+          <span>Alpha · Beta · Gamma · Delta</span>
         </div>
       </div>
     ),

@@ -2,9 +2,9 @@
 
 import React from 'react';
 import { Tournament } from '@/types';
-import '../../styles/animations.css';
+import '../../../styles/animations.css';
 
-interface RestingTimeOverlayProps {
+interface RestingTimeT1Props {
     tournament: Tournament | null;
     overrideLabel?: string;
 }
@@ -18,7 +18,7 @@ const COIN_SIZE = 300;
 const FONT_HEADING = "'Bebas Neue', cursive";
 const FONT_BODY = "'Rajdhani', sans-serif";
 
-const RestingTimeOverlay: React.FC<RestingTimeOverlayProps> = ({ tournament, overrideLabel }) => {
+const RestingTimeT1: React.FC<RestingTimeT1Props> = ({ tournament, overrideLabel }) => {
     const fallbackLabel = tournament?.name?.slice(0, 2).toUpperCase() ?? 'PS';
 
     // Coin faces: front = tournament logo (fallback to streamer logo),
@@ -137,4 +137,4 @@ const RestingTimeOverlay: React.FC<RestingTimeOverlayProps> = ({ tournament, ove
     );
 };
 
-export default RestingTimeOverlay;
+export default RestingTimeT1;

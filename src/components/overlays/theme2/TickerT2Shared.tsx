@@ -53,8 +53,8 @@ const TickerT2Shared: React.FC<TickerT2SharedProps> = ({
       `}</style>
       <div style={{
         position: 'absolute', left: 0, bottom: 0, right: 0, height: 74,
-        background: '#ffffff',
-        borderTop: '3px solid #E7C403',
+        background: 'var(--t2-bg-card)',
+        borderTop: '3px solid var(--t2-accent)',
         fontFamily: "'Varela Round', sans-serif",
         boxShadow: '0 -8px 32px rgba(0,0,0,0.2)',
       }}>
@@ -63,7 +63,7 @@ const TickerT2Shared: React.FC<TickerT2SharedProps> = ({
           position: 'absolute',
           top: 0, left: 0,
           width: LABEL_W, height: '100%',
-          backgroundColor: '#E7C403',
+          backgroundColor: 'var(--t2-accent)',
           clipPath: `polygon(0 0, calc(100% - ${ARROW_D}px) 0, 100% 50%, calc(100% - ${ARROW_D}px) 100%, 0 100%)`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           paddingRight: ARROW_D,
@@ -71,7 +71,7 @@ const TickerT2Shared: React.FC<TickerT2SharedProps> = ({
         }}>
           <span style={{
             fontSize: 20, letterSpacing: 5, textTransform: 'uppercase',
-            color: '#111', fontWeight: 700, whiteSpace: 'nowrap',
+            color: '#ffffff', fontWeight: 700, whiteSpace: 'nowrap',
           }}>
             {customMode ? 'ProStream' : heading}
           </span>
@@ -92,7 +92,7 @@ const TickerT2Shared: React.FC<TickerT2SharedProps> = ({
               {[0, 1].map(offset => (
                 <div key={offset} style={{
                   height: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 20, color: 'rgba(0,0,0,0.7)', whiteSpace: 'nowrap',
+                  fontSize: 20, color: 'rgba(var(--t2-text-primary-rgb), 0.7)', whiteSpace: 'nowrap',
                 }}>
                   {lines[(lineIndex + offset) % (lines.length || 1)] ?? ''}
                 </div>
@@ -109,10 +109,10 @@ const TickerT2Shared: React.FC<TickerT2SharedProps> = ({
                 const team = mode === 'sold' ? teams.find(t => t._id === p.winningTeamId) : null;
                 return (
                   <React.Fragment key={`${i}-${p._id}`}>
-                    {i > 0 && <span style={{ color: '#E7C403', margin: '0 20px' }}>·</span>}
-                    <span style={{ color: 'rgba(0,0,0,0.75)', fontWeight: 600 }}>{p.name.toUpperCase()}</span>
+                    {i > 0 && <span style={{ color: 'var(--t2-accent)', margin: '0 20px' }}>·</span>}
+                    <span style={{ color: 'rgba(var(--t2-text-primary-rgb), 0.75)', fontWeight: 600 }}>{p.name.toUpperCase()}</span>
                     {mode === 'sold' && (
-                      <span style={{ color: 'rgba(0,0,0,0.4)', marginLeft: 10 }}>
+                      <span style={{ color: 'rgba(var(--t2-text-primary-rgb), 0.4)', marginLeft: 10 }}>
                         › {team?.name ?? '—'} · {p.finalPrice?.toLocaleString('en-IN') ?? '—'}
                       </span>
                     )}
@@ -123,7 +123,7 @@ const TickerT2Shared: React.FC<TickerT2SharedProps> = ({
           ) : (
             <div style={{
               position: 'absolute', top: '50%', transform: 'translateY(-50%)',
-              paddingLeft: 24, fontSize: 25, color: 'rgba(0,0,0,0.35)',
+              paddingLeft: 24, fontSize: 25, color: 'rgba(var(--t2-text-primary-rgb), 0.35)',
             }}>
               {emptyText}
             </div>

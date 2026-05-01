@@ -33,7 +33,7 @@ const BasePriceCardT2: React.FC<BasePriceCardT2Props> = ({ tournament, currentPl
                     position: 'relative',
                     width: BASE_WIDTH,
                     height,
-                    backgroundColor: '#ffffff',
+                    backgroundColor: 'var(--t2-bg-card)',
                     borderRadius: 5,
                     overflow: 'hidden',
                     fontFamily: "'Varela Round', sans-serif",
@@ -44,7 +44,7 @@ const BasePriceCardT2: React.FC<BasePriceCardT2Props> = ({ tournament, currentPl
                 }}
             >
                 {/* Gold left strip */}
-                <div style={{ width: STRIP_WIDTH, flexShrink: 0, backgroundColor: '#E7C403' }} />
+                <div style={{ width: STRIP_WIDTH, flexShrink: 0, backgroundColor: 'var(--t2-accent)' }} />
 
                 {/* Content */}
                 <div style={{
@@ -58,7 +58,7 @@ const BasePriceCardT2: React.FC<BasePriceCardT2Props> = ({ tournament, currentPl
                 }}>
                     <span style={{
                         fontSize: fs.label,
-                        color: 'rgba(0, 0, 0, 1)',
+                        color: 'var(--t2-text-primary)',
                         fontWeight: 500,
                         textTransform: 'uppercase',
                         letterSpacing: 1.5,

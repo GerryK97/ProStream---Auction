@@ -81,8 +81,8 @@ const CurrentBidT2: React.FC<CurrentBidT2Props> = ({
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
                 @keyframes t2BidGlow {
-                    0%, 100% { box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 0 0 1.5px #E7C403; }
-                    50%       { box-shadow: 0 4px 24px rgba(0,0,0,0.18), 0 0 0 2.5px #E7C403, 0 0 18px rgba(231,196,3,0.45); }
+                    0%, 100% { box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 0 0 1.5px var(--t2-accent); }
+                    50%       { box-shadow: 0 4px 24px rgba(0,0,0,0.18), 0 0 0 2.5px var(--t2-accent), 0 0 18px rgba(var(--t2-accent-rgb), 0.45); }
                 }
                 @keyframes t2BidPop {
                     0%   { transform: scale(1); }
@@ -103,7 +103,7 @@ const CurrentBidT2: React.FC<CurrentBidT2Props> = ({
                     position: 'relative',
                     width: dims.width,
                     height: dims.height,
-                    backgroundColor: '#ffffff',
+                    backgroundColor: 'var(--t2-bg-card)',
                     borderRadius: 5,
                     overflow: 'hidden',
                     fontFamily: "'Varela Round', sans-serif",
@@ -112,8 +112,8 @@ const CurrentBidT2: React.FC<CurrentBidT2Props> = ({
                     flexDirection: 'row',
                 }}
             >
-                {/* Gold left strip */}
-                <div style={{ width: cfg.strip, flexShrink: 0, backgroundColor: '#E7C403' }} />
+                {/* Accent left strip */}
+                <div style={{ width: cfg.strip, flexShrink: 0, backgroundColor: 'var(--t2-accent)' }} />
 
                 {orientation === 'horizontal' ? (
                     /* Horizontal layout — single row */
@@ -134,7 +134,7 @@ const CurrentBidT2: React.FC<CurrentBidT2Props> = ({
                             )}
                             <span style={{
                                 fontSize: cfg.labelFs,
-                                color: 'rgba(0,0,0,0.7)',
+                                color: 'rgba(var(--t2-text-primary-rgb), 0.7)',
                                 textTransform: 'uppercase',
                                 letterSpacing: 1.5,
                                 whiteSpace: 'nowrap',
@@ -148,7 +148,7 @@ const CurrentBidT2: React.FC<CurrentBidT2Props> = ({
                             style={{
                                 fontSize: cfg.amountFs,
                                 fontWeight: 700,
-                                color: isBidding ? '#E7C403' : 'var(--brand-secondary)',
+                                color: isBidding ? 'var(--t2-accent)' : 'var(--brand-secondary)',
                                 lineHeight: 1,
                                 flex: 1,
                                 textAlign: 'center',
@@ -161,7 +161,7 @@ const CurrentBidT2: React.FC<CurrentBidT2Props> = ({
                         {teamName ? (
                             <span style={{
                                 fontSize: cfg.teamFs,
-                                color: 'rgba(0,0,0,0.45)',
+                                color: 'rgba(var(--t2-text-primary-rgb), 0.45)',
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
@@ -194,7 +194,7 @@ const CurrentBidT2: React.FC<CurrentBidT2Props> = ({
                             )}
                             <span style={{
                                 fontSize: cfg.labelFs,
-                                color: 'rgba(0, 0, 0, 1)',
+                                color: 'var(--t2-text-primary)',
                                 fontWeight: 500,
                                 textTransform: 'uppercase',
                                 letterSpacing: 1.5,
@@ -209,7 +209,7 @@ const CurrentBidT2: React.FC<CurrentBidT2Props> = ({
                             style={{
                                 fontSize: cfg.amountFs,
                                 fontWeight: 700,
-                                color: isBidding ? '#E7C403' : 'var(--brand-secondary)',
+                                color: isBidding ? 'var(--t2-accent)' : 'var(--brand-secondary)',
                                 lineHeight: 1,
                                 textAlign: 'center',
                                 transition: 'color 0.3s ease',
@@ -223,13 +223,13 @@ const CurrentBidT2: React.FC<CurrentBidT2Props> = ({
                                 <div style={{
                                     width: '60%',
                                     height: 1,
-                                    backgroundColor: '#E7C403',
+                                    backgroundColor: 'var(--t2-accent)',
                                     opacity: 0.5,
                                     marginTop: 4,
                                 }} />
                                 <span style={{
                                     fontSize: cfg.teamFs,
-                                    color: 'rgba(0,0,0,0.45)',
+                                    color: 'rgba(var(--t2-text-primary-rgb), 0.45)',
                                     textAlign: 'center',
                                     textTransform: 'uppercase',
                                     letterSpacing: 0.5,

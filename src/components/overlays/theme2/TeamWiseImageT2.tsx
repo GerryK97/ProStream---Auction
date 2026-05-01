@@ -18,13 +18,13 @@ const GRID_AVAIL_H = 762; // 940 total − 90 header − 56 footer − 32 grid p
 const NAME_H = 40;
 const MAX_IMG_H = 380;
 
-const GOLD           = '#E7C403';
-const WHITE_BG       = '#ffffff';
-const TEXT_DARK      = '#111';
-const TEXT_MUTED     = 'rgba(0,0,0,0.4)';
-const TEXT_MUTED_LIGHT = 'rgba(0,0,0,0.5)';
+const GOLD           = 'var(--t2-accent)';
+const WHITE_BG       = 'var(--t2-bg-card)';
+const TEXT_DARK      = 'var(--t2-text-primary)';
+const TEXT_MUTED     = 'rgba(var(--t2-text-primary-rgb), 0.4)';
+const TEXT_MUTED_LIGHT = 'rgba(var(--t2-text-primary-rgb), 0.5)';
 const GREEN          = '#22c55e';
-const DOT_INACTIVE   = 'rgba(0,0,0,0.15)';
+const DOT_INACTIVE   = 'rgba(var(--t2-text-primary-rgb), 0.15)';
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
@@ -270,7 +270,7 @@ const TeamWiseImageT2: React.FC<Props> = ({
                 <div style={{
                   width: '100%',
                   height: imageH,
-                  background: `linear-gradient(180deg, rgba(231,196,3,0.08) 0%, rgba(0,0,0,0.1) 100%)`,
+                  background: `linear-gradient(180deg, rgba(var(--t2-accent-rgb), 0.08) 0%, rgba(0,0,0,0.1) 100%)`,
                   position: 'relative',
                   overflow: 'hidden',
                   borderRadius: '6px 6px 0 0',
@@ -294,9 +294,9 @@ const TeamWiseImageT2: React.FC<Props> = ({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      background: `linear-gradient(180deg, rgba(231,196,3,0.08) 0%, rgba(231,196,3,0.18) 100%)`,
+                      background: `linear-gradient(180deg, rgba(var(--t2-accent-rgb), 0.08) 0%, rgba(var(--t2-accent-rgb), 0.18) 100%)`,
                     }}>
-                      <span style={{ color: 'rgba(231,196,3,0.45)', fontSize: 64, fontWeight: 900 }}>
+                      <span style={{ color: 'rgba(var(--t2-accent-rgb), 0.45)', fontSize: 64, fontWeight: 900 }}>
                         {player.name.charAt(0).toUpperCase()}
                       </span>
                     </div>

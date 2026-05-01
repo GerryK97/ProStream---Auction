@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import WheelSpinOverlay from '../WheelSpinOverlay';
+import WheelSpinOverlay from '../shared/WheelSpinOverlay';
 import SoldPlayersSummaryT2 from './SoldPlayersSummaryT2';
 import TeamSummaryT2 from './TeamSummaryT2';
 import Top10SummaryT2 from './Top10SummaryT2';
 import TeamWiseSummaryT2 from './TeamWiseSummaryT2';
 import TeamWiseImageT2 from './TeamWiseImageT2';
 import RestingTimeT2 from './RestingTimeT2';
-import SoldMessageFullScreen from '../SoldMessageFullScreen';
+import SoldMessageFullScreen from '../theme1/SoldMessageT1';
 import TickerT2Shared from './TickerT2Shared';
 import { AuctionState, Player, Team, Tournament } from '@/types';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
@@ -56,7 +56,7 @@ function PlayerPanelT2({
   }, [currentBid, isBidding]);
 
   const classConfig = tournament?.playerClasses?.find(c => c.name === currentPlayer?.playerClass);
-  const classColor = classConfig?.color ?? '#E7C403';
+  const classColor = classConfig?.color ?? 'var(--t2-accent)';
 
   const photoUrl = hasPlayer ? (currentPlayer!.photoURL || tournament?.logoURL || '') : '';
   const dorsalText = hasPlayer && currentPlayer!.playerNo ? `#${currentPlayer!.playerNo}` : '';
@@ -136,7 +136,7 @@ function PlayerPanelT2({
       <div style={{
         position: 'absolute',
         left: PHOTO_W, top: 0, right: 0, bottom: 0,
-        backgroundColor: 'white',
+        backgroundColor: 'var(--t2-bg-card)',
         zIndex: 1, overflow: 'hidden',
       }}>
 
@@ -144,7 +144,7 @@ function PlayerPanelT2({
         {dorsalText && (
           <div style={{
             position: 'absolute', top: -40, right: -10,
-            color: '#E7C403', fontSize: 380, fontWeight: 700,
+            color: 'var(--t2-accent)', fontSize: 380, fontWeight: 700,
             lineHeight: 1, opacity: 0.07,
             userSelect: 'none', pointerEvents: 'none',
             fontFamily: "'Varela Round', sans-serif",
@@ -156,7 +156,7 @@ function PlayerPanelT2({
         {/* Gold left accent bar */}
         <div style={{
           position: 'absolute', left: 0, top: 64, bottom: 64,
-          width: 5, backgroundColor: '#E7C403', borderRadius: '0 3px 3px 0',
+          width: 5, backgroundColor: 'var(--t2-accent)', borderRadius: '0 3px 3px 0',
         }} />
 
         {/* Content — flex column layout */}
@@ -171,7 +171,7 @@ function PlayerPanelT2({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             {dorsalText ? (
               <div style={{
-                color: '#E7C403', fontSize: 42, fontWeight: 700,
+                color: 'var(--t2-accent)', fontSize: 42, fontWeight: 700,
                 lineHeight: 1, letterSpacing: -1,
               }}>
                 {dorsalText}
@@ -192,15 +192,15 @@ function PlayerPanelT2({
 
           {/* Player name */}
           <div style={{
-            fontSize: nameFontSize, fontWeight: 700, color: '#111',
+            fontSize: nameFontSize, fontWeight: 700, color: 'var(--t2-text-primary)',
             textTransform: 'uppercase', lineHeight: 1.05,
             wordBreak: 'break-word', marginBottom: 18,
           }}>
             {hasPlayer ? currentPlayer!.name : '—'}
           </div>
 
-          {/* Gold divider */}
-          <div style={{ height: 3, backgroundColor: '#E7C403', borderRadius: 2, marginBottom: 22 }} />
+          {/* Accent divider */}
+          <div style={{ height: 3, backgroundColor: 'var(--t2-accent)', borderRadius: 2, marginBottom: 22 }} />
 
           {/* Bid boxes — PlayerCardT2 style, scaled up */}
           <div style={{ display: 'flex', gap: 14, marginBottom: 26 }}>
@@ -208,14 +208,14 @@ function PlayerPanelT2({
             {/* Base Price */}
             <div style={{
               flex: 1, padding: '16px 22px',
-              backgroundColor: 'rgba(231,196,3,0.05)',
-              border: '1px solid rgba(231,196,3,0.25)',
+              backgroundColor: 'rgba(var(--t2-accent-rgb), 0.05)',
+              border: '1px solid rgba(var(--t2-accent-rgb), 0.25)',
               borderRadius: 10,
             }}>
-              <div style={{ fontSize: 15, letterSpacing: 4, textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', marginBottom: 8 }}>
+              <div style={{ fontSize: 15, letterSpacing: 4, textTransform: 'uppercase', color: 'rgba(var(--t2-text-primary-rgb), 0.4)', marginBottom: 8 }}>
                 Base Price
               </div>
-              <div style={{ fontSize: 38, fontWeight: 700, color: '#E7C403', lineHeight: 1 }}>
+              <div style={{ fontSize: 38, fontWeight: 700, color: 'var(--t2-accent)', lineHeight: 1 }}>
                 {hasPlayer ? basePrice.toLocaleString('en-IN') : '—'}
               </div>
             </div>
@@ -224,19 +224,19 @@ function PlayerPanelT2({
             <div style={{
               flex: 2, padding: '16px 22px',
               backgroundColor: isBidding ? 'rgba(34,197,94,0.05)' : 'rgba(0,0,0,0.02)',
-              border: `1px solid ${isBidding ? 'rgba(34,197,94,0.3)' : 'rgba(0,0,0,0.08)'}`,
+              border: `1px solid ${isBidding ? 'rgba(34,197,94,0.3)' : 'var(--t2-border-subtle)'}`,
               borderRadius: 10,
               transition: 'background-color 0.3s, border-color 0.3s',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: 15, letterSpacing: 4, textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)' }}>Current Bid</span>
+                <span style={{ fontSize: 15, letterSpacing: 4, textTransform: 'uppercase', color: 'rgba(var(--t2-text-primary-rgb), 0.4)' }}>Current Bid</span>
                 {isBidding && <div className="t2fs-live-dot" style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#22c55e' }} />}
               </div>
               <div
                 className={`${isBidding ? 't2fs-bid-active' : ''} ${bidPopping ? 't2fs-bid-pop' : ''}`}
                 style={{
                   fontSize: 72, fontWeight: 700,
-                  color: isBidding ? '#22c55e' : '#111',
+                  color: isBidding ? '#22c55e' : 'var(--t2-text-primary)',
                   lineHeight: 1,
                 }}
               >
@@ -249,11 +249,11 @@ function PlayerPanelT2({
           <div style={{ flex: 1, overflow: 'hidden' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 32px' }}>
               {fields.map(f => (
-                <div key={f.label} style={{ padding: '13px 0', borderBottom: '1px solid rgba(0,0,0,0.07)' }}>
-                  <div style={{ fontSize: 15, letterSpacing: 3, textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', marginBottom: 5 }}>
+                <div key={f.label} style={{ padding: '13px 0', borderBottom: `1px solid var(--t2-border-subtle)` }}>
+                  <div style={{ fontSize: 15, letterSpacing: 3, textTransform: 'uppercase', color: 'rgba(var(--t2-text-primary-rgb), 0.4)', marginBottom: 5 }}>
                     {f.label}
                   </div>
-                  <div style={{ fontSize: valueFontSize, fontWeight: 700, color: '#111' }}>
+                  <div style={{ fontSize: valueFontSize, fontWeight: 700, color: 'var(--t2-text-primary)' }}>
                     {f.value}
                   </div>
                 </div>
