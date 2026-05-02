@@ -11,6 +11,8 @@ export interface JWTPayload {
   username: string;
   email: string;
   role: string;
+  assignedTeams: string[];
+  assignedTournaments: string[];
   iat: number;
   exp: number;
 }
@@ -73,6 +75,8 @@ export function generateToken(user: IUser): string {
     username: user.username,
     email: user.email,
     role: user.role,
+    assignedTeams: user.assignedTeams || [],
+    assignedTournaments: user.assignedTournaments || [],
   };
 
   return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });

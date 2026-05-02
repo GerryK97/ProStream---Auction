@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { verifyToken, getTokenFromRequest } from '@/lib/auth';
-import { User } from '@/models/User';
 import { UserRole } from '@/lib/permissions';
+import { User } from '@/models/User';
 
 /**
  * Extracted user information from authenticated request
@@ -23,28 +23,27 @@ export interface RequestUser {
  */
 export async function getUserFromRequest(request: NextRequest): Promise<RequestUser | null> {
   try {
-    // Get token from Authorization header
     const token = getTokenFromRequest(request);
-    if (!token) {
-      return null;
-    }
+    if (!token) return null;
 
-    // Verify and decode JWT token
     const payload = verifyToken(token);
-    if (!payload) {
-      return null;
+    if (!payload) return null;
+
+    // New tokens have assignedTeams embedded — no DB query needed
+    if (payload.assignedTeams !== undefined) {
+      return {
+        userId: payload.userId,
+        role: payload.role as UserRole,
+        assignedTournaments: payload.assignedTournaments || [],
+        assignedTeams: payload.assignedTeams || [],
+        plan: (payload as any).plan || 'Free',
+      };
     }
 
-    // Fetch user from database to get assigned tournaments/teams
+    // Legacy token (pre-embed): fall back to DB once so old sessions keep working
     await require('@/lib/mongodb').connectToDatabase();
-    const user = await User.findById(payload.userId).select(
-      'role assignedTournaments assignedTeams plan'
-    );
-
-    if (!user) {
-      return null;
-    }
-
+    const user = await User.findById(payload.userId).select('role assignedTournaments assignedTeams plan');
+    if (!user) return null;
     return {
       userId: payload.userId,
       role: user.role as UserRole,

@@ -20,11 +20,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch auction state, team, and tournament in parallel
-    const [auctionState, team, tournament] = await Promise.all([
+    // Fetch auction state, team, tournament, and squad count in parallel
+    const [auctionState, team, tournament, playersBought] = await Promise.all([
       AuctionStateModel.findOne({ tournamentId }),
       TeamModel.findOne({ _id: teamId }).lean(),
       TournamentModel.findOne({ _id: tournamentId }).lean(),
+      PlayerModel.countDocuments({ tournamentId, isSold: true, winningTeamId: String(teamId) }),
     ]);
 
     if (!auctionState) {
@@ -69,12 +70,6 @@ export async function POST(request: NextRequest) {
     // Validate bid does not exceed team's max affordable bid (reserve budget for remaining squad slots)
     const squadSize = (tournament as any)?.squadSize ?? 0;
     const basePrice = getMinClassBasePrice(tournament as any);
-    // Use a live Player count — always accurate, unaffected by playersPurchased array drift
-    const playersBought = await PlayerModel.countDocuments({
-      tournamentId,
-      isSold: true,
-      winningTeamId: String(teamId),
-    });
     const squadRemainingPlayers = squadSize - playersBought;
     const maxBid = squadRemainingPlayers <= 1
       ? ((team as any).currentBalance ?? 0)
@@ -111,23 +106,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Player is already sold' }, { status: 409 });
     }
 
-    // Derive correct balance from source of truth — idempotent, immune to $inc drift
-    const totalSpentAgg = await PlayerModel.aggregate([
-      { $match: { tournamentId, isSold: true, winningTeamId: String(teamId) } },
-      { $group: { _id: null, total: { $sum: '$finalPrice' } } },
-    ]);
-    const totalSpent = totalSpentAgg[0]?.total ?? 0;
-    const newBalance = (team as any).initialBudget - totalSpent;
+    // Safe subtraction: the atomic isSold guard above ensures exactly one sell ever succeeds
+    const newBalance = (team as any).currentBalance - currentBid;
 
-    // Update team balance and players purchased
-    const updatedTeam = await TeamModel.findOneAndUpdate(
-      { _id: teamId },
-      {
-        $set: { currentBalance: newBalance },
-        $addToSet: { playersPurchased: String(currentPlayerId) },
-      },
-      { new: true }
-    ).lean();
+    // Update team balance and auction state in parallel
+    const [updatedTeam, updatedState] = await Promise.all([
+      TeamModel.findOneAndUpdate(
+        { _id: teamId },
+        {
+          $set: { currentBalance: newBalance },
+          $addToSet: { playersPurchased: String(currentPlayerId) },
+        },
+        { new: true }
+      ).lean(),
+      AuctionStateModel.findOneAndUpdate(
+        { tournamentId },
+        { $set: { currentAuctionStatus: 'Sold' } },
+        { new: true }
+      ).lean(),
+    ]);
 
     if (!updatedTeam) {
       return NextResponse.json(
@@ -135,17 +132,6 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
-
-    // Update auction state to Sold
-    const updatedState = await AuctionStateModel.findOneAndUpdate(
-      { tournamentId },
-      {
-        $set: {
-          currentAuctionStatus: 'Sold',
-        },
-      },
-      { new: true }
-    ).lean();
 
     // Count remaining players — run both countDocuments in parallel
     const activeClass = (auctionState as any).currentAuctionClass as string | null;
