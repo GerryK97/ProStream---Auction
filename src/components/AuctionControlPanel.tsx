@@ -317,6 +317,130 @@ const CurrentAuctionPanel: React.FC<{
     );
 }
 
+const calculateTeamMaxBid = (team: Team, tournament: Tournament | null): number => {
+    if (!tournament || !team.currentBalance) return 0;
+    const squadSize = tournament.squadSize;
+    const basePrice = getMinClassBasePrice(tournament);
+    const playersPurchased = team.playersPurchased?.length || 0;
+    const remainingPlayers = squadSize - playersPurchased;
+    if (remainingPlayers <= 1) return team.currentBalance;
+    const reservedAmount = (remainingPlayers - 1) * basePrice;
+    return Math.max(0, team.currentBalance - reservedAmount);
+};
+
+// Each team row only re-renders when its own team object, the highlight flag,
+// or the `isBidExceeded` flag changes — not on every bid for every team.
+const TeamRow = React.memo(function TeamRow({
+    team,
+    tournament,
+    isWinning,
+    currentBid,
+}: {
+    team: Team;
+    tournament: Tournament | null;
+    isWinning: boolean;
+    currentBid: number;
+}) {
+    const maxBid = calculateTeamMaxBid(team, tournament);
+    const playersPurchased = team.playersPurchased?.length || 0;
+    const squadSize = tournament?.squadSize || 0;
+    const remainingPlayers = squadSize - playersPurchased;
+    const hasInsufficientFunds = maxBid <= 0 && remainingPlayers > 0;
+    const isBidExceeded = currentBid > 0 && currentBid > maxBid;
+
+    return (
+        <li
+            className={`p-2 rounded-md flex items-center gap-3 relative overflow-hidden transition-all duration-300 hover:opacity-90 border ${isBidExceeded ? 'border-red-500' : 'border-[var(--border-primary)]'}`}
+            style={{
+                backgroundColor: isWinning ? 'var(--surface-hover)' : isBidExceeded ? 'rgba(239,68,68,0.08)' : 'var(--surface-card)',
+                boxShadow: isBidExceeded ? '0 0 0 1px rgba(239,68,68,0.4)' : 'none',
+            }}>
+            {isWinning && <div className="absolute left-0 top-0 h-full w-1.5 bg-[var(--accent-color)] animate-pulse"></div>}
+            <img
+                src={imageOptimizers.teamThumbnail(team.logoURL)}
+                alt={team.name}
+                className="w-10 h-10 rounded-full object-cover"
+                loading="lazy"
+            />
+            <div className="flex-grow">
+                <div className="flex items-center gap-2">
+                    <p className="font-semibold">{team.name}</p>
+                    {hasInsufficientFunds && (
+                        <span className="text-red-500 text-xs" title="Insufficient funds for remaining players">⚠️</span>
+                    )}
+                    {isBidExceeded && (
+                        <span className="text-red-400 text-xs font-semibold">Over limit</span>
+                    )}
+                </div>
+                <p className="text-xs text-[var(--text-secondary)]">Budget: <span className="text-[var(--brand-secondary)]">{formatCurrency(team.currentBalance || 0)}</span></p>
+                <p className="text-xs text-[var(--text-secondary)]">
+                    Max Bid: <span className={hasInsufficientFunds || isBidExceeded ? "text-red-500 font-semibold" : "text-[var(--brand-primary)]"}>{formatCurrency(maxBid)}</span>
+                </p>
+                <p className="text-xs text-[var(--text-muted)]">{playersPurchased}/{squadSize} players</p>
+            </div>
+        </li>
+    );
+});
+
+const SoldPlayerRow = React.memo(function SoldPlayerRow({
+    player,
+    teamName,
+    tournament,
+}: {
+    player: Player;
+    teamName: string;
+    tournament: Tournament | null;
+}) {
+    return (
+        <li className="p-2 rounded-md transition-colors hover:opacity-90 border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-card)' }}>
+            <div className="flex items-center gap-2">
+                <img
+                    src={imageOptimizers.playerThumbnail(player.photoURL)}
+                    alt={player.name}
+                    className="w-10 h-10 rounded-full object-cover"
+                    loading="lazy"
+                />
+                <div className="flex-grow min-w-0">
+                    <div className="flex items-center gap-1.5">
+                        <ClassBadge tournament={tournament} player={player} variant="dot" />
+                        <p className="font-semibold text-sm truncate">{player.name}</p>
+                    </div>
+                    <p className="text-xs text-[var(--brand-secondary)]">{formatCurrency(player.finalPrice || 0)}</p>
+                    <p className="text-xs text-[var(--text-secondary)] truncate">{teamName}</p>
+                </div>
+            </div>
+        </li>
+    );
+});
+
+const UnsoldPlayerRow = React.memo(function UnsoldPlayerRow({
+    player,
+    tournament,
+}: {
+    player: Player;
+    tournament: Tournament | null;
+}) {
+    return (
+        <li className="p-2 rounded-md transition-colors hover:opacity-90 border border-red-900/40" style={{ backgroundColor: 'var(--surface-card)' }}>
+            <div className="flex items-center gap-2">
+                <img
+                    src={imageOptimizers.playerThumbnail(player.photoURL)}
+                    alt={player.name}
+                    className="w-10 h-10 rounded-full object-cover opacity-60 grayscale"
+                    loading="lazy"
+                />
+                <div className="flex-grow min-w-0">
+                    <div className="flex items-center gap-1.5">
+                        <ClassBadge tournament={tournament} player={player} variant="dot" />
+                        <p className="font-semibold text-sm truncate text-[var(--text-secondary)]">{player.name}</p>
+                    </div>
+                    <p className="text-xs font-bold text-red-400">UNSOLD</p>
+                </div>
+            </div>
+        </li>
+    );
+});
+
 const TeamsAndSoldPlayersPanel: React.FC<{
     teams: Team[];
     soldPlayers: Player[];
@@ -326,72 +450,29 @@ const TeamsAndSoldPlayersPanel: React.FC<{
     currentBid: number;
     onUndo: () => void;
     onCleanup: () => void;
-}> = ({ teams, soldPlayers, unsoldPlayers, tournament, winningTeamId, currentBid, onUndo, onCleanup }) => {
-    const calculateMaxBid = (team: Team) => {
-        if (!tournament || !team.currentBalance) return 0;
-
-        const squadSize = tournament.squadSize;
-        const basePrice = getMinClassBasePrice(tournament);
-        const playersPurchased = team.playersPurchased?.length || 0;
-        const remainingPlayers = squadSize - playersPurchased;
-
-        // If squad is complete or it's the last player, team can spend all remaining balance
-        if (remainingPlayers <= 1) {
-            return team.currentBalance;
-        }
-
-        // Otherwise, reserve base price for remaining players
-        const reservedAmount = (remainingPlayers - 1) * basePrice;
-        const maxBid = team.currentBalance - reservedAmount;
-
-        // Return 0 if insufficient funds
-        return Math.max(0, maxBid);
-    };
+}> = React.memo(({ teams, soldPlayers, unsoldPlayers, tournament, winningTeamId, currentBid, onUndo, onCleanup }) => {
+    // Build a fast _id → team name map so SoldPlayerRow can be memoised on a
+    // stable string instead of a derived team object reference.
+    const teamNameById = React.useMemo(() => {
+        const map: Record<string, string> = {};
+        for (const t of teams) map[t._id] = t.name;
+        return map;
+    }, [teams]);
 
     return (
         <div className="h-full flex flex-col gap-3">
             <div className="rounded-lg p-4 border border-[var(--border-primary)] flex flex-col flex-1 min-h-0" style={{ backgroundColor: 'var(--surface-secondary)' }}>
                  <h3 className="font-bold text-base mb-2 shrink-0">Teams</h3>
                  <ul className="space-y-2 overflow-y-auto pr-1 flex-1 min-h-0">
-                     {teams.map((team, index) => {
-                         const maxBid = calculateMaxBid(team);
-                         const playersPurchased = team.playersPurchased?.length || 0;
-                         const squadSize = tournament?.squadSize || 0;
-                         const remainingPlayers = squadSize - playersPurchased;
-                         const hasInsufficientFunds = maxBid <= 0 && remainingPlayers > 0;
-                         const isBidExceeded = currentBid > 0 && currentBid > maxBid;
-
-                         return (
-                             <li key={team._id} className={`p-2 rounded-md flex items-center gap-3 relative overflow-hidden transition-all duration-300 hover:opacity-90 border ${isBidExceeded ? 'border-red-500' : 'border-[var(--border-primary)]'}`} style={{
-                                 backgroundColor: winningTeamId === team._id ? 'var(--surface-hover)' : isBidExceeded ? 'rgba(239,68,68,0.08)' : 'var(--surface-card)',
-                                 boxShadow: isBidExceeded ? '0 0 0 1px rgba(239,68,68,0.4)' : 'none',
-                             }}>
-                                {winningTeamId === team._id && <div className="absolute left-0 top-0 h-full w-1.5 bg-[var(--accent-color)] animate-pulse"></div>}
-                                <img
-                                    src={imageOptimizers.teamThumbnail(team.logoURL)}
-                                    alt={team.name}
-                                    className="w-10 h-10 rounded-full object-cover"
-                                    loading="lazy"
-                                />
-                                <div className="flex-grow">
-                                    <div className="flex items-center gap-2">
-                                        <p className="font-semibold">{team.name}</p>
-                                        {hasInsufficientFunds && (
-                                            <span className="text-red-500 text-xs" title="Insufficient funds for remaining players">⚠️</span>
-                                        )}
-                                        {isBidExceeded && (
-                                            <span className="text-red-400 text-xs font-semibold">Over limit</span>
-                                        )}
-                                    </div>
-                                    <p className="text-xs text-[var(--text-secondary)]">Budget: <span className="text-[var(--brand-secondary)]">{formatCurrency(team.currentBalance || 0)}</span></p>
-                                    <p className="text-xs text-[var(--text-secondary)]">
-                                        Max Bid: <span className={hasInsufficientFunds || isBidExceeded ? "text-red-500 font-semibold" : "text-[var(--brand-primary)]"}>{formatCurrency(maxBid)}</span>
-                                    </p>
-                                    <p className="text-xs text-[var(--text-muted)]">{playersPurchased}/{squadSize} players</p>
-                                </div>
-                             </li>
-                         );
-                     })}
+                     {teams.map((team) => (
+                         <TeamRow
+                             key={team._id}
+                             team={team}
+                             tournament={tournament}
+                             isWinning={winningTeamId === team._id}
+                             currentBid={currentBid}
+                         />
+                     ))}
                  </ul>
             </div>
              <div className="rounded-lg p-4 border border-[var(--border-primary)] flex flex-col flex-1 min-h-0" style={{ backgroundColor: 'var(--surface-secondary)' }}>
@@ -419,49 +500,20 @@ const TeamsAndSoldPlayersPanel: React.FC<{
                         <p className="text-center text-[var(--text-tertiary)] py-8 text-sm">No sold or unsold players yet</p>
                     ) : (
                         <ul className="space-y-2">
-                            {soldPlayers.map((player) => {
-                                const playerTeam = teams.find(t => t._id === player.winningTeamId);
-                                return (
-                                    <li key={player._id} className="p-2 rounded-md transition-colors hover:opacity-90 border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-card)' }}>
-                                        <div className="flex items-center gap-2">
-                                            <img
-                                                src={imageOptimizers.playerThumbnail(player.photoURL)}
-                                                alt={player.name}
-                                                className="w-10 h-10 rounded-full object-cover"
-                                                loading="lazy"
-                                            />
-                                            <div className="flex-grow min-w-0">
-                                                <div className="flex items-center gap-1.5">
-                                                    <ClassBadge tournament={tournament} player={player} variant="dot" />
-                                                    <p className="font-semibold text-sm truncate">{player.name}</p>
-                                                </div>
-                                                <p className="text-xs text-[var(--brand-secondary)]">{formatCurrency(player.finalPrice || 0)}</p>
-                                                <p className="text-xs text-[var(--text-secondary)] truncate">
-                                                    {playerTeam ? playerTeam.name : 'Unknown Team'}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </li>
-                                );
-                            })}
+                            {soldPlayers.map((player) => (
+                                <SoldPlayerRow
+                                    key={player._id}
+                                    player={player}
+                                    teamName={(player.winningTeamId && teamNameById[player.winningTeamId]) || 'Unknown Team'}
+                                    tournament={tournament}
+                                />
+                            ))}
                             {unsoldPlayers.map((player) => (
-                                <li key={player._id} className="p-2 rounded-md transition-colors hover:opacity-90 border border-red-900/40" style={{ backgroundColor: 'var(--surface-card)' }}>
-                                    <div className="flex items-center gap-2">
-                                        <img
-                                            src={imageOptimizers.playerThumbnail(player.photoURL)}
-                                            alt={player.name}
-                                            className="w-10 h-10 rounded-full object-cover opacity-60 grayscale"
-                                            loading="lazy"
-                                        />
-                                        <div className="flex-grow min-w-0">
-                                            <div className="flex items-center gap-1.5">
-                                                <ClassBadge tournament={tournament} player={player} variant="dot" />
-                                                <p className="font-semibold text-sm truncate text-[var(--text-secondary)]">{player.name}</p>
-                                            </div>
-                                            <p className="text-xs font-bold text-red-400">UNSOLD</p>
-                                        </div>
-                                    </div>
-                                </li>
+                                <UnsoldPlayerRow
+                                    key={player._id}
+                                    player={player}
+                                    tournament={tournament}
+                                />
                             ))}
                         </ul>
                     )}
@@ -469,7 +521,8 @@ const TeamsAndSoldPlayersPanel: React.FC<{
              </div>
         </div>
     );
-};
+});
+TeamsAndSoldPlayersPanel.displayName = 'TeamsAndSoldPlayersPanel';
 
 
 interface AuctionControlPanelProps {
@@ -609,6 +662,10 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         error: pusherError,
         setPlayerUnsold,
         setPlayerAvailable,
+        optimisticBid,
+        restoreAuctionState,
+        optimisticSell,
+        restoreSell,
     } = usePusherAuction(liveTournamentId, initialData || undefined);
 
     // Detect loading state: tournamentId is set but tournament data hasn't loaded yet
@@ -989,8 +1046,6 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     };
 
     const handleBid = async (amount: number) => {
-        console.log('handleBid called with amount:', amount);
-
         if (!liveTournament) return;
 
         // Client-side validation
@@ -1007,8 +1062,12 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             return;
         }
 
+        // Optimistic update: snapshot the previous auctionState, apply new bid
+        // immediately so the UI feels instant, then revert if the server rejects.
+        const snapshot = auctionState;
+        optimisticBid(amount);
+
         try {
-            console.log('Sending bid request:', { tournamentId: liveTournament._id, amount });
             const response = await fetch('/api/auction/bid', {
                 method: 'POST',
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
@@ -1017,14 +1076,15 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                     amount,
                 }),
             });
-            console.log('Bid response status:', response.status);
             if (!response.ok) {
-                const data = await response.json();
-                console.log('Bid error:', data);
+                const data = await response.json().catch(() => ({}));
+                restoreAuctionState(snapshot);
                 setError(data.error || 'Failed to place bid');
             }
-            // Pusher will handle real-time updates, no need to refresh
+            // Success path: the auction:bid-placed Pusher event will replace
+            // the optimistic value with the authoritative one.
         } catch (error) {
+            restoreAuctionState(snapshot);
             console.error('Failed to place bid:', error);
             setError('An error occurred while placing the bid');
         }
@@ -1049,17 +1109,25 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     };
 
     const handleSell = async () => {
-        console.log('handleSell called with team:', biddingTeamId);
-        if (!liveTournament) {
-            console.log('No live tournament');
-            return;
-        }
+        if (!liveTournament) return;
         if (!biddingTeamId) {
             setError('Please select a winning team before selling');
             return;
         }
+
+        const playerId = auctionState.currentPlayerId;
+        const bid = auctionState.currentBid;
+        if (!playerId || !bid) {
+            setError('No active bid to sell');
+            return;
+        }
+
+        // Optimistic update: mark sold + deduct balance immediately.
+        // The PLAYER_SOLD Pusher event will replace this with the authoritative
+        // server state. On failure we restore from the snapshot.
+        const snapshot = optimisticSell({ teamId: biddingTeamId, playerId, bid });
+
         try {
-            console.log('Sending sell request for tournament:', liveTournament._id, 'team:', biddingTeamId);
             const response = await fetch('/api/auction/sell', {
                 method: 'POST',
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
@@ -1068,14 +1136,13 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                     teamId: biddingTeamId,
                 }),
             });
-            console.log('Sell response status:', response.status);
             if (!response.ok) {
-                const data = await response.json();
-                console.log('Sell error:', data);
+                const data = await response.json().catch(() => ({}));
+                restoreSell(snapshot);
                 setError(data.error || 'Failed to sell player');
             }
-            // Pusher will handle real-time updates, no need to refresh
         } catch (error) {
+            restoreSell(snapshot);
             console.error('Failed to sell player:', error);
             setError('An error occurred while selling the player');
         }

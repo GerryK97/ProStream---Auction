@@ -20,8 +20,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get auction state
-    const auctionState = await AuctionStateModel.findOne({ tournamentId });
+    // Parallelise the three independent reads that gate every sell.
+    // Cuts ~2 round-trips of latency on the hot path.
+    const [auctionState, team, tournament] = await Promise.all([
+      AuctionStateModel.findOne({ tournamentId }),
+      TeamModel.findOne({ _id: teamId }).lean(),
+      TournamentModel.findOne({ _id: tournamentId }).lean(),
+    ]);
+
     if (!auctionState) {
       return NextResponse.json(
         { error: 'Auction state not found for this tournament' },
@@ -29,7 +35,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate
     if (!auctionState.currentPlayerId || auctionState.currentBid === 0) {
       return NextResponse.json(
         { error: 'No valid bid to sell' },
@@ -37,8 +42,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate team exists
-    const team = await TeamModel.findOne({ _id: teamId }).lean();
     if (!team) {
       return NextResponse.json(
         { error: 'Team not found' },
@@ -46,7 +49,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate team has enough balance
     if (auctionState.currentBid > (team as any).currentBalance) {
       return NextResponse.json(
         { error: 'Team does not have enough balance for this player' },
@@ -54,8 +56,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate tournament is live
-    const tournament = await TournamentModel.findOne({ _id: tournamentId }).lean();
     if (!tournament || (tournament as any).status !== 'Live') {
       return NextResponse.json(
         { error: 'Auction is not live' },
@@ -83,76 +83,68 @@ export async function POST(request: NextRequest) {
 
     const { currentPlayerId, currentBid } = auctionState;
 
-    // Update player to sold
-    // Explicit updatedAt ensures reliable timestamp comparison in the undo route
-    const updatedPlayer = await PlayerModel.findOneAndUpdate(
-      { _id: currentPlayerId },
-      {
-        $set: {
-          isSold: true,
-          finalPrice: currentBid,
-          winningTeamId: teamId,
-          updatedAt: new Date(),
+    // Parallelise the three independent writes plus the remaining-players count.
+    // All four operate on different documents/collections and don't depend on
+    // each other's results — values needed for each are already in scope.
+    // Explicit updatedAt on the player ensures reliable timestamp comparison
+    // in the undo route.
+    const [updatedPlayer, updatedTeam, updatedState, remainingPlayers] = await Promise.all([
+      PlayerModel.findOneAndUpdate(
+        { _id: currentPlayerId },
+        {
+          $set: {
+            isSold: true,
+            finalPrice: currentBid,
+            winningTeamId: teamId,
+            updatedAt: new Date(),
+          },
         },
-      },
-      { new: true }
-    ).lean();
+        { new: true }
+      ).lean(),
+      TeamModel.findOneAndUpdate(
+        { _id: teamId },
+        {
+          $inc: { currentBalance: -currentBid },
+          $push: { playersPurchased: currentPlayerId },
+        },
+        { new: true }
+      ).lean(),
+      AuctionStateModel.findOneAndUpdate(
+        { tournamentId },
+        { $set: { currentAuctionStatus: 'Sold' } },
+        { new: true }
+      ).lean(),
+      // currentPlayer is being marked sold in the same Promise.all, so we
+      // subtract it from the count rather than relying on countDocuments
+      // racing with the player update.
+      PlayerModel.countDocuments({
+        tournamentId,
+        isSold: false,
+        _id: { $ne: currentPlayerId },
+      }),
+    ]);
 
     if (!updatedPlayer) {
-      return NextResponse.json(
-        { error: 'Player not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Player not found' }, { status: 404 });
     }
-
-    // Update team balance and players purchased
-    const updatedTeam = await TeamModel.findOneAndUpdate(
-      { _id: teamId },
-      {
-        $inc: { currentBalance: -currentBid },
-        $push: { playersPurchased: currentPlayerId },
-      },
-      { new: true }
-    ).lean();
-
     if (!updatedTeam) {
-      return NextResponse.json(
-        { error: 'Team not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Team not found' }, { status: 404 });
     }
 
-    // Update auction state to Sold
-    const updatedState = await AuctionStateModel.findOneAndUpdate(
-      { tournamentId },
-      {
-        $set: {
-          currentAuctionStatus: 'Sold',
-        },
-      },
-      { new: true }
-    ).lean();
-
-    // Count remaining unsold players
-    const remainingPlayers = await PlayerModel.countDocuments({
-      tournamentId,
-      isSold: false,
-    });
-
-    // Trigger Pusher event
-    try {
-      await triggerPlayerSold(tournamentId, {
-        soldPlayer: updatedPlayer as any,
-        winningTeam: updatedTeam as any,
-        finalPrice: currentBid,
-        remainingPlayers,
-        remainingBudget: (updatedTeam as any).currentBalance,
-        auctionState: updatedState as any,
-        message: `${(updatedPlayer as any).name} sold to ${(updatedTeam as any).name} for ${currentBid.toLocaleString()}`,
-      });
-    } catch (pusherError) {
+    // Fire-and-forget Pusher trigger so the HTTP response returns immediately;
+    // the client has already applied an optimistic update and the broadcast is
+    // for other connected clients.
+    triggerPlayerSold(tournamentId, {
+      soldPlayer: updatedPlayer as any,
+      winningTeam: updatedTeam as any,
+      finalPrice: currentBid,
+      remainingPlayers,
+      remainingBudget: (updatedTeam as any).currentBalance,
+      auctionState: updatedState as any,
+      message: `${(updatedPlayer as any).name} sold to ${(updatedTeam as any).name} for ${currentBid.toLocaleString()}`,
+    }).catch((pusherError) => {
       console.error('Failed to trigger Pusher event:', pusherError);
-    }
+    });
 
     return NextResponse.json({
       auctionState: updatedState,
