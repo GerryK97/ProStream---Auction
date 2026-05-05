@@ -76,7 +76,7 @@ async function syncRenamedClassNames(
     ? (renameMap.get(state.currentAuctionClass) || state.currentAuctionClass)
     : state.currentAuctionClass;
   const completedClasses = (state.completedClasses || []).map(
-    clsName => renameMap.get(clsName) || clsName
+    (clsName: string) => renameMap.get(clsName) || clsName
   );
 
   state.currentAuctionClass = currentAuctionClass;
