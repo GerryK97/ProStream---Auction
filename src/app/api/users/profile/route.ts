@@ -1,0 +1,132 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { User } from '@/models/User';
+import { connectToDatabase } from '@/lib/mongodb';
+import { getTokenFromRequest, verifyToken, validateEmail, validateUsername } from '@/lib/auth';
+
+function isValidMobileNumber(mobileNumber: string): boolean {
+  return /^[+\d][\d\s\-()]{6,19}$/.test(mobileNumber);
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    await connectToDatabase();
+
+    const token = getTokenFromRequest(request);
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const payload = verifyToken(token);
+    if (!payload) {
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
+    }
+
+    const user = await User.findById(payload.userId).select('-passwordHash');
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        plan: user.plan,
+        logoURL: user.logoURL || '',
+        mobileNumber: user.mobileNumber || '',
+      },
+    });
+  } catch (error) {
+    console.error('Get profile error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    await connectToDatabase();
+
+    const token = getTokenFromRequest(request);
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const payload = verifyToken(token);
+    if (!payload) {
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
+    }
+
+    const { username, email, logoURL = '', mobileNumber = '' } = await request.json();
+
+    if (!username || !email) {
+      return NextResponse.json({ error: 'Username and email are required' }, { status: 400 });
+    }
+
+    if (!validateUsername(username)) {
+      return NextResponse.json(
+        { error: 'Username must be 3-50 characters and contain only letters, numbers, underscores, and hyphens' },
+        { status: 400 }
+      );
+    }
+
+    if (!validateEmail(email)) {
+      return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
+    }
+
+    const normalizedMobile = String(mobileNumber || '').trim();
+    if (normalizedMobile && !isValidMobileNumber(normalizedMobile)) {
+      return NextResponse.json({ error: 'Invalid mobile number format' }, { status: 400 });
+    }
+
+    const normalizedUsername = username.toLowerCase();
+    const normalizedEmail = email.toLowerCase();
+
+    const existingUsername = await User.findOne({ username: normalizedUsername, _id: { $ne: payload.userId } });
+    if (existingUsername) {
+      return NextResponse.json({ error: 'Username already taken' }, { status: 409 });
+    }
+
+    const existingEmail = await User.findOne({ email: normalizedEmail, _id: { $ne: payload.userId } });
+    if (existingEmail) {
+      return NextResponse.json({ error: 'Email already registered' }, { status: 409 });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      payload.userId,
+      {
+        $set: {
+          username: normalizedUsername,
+          email: normalizedEmail,
+          logoURL: String(logoURL || '').trim(),
+          mobileNumber: normalizedMobile,
+        },
+      },
+      { new: true }
+    ).select('-passwordHash');
+
+    if (!updatedUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: {
+        id: updatedUser._id,
+        username: updatedUser.username,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        status: updatedUser.status,
+        plan: updatedUser.plan,
+        logoURL: updatedUser.logoURL || '',
+        mobileNumber: updatedUser.mobileNumber || '',
+      },
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

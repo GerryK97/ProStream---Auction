@@ -123,6 +123,8 @@ export async function POST(request: NextRequest) {
       assignedTeams = [],
       assignedPlayer = null,
       plan = 'Free',
+      logoURL = '',
+      mobileNumber = '',
     } = await request.json();
 
     // Validation
@@ -175,6 +177,8 @@ export async function POST(request: NextRequest) {
       assignedTeams,
       assignedPlayer,
       plan,
+      logoURL,
+      mobileNumber,
     });
 
     await user.save();
@@ -187,6 +191,8 @@ export async function POST(request: NextRequest) {
           id: user._id,
           username: user.username,
           email: user.email,
+          logoURL: user.logoURL || '',
+          mobileNumber: user.mobileNumber || '',
           role: user.role,
           status: user.status,
         },

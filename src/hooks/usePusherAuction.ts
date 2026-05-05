@@ -407,7 +407,10 @@ export function usePusherAuction(
   // Fetch full auction data (tournament + state + players + teams in parallel)
   const fetchInitialData = useCallback(async () => {
     if (!tournamentId) return;
-    if (initialData?.tournament) return; // already provided from server props
+    // Use server-bootstrapped data only when it matches the currently requested tournament.
+    // When users switch tournaments in the control panel, we must re-fetch fresh tournament
+    // config (including player classes) for the new tournamentId.
+    if (initialData?.tournament?._id === tournamentId) return;
 
     try {
       dlog(`[usePusherAuction] Fetching data for tournament: ${tournamentId}`);
@@ -443,7 +446,7 @@ export function usePusherAuction(
       console.error('[usePusherAuction] Error fetching data:', err);
       dispatch({ type: 'SET_ERROR', error: 'Failed to load tournament data. Please try again.' });
     }
-  }, [tournamentId, buildHeaders, initialData?.tournament]);
+  }, [tournamentId, buildHeaders, initialData?.tournament?._id]);
 
   // ─── Effect 1: Initial status check (overlay mode only) ─────────────────────
   // Lightweight fetch to determine whether to connect immediately.

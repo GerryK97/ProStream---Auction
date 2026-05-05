@@ -4,6 +4,9 @@ import { PlayerClassConfig } from '@/types';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction, canAccessTournament } from '@/lib/permissions';
 import { validateOverlayToken, validateOverlaySessionToken, getOverlayTokenFromRequest } from '@/lib/overlay-auth';
+import { connectToDatabase } from '@/lib/mongodb';
+import { PlayerModel } from '@/models/Player';
+import { AuctionStateModel } from '@/models/AuctionState';
 
 /**
  * Validate player class codes
@@ -34,6 +37,51 @@ function validatePlayerClassCodes(playerClasses?: PlayerClassConfig[]): { valid:
   }
 
   return { valid: true };
+}
+
+async function syncRenamedClassNames(
+  tournamentId: string,
+  existingClasses: PlayerClassConfig[] = [],
+  updatedClasses: PlayerClassConfig[] = []
+) {
+  const oldNameByCode = new Map(existingClasses.map(cls => [cls.code, cls.name]));
+  const newNameByCode = new Map(updatedClasses.map(cls => [cls.code, cls.name]));
+
+  const renamedPairs: Array<{ oldName: string; newName: string }> = [];
+  for (const [code, oldName] of oldNameByCode.entries()) {
+    const newName = newNameByCode.get(code);
+    if (newName && newName !== oldName) {
+      renamedPairs.push({ oldName, newName });
+    }
+  }
+
+  if (renamedPairs.length === 0) return;
+
+  await connectToDatabase();
+
+  // Keep all players aligned with renamed class names (matched by stable class code).
+  for (const { oldName, newName } of renamedPairs) {
+    await PlayerModel.updateMany(
+      { tournamentId, playerClass: oldName },
+      { $set: { playerClass: newName } }
+    );
+  }
+
+  // Keep auction state's class pointers valid after rename.
+  const state = await AuctionStateModel.findOne({ tournamentId });
+  if (!state) return;
+
+  const renameMap = new Map(renamedPairs.map(pair => [pair.oldName, pair.newName]));
+  const currentAuctionClass = state.currentAuctionClass
+    ? (renameMap.get(state.currentAuctionClass) || state.currentAuctionClass)
+    : state.currentAuctionClass;
+  const completedClasses = (state.completedClasses || []).map(
+    (clsName: string) => renameMap.get(clsName) || clsName
+  );
+
+  state.currentAuctionClass = currentAuctionClass;
+  state.completedClasses = Array.from(new Set(completedClasses));
+  await state.save();
 }
 
 // GET /api/tournaments/[id] - Get tournament by ID
@@ -127,6 +175,12 @@ export async function PUT(
           { status: 400 }
         );
       }
+
+      await syncRenamedClassNames(
+        id,
+        (tournament.playerClasses as PlayerClassConfig[] | undefined) || [],
+        body.playerClasses as PlayerClassConfig[]
+      );
     }
 
     const updatedTournament = await tournamentDB.update(id, body);

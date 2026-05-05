@@ -6,6 +6,8 @@ export interface User {
   id: string;
   username: string;
   email: string;
+  logoURL?: string;
+  mobileNumber?: string;
   role: 'Admin' | 'Tournament' | 'MasterManager' | 'Team' | 'Player' | 'Audience';
   status: 'Active' | 'PendingApproval' | 'Suspended';
   assignedTournaments?: string[];
@@ -167,6 +169,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(null);
       setUser(null);
       setError(null);
+      // Ensure consistent redirect no matter where logout is triggered from
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth/login';
+      }
     }
   };
 

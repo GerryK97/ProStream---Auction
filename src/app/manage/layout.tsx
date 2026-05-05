@@ -17,10 +17,10 @@ export default function ManageLayout({ children }: { children: React.ReactNode }
 
   return (
     <div>
-      <div className="px-6 pt-6 pb-2">
+      <div className="px-3 sm:px-6 pt-6 pb-2">
         <StepsProgress currentStep={currentStep} />
       </div>
-      <div className="px-6 pb-8">{children}</div>
+      <div className="px-3 sm:px-6 pb-8">{children}</div>
     </div>
   );
 }

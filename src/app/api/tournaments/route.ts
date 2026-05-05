@@ -3,6 +3,7 @@ import { tournamentDB } from '@/lib/db-mongodb';
 import { PlayerClassConfig } from '@/types';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
+import { User } from '@/models/User';
 
 /**
  * Validate player class codes
@@ -55,7 +56,26 @@ export async function GET(request: NextRequest) {
       user.role,
       user.assignedTournaments
     );
-    return NextResponse.json(tournaments);
+
+    const creatorIds = Array.from(
+      new Set(
+        tournaments
+          .map(tournament => tournament.createdBy)
+          .filter((createdBy): createdBy is string => Boolean(createdBy))
+      )
+    );
+
+    const creators = creatorIds.length > 0
+      ? await User.find({ _id: { $in: creatorIds } }).select('_id username').lean() as Array<{ _id: string; username?: string }>
+      : [];
+
+    const creatorNameById = new Map(creators.map(creator => [creator._id, creator.username || creator._id]));
+    const tournamentsWithCreatorName = tournaments.map(tournament => ({
+      ...tournament,
+      createdByUsername: tournament.createdBy ? creatorNameById.get(tournament.createdBy) : undefined,
+    }));
+
+    return NextResponse.json(tournamentsWithCreatorName);
   } catch (error) {
     return NextResponse.json(
       { error: 'Failed to fetch tournaments' },
@@ -95,7 +115,24 @@ export async function POST(request: NextRequest) {
 
     // Create tournament with createdBy tracking
     const newTournament = await tournamentDB.create(body, user.userId);
-    return NextResponse.json(newTournament, { status: 201 });
+
+    // Ensure creator immediately has explicit access to the new tournament
+    const accessAssigned = await tournamentDB.grantUserAccess(user.userId, newTournament._id);
+    if (!accessAssigned) {
+      console.error('Tournament created but creator access assignment failed', {
+        tournamentId: newTournament._id,
+        userId: user.userId,
+      });
+      return NextResponse.json(
+        { error: 'Failed to initialize creator access for new tournament' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { ...newTournament, createdByUsername: user.userId },
+      { status: 201 }
+    );
   } catch (error) {
     return NextResponse.json(
       { error: 'Failed to create tournament' },

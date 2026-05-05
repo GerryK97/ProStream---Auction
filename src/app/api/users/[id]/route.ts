@@ -111,6 +111,8 @@ export async function PUT(
       assignedTeams,
       assignedPlayer,
       plan,
+      logoURL,
+      mobileNumber,
     } = await request.json();
 
     const updateDoc: Record<string, any> = {};
@@ -122,6 +124,8 @@ export async function PUT(
     if (assignedTournaments !== undefined) updateDoc.assignedTournaments  = assignedTournaments;
     if (assignedTeams !== undefined)       updateDoc.assignedTeams        = assignedTeams;
     if (assignedPlayer !== undefined)      updateDoc.assignedPlayer       = assignedPlayer;
+    if (logoURL !== undefined)             updateDoc.logoURL              = logoURL;
+    if (mobileNumber !== undefined)        updateDoc.mobileNumber         = mobileNumber;
     if (plan) {
       const allowedPlans = ['Free', 'Standard', 'Offer'];
       if (!allowedPlans.includes(plan)) {
@@ -150,6 +154,8 @@ export async function PUT(
           id: updatedUser._id,
           username: updatedUser.username,
           email: updatedUser.email,
+          logoURL: updatedUser.logoURL || '',
+          mobileNumber: updatedUser.mobileNumber || '',
           role: updatedUser.role,
           status: updatedUser.status,
         },
