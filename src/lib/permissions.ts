@@ -95,7 +95,7 @@ export function canPerformAction(
       invoice: ['create', 'read', 'update', 'delete', 'manage'],
     },
     Tournament: {
-      tournament: ['create', 'read'],
+      tournament: ['create', 'read', 'update'],
       team: ['create', 'read', 'update', 'delete', 'manage'],
       player: ['create', 'read', 'update', 'delete', 'manage'],
       auction: ['read', 'update', 'manage'],
