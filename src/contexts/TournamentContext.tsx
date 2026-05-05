@@ -10,6 +10,7 @@ interface TournamentContextType {
   setSelectedTournamentId: (id: string | null) => void;
   selectedTournament: Tournament | null;
   tournaments: Tournament[];
+  setTournaments: React.Dispatch<React.SetStateAction<Tournament[]>>;
   loading: boolean;
   refreshTournaments: () => Promise<void>;
 }
@@ -54,10 +55,16 @@ export function TournamentProvider({ children }: TournamentProviderProps) {
 
       if (response.ok) {
         const data = await response.json();
-        setTournaments(Array.isArray(data) ? data : []);
+        const list: Tournament[] = Array.isArray(data) ? data : [];
+        setTournaments(list);
+        // Clear stale selection if the tournament is no longer accessible
+        setSelectedTournamentIdState(prev =>
+          prev && !list.find(t => t._id === prev) ? null : prev
+        );
       } else {
         console.error('Failed to fetch tournaments');
         setTournaments([]);
+        setSelectedTournamentIdState(null);
       }
     } catch (error) {
       console.error('Error fetching tournaments:', error);
@@ -92,6 +99,7 @@ export function TournamentProvider({ children }: TournamentProviderProps) {
         setSelectedTournamentId,
         selectedTournament,
         tournaments,
+        setTournaments,
         loading,
         refreshTournaments,
       }}

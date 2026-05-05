@@ -3,6 +3,7 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { TournamentModel } from '@/models/Tournament';
 import { PlayerModel } from '@/models/Player';
+import { TeamModel } from '@/models/Team';
 import { triggerBidPlaced } from '@/lib/pusher-server';
 
 // POST /api/auction/bid/correct
@@ -11,7 +12,7 @@ import { triggerBidPlaced } from '@/lib/pusher-server';
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
-    const { tournamentId, amount } = await request.json();
+    const { tournamentId, amount, teamId } = await request.json();
 
     if (!tournamentId || typeof amount !== 'number' || amount <= 0) {
       return NextResponse.json(
@@ -58,23 +59,26 @@ export async function POST(request: NextRequest) {
           currentBid: amount,
           currentAuctionStatus: 'Bidding',
         },
+        $push: { history: { teamId: teamId || null, amount, timestamp: Date.now() } },
       },
       { new: true }
     ).lean();
 
-    // Reuse the bid-placed Pusher event so the overlay updates in real time
-    try {
-      await triggerBidPlaced(tournamentId, {
-        auctionState: updatedState as any,
-        currentPlayer: player as any,
-        winningTeam: null,
-        currentBid: amount,
-        previousBid,
-        message: `Bid corrected to: ${amount.toLocaleString()}`,
-      });
-    } catch (pusherError) {
-      console.error('Failed to trigger Pusher event:', pusherError);
+    // Look up the team if provided
+    let winningTeam = null;
+    if (teamId) {
+      winningTeam = await TeamModel.findById(teamId).lean();
     }
+
+    // Fire-and-forget Pusher — respond immediately, event broadcasts in background
+    void triggerBidPlaced(tournamentId, {
+      auctionState: updatedState as any,
+      currentPlayer: player as any,
+      winningTeam: winningTeam as any,
+      currentBid: amount,
+      previousBid,
+      message: `Bid corrected to: ${amount.toLocaleString()}`,
+    }).catch(err => console.error('Failed to trigger Pusher event:', err));
 
     return NextResponse.json(updatedState);
   } catch (error) {

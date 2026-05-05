@@ -4,7 +4,7 @@ import { AuctionStateModel } from '@/models/AuctionState';
 import { TournamentModel } from '@/models/Tournament';
 import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
-import { triggerPlayerSold } from '@/lib/pusher-server';
+import { triggerPlayerSold, triggerClassCompleted } from '@/lib/pusher-server';
 import { getMinClassBasePrice } from '@/lib/playerClassUtils';
 
 // POST /api/auction/sell - Sell the current player to the winning team
@@ -20,12 +20,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parallelise the three independent reads that gate every sell.
-    // Cuts ~2 round-trips of latency on the hot path.
-    const [auctionState, team, tournament] = await Promise.all([
+    // Fetch auction state, team, tournament, and squad count in parallel
+    const [auctionState, team, tournament, playersBought] = await Promise.all([
       AuctionStateModel.findOne({ tournamentId }),
       TeamModel.findOne({ _id: teamId }).lean(),
       TournamentModel.findOne({ _id: tournamentId }).lean(),
+      PlayerModel.countDocuments({ tournamentId, isSold: true, winningTeamId: String(teamId) }),
     ]);
 
     if (!auctionState) {
@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate
     if (!auctionState.currentPlayerId || auctionState.currentBid === 0) {
       return NextResponse.json(
         { error: 'No valid bid to sell' },
@@ -42,6 +43,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate team exists
     if (!team) {
       return NextResponse.json(
         { error: 'Team not found' },
@@ -49,6 +51,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate team has enough balance
     if (auctionState.currentBid > (team as any).currentBalance) {
       return NextResponse.json(
         { error: 'Team does not have enough balance for this player' },
@@ -56,6 +59,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate tournament is live
     if (!tournament || (tournament as any).status !== 'Live') {
       return NextResponse.json(
         { error: 'Auction is not live' },
@@ -66,8 +70,7 @@ export async function POST(request: NextRequest) {
     // Validate bid does not exceed team's max affordable bid (reserve budget for remaining squad slots)
     const squadSize = (tournament as any)?.squadSize ?? 0;
     const basePrice = getMinClassBasePrice(tournament as any);
-    const playersPurchased = (team as any).playersPurchased?.length ?? 0;
-    const squadRemainingPlayers = squadSize - playersPurchased;
+    const squadRemainingPlayers = squadSize - playersBought;
     const maxBid = squadRemainingPlayers <= 1
       ? ((team as any).currentBalance ?? 0)
       : Math.max(0, ((team as any).currentBalance ?? 0) - (squadRemainingPlayers - 1) * basePrice);
@@ -83,29 +86,36 @@ export async function POST(request: NextRequest) {
 
     const { currentPlayerId, currentBid } = auctionState;
 
-    // Parallelise the three independent writes plus the remaining-players count.
-    // All four operate on different documents/collections and don't depend on
-    // each other's results — values needed for each are already in scope.
-    // Explicit updatedAt on the player ensures reliable timestamp comparison
-    // in the undo route.
-    const [updatedPlayer, updatedTeam, updatedState, remainingPlayers] = await Promise.all([
-      PlayerModel.findOneAndUpdate(
-        { _id: currentPlayerId },
-        {
-          $set: {
-            isSold: true,
-            finalPrice: currentBid,
-            winningTeamId: teamId,
-            updatedAt: new Date(),
-          },
+    // Atomic idempotency guard — filter includes isSold: false so only one concurrent
+    // request can ever succeed. If null, another request already sold this player.
+    // Explicit updatedAt ensures reliable timestamp comparison in the undo route.
+    const updatedPlayer = await PlayerModel.findOneAndUpdate(
+      { _id: currentPlayerId, isSold: false },
+      {
+        $set: {
+          isSold: true,
+          finalPrice: currentBid,
+          winningTeamId: teamId,
+          updatedAt: new Date(),
         },
-        { new: true }
-      ).lean(),
+      },
+      { new: true }
+    ).lean();
+
+    if (!updatedPlayer) {
+      return NextResponse.json({ error: 'Player is already sold' }, { status: 409 });
+    }
+
+    // Safe subtraction: the atomic isSold guard above ensures exactly one sell ever succeeds
+    const newBalance = (team as any).currentBalance - currentBid;
+
+    // Update team balance and auction state in parallel
+    const [updatedTeam, updatedState] = await Promise.all([
       TeamModel.findOneAndUpdate(
         { _id: teamId },
         {
-          $inc: { currentBalance: -currentBid },
-          $push: { playersPurchased: currentPlayerId },
+          $set: { currentBalance: newBalance },
+          $addToSet: { playersPurchased: String(currentPlayerId) },
         },
         { new: true }
       ).lean(),
@@ -114,27 +124,44 @@ export async function POST(request: NextRequest) {
         { $set: { currentAuctionStatus: 'Sold' } },
         { new: true }
       ).lean(),
-      // currentPlayer is being marked sold in the same Promise.all, so we
-      // subtract it from the count rather than relying on countDocuments
-      // racing with the player update.
-      PlayerModel.countDocuments({
-        tournamentId,
-        isSold: false,
-        _id: { $ne: currentPlayerId },
-      }),
     ]);
 
-    if (!updatedPlayer) {
-      return NextResponse.json({ error: 'Player not found' }, { status: 404 });
-    }
     if (!updatedTeam) {
-      return NextResponse.json({ error: 'Team not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Team not found' },
+        { status: 404 }
+      );
     }
 
-    // Fire-and-forget Pusher trigger so the HTTP response returns immediately;
-    // the client has already applied an optimistic update and the broadcast is
-    // for other connected clients.
-    triggerPlayerSold(tournamentId, {
+    // Count remaining players — run both countDocuments in parallel
+    const activeClass = (auctionState as any).currentAuctionClass as string | null;
+    const [remainingPlayers, remainingInClass] = await Promise.all([
+      PlayerModel.countDocuments({ tournamentId, isSold: false }),
+      activeClass
+        ? PlayerModel.countDocuments({ tournamentId, playerClass: activeClass, isSold: { $ne: true }, isUnsold: { $ne: true } })
+        : Promise.resolve(1), // sentinel — non-zero means class not complete
+    ]);
+
+    // Check if the active class is now complete after this sale
+    if (activeClass && remainingInClass === 0) {
+      const finalState = await AuctionStateModel.findOneAndUpdate(
+        { tournamentId },
+        {
+          $push: { completedClasses: activeClass },
+          $set: { currentAuctionClass: null },
+        },
+        { new: true }
+      ).lean();
+      void triggerClassCompleted(tournamentId, {
+        completedClassCode: activeClass,
+        completedClasses: (finalState as any)?.completedClasses ?? [activeClass],
+        auctionState: finalState as any,
+        message: `${activeClass} class auction completed`,
+      }).catch(err => console.error('[sell] triggerClassCompleted failed:', err));
+    }
+
+    // Fire-and-forget Pusher — respond immediately, event broadcasts in background
+    void triggerPlayerSold(tournamentId, {
       soldPlayer: updatedPlayer as any,
       winningTeam: updatedTeam as any,
       finalPrice: currentBid,
@@ -142,9 +169,7 @@ export async function POST(request: NextRequest) {
       remainingBudget: (updatedTeam as any).currentBalance,
       auctionState: updatedState as any,
       message: `${(updatedPlayer as any).name} sold to ${(updatedTeam as any).name} for ${currentBid.toLocaleString()}`,
-    }).catch((pusherError) => {
-      console.error('Failed to trigger Pusher event:', pusherError);
-    });
+    }).catch(err => console.error('Failed to trigger Pusher event:', err));
 
     return NextResponse.json({
       auctionState: updatedState,

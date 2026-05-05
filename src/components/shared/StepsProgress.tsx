@@ -2,10 +2,12 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Step {
   label: string;
   href: string;
+  adminOnly?: boolean;
 }
 
 interface StepsProgressProps {
@@ -18,7 +20,7 @@ const DEFAULT_STEPS: Step[] = [
   { label: 'Setup Tournament', href: '/manage/tournaments' },
   { label: 'Teams', href: '/manage/teams' },
   { label: 'Players', href: '/manage/players' },
-  { label: 'Add Overlays to OBS', href: '/overlays' },
+  { label: 'Add Overlays to OBS', href: '/output', adminOnly: true },
   { label: 'Auction', href: '/auction' },
 ];
 
@@ -29,9 +31,12 @@ const getStepStatus = (index: number, currentIndex: number) => {
 };
 
 export default function StepsProgress({ currentStep, steps = DEFAULT_STEPS, className = '' }: StepsProgressProps) {
-  // Convert 1-indexed to 0-indexed
-  const currentStepIndex = currentStep - 1;
-  const progressPercentage = (currentStepIndex / (steps.length - 1)) * 100;
+  const { user } = useAuth();
+  const visibleSteps = steps.filter(s => !s.adminOnly || user?.role === 'Admin');
+
+  // Convert 1-indexed to 0-indexed (clamp to visible range)
+  const currentStepIndex = Math.min(currentStep - 1, visibleSteps.length - 1);
+  const progressPercentage = visibleSteps.length > 1 ? (currentStepIndex / (visibleSteps.length - 1)) * 100 : 0;
   const [renderedWidth, setRenderedWidth] = useState(progressPercentage);
 
   useEffect(() => {
@@ -41,8 +46,8 @@ export default function StepsProgress({ currentStep, steps = DEFAULT_STEPS, clas
     try {
       const storedStep = Number(sessionStorage.getItem('stepsProgress:lastStep'));
       if (!Number.isNaN(storedStep)) {
-        const prevIndex = Math.max(0, Math.min(storedStep - 1, steps.length - 1));
-        startWidth = (prevIndex / (steps.length - 1)) * 100;
+        const prevIndex = Math.max(0, Math.min(storedStep - 1, visibleSteps.length - 1));
+        startWidth = visibleSteps.length > 1 ? (prevIndex / (visibleSteps.length - 1)) * 100 : 0;
       }
       sessionStorage.setItem('stepsProgress:lastStep', String(currentStep));
     } catch {
@@ -54,7 +59,7 @@ export default function StepsProgress({ currentStep, steps = DEFAULT_STEPS, clas
     // Defer setting the final width to trigger the animation frame
     const frame = requestAnimationFrame(() => setRenderedWidth(progressPercentage));
     return () => cancelAnimationFrame(frame);
-  }, [progressPercentage, currentStep, steps.length]);
+  }, [progressPercentage, currentStep, visibleSteps.length]);
 
   return (
     <div className={`w-full py-4 px-4 ${className}`}>
@@ -76,7 +81,7 @@ export default function StepsProgress({ currentStep, steps = DEFAULT_STEPS, clas
 
         {/* Steps Container */}
         <div className="relative flex justify-between w-full z-10">
-          {steps.map((step, index) => {
+          {visibleSteps.map((step, index) => {
             const status = getStepStatus(index, currentStepIndex);
             const isActiveOrCompleted = status === 'active' || status === 'completed';
 

@@ -1,5 +1,17 @@
 export type BasePriceStrategy = 'tournament-level' | 'player-class-based';
 
+export interface StatFieldDef {
+  key: string;    // slug, e.g. 'matches_played'
+  label: string;  // display label, e.g. 'Matches Played'
+}
+
+export interface PlayerProfileFieldsConfig {
+  showAge: boolean;
+  showBattingStyle: boolean;
+  showBowlingStyle: boolean;
+  statFields: StatFieldDef[]; // up to 4
+}
+
 export interface PlayerClassConfig {
   code: string;           // Short code (user-defined, e.g., "PT", "AR-A", "BATB")
   name: string;           // e.g., "Platinum", "Gold", "Silver", "Bronze"
@@ -7,6 +19,11 @@ export interface PlayerClassConfig {
   color: string;          // Hex color for badge display (e.g., "#FFD700")
   icon?: string;          // Optional icon/emoji
   order: number;          // Display order (lower = higher tier)
+}
+
+export interface BidIncrementRange {
+  upTo: number;        // Exclusive ceiling. e.g. 50000 means bids below 50,000.
+  increment: number;   // Step size in this range, e.g. 5000.
 }
 
 export interface Tournament {
@@ -17,12 +34,17 @@ export interface Tournament {
   squadSize: number;
   basePricePerPlayer: number;
   logoURL?: string;
+  wheelCenterImageURL?: string;         // Image shown in the center of the Spin Wheel overlay
   createdBy?: string;                   // User ID who created the tournament
   status: 'Draft' | 'Completed' | 'Setup' | 'Pending' | 'Live' | 'Paused' | 'Stopped' | 'Archived';
   usePlayerClasses?: boolean;           // Toggle to enable/disable player classes
   playerClasses?: PlayerClassConfig[];  // Custom player classes for this tournament
   basePriceStrategy?: BasePriceStrategy; // Strategy for determining base prices (default: 'tournament-level')
-  overlayTheme?: 'standard'; // Overlay theme for OBS browser source
+  overlayTheme?: 'standard' | 'premium' | 'neon' | 'theme2'; // Overlay theme for OBS browser source
+  overlayPalette?: string; // e.g. 'default', 'ocean', 'amethyst'
+  biddingMode?: 'direct' | 'team'; // 'direct' = typed input (default), 'team' = per-team bid buttons
+  bidIncrements?: BidIncrementRange[]; // Ordered list of price ranges and their increment steps
+  playerProfileFields?: PlayerProfileFieldsConfig; // Optional player data fields enabled for this tournament
 }
 
 export interface Team {
@@ -47,12 +69,17 @@ export interface Player {
   position?: string;
   currentClub?: string;
   photoURL?: string;
+  secondaryImageURL?: string;
   playerClass?: string;
   age?: number;
   isSold?: boolean;
   isUnsold?: boolean;
   finalPrice?: number;
   winningTeamId?: string;
+  isIconic?: boolean;
+  battingStyle?: string;
+  bowlingStyle?: string;
+  stats?: Record<string, string | number>; // keys match tournament's playerProfileFields.statFields[].key
 }
 
 export interface AuctionState {
@@ -62,10 +89,12 @@ export interface AuctionState {
   winningTeamId: string | null;
   currentAuctionStatus: 'Pending' | 'Bidding' | 'Sold';
   history: Bid[];
+  currentAuctionClass: string | null;  // class code currently being auctioned (e.g. "PT"), or null for unfiltered
+  completedClasses: string[];           // class codes whose players are all sold/unsold
 }
 
 export interface Bid {
-  teamId: string;
+  teamId: string | null;
   amount: number;
   timestamp: number;
 }

@@ -35,6 +35,8 @@ const MOCK_AUCTION_STATE: AuctionState = {
   winningTeamId: null,
   currentAuctionStatus: 'Pending',
   history: [],
+  currentAuctionClass: null,
+  completedClasses: [],
 };
 
 const MOCK_OVERLAY_TEMPLATES: any[] = [
@@ -146,6 +148,8 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     winningTeamId: null,
     currentAuctionStatus: 'Pending',
     history: [],
+    currentAuctionClass: null,
+    completedClasses: [],
   });
   const [overlayTemplates, setOverlayTemplates] = useState<OverlayTemplate[]>(MOCK_OVERLAY_TEMPLATES);
   const [overlayInstances, setOverlayInstances] = useState<OverlayInstance[]>(MOCK_OVERLAY_INSTANCES);

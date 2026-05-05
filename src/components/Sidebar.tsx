@@ -22,6 +22,17 @@ const NAV_GROUPS = [
         ),
       },
       {
+        label: 'Mobile Auction',
+        href: '/manage/auction-mobile',
+        roles: ['Admin', 'Tournament'],
+        icon: (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+            <line x1="12" y1="18" x2="12.01" y2="18" />
+          </svg>
+        ),
+      },
+      {
         label: 'Tournaments',
         href: '/manage/tournaments',
         roles: ['Admin', 'Tournament'],
@@ -74,12 +85,23 @@ const NAV_GROUPS = [
       },
       {
         label: 'Overlays',
-        href: '/overlays',
+        href: '/output',
         roles: ['Admin'],
         icon: (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0">
             <rect x="2" y="3" width="20" height="14" rx="2" />
             <path d="M8 21h8M12 17v4" />
+          </svg>
+        ),
+      },
+      {
+        label: 'OBS Sessions',
+        href: '/manage/overlays/sessions',
+        roles: ['Admin'],
+        icon: (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0110 0v4" />
           </svg>
         ),
       },

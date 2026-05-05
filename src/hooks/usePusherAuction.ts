@@ -28,6 +28,8 @@ import type {
   AuctionUndoEvent,
   PlayerMarkedUnsoldEvent,
   AuctionStateUpdateEvent,
+  ClassSelectedEvent,
+  ClassCompletedEvent,
 } from '@/types/pusher-events';
 
 /** Channel that overlays always subscribe to for wake/sleep signals */
@@ -57,9 +59,11 @@ interface UsePusherAuctionReturn {
   players: Player[];
   teams: Team[];
   isConnected: boolean;
+  isRevoked: boolean;
   error: string | null;
   setPlayerUnsold: (playerId: string) => void;
   setPlayerAvailable: (playerId: string) => void;
+  updatePlayerAndTeams: (player: Player, teams: Team[]) => void;
   /** Optimistically apply a bid (caller is responsible for restoring on failure). */
   optimisticBid: (amount: number) => void;
   /** Restore auctionState (used to revert an optimistic bid on failure). */
@@ -90,10 +94,13 @@ type AuctionAction =
   | { type: 'AUCTION_UNDO'; data: AuctionUndoEvent }
   | { type: 'PLAYER_MARKED_UNSOLD'; data: PlayerMarkedUnsoldEvent }
   | { type: 'STATE_UPDATE'; data: AuctionStateUpdateEvent }
+  | { type: 'CLASS_SELECTED'; data: ClassSelectedEvent }
+  | { type: 'CLASS_COMPLETED'; data: ClassCompletedEvent }
   | { type: 'SET_ERROR'; error: string }
   | { type: 'CLEAR_ERROR' }
   | { type: 'SET_PLAYER_UNSOLD'; playerId: string }
   | { type: 'SET_PLAYER_AVAILABLE'; playerId: string }
+  | { type: 'UPDATE_PLAYER_AND_TEAMS'; player: Player; teams: Team[] }
   | { type: 'OPTIMISTIC_BID'; amount: number }
   | { type: 'OPTIMISTIC_SELL'; teamId: string; playerId: string; bid: number }
   | { type: 'RESTORE_AUCTION_STATE'; auctionState: AuctionState }
@@ -196,11 +203,21 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         player._id === action.data.restoredPlayer._id ? action.data.restoredPlayer : player
       );
 
-      const updatedTeams = action.data.updatedTeam
-        ? state.teams.map((team) =>
-            team._id === action.data.updatedTeam!._id ? action.data.updatedTeam! : team
-          )
-        : state.teams;
+      let updatedTeams = state.teams;
+      if (action.data.updatedTeam) {
+        const serverTeam = action.data.updatedTeam;
+        const restoredId = action.data.restoredPlayer._id;
+        updatedTeams = state.teams.map((team) => {
+          if (team._id !== serverTeam._id) return team;
+          // Use server's team data but guarantee the restored player is removed from
+          // playersPurchased. Safety net: if $pull silently failed and the server's
+          // updatedTeam still contains the player, the client state shows the correct count.
+          const playersPurchased = (serverTeam.playersPurchased ?? []).filter(
+            (id: string) => id !== restoredId
+          );
+          return { ...serverTeam, playersPurchased };
+        });
+      }
 
       return {
         ...state,
@@ -233,6 +250,20 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         error: null,
       };
 
+    case 'CLASS_SELECTED':
+      return {
+        ...state,
+        auctionState: action.data.auctionState,
+        error: null,
+      };
+
+    case 'CLASS_COMPLETED':
+      return {
+        ...state,
+        auctionState: action.data.auctionState,
+        error: null,
+      };
+
     case 'SET_PLAYER_UNSOLD':
       return {
         ...state,
@@ -248,6 +279,14 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         players: state.players.map((p) =>
           p._id === action.playerId ? { ...p, isUnsold: false, isSold: false } : p
         ),
+        error: null,
+      };
+
+    case 'UPDATE_PLAYER_AND_TEAMS':
+      return {
+        ...state,
+        players: state.players.map((p) => p._id === action.player._id ? action.player : p),
+        teams: action.teams,
         error: null,
       };
 
@@ -341,6 +380,7 @@ export function usePusherAuction(
   const isOverlayMode = !!overlayToken;
 
   const [isConnected, setIsConnected] = useState(false);
+  const [isRevoked, setIsRevoked] = useState(false);
   // In non-overlay mode start as true so Effect 4 fires immediately on mount.
   const [connectTournamentChannel, setConnectTournamentChannel] = useState(!isOverlayMode);
 
@@ -446,9 +486,18 @@ export function usePusherAuction(
       }
     });
 
+    wakeChannel.bind('overlay:revoke', (data: { token: string }) => {
+      if (overlayToken && data.token === overlayToken) {
+        dlog('[usePusherAuction] Overlay session revoked via wake channel');
+        setIsRevoked(true);
+        pusher.disconnect();
+      }
+    });
+
     return () => {
       wakeChannel.unbind('auction:wake');
       wakeChannel.unbind('auction:sleep');
+      wakeChannel.unbind('overlay:revoke');
       pusher.unsubscribe(WAKE_CHANNEL);
     };
   }, [tournamentId, isOverlayMode]);
@@ -536,6 +585,22 @@ export function usePusherAuction(
         dispatch({ type: 'STATE_UPDATE', data });
       });
 
+      channel.bind('auction:class-selected', (data: ClassSelectedEvent) => {
+        dispatch({ type: 'CLASS_SELECTED', data });
+      });
+
+      channel.bind('auction:class-completed', (data: ClassCompletedEvent) => {
+        dispatch({ type: 'CLASS_COMPLETED', data });
+      });
+
+      channel.bind('overlay:revoke', (data: { token: string }) => {
+        if (overlayToken && data.token === overlayToken) {
+          dlog('[usePusherAuction] Overlay session revoked via tournament channel');
+          setIsRevoked(true);
+          pusher.disconnect();
+        }
+      });
+
       const handleConnectionStateChange = (states: { current: string }) => {
         setIsConnected(states.current === 'connected');
         if (states.current === 'connected' || states.current === 'unavailable' || states.current === 'failed') {
@@ -563,6 +628,9 @@ export function usePusherAuction(
           channelRef.current.unbind('auction:undo');
           channelRef.current.unbind('auction:player-unsold');
           channelRef.current.unbind('auction:state-update');
+          channelRef.current.unbind('auction:class-selected');
+          channelRef.current.unbind('auction:class-completed');
+          channelRef.current.unbind('overlay:revoke');
           pusher.unsubscribe(channelName);
           channelRef.current = null;
         }
@@ -575,6 +643,15 @@ export function usePusherAuction(
     }
   }, [tournamentId, connectTournamentChannel]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ─── Effect 5: Re-fetch when overlay token hydrates (mobile SSR delay) ───────
+  // On mobile, useSearchParams may return null for the token on the first render.
+  // When the token becomes available after hydration, re-fetch so teams/players
+  // are loaded with proper authentication.
+  useEffect(() => {
+    if (!overlayToken || !tournamentId) return;
+    fetchInitialData();
+  }, [overlayToken, tournamentId, fetchInitialData]);
+
   const setPlayerUnsold = useCallback((playerId: string) => {
     dispatch({ type: 'SET_PLAYER_UNSOLD', playerId });
   }, []);
@@ -583,7 +660,11 @@ export function usePusherAuction(
     dispatch({ type: 'SET_PLAYER_AVAILABLE', playerId });
   }, []);
 
-  // Snapshot refs so optimistic helpers can capture the current state
+  const updatePlayerAndTeams = useCallback((player: Player, teams: Team[]) => {
+    dispatch({ type: 'UPDATE_PLAYER_AND_TEAMS', player, teams });
+  }, []);
+
+  // Snapshot ref so optimistic helpers can capture the current state
   // synchronously without making the callbacks depend on it (which would
   // re-create them on every render).
   const stateRef = useRef(state);
@@ -625,9 +706,11 @@ export function usePusherAuction(
     players: state.players,
     teams: state.teams,
     isConnected,
+    isRevoked,
     error: state.error,
     setPlayerUnsold,
     setPlayerAvailable,
+    updatePlayerAndTeams,
     optimisticBid,
     restoreAuctionState,
     optimisticSell,

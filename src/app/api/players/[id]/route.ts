@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { playerDB, tournamentDB } from '@/lib/db-mongodb';
+import { TeamModel } from '@/models/Team';
+import { connectToDatabase } from '@/lib/mongodb';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction, canAccessPlayer, canModifyResource } from '@/lib/permissions';
 
@@ -97,7 +99,47 @@ export async function PUT(
     }
 
     const body = await request.json();
+
+    if (body.isIconic) {
+      if (!body.winningTeamId) {
+        return NextResponse.json({ error: 'winningTeamId is required when making a player iconic' }, { status: 400 });
+      }
+      body.isSold = true;
+      body.isUnsold = false;
+      body.finalPrice = 0;
+    } else if (body.isIconic === false) {
+      // If toggled off from iconic, and no other auction state is provided, we reset to unsold pool
+      // But only if it was previously iconic to prevent wiping legitimate auction data unintentionally
+      if (player.isIconic) {
+        body.isSold = false;
+        body.isUnsold = false;
+        // Don't send finalPrice or winningTeamId in update to keep them as is or clear them
+        body.finalPrice = null;
+        body.winningTeamId = null;
+      }
+    }
+
     const updatedPlayer = await playerDB.update(id, body);
+
+    // Sync iconic player's squad slot in the team's playersPurchased list
+    if (body.isIconic && body.winningTeamId) {
+      await connectToDatabase();
+      // If team changed, remove from old team first
+      const oldTeamId = (player as any).winningTeamId;
+      if (oldTeamId && oldTeamId !== body.winningTeamId) {
+        await TeamModel.findByIdAndUpdate(oldTeamId, { $pull: { playersPurchased: id } });
+      }
+      await TeamModel.findByIdAndUpdate(body.winningTeamId, {
+        $addToSet: { playersPurchased: id },
+      });
+    } else if (body.isIconic === false && (player as any).isIconic) {
+      // Removed iconic status — free the squad slot
+      await connectToDatabase();
+      const oldTeamId = (player as any).winningTeamId;
+      if (oldTeamId) {
+        await TeamModel.findByIdAndUpdate(oldTeamId, { $pull: { playersPurchased: id } });
+      }
+    }
     if (!updatedPlayer) {
       return NextResponse.json(
         { error: 'Player not found' },

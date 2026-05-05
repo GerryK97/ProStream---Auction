@@ -3,7 +3,7 @@ import { AuctionState, Bid } from '@/types';
 
 const bidSchema = new Schema<Bid>(
   {
-    teamId: { type: String, required: true },
+    teamId: { type: String, required: false, default: null },
     amount: { type: Number, required: true },
     timestamp: { type: Number, required: true },
   },
@@ -22,6 +22,8 @@ const auctionStateSchema = new Schema<AuctionState>(
       default: 'Pending',
     },
     history: [bidSchema],
+    currentAuctionClass: { type: String, default: null },
+    completedClasses: [{ type: String }],
   },
   {
     timestamps: true,

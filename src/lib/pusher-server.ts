@@ -20,6 +20,8 @@ import type {
   AuctionUndoEvent,
   PlayerMarkedUnsoldEvent,
   AuctionStateUpdateEvent,
+  ClassSelectedEvent,
+  ClassCompletedEvent,
   OverlaySettingsEvent,
   WheelSpinEvent,
 } from '@/types/pusher-events';
@@ -231,6 +233,26 @@ export async function triggerWheelSpin(
 }
 
 /**
+ * Helper: Trigger auction:class-selected event
+ */
+export async function triggerClassSelected(
+  tournamentId: string,
+  data: Omit<ClassSelectedEvent, 'tournamentId' | 'timestamp'>
+): Promise<void> {
+  return triggerAuctionEvent(tournamentId, 'auction:class-selected', data);
+}
+
+/**
+ * Helper: Trigger auction:class-completed event
+ */
+export async function triggerClassCompleted(
+  tournamentId: string,
+  data: Omit<ClassCompletedEvent, 'tournamentId' | 'timestamp'>
+): Promise<void> {
+  return triggerAuctionEvent(tournamentId, 'auction:class-completed', data);
+}
+
+/**
  * Global wake/sleep channel — overlays always subscribe here.
  * Sending 'auction:wake' activates the full tournament channel subscription.
  * Sending 'auction:sleep' deactivates it (manual override).
@@ -254,6 +276,24 @@ export async function triggerSleep(tournamentId: string): Promise<void> {
     console.log(`[Pusher] Sleep signal sent for tournament ${tournamentId}`);
   } catch (error) {
     console.error('[Pusher] Error sending sleep signal:', error);
+  }
+}
+
+/**
+ * Revoke an overlay session — fires overlay:revoke on both channels so the
+ * active OBS browser source disconnects immediately.
+ */
+export async function triggerOverlayRevoke(tournamentId: string, token: string): Promise<void> {
+  try {
+    const pusher = getPusherInstance();
+    const payload = { token, timestamp: Date.now() };
+    await Promise.all([
+      pusher.trigger(`tournament-${tournamentId}`, 'overlay:revoke', payload),
+      pusher.trigger(WAKE_CHANNEL, 'overlay:revoke', payload),
+    ]);
+    console.log(`[Pusher] overlay:revoke sent for session ${token.slice(0, 8)}…`);
+  } catch (error) {
+    console.error('[Pusher] Error sending overlay:revoke:', error);
   }
 }
 

@@ -58,7 +58,14 @@ export function getPusherClient(): PusherJS {
       });
 
       pusherClientInstance.connection.bind('error', (error: any) => {
-        console.error('[Pusher Client] Connection error:', error);
+        if (!error || Object.keys(error).length === 0) return;
+        if (error.type === 'WebSocketError') {
+          console.warn('[Pusher Client] WebSocket error:', error.error);
+        } else if (error.type === 'PusherError') {
+          console.error('[Pusher Client] Pusher error:', error.data);
+        } else {
+          console.error('[Pusher Client] Connection error:', error);
+        }
       });
 
       pusherClientInstance.connection.bind('unavailable', () => {

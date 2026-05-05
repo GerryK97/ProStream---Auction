@@ -9,12 +9,16 @@ import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
 
 interface ExcelRow {
+  'Player No'?: string | number;
   'Name'?: string;
   'Position'?: string;
   'Current Club'?: string;
   'Age'?: string | number;
+  'Batting Style'?: string;
+  'Bowling Style'?: string;
   'Add (Yes/No)'?: string;
   'Player Class'?: string;
+  [key: string]: any; // for dynamic stat field columns
 }
 
 interface ImportResult {
@@ -84,6 +88,11 @@ export async function POST(request: NextRequest) {
       ? tournament.playerClasses.map((c: any) => `${c.code} (${c.name})`).join(', ')
       : '';
 
+    const ppf = tournament.playerProfileFields;
+    const showBattingStyle = ppf?.showBattingStyle ?? false;
+    const showBowlingStyle = ppf?.showBowlingStyle ?? false;
+    const statFields = ppf?.statFields ?? [];
+
     const arrayBuffer = await file.arrayBuffer();
     const workbook = XLSX.read(Buffer.from(arrayBuffer), { type: 'buffer' });
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -107,10 +116,20 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
+      const playerNo = row['Player No'] !== undefined && row['Player No'] !== '' ? String(row['Player No']).trim() : undefined;
       const playerName = row['Name']?.toString().trim();
       const position = row['Position']?.toString().trim();
       const currentClub = row['Current Club']?.toString().trim();
       const age = row['Age'] !== undefined && row['Age'] !== '' ? Number(row['Age']) : undefined;
+      const battingStyle = showBattingStyle && row['Batting Style'] ? row['Batting Style'].toString().trim() : undefined;
+      const bowlingStyle = showBowlingStyle && row['Bowling Style'] ? row['Bowling Style'].toString().trim() : undefined;
+
+      // Read dynamic stat fields
+      const stats: Record<string, string> = {};
+      for (const sf of statFields) {
+        const val = row[sf.label];
+        if (val !== undefined && val !== '') stats[sf.key] = String(val).trim();
+      }
 
       if (!playerName) {
         result.errors.push({ row: rowNumber, error: 'Missing player Name', player: 'Unknown' });
@@ -149,7 +168,16 @@ export async function POST(request: NextRequest) {
 
       try {
         await playerDB.create(
-          { name: playerName, position, currentClub, age, playerClass: playerClass || undefined, tournamentId },
+          {
+            ...(playerNo ? { playerNo } : {}),
+            name: playerName, position, currentClub,
+            ...(age !== undefined ? { age } : {}),
+            ...(battingStyle ? { battingStyle } : {}),
+            ...(bowlingStyle ? { bowlingStyle } : {}),
+            ...(Object.keys(stats).length > 0 ? { stats } : {}),
+            playerClass: playerClass || undefined,
+            tournamentId,
+          },
           user.userId
         );
         result.imported++;

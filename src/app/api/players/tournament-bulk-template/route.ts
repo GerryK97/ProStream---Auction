@@ -5,6 +5,13 @@ import { Tournament } from '@/types';
 import { connectToDatabase } from '@/lib/mongodb';
 import { getUserFromRequest } from '@/lib/request-helpers';
 
+const BATTING_STYLES = ['Right-handed', 'Left-handed'];
+const BOWLING_STYLES = [
+  'Right-arm Fast', 'Right-arm Medium-fast', 'Right-arm Medium', 'Right-arm Off-spin',
+  'Left-arm Fast', 'Left-arm Medium-fast', 'Left-arm Medium', 'Left-arm Orthodox',
+  'Left-arm Chinaman', 'Leg-spin',
+];
+
 export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
@@ -30,62 +37,86 @@ export async function GET(request: NextRequest) {
       ? tournament.playerClasses.map((c: any) => c.name)
       : [];
 
-    // Build sample rows to illustrate the expected format
-    const sampleRows = [
-      {
-        'Name': 'John Smith',
-        'Position': 'Batsman',
-        'Current Club': 'Mumbai FC',
-        'Age': 25,
-        'Add (Yes/No)': 'Yes',
-        ...(playerClasses.length > 0 ? { 'Player Class': playerClasses[0] || '' } : {}),
-      },
-      {
-        'Name': 'Alex Johnson',
-        'Position': 'Bowler',
-        'Current Club': 'Delhi Tigers',
-        'Age': 28,
-        'Add (Yes/No)': 'No',
-        ...(playerClasses.length > 0 ? { 'Player Class': playerClasses[1] || playerClasses[0] || '' } : {}),
-      },
+    const ppf = tournament.playerProfileFields;
+    const showAge          = ppf?.showAge          ?? false;
+    const showBattingStyle = ppf?.showBattingStyle  ?? false;
+    const showBowlingStyle = ppf?.showBowlingStyle  ?? false;
+    const statFields       = ppf?.statFields        ?? [];
+
+    // Build the ordered column list so we can derive column letters dynamically
+    const colNames: string[] = [
+      'Player No',
+      'Name',
+      'Position',
+      'Current Club',
+      ...(showAge          ? ['Age']           : []),
+      ...(showBattingStyle ? ['Batting Style'] : []),
+      ...(showBowlingStyle ? ['Bowling Style'] : []),
+      ...statFields.map(sf => sf.label),
+      'Add (Yes/No)',
+      ...(playerClasses.length > 0 ? ['Player Class'] : []),
     ];
 
-    // Add empty rows for data entry
-    const emptyRowCount = 20;
-    for (let i = 0; i < emptyRowCount; i++) {
-      sampleRows.push({
-        'Name': '',
-        'Position': '',
-        'Current Club': '',
-        'Age': '' as any,
-        'Add (Yes/No)': 'Yes',
-        ...(playerClasses.length > 0 ? { 'Player Class': '' } : {}),
-      });
+    const addColIdx   = colNames.indexOf('Add (Yes/No)');
+    const classColIdx = colNames.indexOf('Player Class');
+    const battingColIdx = colNames.indexOf('Batting Style');
+    const bowlingColIdx = colNames.indexOf('Bowling Style');
+
+    const addColLetter   = XLSX.utils.encode_col(addColIdx);
+    const classColLetter = classColIdx >= 0 ? XLSX.utils.encode_col(classColIdx) : null;
+    const battingColLetter = battingColIdx >= 0 ? XLSX.utils.encode_col(battingColIdx) : null;
+    const bowlingColLetter = bowlingColIdx >= 0 ? XLSX.utils.encode_col(bowlingColIdx) : null;
+
+    // Build sample rows
+    const makeRow = (
+      no: string, name: string, pos: string, club: string,
+      age: number | string, batting: string, bowling: string,
+      stat1: string, addVal: string, cls: string
+    ) => ({
+      'Player No': no,
+      'Name': name,
+      'Position': pos,
+      'Current Club': club,
+      ...(showAge          ? { 'Age': age }                 : {}),
+      ...(showBattingStyle ? { 'Batting Style': batting }   : {}),
+      ...(showBowlingStyle ? { 'Bowling Style': bowling }   : {}),
+      ...Object.fromEntries(statFields.map((sf, i) => [sf.label, i === 0 ? stat1 : ''])),
+      'Add (Yes/No)': addVal,
+      ...(playerClasses.length > 0 ? { 'Player Class': cls } : {}),
+    });
+
+    const sampleRows: Record<string, any>[] = [
+      makeRow('001', 'John Smith',   'Batsman', 'Mumbai FC',     25, 'Right-handed', 'Right-arm Medium', '42', 'Yes', playerClasses[0] || ''),
+      makeRow('002', 'Alex Johnson', 'Bowler',  'Delhi Tigers',  28, 'Left-handed',  'Left-arm Orthodox', '18', 'No',  playerClasses[1] || playerClasses[0] || ''),
+    ];
+
+    // Empty rows for data entry
+    for (let i = 0; i < 20; i++) {
+      sampleRows.push(makeRow('', '', '', '', '' as any, '', '', '', 'Yes', ''));
     }
 
     const workbook = XLSX.utils.book_new();
     const worksheet = XLSX.utils.json_to_sheet(sampleRows);
 
-    // Column widths
-    const columnWidths: Array<{ wch: number }> = [
-      { wch: 25 }, // Name
-      { wch: 18 }, // Position
-      { wch: 30 }, // Current Club
-      { wch: 15 }, // Add (Yes/No)
-    ];
-    if (playerClasses.length > 0) {
-      columnWidths.push({ wch: 20 }); // Player Class
-    }
-    worksheet['!cols'] = columnWidths;
-
-    // Determine column letters
-    const addColLetter = 'D';
-    const classColLetter = 'E';
-    const totalRows = sampleRows.length + 1;
+    // Column widths matching column order
+    worksheet['!cols'] = colNames.map(col => {
+      if (col === 'Player No')    return { wch: 12 };
+      if (col === 'Name')         return { wch: 25 };
+      if (col === 'Position')     return { wch: 18 };
+      if (col === 'Current Club') return { wch: 30 };
+      if (col === 'Age')          return { wch: 8 };
+      if (col === 'Batting Style') return { wch: 22 };
+      if (col === 'Bowling Style') return { wch: 26 };
+      if (col === 'Add (Yes/No)') return { wch: 15 };
+      if (col === 'Player Class') return { wch: 20 };
+      return { wch: 18 }; // stat fields
+    });
 
     if (!worksheet['!dataValidation']) {
       (worksheet as any)['!dataValidation'] = [];
     }
+
+    const totalRows = sampleRows.length + 1;
 
     // Yes/No dropdown for "Add" column
     for (let i = 2; i <= totalRows; i++) {
@@ -99,8 +130,34 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Batting Style dropdown
+    if (battingColLetter) {
+      const battingFormula = `"${BATTING_STYLES.join(',')}"`;
+      for (let i = 2; i <= totalRows; i++) {
+        (worksheet as any)['!dataValidation'].push({
+          sqref: `${battingColLetter}${i}`,
+          type: 'list',
+          formula1: battingFormula,
+          showErrorMessage: false,
+        });
+      }
+    }
+
+    // Bowling Style dropdown
+    if (bowlingColLetter) {
+      const bowlingFormula = `"${BOWLING_STYLES.join(',')}"`;
+      for (let i = 2; i <= totalRows; i++) {
+        (worksheet as any)['!dataValidation'].push({
+          sqref: `${bowlingColLetter}${i}`,
+          type: 'list',
+          formula1: bowlingFormula,
+          showErrorMessage: false,
+        });
+      }
+    }
+
     // Player class dropdown
-    if (playerClasses.length > 0) {
+    if (classColLetter && playerClasses.length > 0) {
       const classListFormula = `"${playerClasses.join(',')}"`;
       for (let i = 2; i <= totalRows; i++) {
         (worksheet as any)['!dataValidation'].push({
@@ -119,28 +176,34 @@ export async function GET(request: NextRequest) {
     // Instructions sheet
     const instructions: Array<{ Step: number | string; Instruction: string }> = [
       { Step: 1, Instruction: 'Fill in player details in the "Players" sheet. The first two rows are examples — replace them with real data.' },
-      { Step: 2, Instruction: 'Required columns: Name, Position, Current Club, Add (Yes/No)' },
+      { Step: 2, Instruction: `Required columns: Name, Position, Current Club, Add (Yes/No). Optional: Player No (e.g. 001, 002)` },
       { Step: 3, Instruction: 'Set "Add (Yes/No)" to "Yes" for rows you want to import. Rows set to "No" will be skipped.' },
     ];
 
+    let step = 4;
+    if (showAge)          instructions.push({ Step: step++, Instruction: 'Age: Enter the player\'s age as a number (optional).' });
+    if (showBattingStyle) instructions.push({ Step: step++, Instruction: `Batting Style: Select from dropdown — ${BATTING_STYLES.join(', ')} (optional).` });
+    if (showBowlingStyle) instructions.push({ Step: step++, Instruction: `Bowling Style: Select from dropdown — ${BOWLING_STYLES.join(', ')} (optional).` });
+    if (statFields.length > 0) instructions.push({ Step: step++, Instruction: `Stat fields: ${statFields.map(sf => sf.label).join(', ')} — enter numeric or text values (optional).` });
+
     if (playerClasses.length > 0) {
       instructions.push(
-        { Step: 4, Instruction: `Select a Player Class from the dropdown: ${playerClasses.join(', ')}` },
-        { Step: 5, Instruction: 'TIP: You can use short codes to reduce typos! (e.g., P=Platinum, G=Gold, S=Silver, B=Bronze, E=Elite, Pr=Premium, St=Standard)' },
-        { Step: 6, Instruction: 'Short codes are case-insensitive. Examples: "P" or "p" → Platinum, "G" → Gold, "S" → Silver' },
-        { Step: 7, Instruction: 'Save the file and upload it back to the application.' },
+        { Step: step++, Instruction: `Select a Player Class from the dropdown: ${playerClasses.join(', ')}` },
+        { Step: step++, Instruction: 'TIP: You can use short codes to reduce typos! (e.g., P=Platinum, G=Gold, S=Silver, B=Bronze, E=Elite, Pr=Premium, St=Standard)' },
+        { Step: step++, Instruction: 'Short codes are case-insensitive. Examples: "P" or "p" → Platinum, "G" → Gold, "S" → Silver' },
+        { Step: step++, Instruction: 'Save the file and upload it back to the application.' },
       );
     } else {
       instructions.push(
-        { Step: 4, Instruction: 'This tournament does not use player classes — no class column needed.' },
-        { Step: 5, Instruction: 'Save the file and upload it back to the application.' },
+        { Step: step++, Instruction: 'This tournament does not use player classes — no class column needed.' },
+        { Step: step++, Instruction: 'Save the file and upload it back to the application.' },
       );
     }
 
     instructions.push(
       { Step: '', Instruction: '' },
       { Step: 'Tournament', Instruction: tournament.name },
-      { Step: 'Positions', Instruction: 'Batsman, Bowler, All-rounder, Wicket-keeper' },
+      { Step: 'Positions', Instruction: 'Batsman, Bowler, All-rounder, Batting All-rounder, Bowling All-rounder, Wicket-keeper, Wicket Keeper Batsman' },
     );
 
     if (playerClasses.length > 0) {

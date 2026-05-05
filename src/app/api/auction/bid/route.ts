@@ -6,12 +6,30 @@ import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
 import { triggerBidPlaced } from '@/lib/pusher-server';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
+import { getNextTeamBid } from '@/lib/bidIncrementUtils';
+import { getUserFromRequest } from '@/lib/request-helpers';
+import { canPerformAction } from '@/lib/permissions';
 
 // POST /api/auction/bid - Place a bid for the current player
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
-    const { tournamentId, teamId, amount } = await request.json();
+
+    // Authenticate request
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Allow Team role to bid; all other roles require auction manage permission
+    if (user.role !== 'Team' && !canPerformAction(user.role, 'manage', 'auction')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const { tournamentId, teamId: bodyTeamId, amount } = await request.json();
+
+    // Team-role users always bid as their assigned team (prevents spoofing)
+    const teamId = user.role === 'Team' ? user.assignedTeams[0] : bodyTeamId;
 
     if (!tournamentId || typeof amount !== 'number') {
       return NextResponse.json(
@@ -20,8 +38,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Read auction state and tournament in parallel — the player lookup
-    // depends on auctionState.currentPlayerId so it has to wait for that.
+    // Fetch auction state and tournament in parallel
     const [auctionState, tournament] = await Promise.all([
       AuctionStateModel.findOne({ tournamentId }),
       TournamentModel.findOne({ _id: tournamentId }).lean(),
@@ -34,6 +51,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate tournament is live
     if (!tournament || (tournament as any).status !== 'Live') {
       return NextResponse.json(
         { error: 'Auction is not live' },
@@ -41,6 +59,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate player
     if (!auctionState.currentPlayerId) {
       return NextResponse.json(
         { error: 'No player is currently up for auction' },
@@ -81,6 +100,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // In team bidding mode, validate that the submitted amount equals the next preset bid
+    // (Team-role users only — admins/Tournament roles can set custom amounts)
+    if ((tournament as any).biddingMode === 'team' && user.role === 'Team') {
+      const bidIncrements = (tournament as any).bidIncrements ?? [];
+      const expectedBid = getNextTeamBid(bidIncrements, auctionState.currentBid, actualBasePrice);
+      if (amount !== expectedBid) {
+        return NextResponse.json(
+          { error: `Invalid bid amount for team bidding mode. Expected: ${expectedBid.toLocaleString()}` },
+          { status: 400 }
+        );
+      }
+    }
+
     // Update auction state (team will be assigned when selling)
     const newBid = {
       teamId: teamId || null,
@@ -90,7 +122,7 @@ export async function POST(request: NextRequest) {
 
     const previousBid = auctionState.currentBid;
 
-    // The state update and the optional winning-team lookup are independent.
+    // Parallelize the state update and team lookup
     const [updatedState, winningTeam] = await Promise.all([
       AuctionStateModel.findOneAndUpdate(
         { tournamentId },
@@ -106,18 +138,15 @@ export async function POST(request: NextRequest) {
       teamId ? TeamModel.findById(teamId).lean() : Promise.resolve(null),
     ]);
 
-    // Fire-and-forget Pusher trigger so the HTTP response returns without
-    // waiting for the broadcast round-trip.
-    triggerBidPlaced(tournamentId, {
+    // Fire-and-forget Pusher — respond immediately, event broadcasts in background
+    void triggerBidPlaced(tournamentId, {
       auctionState: updatedState as any,
       currentPlayer: player as any,
       winningTeam: winningTeam as any,
       currentBid: amount,
       previousBid,
       message: `New bid placed: ${amount.toLocaleString()}`,
-    }).catch((pusherError) => {
-      console.error('Failed to trigger Pusher event:', pusherError);
-    });
+    }).catch(err => console.error('Failed to trigger Pusher event:', err));
 
     return NextResponse.json(updatedState);
   } catch (error) {

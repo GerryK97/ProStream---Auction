@@ -3,10 +3,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { Tournament } from '@/types';
+import { Tournament, BidIncrementRange, StatFieldDef } from '@/types';
 import { getAuthHeaders } from '@/lib/api-client';
 import DeleteButton from '@/components/shared/DeleteButton';
 import ImageUpload from '@/components/ImageUpload';
+import { useAuth } from '@/contexts/AuthContext';
 
 type ClassRow = { name: string; color: string; basePrice: number; code?: string };
 
@@ -19,8 +20,12 @@ const EMPTY_FORM = {
   squadSize: 11,
   basePricePerPlayer: 50000,
   logoURL: '',
+  wheelCenterImageURL: '',
   basePriceStrategy: 'tournament-level' as 'tournament-level' | 'player-class-based',
   playerClasses: [] as ClassRow[],
+  biddingMode: 'direct' as 'direct' | 'team',
+  bidIncrements: [] as BidIncrementRange[],
+  playerProfileFields: { showAge: false, showBattingStyle: false, showBowlingStyle: false, statFields: [] as StatFieldDef[] },
 };
 
 function generateCodes(classes: ClassRow[]): string[] {
@@ -38,6 +43,7 @@ function generateCodes(classes: ClassRow[]): string[] {
 
 function TournamentsManagePage() {
   const router = useRouter();
+  const { user: currentUser } = useAuth();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +54,7 @@ function TournamentsManagePage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [pendingAccessNotice, setPendingAccessNotice] = useState(false);
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
@@ -92,6 +99,7 @@ function TournamentsManagePage() {
       squadSize: t.squadSize,
       basePricePerPlayer: t.basePricePerPlayer,
       logoURL: t.logoURL ?? '',
+      wheelCenterImageURL: t.wheelCenterImageURL ?? '',
       basePriceStrategy: t.basePriceStrategy ?? 'tournament-level',
       playerClasses: (t.playerClasses ?? []).map(cls => ({
         name: cls.name,
@@ -99,6 +107,9 @@ function TournamentsManagePage() {
         basePrice: cls.basePrice ?? 0,
         code: cls.code,
       })),
+      biddingMode: t.biddingMode ?? 'direct',
+      bidIncrements: t.bidIncrements ?? [],
+      playerProfileFields: t.playerProfileFields ?? { showAge: false, showBattingStyle: false, showBowlingStyle: false, statFields: [] },
     });
     setShowCreate(true);
   };
@@ -139,6 +150,8 @@ function TournamentsManagePage() {
   const buildPayload = () => {
     const useClasses = form.basePriceStrategy === 'player-class-based' && form.playerClasses.length > 0;
     const codes = useClasses ? generateCodes(form.playerClasses) : [];
+    // Sort bid increments by upTo ascending for clean storage
+    const sortedIncrements = [...form.bidIncrements].sort((a, b) => a.upTo - b.upTo);
     return {
       name: form.name,
       year: form.year,
@@ -146,6 +159,7 @@ function TournamentsManagePage() {
       squadSize: form.squadSize,
       basePricePerPlayer: form.basePricePerPlayer,
       logoURL: form.logoURL.trim() || undefined,
+      wheelCenterImageURL: form.wheelCenterImageURL.trim() || undefined,
       basePriceStrategy: form.basePriceStrategy,
       usePlayerClasses: useClasses,
       playerClasses: useClasses
@@ -157,6 +171,19 @@ function TournamentsManagePage() {
             order: i + 1,
           }))
         : [],
+      biddingMode: form.biddingMode,
+      bidIncrements: form.biddingMode === 'team' ? sortedIncrements : [],
+      playerProfileFields: {
+        showAge: form.playerProfileFields.showAge,
+        showBattingStyle: form.playerProfileFields.showBattingStyle,
+        showBowlingStyle: form.playerProfileFields.showBowlingStyle,
+        statFields: form.playerProfileFields.statFields
+          .filter(sf => sf.label.trim())
+          .map(sf => ({
+            label: sf.label.trim(),
+            key: sf.label.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''),
+          })),
+      },
     };
   };
 
@@ -175,6 +202,7 @@ function TournamentsManagePage() {
       if (!res.ok) { setCreateError(data.error || 'Failed to create tournament'); return; }
       setTournaments(prev => [data, ...prev]);
       closeModal();
+      if (currentUser?.role !== 'Admin') setPendingAccessNotice(true);
     } catch {
       setCreateError('An error occurred while creating the tournament');
     } finally {
@@ -252,6 +280,15 @@ function TournamentsManagePage() {
           </div>
         )}
 
+        {pendingAccessNotice && (
+          <div className="bg-yellow-900/30 border border-yellow-700 rounded-lg p-4 flex items-start justify-between gap-3 mb-2">
+            <p className="text-yellow-200 text-sm">
+              <strong>Tournament created.</strong> It will be visible to you once an Admin grants you access.
+            </p>
+            <button onClick={() => setPendingAccessNotice(false)} className="text-yellow-400 hover:text-white shrink-0 text-lg leading-none">&times;</button>
+          </div>
+        )}
+
         {error && (
           <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 text-red-300">
             {error}
@@ -304,6 +341,15 @@ function TournamentsManagePage() {
                   >
                     {['Live', 'Stopped'].includes(t.status) ? 'Control Room' : 'Setup →'}
                   </button>
+                  {currentUser?.role === 'Admin' && (
+                    <button
+                      onClick={() => router.push(`/manage/tournaments/${t._id}/access`)}
+                      className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm"
+                      title="Manage user access"
+                    >
+                      Access
+                    </button>
+                  )}
                   <button
                     onClick={() => openEdit(t)}
                     className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm"
@@ -325,7 +371,7 @@ function TournamentsManagePage() {
       {/* Create / Edit Tournament Modal */}
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+          <div className="bg-gray-800 rounded-xl shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-5 border-b border-gray-700 shrink-0">
               <h2 className="text-lg font-semibold text-white">{isEditing ? 'Edit Tournament' : 'Create Tournament'}</h2>
               <button onClick={closeModal} className="text-gray-400 hover:text-white text-xl leading-none">&times;</button>
@@ -336,6 +382,9 @@ function TournamentsManagePage() {
                 {createError && (
                   <div className="bg-red-900/30 border border-red-700 rounded p-3 text-red-300 text-sm">{createError}</div>
                 )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+                <div className="space-y-5">
 
                 {/* Basic fields */}
                 <div className="grid grid-cols-2 gap-4">
@@ -408,6 +457,18 @@ function TournamentsManagePage() {
                       previewClassName="w-16 h-16"
                       previewShape="square"
                       id="tournament-logo-create"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <ImageUpload
+                      value={form.wheelCenterImageURL}
+                      onChange={url => setForm(f => ({ ...f, wheelCenterImageURL: url }))}
+                      folder="tournaments"
+                      label="Auctioner/Streamer Logo (optional)"
+                      placeholder="Auctioner/Streamer logo URL"
+                      previewClassName="w-16 h-16"
+                      previewShape="circle"
+                      id="tournament-wheel-center-create"
                     />
                   </div>
                 </div>
@@ -511,6 +572,213 @@ function TournamentsManagePage() {
                       </div>
                     </div>
                   )}
+                </div>
+
+                </div>
+                <div className="space-y-5">
+
+                {/* Bidding Mode */}
+                <div className="border border-gray-700 rounded-lg p-4 space-y-3">
+                  <p className="text-sm font-medium text-white">Bidding Mode</p>
+                  <div className="flex flex-col gap-2">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="biddingMode"
+                        value="direct"
+                        checked={form.biddingMode === 'direct'}
+                        onChange={() => setForm(f => ({ ...f, biddingMode: 'direct' }))}
+                        className="mt-0.5"
+                      />
+                      <div>
+                        <p className="text-sm text-white font-medium">Direct Bidding</p>
+                        <p className="text-xs text-gray-400">Auctioneer types or picks any bid amount manually</p>
+                      </div>
+                    </label>
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="biddingMode"
+                        value="team"
+                        checked={form.biddingMode === 'team'}
+                        onChange={() => setForm(f => ({
+                          ...f,
+                          biddingMode: 'team',
+                          // Set default brackets if none yet
+                          bidIncrements: f.bidIncrements.length > 0 ? f.bidIncrements : [
+                            { upTo: 50000,  increment: 5000  },
+                            { upTo: 100000, increment: 10000 },
+                            { upTo: 200000, increment: 25000 },
+                          ],
+                        }))}
+                        className="mt-0.5"
+                      />
+                      <div>
+                        <p className="text-sm text-white font-medium">Team Bidding</p>
+                        <p className="text-xs text-gray-400">Each team gets a bid button; increments auto-increase by preset bracket</p>
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Bracket Builder — only shown in team mode */}
+                  {form.biddingMode === 'team' && (
+                    <div className="space-y-3 pt-2 border-t border-gray-700">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-orange-300">Bid Increment Brackets</p>
+                        <button
+                          type="button"
+                          onClick={() => setForm(f => ({
+                            ...f,
+                            bidIncrements: [...f.bidIncrements, { upTo: 0, increment: 0 }],
+                          }))}
+                          className="px-3 py-1 bg-orange-700 hover:bg-orange-600 text-white rounded text-xs font-medium"
+                        >
+                          + Add Range
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500">Each row defines: when bid is below "Up To", the increment used. Last row acts as the catch-all.</p>
+                      <div className="grid grid-cols-3 gap-1 text-xs text-gray-400 px-1">
+                        <span>Up To (₹)</span>
+                        <span>Increment (₹)</span>
+                        <span></span>
+                      </div>
+                      {form.bidIncrements.length === 0 && (
+                        <p className="text-xs text-gray-500 italic">No brackets yet. Click "+ Add Range" to add one.</p>
+                      )}
+                      <div className="space-y-2">
+                        {form.bidIncrements.map((br, i) => (
+                          <div key={i} className="grid grid-cols-3 gap-2 items-center bg-gray-700/50 rounded-lg p-2">
+                            <input
+                              type="number"
+                              value={br.upTo || ''}
+                              min={0}
+                              onChange={e => setForm(f => {
+                                const updated = f.bidIncrements.map((b, j) => j === i ? { ...b, upTo: parseInt(e.target.value) || 0 } : b);
+                                return { ...f, bidIncrements: updated };
+                              })}
+                              placeholder="e.g. 50000"
+                              className="bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-white text-sm focus:outline-none focus:border-orange-500"
+                            />
+                            <input
+                              type="number"
+                              value={br.increment || ''}
+                              min={1}
+                              onChange={e => setForm(f => {
+                                const updated = f.bidIncrements.map((b, j) => j === i ? { ...b, increment: parseInt(e.target.value) || 0 } : b);
+                                return { ...f, bidIncrements: updated };
+                              })}
+                              placeholder="e.g. 5000"
+                              className="bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-white text-sm focus:outline-none focus:border-orange-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setForm(f => ({ ...f, bidIncrements: f.bidIncrements.filter((_, j) => j !== i) }))}
+                              className="text-gray-400 hover:text-red-400 text-lg leading-none px-1 justify-self-end"
+                              title="Remove bracket"
+                            >
+                              &times;
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Player Profile Fields */}
+                <div className="border border-gray-700 rounded-lg p-4 space-y-4">
+                  <div>
+                    <p className="text-sm font-medium text-white">Player Profile Fields</p>
+                    <p className="text-xs text-gray-400 mt-1">Select which optional fields appear in the player form and on the Screen 1 overlay.</p>
+                  </div>
+
+                  {/* Age toggle */}
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.playerProfileFields.showAge}
+                      onChange={e => setForm(f => ({ ...f, playerProfileFields: { ...f.playerProfileFields, showAge: e.target.checked } }))}
+                      className="w-4 h-4 accent-blue-500"
+                    />
+                    <div>
+                      <p className="text-sm text-white font-medium">Show Age field</p>
+                      <p className="text-xs text-gray-400">Adds Age input to player form and overlay card</p>
+                    </div>
+                  </label>
+
+                  {/* Batting Style toggle */}
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.playerProfileFields.showBattingStyle}
+                      onChange={e => setForm(f => ({ ...f, playerProfileFields: { ...f.playerProfileFields, showBattingStyle: e.target.checked } }))}
+                      className="w-4 h-4 accent-blue-500"
+                    />
+                    <div>
+                      <p className="text-sm text-white font-medium">Show Batting Style field</p>
+                      <p className="text-xs text-gray-400">Adds Batting Style dropdown to player form and overlay card</p>
+                    </div>
+                  </label>
+
+                  {/* Bowling Style toggle */}
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.playerProfileFields.showBowlingStyle}
+                      onChange={e => setForm(f => ({ ...f, playerProfileFields: { ...f.playerProfileFields, showBowlingStyle: e.target.checked } }))}
+                      className="w-4 h-4 accent-blue-500"
+                    />
+                    <div>
+                      <p className="text-sm text-white font-medium">Show Bowling Style field</p>
+                      <p className="text-xs text-gray-400">Adds Bowling Style dropdown to player form and overlay card</p>
+                    </div>
+                  </label>
+
+                  {/* Stat fields */}
+                  <div className="space-y-2 pt-3 border-t border-gray-700">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-cyan-300">
+                        Stat Fields ({form.playerProfileFields.statFields.length}/4)
+                      </p>
+                      <button
+                        type="button"
+                        disabled={form.playerProfileFields.statFields.length >= 4}
+                        onClick={() => setForm(f => ({ ...f, playerProfileFields: { ...f.playerProfileFields, statFields: [...f.playerProfileFields.statFields, { label: '', key: '' }] } }))}
+                        className="px-3 py-1 bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 text-white rounded text-xs font-medium"
+                      >
+                        + Add Stat
+                      </button>
+                    </div>
+                    {form.playerProfileFields.statFields.length === 0 && (
+                      <p className="text-xs text-gray-500 italic">No stat fields. Click &quot;+ Add Stat&quot; to add custom stats (e.g. Matches, Runs, Wickets).</p>
+                    )}
+                    <div className="space-y-2">
+                      {form.playerProfileFields.statFields.map((sf, i) => (
+                        <div key={i} className="flex items-center gap-2 bg-gray-700/50 rounded-lg p-2">
+                          <input
+                            type="text"
+                            value={sf.label}
+                            onChange={e => setForm(f => {
+                              const updated = f.playerProfileFields.statFields.map((s, j) => j === i ? { ...s, label: e.target.value } : s);
+                              return { ...f, playerProfileFields: { ...f.playerProfileFields, statFields: updated } };
+                            })}
+                            placeholder="e.g. Matches, Runs, Goals"
+                            className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-white text-sm focus:outline-none focus:border-cyan-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setForm(f => ({ ...f, playerProfileFields: { ...f.playerProfileFields, statFields: f.playerProfileFields.statFields.filter((_, j) => j !== i) } }))}
+                            className="shrink-0 text-gray-400 hover:text-red-400 text-lg leading-none px-1"
+                            title="Remove stat"
+                          >
+                            &times;
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                </div>
                 </div>
               </div>
 

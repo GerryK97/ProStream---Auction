@@ -26,6 +26,25 @@ export function validateOverlayToken(token: string | null | undefined): boolean 
 }
 
 /**
+ * Validates a token against the DB-stored overlay sessions.
+ * Used for per-session tokens created via the Session Manager.
+ * @param token - The session token to validate
+ * @returns true if the token exists and is active, false otherwise
+ */
+export async function validateOverlaySessionToken(token: string | null | undefined): Promise<boolean> {
+  if (!token) return false;
+  try {
+    const { connectToDatabase } = await import('@/lib/mongodb');
+    const { OverlaySessionModel } = await import('@/models/OverlaySession');
+    await connectToDatabase();
+    const session = await OverlaySessionModel.findOne({ _id: token, isActive: true }).lean();
+    return !!session;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Gets the overlay token from various sources (URL params, headers, etc.)
  * @param request - Next.js request object
  * @returns The token if found, null otherwise

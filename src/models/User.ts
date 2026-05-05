@@ -92,9 +92,7 @@ const UserSchema = new Schema<IUser>(
   }
 );
 
-// Index for faster lookups
-UserSchema.index({ username: 1 });
-UserSchema.index({ email: 1 });
+// Index for faster lookups (username and email indexes are implicit from unique: true)
 UserSchema.index({ role: 1 });
 UserSchema.index({ status: 1 });
 

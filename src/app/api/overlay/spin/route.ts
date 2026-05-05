@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { PlayerModel } from '@/models/Player';
 import { AuctionStateModel } from '@/models/AuctionState';
-import { triggerWheelSpin, triggerOverlaySettings } from '@/lib/pusher-server';
+import { TournamentModel } from '@/models/Tournament';
+import { triggerWheelSpin } from '@/lib/pusher-server';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
 
@@ -26,17 +27,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing tournamentId' }, { status: 400 });
     }
 
-    // Get current auction state to exclude the player already on stage
-    const auctionState = await AuctionStateModel.findOne({ tournamentId }).lean();
+    // Get current auction state to exclude the player already on stage and apply class filter
+    const [auctionState, tournament] = await Promise.all([
+      AuctionStateModel.findOne({ tournamentId }).lean(),
+      TournamentModel.findById(tournamentId).select('wheelCenterImageURL').lean(),
+    ]);
+    const centerImageURL = (tournament as any)?.wheelCenterImageURL as string | undefined;
     const currentPlayerId = (auctionState as any)?.currentPlayerId ?? null;
+    const currentAuctionClass = (auctionState as any)?.currentAuctionClass ?? null;
 
     // Fetch available players (not sold, not unsold, not currently selected)
+    // If a class is active, restrict to that class only
     const query: Record<string, unknown> = {
       tournamentId,
       isSold: { $ne: true },
       isUnsold: { $ne: true },
     };
     if (currentPlayerId) query._id = { $ne: currentPlayerId };
+    if (currentAuctionClass) query.playerClass = currentAuctionClass;
 
     const availablePlayers = await PlayerModel
       .find(query)
@@ -44,7 +52,10 @@ export async function POST(request: NextRequest) {
       .lean();
 
     if (availablePlayers.length === 0) {
-      return NextResponse.json({ error: 'No available players to spin' }, { status: 400 });
+      const msg = currentAuctionClass
+        ? `No available players in the active class to spin`
+        : 'No available players to spin';
+      return NextResponse.json({ error: msg }, { status: 400 });
     }
 
     const winnerIndex = Math.floor(Math.random() * availablePlayers.length);
@@ -58,31 +69,16 @@ export async function POST(request: NextRequest) {
       playerNo: (p as any).playerNo as string | undefined,
       position: (p as any).position as string | undefined,
       playerClass: (p as any).playerClass as string | undefined,
+      photoURL: (p as any).photoURL as string | undefined,
     }));
 
     // Broadcast spin event — overlays animate to winner
     try {
-      await triggerWheelSpin(tournamentId, { players, winnerId, winnerIndex, spinDurationMs });
+      await triggerWheelSpin(tournamentId, { players, winnerId, winnerIndex, spinDurationMs, centerImageURL });
     } catch (pusherError) {
       console.error('[spin] triggerWheelSpin failed:', pusherError);
       const msg = pusherError instanceof Error ? pusherError.message : String(pusherError);
       return NextResponse.json({ error: `Pusher error: ${msg}` }, { status: 500 });
-    }
-
-    // Switch overlays to wheel-spin display mode
-    try {
-      await triggerOverlaySettings(tournamentId, {
-        size: 'large',
-        tickerMode: 'sold',
-        displayMode: 'wheel-spin',
-        hidePremiumCard: false,
-        customTickerLine1: '',
-        customTickerLine2: '',
-        soldMessagePosition: 'bottom-right',
-      });
-    } catch (pusherError) {
-      console.error('[spin] triggerOverlaySettings failed:', pusherError);
-      // Non-fatal — wheel-spin event already sent
     }
 
     return NextResponse.json({ ok: true, winnerId, winnerIndex, playerCount: players.length });

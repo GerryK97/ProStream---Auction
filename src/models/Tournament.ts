@@ -10,6 +10,7 @@ const tournamentSchema = new Schema<Tournament>(
     squadSize: { type: Number, required: true },
     basePricePerPlayer: { type: Number, required: true },
     logoURL: { type: String },
+    wheelCenterImageURL: { type: String },
     createdBy: { type: String, required: false }, // User ID who created the tournament
     status: {
       type: String,
@@ -44,8 +45,35 @@ const tournamentSchema = new Schema<Tournament>(
     },
     overlayTheme: {
       type: String,
-      enum: ['standard'],
+      enum: ['standard', 'premium', 'neon'],
       default: 'standard',
+    },
+    overlayPalette: {
+      type: String,
+      default: 'default',
+    },
+    biddingMode: {
+      type: String,
+      enum: ['direct', 'team'],
+      default: 'direct',
+    },
+    bidIncrements: {
+      type: [
+        {
+          upTo:      { type: Number, required: true },
+          increment: { type: Number, required: true },
+        },
+      ],
+      default: [],
+    },
+    playerProfileFields: {
+      type: {
+        showAge:          { type: Boolean, default: false },
+        showBattingStyle: { type: Boolean, default: false },
+        showBowlingStyle: { type: Boolean, default: false },
+        statFields:       { type: [{ key: String, label: String }], default: [] },
+      },
+      default: () => ({ showAge: false, showBattingStyle: false, showBowlingStyle: false, statFields: [] }),
     },
   },
   {

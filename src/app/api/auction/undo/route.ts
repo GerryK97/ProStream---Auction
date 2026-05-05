@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Unsell the player
+      // Unsell the player first — must happen before balance recalculation
       const restoredPlayer = await PlayerModel.findOneAndUpdate(
         { _id: playerId },
         {
@@ -79,12 +79,22 @@ export async function POST(request: NextRequest) {
         { new: true }
       ).lean();
 
-      // Refund the team
+      // Derive correct balance from source of truth — idempotent, immune to $inc drift.
+      // The player is already un-sold above, so this sum excludes the refunded player.
+      const teamDoc = await TeamModel.findById(winningTeamId).lean();
+      const totalSpentAgg = await PlayerModel.aggregate([
+        { $match: { tournamentId, isSold: true, winningTeamId: String(winningTeamId) } },
+        { $group: { _id: null, total: { $sum: '$finalPrice' } } },
+      ]);
+      const totalSpent = totalSpentAgg[0]?.total ?? 0;
+      const newBalance = (teamDoc as any).initialBudget - totalSpent;
+
+      // Refund the team with derived balance
       const updatedTeam = await TeamModel.findOneAndUpdate(
         { _id: winningTeamId },
         {
-          $inc: { currentBalance: finalPrice },
-          $pull: { playersPurchased: playerId },
+          $set: { currentBalance: newBalance },
+          $pull: { playersPurchased: String(playerId) },
         },
         { new: true }
       ).lean();
@@ -108,18 +118,14 @@ export async function POST(request: NextRequest) {
         ).lean();
       }
 
-      // Trigger Pusher event
-      try {
-        await triggerAuctionUndo(tournamentId, {
-          restoredPlayer: restoredPlayer as any,
-          updatedTeam: updatedTeam as any,
-          refundedAmount: finalPrice,
-          auctionState: auctionState as any,
-          message: 'Last sale undone successfully',
-        });
-      } catch (pusherError) {
-        console.error('Failed to trigger Pusher event:', pusherError);
-      }
+      // Fire-and-forget Pusher — respond immediately, event broadcasts in background
+      void triggerAuctionUndo(tournamentId, {
+        restoredPlayer: restoredPlayer as any,
+        updatedTeam: updatedTeam as any,
+        refundedAmount: finalPrice,
+        auctionState: auctionState as any,
+        message: 'Last sale undone successfully',
+      }).catch(err => console.error('Failed to trigger Pusher event:', err));
 
       return NextResponse.json({
         message: 'Last sale undone successfully',
@@ -140,18 +146,14 @@ export async function POST(request: NextRequest) {
 
       const auctionState = await AuctionStateModel.findOne({ tournamentId }).lean();
 
-      // Use targeted small-payload event (avoids Pusher's ~10KB limit)
-      try {
-        await triggerAuctionUndo(tournamentId, {
-          restoredPlayer: restoredPlayer as any,
-          updatedTeam: null,
-          refundedAmount: 0,
-          auctionState: auctionState as any,
-          message: 'Unsold marking reversed',
-        });
-      } catch (pusherError) {
-        console.error('Failed to trigger Pusher event:', pusherError);
-      }
+      // Fire-and-forget Pusher — respond immediately, event broadcasts in background
+      void triggerAuctionUndo(tournamentId, {
+        restoredPlayer: restoredPlayer as any,
+        updatedTeam: null,
+        refundedAmount: 0,
+        auctionState: auctionState as any,
+        message: 'Unsold marking reversed',
+      }).catch(err => console.error('Failed to trigger Pusher event:', err));
 
       return NextResponse.json({
         message: 'Unsold marking reversed successfully',

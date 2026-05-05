@@ -5,17 +5,27 @@ import { useSearchParams } from 'next/navigation';
 import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { Tournament, AuctionState, Player, Team } from '@/types';
 import { getPusherClient } from '@/lib/pusher-client';
+import { OVERLAY_PALETTES } from '@/config/overlayPalettes';
 import type { OverlaySettingsEvent, WheelSpinEvent } from '@/types/pusher-events';
 import '../../styles/animations.css';
 
 export interface OverlaySettings {
     size: 'large' | 'small';
     tickerMode: 'all' | 'sold' | 'available';
-    displayMode: 'standard' | 'sold-summary' | 'team-summary' | 'team-wise-summary' | 'resting' | 'top10-summary' | 'custom-ticker' | 'wheel-spin';
+    displayMode: 'standard' | 'sold-summary' | 'team-summary' | 'team-wise-summary' | 'team-wise-image' | 'resting' | 'top10-summary' | 'custom-ticker' | 'wheel-spin';
     hidePremiumCard: boolean;
     customTickerLine1: string;
     customTickerLine2: string;
     soldMessagePosition: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+    hideTickerCustom: boolean;
+    hideTickerFullscreen: boolean;
+    teamWiseTeamId: string | null;
+    bidCardTop: number;
+    bidCardLeft: number;
+    hideTeamCards: boolean;
+    teamCardSize: 'small' | 'medium' | 'large';
+    teamCardPosition: 'top-right' | 'bottom-right';
+    bidCardPosition: 'top' | 'right' | 'left';
 }
 
 const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
@@ -26,6 +36,15 @@ const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
     customTickerLine1: '',
     customTickerLine2: '',
     soldMessagePosition: 'bottom-right',
+    hideTickerCustom: false,
+    hideTickerFullscreen: false,
+    teamWiseTeamId: null,
+    bidCardTop: 160,
+    bidCardLeft: 1576,
+    hideTeamCards: false,
+    teamCardSize: 'large',
+    teamCardPosition: 'top-right',
+    bidCardPosition: 'top',
 };
 
 interface OverlayWrapperProps {
@@ -108,6 +127,7 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
         players,
         teams,
         isConnected,
+        isRevoked,
     } = usePusherAuction(liveTournamentId, undefined, urlToken ?? undefined);
 
     const currentPlayer = players.find(p => p._id === auctionState.currentPlayerId);
@@ -137,6 +157,15 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
                 customTickerLine1: data.customTickerLine1 ?? '',
                 customTickerLine2: data.customTickerLine2 ?? '',
                 soldMessagePosition: data.soldMessagePosition ?? 'bottom-right',
+                hideTickerCustom: data.hideTickerCustom ?? false,
+                hideTickerFullscreen: data.hideTickerFullscreen ?? false,
+                teamWiseTeamId: data.teamWiseTeamId ?? null,
+                bidCardTop: data.bidCardTop ?? 160,
+                bidCardLeft: data.bidCardLeft ?? 1576,
+                hideTeamCards: data.hideTeamCards ?? false,
+                teamCardSize: data.teamCardSize ?? 'large',
+                teamCardPosition: data.teamCardPosition ?? 'top-right',
+                bidCardPosition: data.bidCardPosition ?? 'top',
             });
         });
 
@@ -155,6 +184,18 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
             // Don't unsubscribe the channel here — usePusherAuction owns it
         };
     }, [liveTournamentId, tournament?.status]);
+
+    // Revoked state — shown when admin revokes this session
+    if (isRevoked) {
+        return (
+            <div className="w-full h-full flex items-center justify-center bg-black">
+                <div className="text-center">
+                    <p className="text-gray-500 text-lg font-medium">Access Revoked</p>
+                    <p className="text-gray-700 text-sm mt-1">Contact your administrator</p>
+                </div>
+            </div>
+        );
+    }
 
     // Error state - visible on transparent background
     if (error) {
@@ -196,8 +237,18 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
         );
     }
 
+    // Determine active palette CSS variables
+    const theme = tournament?.overlayTheme || 'standard';
+    const paletteId = tournament?.overlayPalette || 'default';
+    const activePalette = OVERLAY_PALETTES[theme]?.find(p => p.id === paletteId) 
+        || OVERLAY_PALETTES[theme]?.[0] 
+        || { cssVars: {} };
+
     return (
-        <div className="w-full h-full bg-transparent text-white font-sans relative overflow-hidden">
+        <div 
+            className="w-full h-full bg-transparent text-white font-sans relative overflow-hidden"
+            style={{ ...activePalette.cssVars }}
+        >
             {/* Debug overlay - shows connection status */}
             {isDebugMode && (
                 <div className="fixed top-2 right-2 bg-black/90 text-white p-3 text-xs font-mono rounded border border-green-500 z-50 max-w-xs">

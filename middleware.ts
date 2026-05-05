@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, getTokenFromRequest, getTokenFromCookies } from '@/lib/auth';
 import { canAccessRoute } from '@/lib/permissions';
-import { validateOverlayToken, getOverlayTokenFromRequest } from '@/lib/overlay-auth';
+
 
 // Define public routes that don't require authentication
 const PUBLIC_ROUTES = [
@@ -25,18 +25,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check if this is an overlay viewer route - they use token-based authentication
-  // Only sub-paths (/overlays/[id]) bypass user auth; the management page (/overlays) requires user auth
+  // Overlay viewer pages are fully public — no auth required
   if (pathname.startsWith('/overlays/')) {
-    const overlayToken = getOverlayTokenFromRequest(request);
-
-    if (overlayToken && validateOverlayToken(overlayToken)) {
-      // Valid overlay token - allow access without user authentication
-      return NextResponse.next();
-    }
-
-    // No valid overlay token - check for regular user authentication
-    // This allows logged-in users to preview overlays in browser
+    return NextResponse.next();
   }
 
   // Get token from request - check Authorization header first, then cookies

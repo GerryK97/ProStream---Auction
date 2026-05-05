@@ -192,7 +192,7 @@ const overlayAnalyticsSchema = new Schema<OverlayAnalytics>(
   }
 );
 
-overlayAnalyticsSchema.index({ overlayConfigId: 1 });
+// overlayConfigId index is implicit from unique: true on the field
 
 // Export models
 export const OverlayConfigModel =

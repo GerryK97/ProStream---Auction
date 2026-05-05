@@ -7,6 +7,8 @@ export const EMPTY_AUCTION_STATE: AuctionState = {
   winningTeamId: null,
   currentAuctionStatus: 'Pending',
   history: [],
+  currentAuctionClass: null,
+  completedClasses: [],
 };
 
 export const AUCTION_BOOTSTRAP_CACHE_HEADERS = {

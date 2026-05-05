@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { playerDB } from '@/lib/db-mongodb';
 import { PlayerModel } from '@/models/Player';
+import { TeamModel } from '@/models/Team';
 import { TournamentModel } from '@/models/Tournament';
 import { connectToDatabase } from '@/lib/mongodb';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
-import { validateOverlayToken, getOverlayTokenFromRequest } from '@/lib/overlay-auth';
+import { validateOverlayToken, validateOverlaySessionToken, getOverlayTokenFromRequest } from '@/lib/overlay-auth';
 
 // GET /api/players - Get players accessible to the authenticated user
 export async function GET(request: NextRequest) {
@@ -15,7 +16,10 @@ export async function GET(request: NextRequest) {
 
     // Overlay token auth — allows OBS browser sources to read player data without JWT
     const overlayToken = getOverlayTokenFromRequest(request);
-    const isOverlayAuth = overlayToken && validateOverlayToken(overlayToken);
+    const isOverlayAuth = overlayToken && (
+      validateOverlayToken(overlayToken) ||
+      await validateOverlaySessionToken(overlayToken)
+    );
 
     // Authenticate user
     const user = await getUserFromRequest(request);
@@ -85,10 +89,14 @@ export async function POST(request: NextRequest) {
     if (!canPerformAction(user.role, 'create', 'player')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const body = await request.json();
-    const { name, position, currentClub, photoURL, playerClass, age, tournamentId } = body;
+    const { playerNo, name, position, currentClub, photoURL, secondaryImageURL, playerClass, age, battingStyle, bowlingStyle, stats, tournamentId, isIconic, winningTeamId } = body;
 
     if (!name || !tournamentId) {
       return NextResponse.json({ error: 'name and tournamentId are required' }, { status: 400 });
+    }
+
+    if (isIconic && !winningTeamId) {
+      return NextResponse.json({ error: 'winningTeamId is required when creating an iconic player' }, { status: 400 });
     }
 
     // Validate tournament access
@@ -102,10 +110,38 @@ export async function POST(request: NextRequest) {
       user.assignedTournaments.includes(tournamentId);
     if (!hasAccess) return NextResponse.json({ error: 'Access denied to this tournament' }, { status: 403 });
 
-    const newPlayer = await playerDB.create(
-      { name, position, currentClub, photoURL, playerClass, age: age !== undefined ? Number(age) : undefined, tournamentId },
-      user.userId
-    );
+    const newPlayerData: any = {
+      ...(playerNo ? { playerNo } : {}),
+      name,
+      position,
+      currentClub,
+      photoURL,
+      secondaryImageURL,
+      playerClass,
+      age: age !== undefined ? Number(age) : undefined,
+      ...(battingStyle ? { battingStyle } : {}),
+      ...(bowlingStyle ? { bowlingStyle } : {}),
+      ...(stats ? { stats } : {}),
+      tournamentId
+    };
+
+    if (isIconic) {
+      newPlayerData.isIconic = true;
+      newPlayerData.isSold = true;
+      newPlayerData.isUnsold = false;
+      newPlayerData.finalPrice = 0;
+      newPlayerData.winningTeamId = winningTeamId;
+    }
+
+    const newPlayer = await playerDB.create(newPlayerData, user.userId);
+
+    // Add iconic player to team's squad roster (no budget deduction — finalPrice is 0)
+    if (isIconic && winningTeamId && newPlayer._id) {
+      await TeamModel.findByIdAndUpdate(winningTeamId, {
+        $addToSet: { playersPurchased: String(newPlayer._id) },
+      });
+    }
+
     return NextResponse.json(newPlayer, { status: 201 });
   } catch (error: any) {
     console.error('Error creating player:', error);

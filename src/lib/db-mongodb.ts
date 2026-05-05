@@ -80,12 +80,9 @@ export const tournamentDB = {
       return await TournamentModel.find().lean() as any;
     }
 
-    // All non-admin roles: tournaments created by user OR assigned to user
+    // All non-admin roles: only tournaments explicitly assigned to user
     const tournaments = await TournamentModel.find({
-      $or: [
-        { createdBy: userId },
-        { _id: { $in: assignedTournaments } },
-      ],
+      _id: { $in: assignedTournaments },
     }).lean() as any;
 
     return tournaments;
@@ -250,12 +247,12 @@ export const playerDB = {
   },
 
   create: async (
-    data: { name: string; position?: string; currentClub?: string; photoURL?: string; playerClass?: string; age?: number; tournamentId: string },
+    data: { name: string; position?: string; currentClub?: string; photoURL?: string; secondaryImageURL?: string; playerClass?: string; age?: number; battingStyle?: string; bowlingStyle?: string; stats?: Record<string, any>; tournamentId: string },
     createdBy?: string
   ): Promise<Player> => {
     await connectToDatabase();
     const playerId = await generateTournamentPlayerId();
-    const playerNo = await generatePlayerNo(data.tournamentId);
+    const playerNo = (data as any).playerNo || await generatePlayerNo(data.tournamentId);
     const newPlayer: Player = {
       _id: playerId,
       playerNo,
@@ -263,9 +260,13 @@ export const playerDB = {
       name: data.name,
       position: data.position,
       currentClub: data.currentClub,
-      photoURL: data.photoURL || `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23374151'/><text x='50' y='55' font-family='sans-serif' font-size='12' fill='%23F3F4F6' text-anchor='middle'>No Image</text></svg>`,
+      ...(data.photoURL && { photoURL: data.photoURL }),
+      ...(data.secondaryImageURL && { secondaryImageURL: data.secondaryImageURL }),
       playerClass: data.playerClass,
       ...(data.age !== undefined && { age: data.age }),
+      ...(data.battingStyle && { battingStyle: data.battingStyle }),
+      ...(data.bowlingStyle && { bowlingStyle: data.bowlingStyle }),
+      ...(data.stats && Object.keys(data.stats).length > 0 && { stats: data.stats }),
       isSold: false,
       ...(createdBy && { createdBy }),
     };
