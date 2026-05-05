@@ -10,8 +10,27 @@ import ImageUpload from '@/components/ImageUpload';
 import { useAuth } from '@/contexts/AuthContext';
 
 type ClassRow = { name: string; color: string; basePrice: number; code?: string };
+type TournamentWithCreator = Tournament & { createdByUsername?: string };
 
 const DEFAULT_CLASS_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32', '#E5E4E2', '#4ade80', '#60a5fa', '#f472b6', '#a78bfa'];
+
+const sortTournamentsByStatus = (items: TournamentWithCreator[]) => {
+  const statusPriority: Record<string, number> = {
+    Live: 0,
+    Stopped: 1,
+    Draft: 2,
+    Completed: 3,
+  };
+
+  return [...items].sort((a, b) => {
+    const priorityA = statusPriority[a.status] ?? 2;
+    const priorityB = statusPriority[b.status] ?? 2;
+    if (priorityA !== priorityB) return priorityA - priorityB;
+
+    // Keep ordering stable and predictable within the same status group
+    return b.year - a.year || a.name.localeCompare(b.name);
+  });
+};
 
 const EMPTY_FORM = {
   name: '',
@@ -44,13 +63,13 @@ function generateCodes(classes: ClassRow[]): string[] {
 function TournamentsManagePage() {
   const router = useRouter();
   const { user: currentUser } = useAuth();
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [tournaments, setTournaments] = useState<TournamentWithCreator[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Create/Edit modal state
   const [showCreate, setShowCreate] = useState(false);
-  const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
+  const [editingTournament, setEditingTournament] = useState<TournamentWithCreator | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -77,7 +96,7 @@ function TournamentsManagePage() {
       const res = await fetch('/api/tournaments', { headers: getAuthHeaders() });
       if (!res.ok) throw new Error('Failed to fetch tournaments');
       const data = await res.json();
-      setTournaments(data);
+      setTournaments(sortTournamentsByStatus(data));
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -89,7 +108,7 @@ function TournamentsManagePage() {
     fetchTournaments();
   }, [fetchTournaments]);
 
-  const openEdit = (t: Tournament) => {
+  const openEdit = (t: TournamentWithCreator) => {
     setEditingTournament(t);
     setCreateError(null);
     setForm({
@@ -117,7 +136,10 @@ function TournamentsManagePage() {
   const closeModal = () => {
     setShowCreate(false);
     setEditingTournament(null);
-    setForm(EMPTY_FORM);
+    setForm({
+      ...EMPTY_FORM,
+      wheelCenterImageURL: currentUser?.logoURL || '',
+    });
     setCreateError(null);
   };
 
@@ -200,7 +222,7 @@ function TournamentsManagePage() {
       });
       const data = await res.json();
       if (!res.ok) { setCreateError(data.error || 'Failed to create tournament'); return; }
-      setTournaments(prev => [data, ...prev]);
+      setTournaments(prev => sortTournamentsByStatus([data, ...prev]));
       closeModal();
       if (currentUser?.role !== 'Admin') setPendingAccessNotice(true);
     } catch {
@@ -224,7 +246,7 @@ function TournamentsManagePage() {
       });
       const data = await res.json();
       if (!res.ok) { setCreateError(data.error || 'Failed to update tournament'); return; }
-      setTournaments(prev => prev.map(t => t._id === data._id ? data : t));
+      setTournaments(prev => sortTournamentsByStatus(prev.map(t => t._id === data._id ? data : t)));
       closeModal();
     } catch {
       setCreateError('An error occurred while updating the tournament');
@@ -260,7 +282,15 @@ function TournamentsManagePage() {
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => { setShowCreate(true); setCreateError(null); setEditingTournament(null); setForm(EMPTY_FORM); }}
+              onClick={() => {
+                setShowCreate(true);
+                setCreateError(null);
+                setEditingTournament(null);
+                setForm({
+                  ...EMPTY_FORM,
+                  wheelCenterImageURL: currentUser?.logoURL || '',
+                });
+              }}
               className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-medium"
             >
               + Create Tournament
@@ -315,6 +345,9 @@ function TournamentsManagePage() {
                   <div>
                     <h2 className="text-white font-semibold text-lg">{t.name}</h2>
                     <p className="text-gray-400 text-sm">{t.year}</p>
+                    {t.createdByUsername && (
+                      <p className="text-gray-500 text-xs mt-1">Created by: {t.createdByUsername}</p>
+                    )}
                     <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
                       <span>Budget: {t.budgetPerTeam?.toLocaleString()}</span>
                       <span>•</span>
@@ -469,6 +502,9 @@ function TournamentsManagePage() {
                       previewClassName="w-16 h-16"
                       previewShape="circle"
                       id="tournament-wheel-center-create"
+                      profileImageUrl={currentUser?.logoURL}
+                      onUseProfileImage={() => setForm(f => ({ ...f, wheelCenterImageURL: currentUser?.logoURL || '' }))}
+                      profileButtonText="Add from profile"
                     />
                   </div>
                 </div>

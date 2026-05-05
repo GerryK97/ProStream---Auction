@@ -83,6 +83,27 @@ const NAV_GROUPS = [
           </svg>
         ),
       },
+    ],
+  },
+  {
+    label: null,
+    items: [
+      {
+        label: 'InvoiceIt',
+        href: '/invoiceit',
+        roles: null,
+        icon: (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
+          </svg>
+        ),
+      },
+    ],
+  },
+  {
+    label: null,
+    items: [
       {
         label: 'Overlays',
         href: '/output',
@@ -105,22 +126,6 @@ const NAV_GROUPS = [
           </svg>
         ),
       },
-    ],
-  },
-  {
-    label: null,
-    items: [
-      {
-        label: 'InvoiceIt',
-        href: '/invoiceit',
-        roles: null,
-        icon: (
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0">
-            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
-          </svg>
-        ),
-      },
       {
         label: 'Users',
         href: '/users',
@@ -139,6 +144,17 @@ const NAV_GROUPS = [
         icon: (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0">
             <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+          </svg>
+        ),
+      },
+      {
+        label: 'Profile',
+        href: '/profile',
+        roles: null,
+        icon: (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
           </svg>
         ),
       },

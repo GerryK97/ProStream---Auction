@@ -26,7 +26,6 @@ const Navigation: React.FC = () => {
 
   const handleLogout = async () => {
     await logout();
-    router.push('/auth/login');
   };
 
   const ProStreamLogo = () => (
@@ -101,6 +100,25 @@ const Navigation: React.FC = () => {
       </Link>
     );
 
+  const UserSummary = () =>
+    user ? (
+      <div className="flex items-center gap-2">
+        <div
+          className="w-11 h-11 rounded-full border overflow-hidden shrink-0"
+          style={{ borderColor: 'var(--border-primary)', backgroundColor: 'var(--surface-elevated)' }}
+        >
+          <img
+            src={user.logoURL || 'https://placehold.co/96x96/374151/F3F4F6/png?text=U'}
+            alt={user.username}
+            className="w-full h-full rounded-full object-cover"
+          />
+        </div>
+        <span className="text-sm font-medium max-w-[140px] truncate" style={{ color: 'var(--text-primary)' }}>
+          {user.username}
+        </span>
+      </div>
+    ) : null;
+
   return (
     <nav
       className={`fixed inset-x-0 top-0 z-50 flex items-center justify-between px-4 h-[5.5rem] transition-all duration-300`}
@@ -130,6 +148,7 @@ const Navigation: React.FC = () => {
       {/* Right: theme + auth */}
       <div className="flex items-center gap-3">
         <ThemeToggle />
+        <UserSummary />
         <AuthButtons />
       </div>
     </nav>

@@ -3,6 +3,7 @@ import { connectToDatabase } from './mongodb';
 import { TournamentModel } from '@/models/Tournament';
 import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
+import { User } from '@/models/User';
 import { OverlayConfigModel, OverlaySceneModel, OverlayHistoryModel, OverlayAnalyticsModel } from '@/models/OverlayConfig';
 import { Tournament, Team, Player, OverlayConfig, OverlayScene, OverlayHistory } from '@/types';
 import { canAccessTournament, canAccessTeam, canAccessPlayer } from './permissions';
@@ -103,6 +104,15 @@ export const tournamentDB = {
     };
     const doc = await TournamentModel.create(newTournament);
     return doc.toObject();
+  },
+
+  grantUserAccess: async (userId: string, tournamentId: string): Promise<boolean> => {
+    await connectToDatabase();
+    const result = await User.updateOne(
+      { _id: userId },
+      { $addToSet: { assignedTournaments: tournamentId } }
+    );
+    return result.matchedCount > 0;
   },
 
   update: async (id: string, data: Partial<Omit<Tournament, '_id'>>): Promise<Tournament | null> => {

@@ -8,6 +8,8 @@ export interface IUser extends Document {
   role: 'Admin' | 'Tournament' | 'MasterManager' | 'Team' | 'Player' | 'Audience';
   status: 'Active' | 'PendingApproval' | 'Suspended';
   plan: 'Free' | 'Standard' | 'Offer';
+  logoURL?: string;
+  mobileNumber?: string;
 
   // Role-specific assignments
   assignedTournaments?: string[]; // For Tournament Managers
@@ -65,6 +67,14 @@ const UserSchema = new Schema<IUser>(
       enum: ['Free', 'Standard', 'Offer'],
       required: true,
       default: 'Free',
+    },
+    logoURL: {
+      type: String,
+      default: '',
+    },
+    mobileNumber: {
+      type: String,
+      default: '',
     },
     assignedTournaments: {
       type: [String],

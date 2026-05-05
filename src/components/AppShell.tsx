@@ -19,10 +19,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <Navigation />
       <Sidebar />
       <div
-        className={`${isMobileAuction ? '' : 'transition-[padding-left] duration-300 ease-in-out'} min-h-screen`}
+        className={`${isMobileAuction ? '' : 'transition-[padding-left] duration-300 ease-in-out md:pl-[var(--sidebar-width,240px)]'} min-h-screen`}
         style={{
           paddingTop: '5.5rem',
-          paddingLeft: isMobileAuction ? '0' : 'var(--sidebar-width, 240px)',
           backgroundColor: 'var(--surface-primary)',
           color: 'var(--text-primary)',
         }}
