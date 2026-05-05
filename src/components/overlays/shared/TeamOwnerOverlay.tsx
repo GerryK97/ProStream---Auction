@@ -250,7 +250,9 @@ function TeamOwnerDashboard({ tournament, players, teams, isConnected, tournamen
             .sort((a, b) => (b.finalPrice ?? 0) - (a.finalPrice ?? 0))
         : [];
 
-    const pendingPlayers = players.filter(p => !p.isSold && !p.isUnsold);
+    const pendingPlayers = players
+        .filter(p => !p.isSold && !p.isUnsold)
+        .sort((a, b) => (a.playerClass ?? '').localeCompare(b.playerClass ?? ''));
 
     // Use live players array — always accurate, unaffected by playersPurchased array drift
     const playersPurchasedCount = selectedTeam
