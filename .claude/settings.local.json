@@ -15,7 +15,12 @@
       "Bash(gh --version)",
       "Bash('/c/Program Files/GitHub CLI/gh.exe' --version)",
       "Bash('/c/Program Files/GitHub CLI/gh.exe' auth status)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git fetch *)",
+      "Bash(git merge *)",
+      "Bash(git checkout *)",
+      "Bash(git show *)",
+      "Read(//tmp/**)"
     ],
     "deny": [],
     "ask": []
