@@ -1106,10 +1106,6 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         setPlayerUnsold,
         setPlayerAvailable,
         updatePlayerAndTeams,
-        optimisticBid,
-        restoreAuctionState,
-        optimisticSell,
-        restoreSell,
     } = usePusherAuction(liveTournamentId, initialData || undefined);
 
     // Detect loading state: tournamentId is set but tournament data hasn't loaded yet
@@ -1572,6 +1568,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     };
 
     const handleBid = async (amount: number, teamId?: string) => {
+        console.log('handleBid called with amount:', amount);
+
         if (!liveTournament) return;
 
         // Client-side validation
@@ -1588,14 +1586,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             return;
         }
 
-        // Optimistic update: snapshot the previous auctionState, apply new bid
-        // immediately so the UI feels instant, then revert if the server rejects.
-        // The auction:bid-placed Pusher event will replace this with the
-        // authoritative value once it arrives.
-        const snapshot = auctionState;
-        optimisticBid(amount);
-
         try {
+            console.log('Sending bid request:', { tournamentId: liveTournament._id, amount });
             const response = await fetch('/api/auction/bid', {
                 method: 'POST',
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
@@ -1605,13 +1597,14 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                     amount,
                 }),
             });
+            console.log('Bid response status:', response.status);
             if (!response.ok) {
-                const data = await response.json().catch(() => ({}));
-                restoreAuctionState(snapshot);
+                const data = await response.json();
+                console.log('Bid error:', data);
                 setError(data.error || 'Failed to place bid');
             }
+            // Pusher will handle real-time updates, no need to refresh
         } catch (error) {
-            restoreAuctionState(snapshot);
             console.error('Failed to place bid:', error);
             setError('An error occurred while placing the bid');
         }
@@ -1636,25 +1629,17 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     };
 
     const handleSell = async () => {
-        if (!liveTournament) return;
+        console.log('handleSell called with team:', biddingTeamId);
+        if (!liveTournament) {
+            console.log('No live tournament');
+            return;
+        }
         if (!biddingTeamId) {
             setError('Please select a winning team before selling');
             return;
         }
-
-        const playerId = auctionState.currentPlayerId;
-        const bid = auctionState.currentBid;
-        if (!playerId || !bid) {
-            setError('No active bid to sell');
-            return;
-        }
-
-        // Optimistic update: mark sold + deduct balance immediately. The
-        // PLAYER_SOLD Pusher event will replace this with the authoritative
-        // server state. On failure we restore from the snapshot.
-        const snapshot = optimisticSell({ teamId: biddingTeamId, playerId, bid });
-
         try {
+            console.log('Sending sell request for tournament:', liveTournament._id, 'team:', biddingTeamId);
             const response = await fetch('/api/auction/sell', {
                 method: 'POST',
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
@@ -1663,13 +1648,14 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                     teamId: biddingTeamId,
                 }),
             });
+            console.log('Sell response status:', response.status);
             if (!response.ok) {
-                const data = await response.json().catch(() => ({}));
-                restoreSell(snapshot);
+                const data = await response.json();
+                console.log('Sell error:', data);
                 setError(data.error || 'Failed to sell player');
             }
+            // Pusher will handle real-time updates, no need to refresh
         } catch (error) {
-            restoreSell(snapshot);
             console.error('Failed to sell player:', error);
             setError('An error occurred while selling the player');
         }

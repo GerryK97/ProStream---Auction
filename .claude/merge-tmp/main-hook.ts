@@ -35,22 +35,11 @@ import type {
 /** Channel that overlays always subscribe to for wake/sleep signals */
 const WAKE_CHANNEL = 'prostream-control';
 
-/** Lifecycle/diagnostic log — silenced in production builds. */
-const dlog = (...args: unknown[]) => {
-  if (process.env.NODE_ENV !== 'production') console.log(...args);
-};
-
 /** Tournament-channel subscriptions are only active in these states */
 const ACTIVE_STATUSES = ['Live', 'Paused', 'Stopped'] as const;
 
 function isActiveStatus(status: string | undefined): boolean {
   return ACTIVE_STATUSES.includes(status as any);
-}
-
-export interface OptimisticSellSnapshot {
-  auctionState: AuctionState;
-  player: Player | null;
-  team: Team | null;
 }
 
 interface UsePusherAuctionReturn {
@@ -64,14 +53,6 @@ interface UsePusherAuctionReturn {
   setPlayerUnsold: (playerId: string) => void;
   setPlayerAvailable: (playerId: string) => void;
   updatePlayerAndTeams: (player: Player, teams: Team[]) => void;
-  /** Optimistically apply a bid (caller is responsible for restoring on failure). */
-  optimisticBid: (amount: number) => void;
-  /** Restore auctionState (used to revert an optimistic bid on failure). */
-  restoreAuctionState: (snapshot: AuctionState) => void;
-  /** Optimistically apply a sell. Returns a snapshot the caller can pass to restoreSell on failure. */
-  optimisticSell: (args: { teamId: string; playerId: string; bid: number }) => OptimisticSellSnapshot;
-  /** Restore the state captured before optimisticSell. */
-  restoreSell: (snapshot: OptimisticSellSnapshot) => void;
 }
 
 interface AuctionStateType {
@@ -100,11 +81,7 @@ type AuctionAction =
   | { type: 'CLEAR_ERROR' }
   | { type: 'SET_PLAYER_UNSOLD'; playerId: string }
   | { type: 'SET_PLAYER_AVAILABLE'; playerId: string }
-  | { type: 'UPDATE_PLAYER_AND_TEAMS'; player: Player; teams: Team[] }
-  | { type: 'OPTIMISTIC_BID'; amount: number }
-  | { type: 'OPTIMISTIC_SELL'; teamId: string; playerId: string; bid: number }
-  | { type: 'RESTORE_AUCTION_STATE'; auctionState: AuctionState }
-  | { type: 'RESTORE_SELL'; auctionState: AuctionState; player: Player | null; team: Team | null };
+  | { type: 'UPDATE_PLAYER_AND_TEAMS'; player: Player; teams: Team[] };
 import { EMPTY_AUCTION_STATE } from '@/lib/auctionDefaults';
 
 const auctionReducer = (state: AuctionStateType, action: AuctionAction): AuctionStateType => {
@@ -153,17 +130,11 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
       };
 
     case 'BID_PLACED': {
-      // Only rebuild teams[] if a winningTeam is supplied AND it actually
-      // exists in our list. Re-using the same reference when nothing
-      // structurally changed lets memoised consumers (TeamRow, SoldPlayerRow)
-      // skip reconciliation on every bid.
-      let updatedTeams = state.teams;
-      const incomingTeam = action.data.winningTeam;
-      if (incomingTeam && state.teams.some((t) => t._id === incomingTeam._id)) {
-        updatedTeams = state.teams.map((team) =>
-          team._id === incomingTeam._id ? incomingTeam : team
-        );
-      }
+      const updatedTeams = action.data.winningTeam
+        ? state.teams.map((team) =>
+            team._id === action.data.winningTeam!._id ? action.data.winningTeam! : team
+          )
+        : state.teams;
 
       return {
         ...state,
@@ -296,69 +267,6 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
     case 'CLEAR_ERROR':
       return { ...state, error: null };
 
-    case 'OPTIMISTIC_BID': {
-      // Apply the new bid immediately so the UI updates before the server
-      // round-trip completes. The eventual auction:bid-placed Pusher event
-      // (BID_PLACED) will replace this with the authoritative value.
-      return {
-        ...state,
-        auctionState: {
-          ...state.auctionState,
-          currentBid: action.amount,
-          currentAuctionStatus: 'Bidding',
-        },
-        error: null,
-      };
-    }
-
-    case 'OPTIMISTIC_SELL': {
-      // Mark the current player sold, deduct from team balance, and flip the
-      // auction status. Reverted by RESTORE_SELL if the request fails; replaced
-      // by the authoritative PLAYER_SOLD event on success.
-      const updatedPlayers = state.players.map((p) =>
-        p._id === action.playerId
-          ? { ...p, isSold: true, finalPrice: action.bid, winningTeamId: action.teamId }
-          : p
-      );
-      const updatedTeams = state.teams.map((t) =>
-        t._id === action.teamId
-          ? {
-              ...t,
-              currentBalance: Math.max(0, (t.currentBalance ?? 0) - action.bid),
-              playersPurchased: [...(t.playersPurchased ?? []), action.playerId],
-            }
-          : t
-      );
-      return {
-        ...state,
-        players: updatedPlayers,
-        teams: updatedTeams,
-        auctionState: {
-          ...state.auctionState,
-          currentAuctionStatus: 'Sold',
-        },
-        error: null,
-      };
-    }
-
-    case 'RESTORE_AUCTION_STATE':
-      return { ...state, auctionState: action.auctionState };
-
-    case 'RESTORE_SELL': {
-      const players = action.player
-        ? state.players.map((p) => (p._id === action.player!._id ? action.player! : p))
-        : state.players;
-      const teams = action.team
-        ? state.teams.map((t) => (t._id === action.team!._id ? action.team! : t))
-        : state.teams;
-      return {
-        ...state,
-        players,
-        teams,
-        auctionState: action.auctionState,
-      };
-    }
-
     default:
       return state;
   }
@@ -410,7 +318,7 @@ export function usePusherAuction(
     if (initialData?.tournament) return; // already provided from server props
 
     try {
-      dlog(`[usePusherAuction] Fetching data for tournament: ${tournamentId}`);
+      console.log(`[usePusherAuction] Fetching data for tournament: ${tournamentId}`);
       const { headers, tkQ, tk } = buildHeaders();
       const startTime = Date.now();
 
@@ -428,7 +336,7 @@ export function usePusherAuction(
         teamsRes.ok ? teamsRes.json() : null,
       ]);
 
-      dlog(`[usePusherAuction] Data fetch completed in ${Date.now() - startTime}ms`);
+      console.log(`[usePusherAuction] Data fetch completed in ${Date.now() - startTime}ms`);
 
       dispatch({
         type: 'SET_INITIAL_DATA',
@@ -456,7 +364,7 @@ export function usePusherAuction(
       .then(r => r.ok ? r.json() : null)
       .then((t: Tournament | null) => {
         if (t && isActiveStatus(t.status)) {
-          dlog(`[usePusherAuction] Tournament already active (${t.status}), connecting immediately`);
+          console.log(`[usePusherAuction] Tournament already active (${t.status}), connecting immediately`);
           setConnectTournamentChannel(true);
         }
       })
@@ -474,21 +382,21 @@ export function usePusherAuction(
 
     wakeChannel.bind('auction:wake', (data: { tournamentId: string }) => {
       if (data.tournamentId === tournamentId) {
-        dlog('[usePusherAuction] Wake signal received — connecting tournament channel');
+        console.log('[usePusherAuction] Wake signal received — connecting tournament channel');
         setConnectTournamentChannel(true);
       }
     });
 
     wakeChannel.bind('auction:sleep', (data: { tournamentId: string }) => {
       if (data.tournamentId === tournamentId) {
-        dlog('[usePusherAuction] Sleep signal received — disconnecting tournament channel');
+        console.log('[usePusherAuction] Sleep signal received — disconnecting tournament channel');
         setConnectTournamentChannel(false);
       }
     });
 
     wakeChannel.bind('overlay:revoke', (data: { token: string }) => {
       if (overlayToken && data.token === overlayToken) {
-        dlog('[usePusherAuction] Overlay session revoked via wake channel');
+        console.log('[usePusherAuction] Overlay session revoked via wake channel');
         setIsRevoked(true);
         pusher.disconnect();
       }
@@ -508,7 +416,7 @@ export function usePusherAuction(
   useEffect(() => {
     if (!isOverlayMode || !state.tournament) return;
     if (!isActiveStatus(state.tournament.status)) {
-      dlog(`[usePusherAuction] Tournament status "${state.tournament.status}" is inactive — disconnecting`);
+      console.log(`[usePusherAuction] Tournament status "${state.tournament.status}" is inactive — disconnecting`);
       setConnectTournamentChannel(false);
     }
   }, [state.tournament?.status, isOverlayMode]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -533,10 +441,10 @@ export function usePusherAuction(
       const channel = pusher.subscribe(channelName);
       channelRef.current = channel;
 
-      dlog(`[Pusher] Subscribing to channel: ${channelName}`);
+      console.log(`[Pusher] Subscribing to channel: ${channelName}`);
 
       channel.bind('pusher:subscription_succeeded', () => {
-        dlog(`[Pusher] Subscribed to ${channelName}`);
+        console.log(`[Pusher] Subscribed to ${channelName}`);
         setIsConnected(true);
       });
 
@@ -595,7 +503,7 @@ export function usePusherAuction(
 
       channel.bind('overlay:revoke', (data: { token: string }) => {
         if (overlayToken && data.token === overlayToken) {
-          dlog('[usePusherAuction] Overlay session revoked via tournament channel');
+          console.log('[usePusherAuction] Overlay session revoked via tournament channel');
           setIsRevoked(true);
           pusher.disconnect();
         }
@@ -611,7 +519,7 @@ export function usePusherAuction(
       pusher.connection.bind('state_change', handleConnectionStateChange);
 
       return () => {
-        dlog(`[Pusher] Unsubscribing from ${channelName}`);
+        console.log(`[Pusher] Unsubscribing from ${channelName}`);
         if (channelRef.current) {
           // Explicitly unbind only the events bound in this effect.
           // Do NOT use unbind_all() — it would also remove overlay:settings
@@ -664,42 +572,6 @@ export function usePusherAuction(
     dispatch({ type: 'UPDATE_PLAYER_AND_TEAMS', player, teams });
   }, []);
 
-  // Snapshot ref so optimistic helpers can capture the current state
-  // synchronously without making the callbacks depend on it (which would
-  // re-create them on every render).
-  const stateRef = useRef(state);
-  stateRef.current = state;
-
-  const optimisticBid = useCallback((amount: number) => {
-    dispatch({ type: 'OPTIMISTIC_BID', amount });
-  }, []);
-
-  const restoreAuctionState = useCallback((snapshot: AuctionState) => {
-    dispatch({ type: 'RESTORE_AUCTION_STATE', auctionState: snapshot });
-  }, []);
-
-  const optimisticSell = useCallback(
-    (args: { teamId: string; playerId: string; bid: number }): OptimisticSellSnapshot => {
-      const snap: OptimisticSellSnapshot = {
-        auctionState: stateRef.current.auctionState,
-        player: stateRef.current.players.find((p) => p._id === args.playerId) ?? null,
-        team: stateRef.current.teams.find((t) => t._id === args.teamId) ?? null,
-      };
-      dispatch({ type: 'OPTIMISTIC_SELL', ...args });
-      return snap;
-    },
-    []
-  );
-
-  const restoreSell = useCallback((snapshot: OptimisticSellSnapshot) => {
-    dispatch({
-      type: 'RESTORE_SELL',
-      auctionState: snapshot.auctionState,
-      player: snapshot.player,
-      team: snapshot.team,
-    });
-  }, []);
-
   return {
     tournament: state.tournament,
     auctionState: state.auctionState,
@@ -711,9 +583,5 @@ export function usePusherAuction(
     setPlayerUnsold,
     setPlayerAvailable,
     updatePlayerAndTeams,
-    optimisticBid,
-    restoreAuctionState,
-    optimisticSell,
-    restoreSell,
   };
 }
