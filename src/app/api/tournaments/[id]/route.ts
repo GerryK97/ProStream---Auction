@@ -6,6 +6,7 @@ import { canPerformAction, canAccessTournament } from '@/lib/permissions';
 import { validateOverlayToken, validateOverlaySessionToken, getOverlayTokenFromRequest } from '@/lib/overlay-auth';
 import { connectToDatabase } from '@/lib/mongodb';
 import { PlayerModel } from '@/models/Player';
+import { TeamModel } from '@/models/Team';
 import { AuctionStateModel } from '@/models/AuctionState';
 
 /**
@@ -82,6 +83,42 @@ async function syncRenamedClassNames(
   state.currentAuctionClass = currentAuctionClass;
   state.completedClasses = Array.from(new Set(completedClasses));
   await state.save();
+}
+
+async function syncTeamBudgets(tournamentId: string, newBudget: number) {
+  const teams = await TeamModel.find({ tournamentId }).lean() as any[];
+  if (!teams.length) return;
+
+  const spendAgg: { _id: string; totalSpent: number; playerIds: string[] }[] =
+    await PlayerModel.aggregate([
+      { $match: { tournamentId, isSold: true, winningTeamId: { $exists: true, $ne: null } } },
+      {
+        $group: {
+          _id: '$winningTeamId',
+          totalSpent: { $sum: '$finalPrice' },
+          playerIds: { $push: { $toString: '$_id' } },
+        },
+      },
+    ]);
+
+  const spendByTeam = new Map(spendAgg.map(r => [r._id, r]));
+
+  await Promise.all(
+    teams.map(async (team: any) => {
+      const entry = spendByTeam.get(String(team._id));
+      const totalSpent = entry?.totalSpent ?? 0;
+      const playersPurchased = entry?.playerIds ?? [];
+      const newBalance = newBudget - totalSpent;
+
+      await TeamModel.findByIdAndUpdate(team._id, {
+        $set: {
+          initialBudget: newBudget,
+          currentBalance: newBalance,
+          playersPurchased,
+        },
+      });
+    })
+  );
 }
 
 // GET /api/tournaments/[id] - Get tournament by ID
@@ -183,6 +220,7 @@ export async function PUT(
       );
     }
 
+    const oldBudget = (tournament as any).budgetPerTeam;
     const updatedTournament = await tournamentDB.update(id, body);
     if (!updatedTournament) {
       return NextResponse.json(
@@ -190,6 +228,12 @@ export async function PUT(
         { status: 404 }
       );
     }
+
+    const newBudget = (updatedTournament as any).budgetPerTeam;
+    if (typeof newBudget === 'number' && newBudget !== oldBudget) {
+      await syncTeamBudgets(id, newBudget);
+    }
+
     return NextResponse.json(updatedTournament);
   } catch (error) {
     return NextResponse.json(
