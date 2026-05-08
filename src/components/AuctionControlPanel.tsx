@@ -1110,6 +1110,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         restoreAuctionState,
         optimisticSell,
         restoreSell,
+        refreshData,
     } = usePusherAuction(liveTournamentId, initialData || undefined);
 
     // Detect loading state: tournamentId is set but tournament data hasn't loaded yet
@@ -1242,6 +1243,20 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         }).catch(() => {});
         return () => { cancelled = true; };
     }, [selectedTournamentId, liveTournament]);
+
+    // Keep Team Balance and Max Bid in sync when tournament config changes
+    // (e.g. budgetPerTeam/squadSize edited in Tournament form).
+    useEffect(() => {
+        if (!liveTournamentId || !selectedTournament) return;
+        if (selectedTournament._id !== liveTournamentId) return;
+        refreshData();
+    }, [
+        liveTournamentId,
+        selectedTournament?._id,
+        selectedTournament?.budgetPerTeam,
+        selectedTournament?.squadSize,
+        refreshData,
+    ]);
 
     const handleStartAuction = async () => {
         if (!selectedTournament) return;

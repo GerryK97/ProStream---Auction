@@ -91,8 +91,8 @@ const MOCK_OVERLAY_INSTANCES: OverlayInstance[] = [
     templateName: 'Master Auction Overlay',
     status: 'Active',
     url: typeof window !== 'undefined'
-      ? `http://${window.location.host}/overlays/a01c1fce7fbbf343a6c343c27c497328`
-      : 'http://localhost:3000/overlays/a01c1fce7fbbf343a6c343c27c497328'
+      ? `${window.location.origin}/overlays/a01c1fce7fbbf343a6c343c27c497328`
+      : `${process.env.NEXTAUTH_URL ?? 'http://localhost:3000'}/overlays/a01c1fce7fbbf343a6c343c27c497328`
   }
 ];
 

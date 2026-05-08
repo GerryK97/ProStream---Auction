@@ -72,6 +72,8 @@ interface UsePusherAuctionReturn {
   optimisticSell: (args: { teamId: string; playerId: string; bid: number }) => OptimisticSellSnapshot;
   /** Restore the state captured before optimisticSell. */
   restoreSell: (snapshot: OptimisticSellSnapshot) => void;
+  /** Force a fresh server fetch of tournament/state/players/teams. */
+  refreshData: () => Promise<void>;
 }
 
 interface AuctionStateType {
@@ -448,6 +450,39 @@ export function usePusherAuction(
     }
   }, [tournamentId, buildHeaders, initialData?.tournament?._id]);
 
+  const refreshData = useCallback(async () => {
+    if (!tournamentId) return;
+    try {
+      const { headers, tkQ, tk } = buildHeaders();
+      const [tournamentRes, stateRes, playersRes, teamsRes] = await Promise.all([
+        fetch(`/api/tournaments/${tournamentId}${tkQ}`, { headers }),
+        fetch(`/api/auction/state/${tournamentId}`, { headers }),
+        fetch(`/api/players?tournamentId=${tournamentId}${tk}`, { headers }),
+        fetch(`/api/teams?tournamentId=${tournamentId}${tk}`, { headers }),
+      ]);
+
+      const [tournamentData, stateData, playersData, teamsData] = await Promise.all([
+        tournamentRes.ok ? tournamentRes.json() : null,
+        stateRes.ok ? stateRes.json() : null,
+        playersRes.ok ? playersRes.json() : null,
+        teamsRes.ok ? teamsRes.json() : null,
+      ]);
+
+      dispatch({
+        type: 'SET_INITIAL_DATA',
+        data: {
+          tournament: tournamentData || null,
+          auctionState: stateData || EMPTY_AUCTION_STATE,
+          players: playersData || [],
+          teams: teamsData || [],
+        },
+      });
+    } catch (err) {
+      console.error('[usePusherAuction] Error refreshing data:', err);
+      dispatch({ type: 'SET_ERROR', error: 'Failed to refresh tournament data. Please try again.' });
+    }
+  }, [tournamentId, buildHeaders]);
+
   // ─── Effect 1: Initial status check (overlay mode only) ─────────────────────
   // Lightweight fetch to determine whether to connect immediately.
   // Skipped in non-overlay mode — connectTournamentChannel is already true.
@@ -718,5 +753,6 @@ export function usePusherAuction(
     restoreAuctionState,
     optimisticSell,
     restoreSell,
+    refreshData,
   };
 }
