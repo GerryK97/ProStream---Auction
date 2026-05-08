@@ -7,6 +7,7 @@ import { validateOverlayToken, validateOverlaySessionToken, getOverlayTokenFromR
 import { connectToDatabase } from '@/lib/mongodb';
 import { PlayerModel } from '@/models/Player';
 import { AuctionStateModel } from '@/models/AuctionState';
+import { TeamModel } from '@/models/Team';
 
 /**
  * Validate player class codes
@@ -183,6 +184,12 @@ export async function PUT(
       );
     }
 
+    const previousBudgetPerTeam = tournament.budgetPerTeam;
+    const nextBudgetPerTeam =
+      typeof body.budgetPerTeam === 'number' && Number.isFinite(body.budgetPerTeam)
+        ? body.budgetPerTeam
+        : previousBudgetPerTeam;
+
     const updatedTournament = await tournamentDB.update(id, body);
     if (!updatedTournament) {
       return NextResponse.json(
@@ -190,6 +197,29 @@ export async function PUT(
         { status: 404 }
       );
     }
+
+    // Keep team budgets aligned when tournament budget changes.
+    if (nextBudgetPerTeam !== previousBudgetPerTeam) {
+      await connectToDatabase();
+      const teams = await TeamModel.find({ tournamentId: id });
+
+      await Promise.all(
+        teams.map(async (teamDoc) => {
+          const previousInitialBudget =
+            typeof teamDoc.initialBudget === 'number' ? teamDoc.initialBudget : previousBudgetPerTeam;
+          const previousCurrentBalance =
+            typeof teamDoc.currentBalance === 'number' ? teamDoc.currentBalance : previousInitialBudget;
+
+          const spentAmount = Math.max(0, previousInitialBudget - previousCurrentBalance);
+          const nextCurrentBalance = Math.max(0, nextBudgetPerTeam - spentAmount);
+
+          teamDoc.initialBudget = nextBudgetPerTeam;
+          teamDoc.currentBalance = nextCurrentBalance;
+          await teamDoc.save();
+        })
+      );
+    }
+
     return NextResponse.json(updatedTournament);
   } catch (error) {
     return NextResponse.json(

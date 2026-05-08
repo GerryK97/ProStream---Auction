@@ -219,7 +219,7 @@ function AuctionResultsPage() {
                                 { label: 'Sold', value: soldPlayers.length, color: '#4ade80' },
                                 { label: 'Unsold', value: unsoldPlayers.length, color: '#f87171' },
                                 { label: 'Available', value: availablePlayers.length, color: 'var(--text-tertiary)' },
-                                { label: 'Total Spent', value: `₹${formatCurrency(totalSpent)}`, color: 'var(--brand-secondary)' },
+                                { label: 'Total Spent', value: formatCurrency(totalSpent), color: 'var(--brand-secondary)' },
                             ].map(stat => (
                                 <div key={stat.label} className="rounded-lg p-3 text-center" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}>
                                     <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>{stat.label}</p>
@@ -428,7 +428,7 @@ function AuctionResultsPage() {
                                                     ) : '—'}
                                                 </td>
                                                 <td className="py-3 px-3 font-semibold" style={{ color: player.isSold ? 'var(--brand-secondary)' : 'var(--text-tertiary)' }}>
-                                                    {player.isSold && player.finalPrice ? `₹${formatCurrency(player.finalPrice)}` : '—'}
+                                                    {player.isSold && player.finalPrice ? formatCurrency(player.finalPrice) : '—'}
                                                 </td>
                                                 <td className="py-3 px-3">
                                                     <button

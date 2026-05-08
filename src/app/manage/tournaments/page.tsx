@@ -8,6 +8,7 @@ import { getAuthHeaders } from '@/lib/api-client';
 import DeleteButton from '@/components/shared/DeleteButton';
 import ImageUpload from '@/components/ImageUpload';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTournamentContext } from '@/contexts/TournamentContext';
 
 type ClassRow = { name: string; color: string; basePrice: number; code?: string };
 type TournamentWithCreator = Tournament & { createdByUsername?: string };
@@ -63,6 +64,7 @@ function generateCodes(classes: ClassRow[]): string[] {
 function TournamentsManagePage() {
   const router = useRouter();
   const { user: currentUser } = useAuth();
+  const { refreshTournaments: refreshTournamentContext } = useTournamentContext();
   const [tournaments, setTournaments] = useState<TournamentWithCreator[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +87,7 @@ function TournamentsManagePage() {
         return;
       }
       setTournaments(prev => prev.filter(t => t._id !== id));
+      await refreshTournamentContext();
     } catch {
       setError('An error occurred while deleting the tournament');
     }
@@ -223,6 +226,7 @@ function TournamentsManagePage() {
       const data = await res.json();
       if (!res.ok) { setCreateError(data.error || 'Failed to create tournament'); return; }
       setTournaments(prev => sortTournamentsByStatus([data, ...prev]));
+      await refreshTournamentContext();
       closeModal();
       if (currentUser?.role !== 'Admin') setPendingAccessNotice(true);
     } catch {
@@ -247,6 +251,7 @@ function TournamentsManagePage() {
       const data = await res.json();
       if (!res.ok) { setCreateError(data.error || 'Failed to update tournament'); return; }
       setTournaments(prev => sortTournamentsByStatus(prev.map(t => t._id === data._id ? data : t)));
+      await refreshTournamentContext();
       closeModal();
     } catch {
       setCreateError('An error occurred while updating the tournament');
