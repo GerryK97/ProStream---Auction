@@ -6,8 +6,8 @@ import { canPerformAction, canAccessTournament } from '@/lib/permissions';
 import { validateOverlayToken, validateOverlaySessionToken, getOverlayTokenFromRequest } from '@/lib/overlay-auth';
 import { connectToDatabase } from '@/lib/mongodb';
 import { PlayerModel } from '@/models/Player';
-import { AuctionStateModel } from '@/models/AuctionState';
 import { TeamModel } from '@/models/Team';
+import { AuctionStateModel } from '@/models/AuctionState';
 
 /**
  * Validate player class codes
@@ -83,6 +83,42 @@ async function syncRenamedClassNames(
   state.currentAuctionClass = currentAuctionClass;
   state.completedClasses = Array.from(new Set(completedClasses));
   await state.save();
+}
+
+async function syncTeamBudgets(tournamentId: string, newBudget: number) {
+  const teams = await TeamModel.find({ tournamentId }).lean() as any[];
+  if (!teams.length) return;
+
+  const spendAgg: { _id: string; totalSpent: number; playerIds: string[] }[] =
+    await PlayerModel.aggregate([
+      { $match: { tournamentId, isSold: true, winningTeamId: { $exists: true, $ne: null } } },
+      {
+        $group: {
+          _id: '$winningTeamId',
+          totalSpent: { $sum: '$finalPrice' },
+          playerIds: { $push: { $toString: '$_id' } },
+        },
+      },
+    ]);
+
+  const spendByTeam = new Map(spendAgg.map(r => [r._id, r]));
+
+  await Promise.all(
+    teams.map(async (team: any) => {
+      const entry = spendByTeam.get(String(team._id));
+      const totalSpent = entry?.totalSpent ?? 0;
+      const playersPurchased = entry?.playerIds ?? [];
+      const newBalance = newBudget - totalSpent;
+
+      await TeamModel.findByIdAndUpdate(team._id, {
+        $set: {
+          initialBudget: newBudget,
+          currentBalance: newBalance,
+          playersPurchased,
+        },
+      });
+    })
+  );
 }
 
 // GET /api/tournaments/[id] - Get tournament by ID
@@ -184,12 +220,7 @@ export async function PUT(
       );
     }
 
-    const previousBudgetPerTeam = tournament.budgetPerTeam;
-    const nextBudgetPerTeam =
-      typeof body.budgetPerTeam === 'number' && Number.isFinite(body.budgetPerTeam)
-        ? body.budgetPerTeam
-        : previousBudgetPerTeam;
-
+    const oldBudget = (tournament as any).budgetPerTeam;
     const updatedTournament = await tournamentDB.update(id, body);
     if (!updatedTournament) {
       return NextResponse.json(
@@ -198,26 +229,9 @@ export async function PUT(
       );
     }
 
-    // Keep team budgets aligned when tournament budget changes.
-    if (nextBudgetPerTeam !== previousBudgetPerTeam) {
-      await connectToDatabase();
-      const teams = await TeamModel.find({ tournamentId: id });
-
-      await Promise.all(
-        teams.map(async (teamDoc) => {
-          const previousInitialBudget =
-            typeof teamDoc.initialBudget === 'number' ? teamDoc.initialBudget : previousBudgetPerTeam;
-          const previousCurrentBalance =
-            typeof teamDoc.currentBalance === 'number' ? teamDoc.currentBalance : previousInitialBudget;
-
-          const spentAmount = Math.max(0, previousInitialBudget - previousCurrentBalance);
-          const nextCurrentBalance = Math.max(0, nextBudgetPerTeam - spentAmount);
-
-          teamDoc.initialBudget = nextBudgetPerTeam;
-          teamDoc.currentBalance = nextCurrentBalance;
-          await teamDoc.save();
-        })
-      );
+    const newBudget = (updatedTournament as any).budgetPerTeam;
+    if (typeof newBudget === 'number' && newBudget !== oldBudget) {
+      await syncTeamBudgets(id, newBudget);
     }
 
     return NextResponse.json(updatedTournament);
