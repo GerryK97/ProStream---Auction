@@ -199,14 +199,19 @@ export interface OverlaySettingsEvent extends BasePusherEvent {
  * players and the pre-determined winner index so overlays animate to the result.
  */
 export interface WheelSpinEvent extends BasePusherEvent {
+  // Stripped to minimum — only what the wheel segments need to render
   players: Array<{
+    _id: string;
+    playerNo?: string;
+  }>;
+  // Full details for the winner reveal card
+  winner: {
     _id: string;
     name: string;
     playerNo?: string;
     position?: string;
     playerClass?: string;
-    photoURL?: string;
-  }>;
+  };
   winnerId: string;
   winnerIndex: number;
   spinDurationMs: number;

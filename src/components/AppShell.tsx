@@ -9,9 +9,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isAuth = pathname.startsWith('/auth');
   // OBS overlay routes (/overlays/[id] and sub-routes) must render with no UI chrome
   const isOverlay = /^\/overlays\/.+/.test(pathname);
-  // Mobile auction page — full width, no sidebar offset
-  const isMobileAuction = pathname === '/manage/auction-mobile';
-
   if (isAuth || isOverlay) return <>{children}</>;
 
   return (
@@ -19,7 +16,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <Navigation />
       <Sidebar />
       <div
-        className={`${isMobileAuction ? '' : 'transition-[padding-left] duration-300 ease-in-out md:pl-[var(--sidebar-width,240px)]'} min-h-screen`}
+        className="transition-[padding-left] duration-300 ease-in-out md:pl-[var(--sidebar-width,240px)] min-h-screen"
         style={{
           paddingTop: '5.5rem',
           backgroundColor: 'var(--surface-primary)',

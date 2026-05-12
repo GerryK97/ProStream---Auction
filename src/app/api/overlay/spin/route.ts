@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
       .select('_id name playerNo position playerClass')
       .lean();
 
+
     if (availablePlayers.length === 0) {
       const msg = currentAuctionClass
         ? `No available players in the active class to spin`
@@ -59,22 +60,28 @@ export async function POST(request: NextRequest) {
     }
 
     const winnerIndex = Math.floor(Math.random() * availablePlayers.length);
-    const winner = availablePlayers[winnerIndex];
-    const winnerId = (winner._id as any).toString();
+    const winnerRaw = availablePlayers[winnerIndex] as any;
+    const winnerId = winnerRaw._id.toString();
     const spinDurationMs = 8000;
 
+    // Strip to _id + playerNo only — full details for winner go in a separate field
+    // to stay well under Pusher's 10 KB per-event limit
     const players = availablePlayers.map(p => ({
       _id: (p as any)._id.toString(),
-      name: (p as any).name as string,
       playerNo: (p as any).playerNo as string | undefined,
-      position: (p as any).position as string | undefined,
-      playerClass: (p as any).playerClass as string | undefined,
-      photoURL: (p as any).photoURL as string | undefined,
     }));
+
+    const winner = {
+      _id: winnerId,
+      name: winnerRaw.name as string,
+      playerNo: winnerRaw.playerNo as string | undefined,
+      position: winnerRaw.position as string | undefined,
+      playerClass: winnerRaw.playerClass as string | undefined,
+    };
 
     // Broadcast spin event — overlays animate to winner
     try {
-      await triggerWheelSpin(tournamentId, { players, winnerId, winnerIndex, spinDurationMs, centerImageURL });
+      await triggerWheelSpin(tournamentId, { players, winner, winnerId, winnerIndex, spinDurationMs, centerImageURL });
     } catch (pusherError) {
       console.error('[spin] triggerWheelSpin failed:', pusherError);
       const msg = pusherError instanceof Error ? pusherError.message : String(pusherError);

@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import SoldPlayersSummaryOverlay from './SoldPlayersSummaryT1';
 import TeamSummaryOverlay from './TeamSummaryT1';
 import TeamWiseSummaryOverlay from './TeamWiseSummaryT1';
+import TeamWiseImageT1 from './TeamWiseImageT1';
 import RestingTimeOverlay from './RestingTimeT1';
 import Top10SummaryOverlay from './Top10SummaryT1';
 import WheelSpinOverlay from '../shared/WheelSpinOverlay';
@@ -316,18 +317,16 @@ function PlayerAuctionPanel({
     fields.push({ label: 'Class', value: hasPlayer ? (currentPlayer!.playerClass || '—') : '—', color: classColor });
   }
 
-  // White panel geometry — diagonal left edge (≈15° slope matching reference design)
+  // White panel geometry
   const PHOTO_LEFT = 72;
   const PHOTO_TOP = 73;
   const PHOTO_WIDTH = 730;
-  const PANEL_LEFT = 640;   // white panel starts here, overlapping photo edge
+  const PANEL_LEFT = PHOTO_LEFT + PHOTO_WIDTH;
   const PANEL_TOP = 73;
-  const PANEL_WIDTH = 1280; // 640 → 1920
+  const PANEL_WIDTH = 1920 - PANEL_LEFT;
   const PANEL_HEIGHT = 929;
-  const DIAG_PX = 280;      // diagonal offset: top-left pushed right by 280px → ≈16° slope
 
-  // Content starts safely after the diagonal for the y position being used
-  const CONTENT_LEFT = DIAG_PX + 60; // 340px from panel left = x≈980 from canvas left
+  const CONTENT_LEFT = 60;
 
   // Field rows
   const FIELD_START_Y = 450;
@@ -376,7 +375,7 @@ function PlayerAuctionPanel({
         )}
       </div>
 
-      {/* ── White right panel — diagonal left edge (clip-path) ── */}
+      {/* ── White right panel ── */}
       <div style={{
         position: 'absolute',
         left: PANEL_LEFT,
@@ -384,7 +383,6 @@ function PlayerAuctionPanel({
         width: PANEL_WIDTH,
         height: PANEL_HEIGHT,
         backgroundColor: 'white',
-        clipPath: `polygon(${DIAG_PX}px 0%, 100% 0%, 100% 100%, 0% 100%)`,
         fontFamily: "'Varela Round', sans-serif",
         boxShadow: '-12px 0 40px rgba(0,0,0,0.3)',
         borderRadius: '0 16px 16px 0',
@@ -495,9 +493,7 @@ function PlayerAuctionPanel({
         {/* Dynamic field rows */}
         {fields.map((f, i) => {
           const top = FIELD_START_Y + i * FIELD_SLOT_H;
-          // Safe left offset — at lower y-values the diagonal boundary is further right
-          const diagBoundary = DIAG_PX * (1 - top / PANEL_HEIGHT);
-          const safeLeft = Math.max(CONTENT_LEFT - 20, diagBoundary + 20);
+          const safeLeft = CONTENT_LEFT - 20;
           return (
             <React.Fragment key={f.label}>
               <div style={{
@@ -632,7 +628,7 @@ export function FullScreenT1Content({
         setPanelExiting(false);
       }, 1500);
       return () => clearTimeout(t);
-    } else if (prev === 'sold-summary' || prev === 'team-summary' || prev === 'team-wise-summary' || prev === 'top10-summary' || prev === 'wheel-spin' || prev === 'resting') {
+    } else if (prev === 'sold-summary' || prev === 'team-summary' || prev === 'team-wise-summary' || prev === 'team-wise-image' || prev === 'top10-summary' || prev === 'wheel-spin' || prev === 'resting') {
       setSummaryExiting(true);
       const t = setTimeout(() => {
         setActiveMode(incoming);
@@ -807,6 +803,19 @@ export function FullScreenT1Content({
         {activeMode === 'team-wise-summary' && (
           <div className={summaryExiting ? 'fs-summary-exit' : ''} style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
             <TeamWiseSummaryOverlay
+              players={players}
+              teams={teams}
+              tournament={tournament}
+              isExiting={summaryExiting}
+              filterTeamId={overlaySettings.teamWiseTeamId}
+            />
+          </div>
+        )}
+
+        {/* ── Team Wise Image mode ── */}
+        {activeMode === 'team-wise-image' && (
+          <div className={summaryExiting ? 'fs-summary-exit' : ''} style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
+            <TeamWiseImageT1
               players={players}
               teams={teams}
               tournament={tournament}

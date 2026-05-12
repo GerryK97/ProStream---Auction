@@ -965,9 +965,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const [reAuctioning, setReAuctioning] = useState(false);
 
     // Class-wise auction management
-    const [classCompletionAlert, setClassCompletionAlert] = useState<string | null>(null);
     const [selectingClass, setSelectingClass] = useState(false);
-    const prevCompletedClassesRef = useRef<string[]>([]);
 
     // Overlay control panel settings
     const [overlaySize, setOverlaySize] = useState<'large' | 'small'>('large');
@@ -1208,24 +1206,6 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             })
             .sort((a, b) => a.order - b.order);
     }, [liveTournament, players, auctionState.currentAuctionClass, auctionState.completedClasses]);
-
-    // Show completion toast when a class finishes (completedClasses array grows)
-    useEffect(() => {
-        const completedClasses = auctionState.completedClasses ?? [];
-        const prev = prevCompletedClassesRef.current;
-        if (completedClasses.length > prev.length && liveTournament?.playerClasses) {
-            const newName = completedClasses.find(c => !prev.includes(c));
-            if (newName) {
-                const cls = liveTournament.playerClasses.find(c => c.name === newName);
-                if (cls) {
-                    const msg = `${cls.icon ?? ''} ${cls.name} class completed! Select the next class.`.trim();
-                    setClassCompletionAlert(msg);
-                    setTimeout(() => setClassCompletionAlert(null), 8000);
-                }
-            }
-        }
-        prevCompletedClassesRef.current = [...completedClasses];
-    }, [auctionState.completedClasses]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Fetch stats when auction is not live (pre/post-auction state)
     useEffect(() => {
@@ -1879,9 +1859,6 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                         <button onClick={() => setShowCompleteConfirm(true)} className="text-white font-bold py-2 px-4 rounded-lg transition-colors hover:opacity-80 text-sm" style={{ backgroundColor: 'var(--status-info)' }}>
                             ✓ Complete
                         </button>
-                        <button onClick={() => window.location.href = '/manage/auction-mobile'} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm">
-                            📱 Mobile View
-                        </button>
                     </div>
                 </div>
                 {isAuctionStopped && (
@@ -2000,11 +1977,6 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                     />
                 </div>
                 {error && <div className="absolute bottom-4 right-4 text-center text-red-400 bg-red-900/80 backdrop-blur-sm p-3 rounded-lg shadow-lg border border-red-700 animate-fade-in">{error}</div>}
-                {classCompletionAlert && (
-                    <div className="absolute bottom-16 right-4 max-w-xs text-sm font-semibold text-green-200 bg-green-900/90 backdrop-blur-sm px-4 py-3 rounded-lg shadow-lg border border-green-700 animate-fade-in">
-                        {classCompletionAlert}
-                    </div>
-                )}
             </div>
             {/* Complete Confirmation Modal */}
             <Modal isOpen={showCompleteConfirm} onClose={() => setShowCompleteConfirm(false)} title="Complete Tournament?" size="sm">
