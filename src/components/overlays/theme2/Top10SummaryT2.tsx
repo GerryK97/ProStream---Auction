@@ -13,11 +13,11 @@ interface Props {
 const GOLD         = 'var(--t2-accent)';
 const WHITE_BG     = 'var(--t2-bg-card)';
 const TEXT_DARK    = 'var(--t2-text-primary)';
-const TEXT_MUTED   = 'rgba(var(--t2-text-primary-rgb), 0.4)';
-const TEXT_MUTED_L = 'rgba(var(--t2-text-primary-rgb), 0.5)';
+const TEXT_MUTED   = 'var(--t2-text-muted)';
+const TEXT_MUTED_L = 'var(--t2-text-secondary)';
 const ON_ACCENT    = 'var(--t2-on-accent)';
-const GREEN        = '#22c55e';
-const GOLD_SEP     = 'rgba(var(--t2-accent-rgb), 0.5)';
+const GREEN        = 'var(--t2-success)';
+const GOLD_SEP     = 'var(--t2-border-subtle)';
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
@@ -63,7 +63,7 @@ const Top10SummaryT2: React.FC<Props> = ({ players, teams, tournament, isExiting
         borderRadius: 12,
         overflow: 'hidden',
         position: 'relative',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+        boxShadow: '0 8px 32px var(--t2-shadow-color)',
         opacity: isExiting ? 0 : 1,
         transition: isExiting ? 'opacity 0.4s ease-out' : 'none',
       }}>
@@ -86,7 +86,7 @@ const Top10SummaryT2: React.FC<Props> = ({ players, teams, tournament, isExiting
               top: 0,
               bottom: 0,
               width: '40%',
-              background: 'linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.65) 50%, transparent 80%)',
+              background: 'linear-gradient(105deg, transparent 20%, var(--t2-shine) 50%, transparent 80%)',
               animation: 't2ShineSwipe 1.05s 0.15s cubic-bezier(0.4, 0, 0.6, 1) forwards',
             }} />
           </div>
@@ -211,7 +211,7 @@ const Top10SummaryT2: React.FC<Props> = ({ players, teams, tournament, isExiting
               { label: 'TOP 10 TOTAL', value: formatCurrency(top10Total)   },
             ].map(stat => (
               <div key={stat.label} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-                <span style={{ fontSize: 11, letterSpacing: 3, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase' }}>{stat.label}</span>
+                <span style={{ fontSize: 11, letterSpacing: 3, color: 'color-mix(in oklab, var(--t2-on-accent) 70%, transparent)', textTransform: 'uppercase' }}>{stat.label}</span>
                 <span style={{ fontSize: 22, fontWeight: 700, color: ON_ACCENT }}>{stat.value}</span>
               </div>
             ))}

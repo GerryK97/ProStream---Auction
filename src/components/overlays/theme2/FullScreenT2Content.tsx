@@ -8,7 +8,7 @@ import Top10SummaryT2 from './Top10SummaryT2';
 import TeamWiseSummaryT2 from './TeamWiseSummaryT2';
 import TeamWiseImageT2 from './TeamWiseImageT2';
 import RestingTimeT2 from './RestingTimeT2';
-import SoldMessageFullScreen from '../theme1/SoldMessageT1';
+import SoldMessageFullScreen from './SoldMessageT2';
 import TickerT2Shared from './TickerT2Shared';
 import { AuctionState, Player, Team, Tournament } from '@/types';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
@@ -85,14 +85,14 @@ function PlayerPanelT2({
       left: CARD_LEFT, top: CARD_TOP,
       width: CARD_W, height: CARD_H,
       borderRadius: 20, overflow: 'hidden',
-      boxShadow: '0 24px 80px rgba(0,0,0,0.65), 0 8px 32px rgba(0,0,0,0.4)',
+      boxShadow: '0 24px 80px var(--t2-shadow-color), 0 8px 32px var(--t2-shadow-color)',
     }}>
 
       {/* ── Photo section ── */}
       <div style={{
         position: 'absolute',
         left: 0, top: 0, width: PHOTO_W, height: CARD_H,
-        backgroundColor: '#111827',
+        backgroundColor: 'var(--t2-bg-photo)',
       }}>
         {photoUrl ? (
           <img
@@ -102,10 +102,10 @@ function PlayerPanelT2({
           />
         ) : (
           <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24 }}>
-            <svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="var(--t2-text-disabled)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
             </svg>
-            <span style={{ color: 'rgba(255,255,255,0.18)', fontSize: 22, fontFamily: "'Varela Round', sans-serif", letterSpacing: 3, textTransform: 'uppercase' }}>
+            <span style={{ color: 'var(--t2-text-disabled)', fontSize: 22, fontFamily: "'Varela Round', sans-serif", letterSpacing: 3, textTransform: 'uppercase' }}>
               Waiting for player…
             </span>
           </div>
@@ -114,7 +114,7 @@ function PlayerPanelT2({
         {/* Bottom gradient for depth */}
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0, height: 300,
-          background: 'linear-gradient(to top, rgba(0,0,0,0.65), transparent)',
+          background: 'linear-gradient(to top, var(--t2-bg-overlay), transparent)',
           pointerEvents: 'none',
         }} />
 
@@ -122,10 +122,10 @@ function PlayerPanelT2({
         {hasPlayer && currentPlayer!.playerClass && (
           <div style={{
             position: 'absolute', bottom: 32, left: 28,
-            backgroundColor: classColor, color: '#fff',
+            backgroundColor: classColor, color: 'var(--t2-on-accent)',
             fontSize: 14, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase',
             padding: '9px 20px', borderRadius: 5,
-            boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+            boxShadow: '0 4px 16px var(--t2-shadow-color)',
           }}>
             {currentPlayer!.playerClass}
           </div>
@@ -180,12 +180,12 @@ function PlayerPanelT2({
             {isBidding && (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 8,
-                backgroundColor: 'rgba(34,197,94,0.08)',
-                border: '1px solid rgba(34,197,94,0.3)',
+                backgroundColor: 'var(--t2-success-soft)',
+                border: '1px solid var(--t2-border-accent)',
                 borderRadius: 20, padding: '8px 18px',
               }}>
-                <div className="t2fs-live-dot" style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#22c55e' }} />
-                <span style={{ fontSize: 11, letterSpacing: 3, color: '#22c55e', textTransform: 'uppercase', fontWeight: 700 }}>LIVE</span>
+                <div className="t2fs-live-dot" style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--t2-success)' }} />
+                <span style={{ fontSize: 11, letterSpacing: 3, color: 'var(--t2-success)', textTransform: 'uppercase', fontWeight: 700 }}>LIVE</span>
               </div>
             )}
           </div>
@@ -208,11 +208,11 @@ function PlayerPanelT2({
             {/* Base Price */}
             <div style={{
               flex: 1, padding: '16px 22px',
-              backgroundColor: 'rgba(var(--t2-accent-rgb), 0.05)',
-              border: '1px solid rgba(var(--t2-accent-rgb), 0.25)',
+              backgroundColor: 'var(--t2-accent-soft)',
+              border: '1px solid var(--t2-border-accent)',
               borderRadius: 10,
             }}>
-              <div style={{ fontSize: 15, letterSpacing: 4, textTransform: 'uppercase', color: 'rgba(var(--t2-text-primary-rgb), 0.4)', marginBottom: 8 }}>
+              <div style={{ fontSize: 15, letterSpacing: 4, textTransform: 'uppercase', color: 'var(--t2-text-muted)', marginBottom: 8 }}>
                 Base Price
               </div>
               <div style={{ fontSize: 38, fontWeight: 700, color: 'var(--t2-accent)', lineHeight: 1 }}>
@@ -223,20 +223,20 @@ function PlayerPanelT2({
             {/* Current Bid */}
             <div style={{
               flex: 2, padding: '16px 22px',
-              backgroundColor: isBidding ? 'rgba(34,197,94,0.05)' : 'rgba(0,0,0,0.02)',
-              border: `1px solid ${isBidding ? 'rgba(34,197,94,0.3)' : 'var(--t2-border-subtle)'}`,
+              backgroundColor: isBidding ? 'var(--t2-success-soft)' : 'var(--t2-bg-muted)',
+              border: `1px solid ${isBidding ? 'var(--t2-border-accent)' : 'var(--t2-border-subtle)'}`,
               borderRadius: 10,
               transition: 'background-color 0.3s, border-color 0.3s',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: 15, letterSpacing: 4, textTransform: 'uppercase', color: 'rgba(var(--t2-text-primary-rgb), 0.4)' }}>Current Bid</span>
-                {isBidding && <div className="t2fs-live-dot" style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#22c55e' }} />}
+                <span style={{ fontSize: 15, letterSpacing: 4, textTransform: 'uppercase', color: 'var(--t2-text-muted)' }}>Current Bid</span>
+                {isBidding && <div className="t2fs-live-dot" style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--t2-success)' }} />}
               </div>
               <div
                 className={`${isBidding ? 't2fs-bid-active' : ''} ${bidPopping ? 't2fs-bid-pop' : ''}`}
                 style={{
                   fontSize: 72, fontWeight: 700,
-                  color: isBidding ? '#22c55e' : 'var(--t2-text-primary)',
+                  color: isBidding ? 'var(--t2-accent)' : 'var(--t2-text-primary)',
                   lineHeight: 1,
                 }}
               >
@@ -250,7 +250,7 @@ function PlayerPanelT2({
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 32px' }}>
               {fields.map(f => (
                 <div key={f.label} style={{ padding: '13px 0', borderBottom: `1px solid var(--t2-border-subtle)` }}>
-                  <div style={{ fontSize: 15, letterSpacing: 3, textTransform: 'uppercase', color: 'rgba(var(--t2-text-primary-rgb), 0.4)', marginBottom: 5 }}>
+                  <div style={{ fontSize: 15, letterSpacing: 3, textTransform: 'uppercase', color: 'var(--t2-text-muted)', marginBottom: 5 }}>
                     {f.label}
                   </div>
                   <div style={{ fontSize: valueFontSize, fontWeight: 700, color: 'var(--t2-text-primary)' }}>
@@ -271,12 +271,12 @@ function PlayerPanelT2({
             zIndex: 10,
           }}>
             <div className="animate-stamp-seal" style={{
-              border: '8px solid #ef4444', borderRadius: 16,
-              padding: '14px 48px', background: 'rgba(239,68,68,0.06)',
+              border: '8px solid var(--t2-danger)', borderRadius: 16,
+              padding: '14px 48px', background: 'var(--t2-danger-soft)',
             }}>
               <span style={{
                 fontFamily: "'Varela Round', sans-serif",
-                fontSize: 110, fontWeight: 700, color: '#ef4444',
+                fontSize: 110, fontWeight: 700, color: 'var(--t2-danger)',
                 letterSpacing: 18, lineHeight: 1, display: 'block',
               }}>
                 SOLD
@@ -380,12 +380,12 @@ const FullScreenT2Content: React.FC<ContentProps> = ({
   const SUMMARY_AREA = { position: 'absolute' as const, left: 100, top: 60, right: 100, bottom: 68, overflow: 'hidden' as const };
 
   return (
-    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative', background: 'linear-gradient(160deg, #0a0a14 0%, #111827 60%, #0d1117 100%)' }}>
+    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative', background: 'var(--t2-gradient-canvas)' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Concert+One&family=Coda+Caption:wght@800&family=Graduate&family=Inconsolata:wght@400;700&family=Rajdhani:wght@500;600;700&family=Varela+Round&display=swap');
         @keyframes t2fsBidActivePulse {
-          0%, 100% { text-shadow: 0 0 0px #22c55e; }
-          50%      { text-shadow: 0 0 40px #22c55e, 0 0 80px rgba(34,197,94,0.5), 0 0 120px rgba(34,197,94,0.2); }
+          0%, 100% { text-shadow: 0 0 0px var(--t2-success); }
+          50%      { text-shadow: 0 0 40px var(--t2-success), 0 0 80px var(--t2-success-soft), 0 0 120px var(--t2-success-soft); }
         }
         .t2fs-bid-active { animation: t2fsBidActivePulse 1.5s ease-in-out infinite; }
         @keyframes t2fsLiveDotPulse {

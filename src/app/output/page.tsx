@@ -65,19 +65,19 @@ const THEMES = [
     preview: (
       <div
         className="w-full aspect-video rounded-lg overflow-hidden flex flex-col justify-between text-xs"
-        style={{ background: '#080f1c', border: '1px solid rgba(59,130,246,0.25)' }}
+        style={{ background: 'linear-gradient(160deg,#05070B 0%,#0B1018 48%,#121A24 100%)', border: '1px solid rgba(196,167,111,.42)' }}
       >
         <div className="flex flex-1 min-h-0 gap-2 p-2">
           {/* Player card */}
-          <div className="flex rounded overflow-hidden flex-shrink-0" style={{ background: '#0f1829', width: '44%', border: '1px solid rgba(59,130,246,0.2)' }}>
-            <div style={{ width: 4, background: '#3b82f6', flexShrink: 0 }} />
+          <div className="flex rounded overflow-hidden flex-shrink-0" style={{ background: '#121A24', width: '44%', border: '1px solid rgba(178,190,204,.13)' }}>
+            <div style={{ width: 4, background: '#C8A15F', flexShrink: 0 }} />
             <div className="flex-1 p-1.5 space-y-1">
-              <div className="font-bold text-[11px]" style={{ color: '#e2e8f0' }}>PLAYER NAME</div>
-              <div className="h-px" style={{ background: 'rgba(59,130,246,0.35)' }} />
-              <div className="flex justify-between text-[8px]" style={{ color: 'rgba(226,232,240,0.45)' }}>
+              <div className="font-bold text-[11px]" style={{ color: '#EEF3F7' }}>PLAYER NAME</div>
+              <div className="h-px" style={{ background: 'rgba(196,167,111,.42)' }} />
+              <div className="flex justify-between text-[8px]" style={{ color: '#7F8B99' }}>
                 <span>BASE</span><span>CURRENT BID</span>
               </div>
-              <div className="flex justify-between font-semibold text-[10px]" style={{ color: '#3b82f6' }}>
+              <div className="flex justify-between font-semibold text-[10px]" style={{ color: '#C8A15F' }}>
                 <span>20L</span><span>45L</span>
               </div>
             </div>
@@ -85,16 +85,16 @@ const THEMES = [
           {/* Team cards */}
           <div className="flex flex-col gap-1 flex-1">
             {['Team Alpha', 'Team Beta', 'Team Gamma'].map((t, i) => (
-              <div key={t} className="flex items-center rounded overflow-hidden" style={{ background: '#0f1829', border: '1px solid rgba(59,130,246,0.15)', flex: 1 }}>
-                <div style={{ width: 3, background: '#3b82f6', alignSelf: 'stretch' }} />
-                <span className="px-1.5 text-[8px] font-medium flex-1 truncate" style={{ color: '#e2e8f0' }}>{t}</span>
-                <span className="px-1.5 text-[8px]" style={{ color: 'rgba(226,232,240,0.45)' }}>₹{80 - i * 15}L</span>
+              <div key={t} className="flex items-center rounded overflow-hidden" style={{ background: '#121A24', border: '1px solid rgba(178,190,204,.13)', flex: 1 }}>
+                <div style={{ width: 3, background: '#C8A15F', alignSelf: 'stretch' }} />
+                <span className="px-1.5 text-[8px] font-medium flex-1 truncate" style={{ color: '#EEF3F7' }}>{t}</span>
+                <span className="px-1.5 text-[8px]" style={{ color: '#7F8B99' }}>₹{80 - i * 15}L</span>
               </div>
             ))}
           </div>
         </div>
-        <div className="px-2 py-1 text-[8px] tracking-widest flex items-center gap-1.5" style={{ background: '#0f1829', color: 'rgba(226,232,240,0.4)', borderTop: '3px solid #3b82f6' }}>
-          <span style={{ background: '#3b82f6', color: '#fff', padding: '0 6px', borderRadius: 2, fontWeight: 700 }}>PLAYERS</span>
+        <div className="px-2 py-1 text-[8px] tracking-widest flex items-center gap-1.5" style={{ background: '#0B1017', color: '#7F8B99', borderTop: '3px solid #C8A15F' }}>
+          <span style={{ background: '#C8A15F', color: '#11100C', padding: '0 6px', borderRadius: 2, fontWeight: 700 }}>PLAYERS</span>
           <span>Alpha · Beta · Gamma · Delta</span>
         </div>
       </div>

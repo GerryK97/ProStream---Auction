@@ -29,7 +29,7 @@ const RestingTimeT2: React.FC<Props> = ({ tournament, overrideLabel, size = 'med
   const nameFontSize = Math.round(cardSize * 0.11);
 
   const logoFace = (logo: string | null, dark: boolean, fallback: string) => (
-    <div style={{ position: 'absolute', inset: 0, backgroundColor: dark ? '#1a1a1a' : 'var(--t2-bg-card)' }}>
+    <div style={{ position: 'absolute', inset: 0, backgroundColor: dark ? 'var(--t2-bg-canvas)' : 'var(--t2-bg-card)' }}>
       {/* Image fills the full square */}
       {logo ? (
         <img src={logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -37,7 +37,7 @@ const RestingTimeT2: React.FC<Props> = ({ tournament, overrideLabel, size = 'med
         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <span style={{
             fontSize: logoSize, fontWeight: 700,
-            color: dark ? 'var(--t2-accent)' : '#1a1a1a',
+            color: dark ? 'var(--t2-accent)' : 'var(--t2-bg-canvas)',
             letterSpacing: 4, textTransform: 'uppercase',
             fontFamily: "'Varela Round', sans-serif",
           }}>
@@ -51,13 +51,13 @@ const RestingTimeT2: React.FC<Props> = ({ tournament, overrideLabel, size = 'med
         position: 'absolute', bottom: 0, left: 0, right: 0,
         height: textHeight,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        backgroundColor: dark ? 'rgba(0,0,0,0.72)' : 'rgba(255,255,255,0.82)',
+        backgroundColor: dark ? 'var(--t2-bg-overlay)' : 'var(--t2-bg-card-raised)',
         padding: '0 8px',
       }}>
         <span style={{
           fontSize: nameFontSize,
           fontWeight: 700,
-          color: dark ? '#ffffff' : 'var(--t2-text-primary)',
+          color: dark ? 'var(--t2-on-accent)' : 'var(--t2-text-primary)',
           textTransform: 'uppercase',
           letterSpacing: 3,
           whiteSpace: 'nowrap',
@@ -73,7 +73,7 @@ const RestingTimeT2: React.FC<Props> = ({ tournament, overrideLabel, size = 'med
     position: 'absolute', top: 0, right: 0,
     width: cardSize, height: cardSize,
     overflow: 'hidden',
-    boxShadow: '0 2px 12px rgba(0,0,0,0.4)',
+    boxShadow: '0 2px 12px var(--t2-shadow-color)',
   };
 
   return (
@@ -131,9 +131,9 @@ const RestingTimeT2: React.FC<Props> = ({ tournament, overrideLabel, size = 'med
             position: 'absolute',
             top: '50%', left: '50%',
             width: cardSize, height: cardSize,
-            backgroundColor: '#0f0f1a',
+            backgroundColor: 'var(--t2-bg-panel)',
             transform: 'translate(-50%, -50%)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+            boxShadow: '0 8px 32px var(--t2-shadow-color)',
           }}>
             {/* C — Tournament: fading off left at t=0 */}
             <div style={{ ...cardBase, animation: 'resting-t2-cycle 10s linear -5s infinite' }}>

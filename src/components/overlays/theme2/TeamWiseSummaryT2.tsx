@@ -17,11 +17,11 @@ const PAGE_DURATION = 6000;
 const GOLD         = 'var(--t2-accent)';
 const WHITE_BG     = 'var(--t2-bg-card)';
 const TEXT_DARK    = 'var(--t2-text-primary)';
-const TEXT_MUTED   = 'rgba(var(--t2-text-primary-rgb), 0.4)';
-const TEXT_MUTED_LIGHT = 'rgba(var(--t2-text-primary-rgb), 0.5)';
-const GREEN        = '#22c55e';
-const DOT_INACTIVE = 'rgba(var(--t2-text-primary-rgb), 0.15)';
-const GOLD_SEP     = 'rgba(var(--t2-accent-rgb), 0.5)';
+const TEXT_MUTED   = 'var(--t2-text-muted)';
+const TEXT_MUTED_LIGHT = 'var(--t2-text-secondary)';
+const GREEN        = 'var(--t2-success)';
+const DOT_INACTIVE = 'var(--t2-text-disabled)';
+const GOLD_SEP     = 'var(--t2-border-subtle)';
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
@@ -116,7 +116,7 @@ const TeamWiseSummaryT2: React.FC<Props> = ({
         borderRadius: 12,
         overflow: 'hidden',
         position: 'relative',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+        boxShadow: '0 8px 32px var(--t2-shadow-color)',
         opacity: isExiting ? 0 : 1,
         transition: isExiting ? 'opacity 0.4s ease-out' : 'none',
       }}>
@@ -146,7 +146,7 @@ const TeamWiseSummaryT2: React.FC<Props> = ({
               top: 0,
               bottom: 0,
               width: '40%',
-              background: 'linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.65) 50%, transparent 80%)',
+              background: 'linear-gradient(105deg, transparent 20%, var(--t2-shine) 50%, transparent 80%)',
               animation: 't2ShineSwipe 1.05s 0.15s cubic-bezier(0.4, 0, 0.6, 1) forwards',
             }} />
           </div>
@@ -174,8 +174,8 @@ const TeamWiseSummaryT2: React.FC<Props> = ({
               height: 80,
               borderRadius: '50%',
               overflow: 'hidden',
-              boxShadow: '0 0 18px rgba(0,0,0,0.15)',
-              backgroundColor: 'rgba(0,0,0,0.06)',
+              boxShadow: '0 0 18px var(--t2-shadow-color)',
+              backgroundColor: 'var(--t2-bg-muted)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

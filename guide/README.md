@@ -8,7 +8,7 @@ A real-time cricket player auction platform built with Next.js. Manage tournamen
 
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 15.5 (App Router) |
+| Frameworks | Next.js 15.5 (App Router) |
 | UI | React 19, Tailwind CSS 3.4 |
 | Database | MongoDB 6 via Mongoose 8 |
 | Real-time | Pusher 5 (server) + Pusher-JS 8 (client) |
