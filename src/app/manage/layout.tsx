@@ -6,11 +6,6 @@ import { usePathname } from 'next/navigation';
 export default function ManageLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  // Mobile auction page gets no wrapper padding or step progress
-  if (pathname === '/manage/auction-mobile') {
-    return <>{children}</>;
-  }
-
   const currentStep = pathname.startsWith('/manage/tournaments') ? 1
     : pathname.startsWith('/manage/teams') ? 2
     : 3;

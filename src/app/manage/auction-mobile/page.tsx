@@ -1,33 +1,5 @@
-import { getAuctionBootstrapData } from '@/lib/auctionBootstrap';
-import MobileAuctionPageClient from './MobileAuctionPageClient';
-import { headers } from 'next/headers';
-import { connectToDatabase } from '@/lib/mongodb';
-import { User } from '@/models/User';
+import { notFound } from 'next/navigation';
 
-export default async function MobileAuctionPage() {
-  // Get user info from headers (set by middleware)
-  const headersList = await headers();
-  const userId = headersList.get('x-user-id') || undefined;
-  const userRole = headersList.get('x-user-role') || undefined;
-
-  // Fetch assignedTournaments from DB so non-admin users see their assigned tournaments
-  let assignedTournaments: string[] = [];
-  if (userId && userRole !== 'Admin') {
-    try {
-      await connectToDatabase();
-      const user = await User.findById(userId).select('assignedTournaments').lean();
-      assignedTournaments = (user as any)?.assignedTournaments ?? [];
-    } catch {
-      // Non-fatal — bootstrap will return null tournament
-    }
-  }
-
-  const initialData = await getAuctionBootstrapData(
-    null, // no specific tournament ID
-    userId,
-    userRole,
-    assignedTournaments
-  );
-
-  return <MobileAuctionPageClient initialData={initialData} />;
+export default function MobileAuctionPage() {
+  notFound();
 }

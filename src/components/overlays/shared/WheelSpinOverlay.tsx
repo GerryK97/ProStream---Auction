@@ -36,7 +36,7 @@ function segmentPath(startDeg: number, endDeg: number): string {
 }
 
 const WheelSpinOverlay: React.FC<WheelSpinOverlayProps> = ({ data }) => {
-  const { players, winnerIndex, spinDurationMs, centerImageURL } = data;
+  const { players, winner, winnerIndex, spinDurationMs, centerImageURL } = data;
   const N = players.length;
   const segDeg = 360 / N;
 
@@ -46,7 +46,6 @@ const WheelSpinOverlay: React.FC<WheelSpinOverlayProps> = ({ data }) => {
   const finalRotation = 8 * 360 + alignmentRotation; // 8+ full spins
 
   const spinDurationS = (spinDurationMs / 1000).toFixed(1);
-  const winner = players[winnerIndex];
 
   const segments = useMemo(() => players.map((player, i) => {
     const startDeg = i * segDeg - 90;   // -90 so segment 0 starts at 12 o'clock
@@ -61,7 +60,6 @@ const WheelSpinOverlay: React.FC<WheelSpinOverlayProps> = ({ data }) => {
   // 2 * R_LABEL * sin(π/N) = arc width at label radius; number text width ≈ 1.16 * fontSize (2 chars)
   const labelFontSize = Math.max(16, Math.min(82, Math.round(R_LABEL * Math.sin(Math.PI / N) * 1.55)));
 
-  // Format playerNo: strip leading zeros ("001" → "1"), fallback to index+1
   const getPlayerLabel = (player: WheelSpinEvent['players'][number], index: number): string => {
     if (player.playerNo) return String(parseInt(player.playerNo, 10));
     return String(index + 1);

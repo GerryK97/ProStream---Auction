@@ -5,6 +5,7 @@ import PlayerCardOverlay from './PlayerCardT1';
 import SoldPlayersSummaryOverlay from './SoldPlayersSummaryT1';
 import TeamSummaryOverlay from './TeamSummaryT1';
 import TeamWiseSummaryOverlay from './TeamWiseSummaryT1';
+import TeamWiseImageT1 from './TeamWiseImageT1';
 import RestingTimeOverlay from './RestingTimeT1';
 import Top10SummaryOverlay from './Top10SummaryT1';
 import WheelSpinOverlay from '../shared/WheelSpinOverlay';
@@ -735,6 +736,18 @@ export function CustomT1Content({
         {visibleMode === 'team-wise-summary' && (
           <div className={modeExiting ? 'fs-summary-exit' : 'animate-fade-in'} style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
             <TeamWiseSummaryOverlay
+              players={players}
+              teams={teams}
+              tournament={tournament}
+              filterTeamId={overlaySettings.teamWiseTeamId}
+            />
+          </div>
+        )}
+
+        {/* ── Team Wise Image mode ── */}
+        {visibleMode === 'team-wise-image' && (
+          <div className={modeExiting ? 'fs-summary-exit' : 'animate-fade-in'} style={{ position: 'absolute', left: 160, top: 40, width: 1600, height: 940 }}>
+            <TeamWiseImageT1
               players={players}
               teams={teams}
               tournament={tournament}
