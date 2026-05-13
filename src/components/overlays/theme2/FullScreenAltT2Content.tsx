@@ -42,10 +42,10 @@ function ImagePanel({ currentPlayer, tournament }: {
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center', gap: 24,
       }}>
-        <svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="var(--t2-text-disabled)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
         </svg>
-        <span style={{ color: 'rgba(255,255,255,0.18)', fontSize: 22, fontFamily: "'Varela Round', sans-serif", letterSpacing: 3, textTransform: 'uppercase' }}>
+        <span style={{ color: 'var(--t2-text-disabled)', fontSize: 22, fontFamily: "'Varela Round', sans-serif", letterSpacing: 3, textTransform: 'uppercase' }}>
           Waiting for player…
         </span>
       </div>
@@ -62,7 +62,7 @@ function ImagePanel({ currentPlayer, tournament }: {
         />
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0, height: 140,
-          background: 'linear-gradient(to bottom, transparent 0%, #0a0a14 100%)',
+          background: 'linear-gradient(to bottom, transparent 0%, var(--t2-bg-canvas) 100%)',
           pointerEvents: 'none',
         }} />
       </div>
@@ -79,7 +79,7 @@ function ImagePanel({ currentPlayer, tournament }: {
       {tournament?.logoURL ? (
         <img src={tournament.logoURL} alt={tournament.name} style={{ width: 320, height: 320, objectFit: 'contain', opacity: 0.85 }} />
       ) : (
-        <svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="var(--t2-text-disabled)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
         </svg>
       )}
@@ -254,8 +254,8 @@ const FullScreenAltT2Content: React.FC<ContentProps> = ({
         .t2fs2-live-dot { animation: t2fs2LiveDot 1.2s ease-in-out infinite; }
 
         @keyframes t2fs2BidCardPulse {
-          0%, 100% { box-shadow: 0 8px 32px rgba(0,0,0,0.45); }
-          50%      { box-shadow: 0 8px 32px rgba(0,0,0,0.45), 0 0 28px rgba(var(--t2-accent-rgb), 0.4); }
+          0%, 100% { box-shadow: 0 8px 32px var(--t2-shadow-color); }
+          50%      { box-shadow: 0 8px 32px var(--t2-shadow-color), 0 0 28px var(--t2-border-accent); }
         }
         .t2fs2-bid-active { animation: t2fs2BidCardPulse 1.5s ease-in-out infinite; }
       `}</style>
@@ -341,7 +341,7 @@ const FullScreenAltT2Content: React.FC<ContentProps> = ({
                 backgroundColor: 'var(--t2-bg-card)',
                 borderRadius: 5,
                 overflow: 'hidden',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+                boxShadow: '0 8px 32px var(--t2-shadow-color)',
                 display: waitingForNextPlayer ? 'none' : 'flex',
                 flexDirection: 'row',
                 fontFamily: "'Varela Round', sans-serif",
@@ -359,7 +359,7 @@ const FullScreenAltT2Content: React.FC<ContentProps> = ({
               }}>
                 <span style={{
                   fontSize: 13, letterSpacing: 2, textTransform: 'uppercase',
-                  color: 'rgba(var(--t2-text-primary-rgb), 0.45)',
+                  color: 'var(--t2-text-muted)',
                 }}>
                   Current Bid
                 </span>
@@ -367,14 +367,14 @@ const FullScreenAltT2Content: React.FC<ContentProps> = ({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span
                     className={bidPopping ? 't2fs2-bid-pop' : ''}
-                    style={{ fontSize: 56, fontWeight: 700, color: 'var(--t2-text-primary)', lineHeight: 1 }}
+                    style={{ fontSize: 56, fontWeight: 700, color: isBidding ? 'var(--t2-accent)' : 'var(--t2-text-primary)', lineHeight: 1 }}
                   >
                     {hasPlayer ? currentBid.toLocaleString('en-IN') : '—'}
                   </span>
                   {isBidding && (
                     <div className="t2fs2-live-dot" style={{
                       width: 10, height: 10, borderRadius: '50%',
-                      backgroundColor: '#22c55e', flexShrink: 0,
+                      backgroundColor: 'var(--t2-success)', flexShrink: 0,
                     }} />
                   )}
                 </div>
@@ -384,7 +384,7 @@ const FullScreenAltT2Content: React.FC<ContentProps> = ({
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                   <span style={{
                     fontSize: 12, letterSpacing: 2, textTransform: 'uppercase',
-                    color: 'rgba(var(--t2-text-primary-rgb), 0.4)',
+                    color: 'var(--t2-text-muted)',
                   }}>
                     Base
                   </span>

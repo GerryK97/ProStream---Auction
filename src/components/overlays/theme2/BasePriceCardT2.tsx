@@ -37,7 +37,7 @@ const BasePriceCardT2: React.FC<BasePriceCardT2Props> = ({ tournament, currentPl
                     borderRadius: 5,
                     overflow: 'hidden',
                     fontFamily: "'Varela Round', sans-serif",
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                    boxShadow: '0 4px 16px var(--t2-shadow-color)',
                     display: 'flex',
                     flexDirection: 'row',
                     flexShrink: 0,
@@ -70,7 +70,7 @@ const BasePriceCardT2: React.FC<BasePriceCardT2Props> = ({ tournament, currentPl
                     <span style={{
                         fontSize: fs.amount,
                         fontWeight: 700,
-                        color: 'var(--brand-secondary)',
+                        color: 'var(--t2-success)',
                         lineHeight: 1,
                         textAlign: 'center',
                     }}>

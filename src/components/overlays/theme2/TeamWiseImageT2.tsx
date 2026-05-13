@@ -21,10 +21,10 @@ const MAX_IMG_H = 380;
 const GOLD           = 'var(--t2-accent)';
 const WHITE_BG       = 'var(--t2-bg-card)';
 const TEXT_DARK      = 'var(--t2-text-primary)';
-const TEXT_MUTED     = 'rgba(var(--t2-text-primary-rgb), 0.4)';
-const TEXT_MUTED_LIGHT = 'rgba(var(--t2-text-primary-rgb), 0.5)';
-const GREEN          = '#22c55e';
-const DOT_INACTIVE   = 'rgba(var(--t2-text-primary-rgb), 0.15)';
+const TEXT_MUTED     = 'var(--t2-text-muted)';
+const TEXT_MUTED_LIGHT = 'var(--t2-text-secondary)';
+const GREEN          = 'var(--t2-success)';
+const DOT_INACTIVE   = 'var(--t2-text-disabled)';
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
@@ -116,7 +116,7 @@ const TeamWiseImageT2: React.FC<Props> = ({
         borderRadius: 12,
         overflow: 'hidden',
         position: 'relative',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+        boxShadow: '0 8px 32px var(--t2-shadow-color)',
         opacity: isExiting ? 0 : 1,
         transition: isExiting ? 'opacity 0.4s ease-out' : 'none',
       }}>
@@ -139,7 +139,7 @@ const TeamWiseImageT2: React.FC<Props> = ({
               top: 0,
               bottom: 0,
               width: '40%',
-              background: 'linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.65) 50%, transparent 80%)',
+              background: 'linear-gradient(105deg, transparent 20%, var(--t2-shine) 50%, transparent 80%)',
               animation: 't2ImgShineSwipe 1.05s 0.15s cubic-bezier(0.4, 0, 0.6, 1) forwards',
             }} />
           </div>
@@ -167,8 +167,8 @@ const TeamWiseImageT2: React.FC<Props> = ({
               height: 80,
               borderRadius: '50%',
               overflow: 'hidden',
-              boxShadow: '0 0 18px rgba(0,0,0,0.15)',
-              backgroundColor: 'rgba(0,0,0,0.06)',
+              boxShadow: '0 0 18px var(--t2-shadow-color)',
+              backgroundColor: 'var(--t2-bg-muted)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -270,7 +270,7 @@ const TeamWiseImageT2: React.FC<Props> = ({
                 <div style={{
                   width: '100%',
                   height: imageH,
-                  background: `linear-gradient(180deg, rgba(var(--t2-accent-rgb), 0.08) 0%, rgba(0,0,0,0.1) 100%)`,
+                  background: 'var(--t2-bg-muted)',
                   position: 'relative',
                   overflow: 'hidden',
                   borderRadius: '6px 6px 0 0',
@@ -294,9 +294,9 @@ const TeamWiseImageT2: React.FC<Props> = ({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      background: `linear-gradient(180deg, rgba(var(--t2-accent-rgb), 0.08) 0%, rgba(var(--t2-accent-rgb), 0.18) 100%)`,
+                      background: `linear-gradient(180deg, var(--t2-accent-soft) 0%, var(--t2-accent-soft) 100%)`,
                     }}>
-                      <span style={{ color: 'rgba(var(--t2-accent-rgb), 0.45)', fontSize: 64, fontWeight: 900 }}>
+                      <span style={{ color: 'var(--t2-border-accent)', fontSize: 64, fontWeight: 900 }}>
                         {player.name.charAt(0).toUpperCase()}
                       </span>
                     </div>

@@ -62,6 +62,7 @@ export function getPusherClient(): PusherJS {
         if (error.type === 'WebSocketError') {
           console.warn('[Pusher Client] WebSocket error:', error.error);
         } else if (error.type === 'PusherError') {
+          if (!error.data || Object.keys(error.data).length === 0) return;
           console.error('[Pusher Client] Pusher error:', error.data);
         } else {
           console.error('[Pusher Client] Connection error:', error);

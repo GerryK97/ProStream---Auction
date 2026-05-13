@@ -111,7 +111,7 @@ const PlayerCardT2: React.FC<PlayerCardT2Props> = ({
                         borderRadius: 5,
                         overflow: 'hidden',
                         fontFamily: "'Varela Round', sans-serif",
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+                        boxShadow: '0 8px 32px var(--t2-shadow-color)',
                     }}>
                         {/* Player photo */}
                         <div style={{
@@ -161,7 +161,7 @@ const PlayerCardT2: React.FC<PlayerCardT2Props> = ({
                                     </div>
                                 ) : <div />}
                                 <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-                                    <div style={{ fontSize: cfg.priceLabelFs, color: 'rgba(var(--t2-text-primary-rgb), 0.4)', lineHeight: 1.2 }}>
+                                    <div style={{ fontSize: cfg.priceLabelFs, color: 'var(--t2-text-muted)', lineHeight: 1.2 }}>
                                         Base
                                     </div>
                                     <div style={{ color: 'var(--t2-accent)', fontSize: cfg.priceValueFs, fontWeight: 700, lineHeight: 1 }}>
@@ -180,7 +180,7 @@ const PlayerCardT2: React.FC<PlayerCardT2Props> = ({
                                     position: 'relative',
                                     left: -cfg.nameLeftOffset,
                                     fontSize: cfg.typeFontSize,
-                                    color: 'rgba(var(--t2-text-primary-rgb), 0.45)',
+                                    color: 'var(--t2-text-muted)',
                                     textTransform: 'uppercase',
                                     letterSpacing: 1,
                                 }}>
@@ -208,7 +208,7 @@ const PlayerCardT2: React.FC<PlayerCardT2Props> = ({
                             {statKeys.length > 0 && (
                                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                                     {statKeys.slice(0, 2).map((key) => (
-                                        <div key={key} style={{ textAlign: 'center', fontSize: cfg.statFontSize, color: 'rgba(var(--t2-text-primary-rgb), 0.4)', whiteSpace: 'nowrap' }}>
+                                        <div key={key} style={{ textAlign: 'center', fontSize: cfg.statFontSize, color: 'var(--t2-text-muted)', whiteSpace: 'nowrap' }}>
                                             {key}<br />
                                             <span style={{ color: 'var(--t2-text-primary)', fontSize: cfg.valFontSize, fontWeight: 600 }}>{stats[key]}</span>
                                         </div>
@@ -219,8 +219,8 @@ const PlayerCardT2: React.FC<PlayerCardT2Props> = ({
 
                         {/* Sold flash overlay */}
                         {showSoldAnimation && (
-                            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(34,197,94,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-                                <div style={{ fontSize: cfg.jerseyFs * 1.2, fontWeight: 'bold', color: '#22c55e', textShadow: '0 0 20px rgba(34,197,94,1)', letterSpacing: 4 }}>
+                            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'var(--t2-success-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+                                <div style={{ fontSize: cfg.jerseyFs * 1.2, fontWeight: 'bold', color: 'var(--t2-success)', textShadow: '0 0 20px var(--t2-success)', letterSpacing: 4 }}>
                                     SOLD!
                                 </div>
                             </div>
