@@ -16,6 +16,9 @@ export interface IUser extends Document {
   assignedTeams?: string[]; // For Team Managers
   assignedPlayer?: string; // For Players (links to player profile)
 
+  // Push notifications
+  expoPushToken?: string;
+
   // Session & Auth
   lastLogin?: Date;
   lastIPAddress?: string;
@@ -85,6 +88,10 @@ const UserSchema = new Schema<IUser>(
       default: [],
     },
     assignedPlayer: {
+      type: String,
+      default: null,
+    },
+    expoPushToken: {
       type: String,
       default: null,
     },
