@@ -3,7 +3,7 @@ import { verifyToken, getTokenFromRequest } from '@/lib/auth';
 import { connectToDatabase } from '@/lib/mongodb';
 import { isAdmin } from '@/lib/permissions';
 import { User } from '@/models/User';
-import Expo from 'expo-server-sdk';
+import { Expo } from 'expo-server-sdk';
 
 const expo = new Expo();
 

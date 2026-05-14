@@ -7,7 +7,7 @@ const nextConfig = {
   // Do NOT bundle pdfkit — it needs access to its font data files on disk at runtime.
   // When bundled by webpack, Next.js copies only the JS but not the /data/*.afm font files,
   // causing ENOENT errors when PDFKit tries to load Helvetica.afm.
-  serverExternalPackages: ['pdfkit'],
+  serverExternalPackages: ['pdfkit', 'expo-server-sdk'],
   experimental: {
     optimizePackageImports: [],
   },
