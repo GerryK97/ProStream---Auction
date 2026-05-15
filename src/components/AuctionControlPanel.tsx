@@ -976,6 +976,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const [isSpinning, setIsSpinning] = useState(false);
     const spinTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
     const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const bidInFlightRef = useRef(false);
     const [hidePremiumCard, setHidePremiumCard] = useState(false);
     const [autoSwitch, setAutoSwitch] = useState(false);
     const [autoSwitchDuration, setAutoSwitchDuration] = useState(5);
@@ -1562,6 +1563,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
 
     const handleBid = async (amount: number, teamId?: string) => {
         if (!liveTournament) return;
+        if (bidInFlightRef.current) return;
 
         // Client-side validation
         const currentBid = auctionState.currentBid || 0;
@@ -1576,6 +1578,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             setError(`First bid must be at least base price of ${formatCurrency(basePrice)}`);
             return;
         }
+
+        bidInFlightRef.current = true;
 
         // Optimistic update: snapshot the previous auctionState, apply new bid
         // immediately so the UI feels instant, then revert if the server rejects.
@@ -1603,6 +1607,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             restoreAuctionState(snapshot);
             console.error('Failed to place bid:', error);
             setError('An error occurred while placing the bid');
+        } finally {
+            bidInFlightRef.current = false;
         }
     };
 
