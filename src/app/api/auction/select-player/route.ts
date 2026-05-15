@@ -67,13 +67,12 @@ export async function POST(request: NextRequest) {
 
     const basePrice = getClassBasePrice(tournament as any, player as any);
 
-    // Fire-and-forget Pusher — respond immediately, event broadcasts in background
-    void triggerPlayerSelected(tournamentId, {
+    await triggerPlayerSelected(tournamentId, {
       currentPlayer: player as any,
       basePrice,
       auctionState: updatedState as any,
       message: `Player ${(player as any).name} selected for auction`,
-    }).catch(err => console.error('Failed to trigger Pusher event:', err));
+    });
 
     return NextResponse.json(updatedState);
   } catch (error) {

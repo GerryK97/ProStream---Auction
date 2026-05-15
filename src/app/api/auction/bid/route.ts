@@ -121,15 +121,14 @@ export async function POST(request: NextRequest) {
       teamId ? TeamModel.findById(teamId).lean() : Promise.resolve(null),
     ]);
 
-    // Fire-and-forget Pusher â€” respond immediately, event broadcasts in background
-    void triggerBidPlaced(tournamentId, {
+    await triggerBidPlaced(tournamentId, {
       auctionState: updatedState as any,
       currentPlayer: player as any,
       winningTeam: winningTeam as any,
       currentBid: amount,
       previousBid,
       message: `New bid placed: ${amount.toLocaleString()}`,
-    }).catch(err => console.error('Failed to trigger Pusher event:', err));
+    });
 
     return NextResponse.json(updatedState);
   } catch (error) {
