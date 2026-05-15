@@ -1,11 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, getTokenFromRequest } from '@/lib/auth';
-import { connectToDatabase } from '@/lib/mongodb';
 import { isAdmin } from '@/lib/permissions';
-import { User } from '@/models/User';
-import { Expo } from 'expo-server-sdk';
-
-const expo = new Expo();
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,43 +14,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Only Admin users can send notifications.' }, { status: 403 });
     }
 
-    const { title, body } = await request.json();
-    if (!title || !body) {
-      return NextResponse.json({ error: 'title and body are required' }, { status: 400 });
-    }
-
-    await connectToDatabase();
-    const users = await User.find({ expoPushToken: { $ne: null } }).select('expoPushToken').lean();
-
-    const tokens = users
-      .map((u: any) => u.expoPushToken as string)
-      .filter((t) => Expo.isExpoPushToken(t));
-
-    const messages = tokens.map((pushToken) => ({
-      to: pushToken,
-      sound: 'default' as const,
-      title,
-      body,
-    }));
-
-    const chunks = expo.chunkPushNotifications(messages);
-    let sent = 0;
-    let failed = 0;
-    let invalidTokens = 0;
-
-    for (const chunk of chunks) {
-      const receipts = await expo.sendPushNotificationsAsync(chunk);
-      for (const receipt of receipts) {
-        if (receipt.status === 'ok') {
-          sent++;
-        } else {
-          if (receipt.details?.error === 'DeviceNotRegistered') invalidTokens++;
-          else failed++;
-        }
-      }
-    }
-
-    return NextResponse.json({ sent, failed, invalidTokens });
+    await request.json().catch(() => null);
+    return NextResponse.json(
+      { error: 'Push notifications are unavailable after the Postgres user-store cutover because expoPushToken was not migrated.' },
+      { status: 410 }
+    );
   } catch (err) {
     console.error('[admin/notifications]', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

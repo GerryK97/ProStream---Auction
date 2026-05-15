@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -124,7 +124,7 @@ export default function ReportsPage() {
 
   if (loading) {
     return (
-      <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'MasterManager']}>
+      <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
         <div className="p-6">
           <div className="mx-auto max-w-7xl">
             <div className="rounded-2xl p-12 border text-center" style={{ backgroundColor: 'var(--surface-card)', borderColor: 'var(--border-primary)' }}>
@@ -138,7 +138,7 @@ export default function ReportsPage() {
 
   if (error || !stats) {
     return (
-      <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'MasterManager']}>
+      <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
         <div className="p-6">
           <div className="mx-auto max-w-7xl">
             <div className="rounded-2xl p-12 border text-center" style={{ backgroundColor: 'var(--surface-card)', borderColor: 'var(--border-primary)' }}>
@@ -154,7 +154,7 @@ export default function ReportsPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'MasterManager']}>
+    <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
       <div className="p-6">
         <div className="mx-auto max-w-7xl">
           {/* Header */}
@@ -275,7 +275,7 @@ export default function ReportsPage() {
                           {invoice.invoiceNumber}
                         </Link>
                         <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-                          {invoice.customerName || 'Unknown'} • {formatDate(invoice.issueDate)}
+                          {invoice.customerName || 'Unknown'} â€¢ {formatDate(invoice.issueDate)}
                         </p>
                       </div>
                       <div className="text-right">

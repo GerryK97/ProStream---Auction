@@ -1,11 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { TournamentModel } from '@/models/Tournament';
-import { User } from '@/models/User';
 import { getTokenFromRequest, verifyToken } from '@/lib/auth';
 import { isAdmin } from '@/lib/permissions';
+import {
+  addAssignedTournament,
+  getUserById,
+  listUsersByAssignedTournament,
+  removeAssignedTournament,
+  toPublicUser,
+} from '@/lib/pg/user-queries';
 
-// GET /api/tournaments/[id]/access — list all users who have access to this tournament
+// GET /api/tournaments/[id]/access - list all users who have access to this tournament
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -26,20 +32,16 @@ export async function GET(
     const tournament = await TournamentModel.findById(tournamentId).lean();
     if (!tournament) return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
 
-    // Find all non-admin users who have this tournament in their assignedTournaments
-    const users = await User.find({
-      assignedTournaments: tournamentId,
-      role: { $ne: 'Admin' },
-    }).select('_id username email role status').lean();
+    const users = await listUsersByAssignedTournament(tournamentId);
 
-    return NextResponse.json({ users });
+    return NextResponse.json({ users: users.map(toPublicUser) });
   } catch (error) {
     console.error('Error fetching tournament access:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-// POST /api/tournaments/[id]/access — grant or revoke a user's access to this tournament
+// POST /api/tournaments/[id]/access - grant or revoke a user's access to this tournament
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -69,22 +71,21 @@ export async function POST(
     const tournament = await TournamentModel.findById(tournamentId).lean();
     if (!tournament) return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
 
-    const targetUser = await User.findById(userId).lean();
+    const targetUser = await getUserById(userId);
     if (!targetUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    if ((targetUser as any).role === 'Admin') {
+    if (targetUser.role === 'Admin') {
       return NextResponse.json(
-        { error: 'Admin users always have access — no assignment needed' },
+        { error: 'Admin users always have access - no assignment needed' },
         { status: 400 }
       );
     }
 
-    const update =
-      action === 'grant'
-        ? { $addToSet: { assignedTournaments: tournamentId } }
-        : { $pull: { assignedTournaments: tournamentId } };
-
-    await User.findByIdAndUpdate(userId, update);
+    if (action === 'grant') {
+      await addAssignedTournament(userId, tournamentId);
+    } else {
+      await removeAssignedTournament(userId, tournamentId);
+    }
 
     return NextResponse.json({
       message:

@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { TournamentModel } from '@/models/Tournament';
-import { User } from '@/models/User';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { connectToDatabase } from '@/lib/mongodb';
+import { getUserById } from '@/lib/pg/user-queries';
 
 /**
  * POST /api/tournaments/[id]/transfer-ownership
@@ -18,7 +18,6 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only Admin can transfer ownership
     if (user.role !== 'Admin') {
       return NextResponse.json(
         { error: 'Only administrators can transfer tournament ownership' },
@@ -30,16 +29,14 @@ export async function POST(
     const { id: tournamentId } = await params;
     const { newOwnerId } = await request.json();
 
-    // Validate newOwnerId
-    if (!newOwnerId) {
+    if (!newOwnerId || typeof newOwnerId !== 'string') {
       return NextResponse.json(
         { error: 'New owner ID is required' },
         { status: 400 }
       );
     }
 
-    // Check if new owner exists
-    const newOwner = await User.findById(newOwnerId);
+    const newOwner = await getUserById(newOwnerId);
     if (!newOwner) {
       return NextResponse.json(
         { error: 'New owner not found' },
@@ -47,25 +44,21 @@ export async function POST(
       );
     }
 
-    // Get tournament
     const tournament = await TournamentModel.findById(tournamentId);
     if (!tournament) {
       return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
     }
 
-    // Store old owner for response
     const oldOwnerId = tournament.createdBy;
-
-    // Update tournament owner
-    tournament.createdBy = newOwnerId;
+    tournament.createdBy = newOwner.id;
     await tournament.save();
 
     return NextResponse.json({
       success: true,
-      message: `Tournament ownership transferred from ${oldOwnerId} to ${newOwnerId}`,
+      message: `Tournament ownership transferred from ${oldOwnerId} to ${newOwner.id}`,
       tournament: tournament.toObject(),
       newOwner: {
-        id: newOwner._id,
+        id: newOwner.id,
         username: newOwner.username,
         email: newOwner.email,
         role: newOwner.role,

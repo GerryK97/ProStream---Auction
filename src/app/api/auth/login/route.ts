@@ -1,15 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { User } from '@/models/User';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { comparePassword, generateToken, validateUsername } from '@/lib/auth';
-import { connectToDatabase } from '@/lib/mongodb';
+import { getUserByUsername, toAuctionUser, toPublicUser } from '@/lib/pg/user-queries';
 
 export async function POST(request: NextRequest) {
   try {
-    await connectToDatabase();
-
     const { username, password } = await request.json();
 
-    // Validation
     if (!username || !password) {
       return NextResponse.json(
         { error: 'Username and password are required' },
@@ -17,10 +13,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user by username
-    const user = await User.findOne({
-      username: username.toLowerCase(),
-    });
+    if (!validateUsername(username)) {
+      return NextResponse.json(
+        { error: 'Invalid username or password' },
+        { status: 401 }
+      );
+    }
+
+    const user = await getUserByUsername(username);
 
     if (!user) {
       return NextResponse.json(
@@ -29,7 +29,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user is suspended
     if (user.status === 'Suspended') {
       return NextResponse.json(
         { error: 'Account has been suspended' },
@@ -37,7 +36,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user is pending approval
     if (user.status === 'PendingApproval') {
       return NextResponse.json(
         { error: 'Account is pending admin approval' },
@@ -45,7 +43,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Compare password
     const isValidPassword = await comparePassword(password, user.passwordHash);
     if (!isValidPassword) {
       return NextResponse.json(
@@ -54,40 +51,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update last login
-    user.lastLogin = new Date();
-    user.lastIPAddress = request.headers.get('x-forwarded-for') || 'unknown';
-    await user.save();
+    const token = generateToken(toAuctionUser(user));
 
-    // Generate token
-    const token = generateToken(user);
-
-    // Create response with token in body
     const response = NextResponse.json(
       {
         success: true,
         message: 'Login successful',
-        user: {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          logoURL: user.logoURL || '',
-          mobileNumber: user.mobileNumber || '',
-          role: user.role,
-          status: user.status,
-          plan: (user as any).plan || 'Free',
-        },
+        user: toPublicUser(user),
         token,
       },
       { status: 200 }
     );
 
-    // Set HttpOnly cookie for server-side authentication (middleware)
     response.cookies.set('auth_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * 7,
       path: '/',
     });
 

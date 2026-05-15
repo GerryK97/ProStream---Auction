@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -172,7 +172,7 @@ export default function InvoiceDetailPage() {
 
   if (loading) {
     return (
-      <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'MasterManager']}>
+      <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
         <div className="p-6">
           <div className="mx-auto max-w-5xl">
             <div className="rounded-2xl p-12 border text-center" style={{ backgroundColor: 'var(--surface-card)', borderColor: 'var(--border-primary)' }}>
@@ -186,7 +186,7 @@ export default function InvoiceDetailPage() {
 
   if (error || !invoice) {
     return (
-      <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'MasterManager']}>
+      <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
         <div className="p-6">
           <div className="mx-auto max-w-5xl">
             <div className="rounded-2xl p-12 border text-center" style={{ backgroundColor: 'var(--surface-card)', borderColor: 'var(--border-primary)' }}>
@@ -204,7 +204,7 @@ export default function InvoiceDetailPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'MasterManager']}>
+    <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
       <div className="p-6">
         <div className="mx-auto max-w-5xl">
           {/* Header */}

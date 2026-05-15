@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { TournamentModel } from '@/models/Tournament';
@@ -6,7 +6,6 @@ import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
 import { triggerBidPlaced } from '@/lib/pusher-server';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
-import { getNextTeamBid } from '@/lib/bidIncrementUtils';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
 
@@ -21,15 +20,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Allow Team role to bid; all other roles require auction manage permission
-    if (user.role !== 'Team' && !canPerformAction(user.role, 'manage', 'auction')) {
+    if (!canPerformAction(user.role, 'manage', 'auction')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { tournamentId, teamId: bodyTeamId, amount } = await request.json();
-
-    // Team-role users always bid as their assigned team (prevents spoofing)
-    const teamId = user.role === 'Team' ? user.assignedTeams[0] : bodyTeamId;
+    const teamId = bodyTeamId;
 
     if (!tournamentId || typeof amount !== 'number') {
       return NextResponse.json(
@@ -100,19 +96,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // In team bidding mode, validate that the submitted amount equals the next preset bid
-    // (Team-role users only — admins/Tournament roles can set custom amounts)
-    if ((tournament as any).biddingMode === 'team' && user.role === 'Team') {
-      const bidIncrements = (tournament as any).bidIncrements ?? [];
-      const expectedBid = getNextTeamBid(bidIncrements, auctionState.currentBid, actualBasePrice);
-      if (amount !== expectedBid) {
-        return NextResponse.json(
-          { error: `Invalid bid amount for team bidding mode. Expected: ${expectedBid.toLocaleString()}` },
-          { status: 400 }
-        );
-      }
-    }
-
     // Update auction state (team will be assigned when selling)
     const newBid = {
       teamId: teamId || null,
@@ -138,7 +121,7 @@ export async function POST(request: NextRequest) {
       teamId ? TeamModel.findById(teamId).lean() : Promise.resolve(null),
     ]);
 
-    // Fire-and-forget Pusher — respond immediately, event broadcasts in background
+    // Fire-and-forget Pusher â€” respond immediately, event broadcasts in background
     void triggerBidPlaced(tournamentId, {
       auctionState: updatedState as any,
       currentPlayer: player as any,

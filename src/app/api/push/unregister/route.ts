@@ -1,7 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, getTokenFromRequest } from '@/lib/auth';
-import { connectToDatabase } from '@/lib/mongodb';
-import { User } from '@/models/User';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,10 +9,10 @@ export async function POST(request: NextRequest) {
     const payload = verifyToken(token);
     if (!payload) return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
 
-    await connectToDatabase();
-    await User.findByIdAndUpdate(payload.userId, { expoPushToken: null });
-
-    return NextResponse.json({ ok: true });
+    return NextResponse.json(
+      { error: 'Push notification unregistration is unavailable after the Postgres user-store cutover.' },
+      { status: 410 }
+    );
   } catch (err) {
     console.error('[push/unregister]', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

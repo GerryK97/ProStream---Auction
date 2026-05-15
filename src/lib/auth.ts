@@ -1,6 +1,5 @@
-import bcrypt from 'bcrypt';
+﻿import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { IUser } from '@/models/User';
 import { NextRequest } from 'next/server';
 
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'your-secret-key-change-this';
@@ -11,10 +10,20 @@ export interface JWTPayload {
   username: string;
   email: string;
   role: string;
-  assignedTeams: string[];
   assignedTournaments: string[];
+  plan?: 'Free' | 'Standard' | 'Offer';
   iat: number;
   exp: number;
+}
+
+export interface AuthUser {
+  id?: string;
+  _id?: string;
+  username: string;
+  email: string;
+  role: string;
+  assignedTournaments?: string[];
+  plan?: 'Free' | 'Standard' | 'Offer';
 }
 
 /**
@@ -58,7 +67,6 @@ export function validatePassword(password: string): {
   if (!/[0-9]/.test(password)) {
     errors.push('Password must contain at least one number');
   }
-  // Special character is optional for easier testing and user experience
 
   return {
     isValid: errors.length === 0,
@@ -69,14 +77,19 @@ export function validatePassword(password: string): {
 /**
  * Generate JWT token
  */
-export function generateToken(user: IUser): string {
+export function generateToken(user: AuthUser): string {
+  const userId = user._id ?? user.id;
+  if (!userId) {
+    throw new Error('Cannot generate token without a user id');
+  }
+
   const payload = {
-    userId: user._id,
+    userId,
     username: user.username,
     email: user.email,
     role: user.role,
-    assignedTeams: user.assignedTeams || [],
     assignedTournaments: user.assignedTournaments || [],
+    plan: user.plan || 'Free',
   };
 
   return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });

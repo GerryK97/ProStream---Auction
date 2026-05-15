@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -76,7 +76,7 @@ export default function QuotationsListPage() {
   };
 
   return (
-    <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'MasterManager']}>
+    <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
       <div className="p-6">
         <div className="mx-auto max-w-7xl">
           <div className="flex items-center justify-between mb-6">
