@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -59,13 +59,8 @@ export default function InvoiceDetailPage() {
   const [updating, setUpdating] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
-  useEffect(() => {
-    if (params.id) {
-      fetchInvoice();
-    }
-  }, [params.id]);
-
-  const fetchInvoice = async () => {
+  const fetchInvoice = useCallback(async () => {
+    if (!params.id) return;
     try {
       setLoading(true);
       const response = await fetch(`/api/invoices/${params.id}`, {
@@ -94,7 +89,9 @@ export default function InvoiceDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id]);
+
+  useEffect(() => { fetchInvoice(); }, [fetchInvoice]);
 
   const updateStatus = async (newStatus: Invoice['status']) => {
     if (!invoice) return;

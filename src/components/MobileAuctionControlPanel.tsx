@@ -77,7 +77,7 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
         } else {
             (async () => {
                 try {
-                    const res = await fetch('/api/tournaments/active', { headers: getAuthHeaders() });
+                    const res = await fetch('/api/tournaments/active', { headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
                     if (res.ok) {
                         const t = await res.json();
                         if (t) setLiveTournamentId(t._id);
@@ -85,7 +85,7 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
                 } catch { /* silent */ }
             })();
         }
-    }, [selectedTournamentId, initialTournamentId]);
+    }, [selectedTournamentId, initialTournamentId, token]);
 
     const {
         tournament: liveTournament,

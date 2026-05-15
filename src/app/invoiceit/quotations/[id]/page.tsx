@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -58,13 +58,8 @@ export default function QuotationDetailPage() {
   const [converting, setConverting] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
-  useEffect(() => {
-    if (params.id) {
-      fetchQuotation();
-    }
-  }, [params.id]);
-
-  const fetchQuotation = async () => {
+  const fetchQuotation = useCallback(async () => {
+    if (!params.id) return;
     try {
       setLoading(true);
       const response = await fetch(`/api/quotations/${params.id}`, {
@@ -92,7 +87,9 @@ export default function QuotationDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id]);
+
+  useEffect(() => { fetchQuotation(); }, [fetchQuotation]);
 
   const updateStatus = async (newStatus: Quotation['status']) => {
     if (!quotation) return;

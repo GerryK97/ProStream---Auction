@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import StatusBadge from '@/components/invoiceit/StatusBadge';
@@ -40,11 +40,7 @@ export default function ReportsPage() {
   const [error, setError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<'all' | '30days' | '90days' | '1year'>('all');
 
-  useEffect(() => {
-    fetchReports();
-  }, [dateRange]);
-
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/invoices', {
@@ -104,7 +100,9 @@ export default function ReportsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange]);
+
+  useEffect(() => { fetchReports(); }, [fetchReports]);
 
   const formatCurrency = (amount: number) => {
     return `LKR ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Tournament } from '@/types';
 import { getAuthHeaders } from '@/lib/api-client';
 import { useAuth } from './AuthContext';
@@ -46,7 +46,7 @@ export function TournamentProvider({ children }: TournamentProviderProps) {
   }, [selectedTournamentId]);
 
   // Fetch tournaments
-  const refreshTournaments = async () => {
+  const refreshTournaments = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/tournaments', {
@@ -72,7 +72,7 @@ export function TournamentProvider({ children }: TournamentProviderProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Auto-fetch when authentication is ready
   useEffect(() => {
@@ -84,6 +84,9 @@ export function TournamentProvider({ children }: TournamentProviderProps) {
       setTournaments([]);
       setLoading(false);
     }
+    // refreshTournaments is stable (useCallback with []) and getAuthHeaders is a
+    // module-level import — neither can change, so omitting them is intentional.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, isAuthenticated]);
 
   const selectedTournament = tournaments.find(t => t._id === selectedTournamentId) || null;

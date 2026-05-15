@@ -1230,13 +1230,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         if (!liveTournamentId || !selectedTournament) return;
         if (selectedTournament._id !== liveTournamentId) return;
         refreshData();
-    }, [
-        liveTournamentId,
-        selectedTournament?._id,
-        selectedTournament?.budgetPerTeam,
-        selectedTournament?.squadSize,
-        refreshData,
-    ]);
+    }, [liveTournamentId, selectedTournament, refreshData]);
 
     const handleStartAuction = async () => {
         if (!selectedTournament) return;

@@ -538,7 +538,7 @@ export function usePusherAuction(
       wakeChannel.unbind('overlay:revoke');
       pusher.unsubscribe(WAKE_CHANNEL);
     };
-  }, [tournamentId, isOverlayMode]);
+  }, [tournamentId, isOverlayMode, overlayToken]);
 
   // ─── Effect 3: Auto-disconnect when status goes inactive (overlay mode only) ─
   // Watches tournament.status updates that arrive through Pusher events.
