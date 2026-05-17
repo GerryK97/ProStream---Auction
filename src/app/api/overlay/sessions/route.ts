@@ -4,6 +4,12 @@ import { OverlaySessionModel } from '@/models/OverlaySession';
 import { TournamentModel } from '@/models/Tournament';
 import { getTokenFromRequest, verifyToken } from '@/lib/auth';
 import { isAdmin } from '@/lib/permissions';
+import {
+  AUCTION_OVERLAY_CREATE_PRICE_KEY,
+  deductWalletBalance,
+  getPrice,
+  InsufficientWalletBalanceError,
+} from '@/lib/pg/wallet-queries';
 import { randomUUID } from 'crypto';
 
 // GET /api/overlay/sessions?tournamentId=xxx — list sessions (Admin only)
@@ -55,6 +61,33 @@ export async function POST(request: NextRequest) {
       hour: '2-digit', minute: '2-digit',
     })}`;
 
+    const overlayPrice = await getPrice(AUCTION_OVERLAY_CREATE_PRICE_KEY, 0);
+    let walletTransaction = null;
+    if (overlayPrice > 0) {
+      try {
+        const deduction = await deductWalletBalance({
+          userId: payload.userId,
+          amount: overlayPrice,
+          description: `Auction overlay session: ${(tournament as any).name}`,
+          createdBy: payload.userId,
+        });
+        walletTransaction = deduction.transaction;
+      } catch (error) {
+        if (error instanceof InsufficientWalletBalanceError) {
+          return NextResponse.json(
+            {
+              error: 'insufficient_balance',
+              message: 'Insufficient wallet balance',
+              requiredAmount: error.requiredAmount,
+              currentBalance: error.currentBalance,
+            },
+            { status: 402 }
+          );
+        }
+        throw error;
+      }
+    }
+
     const sessionToken = randomUUID();
     const session = await OverlaySessionModel.create({
       _id: sessionToken,
@@ -64,7 +97,7 @@ export async function POST(request: NextRequest) {
       isActive: true,
     });
 
-    return NextResponse.json({ session }, { status: 201 });
+    return NextResponse.json({ session, walletTransaction }, { status: 201 });
   } catch (error) {
     console.error('Error creating overlay session:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
