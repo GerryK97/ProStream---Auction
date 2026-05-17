@@ -108,7 +108,7 @@ const NAV_GROUPS = [
       {
         label: 'Overlays',
         href: '/output',
-        roles: ['Admin'],
+        roles: ['Admin', 'Tournament'],
         icon: (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0">
             <rect x="2" y="3" width="20" height="14" rx="2" />
@@ -119,7 +119,7 @@ const NAV_GROUPS = [
       {
         label: 'OBS Sessions',
         href: '/manage/overlays/sessions',
-        roles: ['Admin'],
+        roles: ['Admin', 'Tournament'],
         icon: (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />

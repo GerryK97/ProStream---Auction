@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { OverlaySessionModel } from '@/models/OverlaySession';
 import { TournamentModel } from '@/models/Tournament';
-import { getTokenFromRequest, verifyToken } from '@/lib/auth';
-import { isAdmin } from '@/lib/permissions';
+import { canAccessTournament, canPerformAction } from '@/lib/permissions';
+import { getUserFromRequest, RequestUser } from '@/lib/request-helpers';
 import {
   creditWalletBalance,
   deductWalletBalance,
@@ -26,6 +26,21 @@ const DEFAULT_OVERLAY_PRICES: Record<AuctionOverlayType, number> = {
   team_owners: 300,
 };
 
+function canGenerateOverlays(user: RequestUser) {
+  return canPerformAction(user.role, 'create', 'overlayConfig');
+}
+
+async function assertTournamentAccess(user: RequestUser, tournamentId: string) {
+  const tournament = await TournamentModel.findById(tournamentId).lean();
+  if (!tournament) return { tournament: null, response: NextResponse.json({ error: 'Tournament not found' }, { status: 404 }) };
+
+  if (!canAccessTournament(user.userId, user.role, tournament as any, user.assignedTournaments)) {
+    return { tournament: null, response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) };
+  }
+
+  return { tournament, response: null };
+}
+
 async function getOverlayPriceMap() {
   const entries = await Promise.all(
     AUCTION_OVERLAY_TYPE_KEYS.map(async (type) => {
@@ -37,20 +52,26 @@ async function getOverlayPriceMap() {
   return Object.fromEntries(entries) as Record<AuctionOverlayType, number>;
 }
 
-// GET /api/overlay/sessions?tournamentId=xxx — list sessions (Admin only)
+// GET /api/overlay/sessions?tournamentId=xxx — list sessions for accessible tournaments
 export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
 
-    const token = getTokenFromRequest(request);
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const payload = verifyToken(token);
-    if (!payload) return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
-    if (!isAdmin(payload.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const user = await getUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!canGenerateOverlays(user)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const tournamentId = request.nextUrl.searchParams.get('tournamentId');
+    let query: Record<string, unknown> = {};
 
-    const query = tournamentId ? { tournamentId } : {};
+    if (tournamentId) {
+      const access = await assertTournamentAccess(user, tournamentId);
+      if (access.response) return access.response;
+      query = { tournamentId };
+    } else if (user.role !== 'Admin') {
+      query = { tournamentId: { $in: user.assignedTournaments } };
+    }
+
     const sessions = await OverlaySessionModel.find(query)
       .sort({ createdAt: -1 })
       .lean();
@@ -64,7 +85,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/overlay/sessions — create a new paid/free overlay session (Admin only)
+// POST /api/overlay/sessions — creates exactly one overlay output and charges once at creation time
 export async function POST(request: NextRequest) {
   let deduction:
     | Awaited<ReturnType<typeof deductWalletBalance>>
@@ -76,12 +97,10 @@ export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
 
-    const token = getTokenFromRequest(request);
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const payload = verifyToken(token);
-    if (!payload) return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
-    if (!isAdmin(payload.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    requestedUserId = payload.userId;
+    const user = await getUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!canGenerateOverlays(user)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    requestedUserId = user.userId;
 
     const { tournamentId, overlayType = 'fullscreen' } = await request.json();
     if (!tournamentId) {
@@ -96,8 +115,9 @@ export async function POST(request: NextRequest) {
     }
     requestedOverlayType = overlayType;
 
-    const tournament = await TournamentModel.findById(tournamentId).lean();
-    if (!tournament) return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
+    const access = await assertTournamentAccess(user, tournamentId);
+    if (access.response) return access.response;
+    const tournament = access.tournament!;
     requestedTournamentName = (tournament as any).name;
 
     const overlayConfig = getAuctionOverlayConfig(overlayType);
@@ -106,10 +126,10 @@ export async function POST(request: NextRequest) {
     if (overlayPrice > 0) {
       try {
         deduction = await deductWalletBalance({
-          userId: payload.userId,
+          userId: user.userId,
           amount: overlayPrice,
           description: `${overlayConfig.label}: ${requestedTournamentName}`,
-          createdBy: payload.userId,
+          createdBy: user.userId,
         });
       } catch (error) {
         if (error instanceof InsufficientWalletBalanceError) {
@@ -138,7 +158,7 @@ export async function POST(request: NextRequest) {
       _id: sessionToken,
       tournamentId,
       label,
-      createdBy: payload.userId,
+      createdBy: user.userId,
       overlayType,
       paymentStatus: overlayPrice > 0 ? 'paid' : 'free',
       walletTransactionId: deduction?.transaction.id ?? null,

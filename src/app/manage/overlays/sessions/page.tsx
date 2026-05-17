@@ -341,7 +341,7 @@ function SessionsPage() {
 
 export default function OverlaySessionsPageWrapper() {
   return (
-    <ProtectedRoute allowedRoles={['Admin']}>
+    <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
       <SessionsPage />
     </ProtectedRoute>
   );

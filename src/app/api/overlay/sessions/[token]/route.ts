@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { OverlaySessionModel } from '@/models/OverlaySession';
-import { getTokenFromRequest, verifyToken } from '@/lib/auth';
-import { isAdmin } from '@/lib/permissions';
+import { canAccessTournament, canPerformAction } from '@/lib/permissions';
+import { getUserFromRequest } from '@/lib/request-helpers';
 import { triggerOverlayRevoke } from '@/lib/pusher-server';
 
-// DELETE /api/overlay/sessions/[token] — revoke a session (Admin only)
+// DELETE /api/overlay/sessions/[token] — revoke an accessible overlay session
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
@@ -13,13 +13,22 @@ export async function DELETE(
   try {
     await connectToDatabase();
 
-    const authToken = getTokenFromRequest(request);
-    if (!authToken) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const payload = verifyToken(authToken);
-    if (!payload) return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
-    if (!isAdmin(payload.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const user = await getUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!canPerformAction(user.role, 'delete', 'overlayConfig')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const { token: sessionToken } = await params;
+    const existingSession = await OverlaySessionModel.findOne({ _id: sessionToken, isActive: true }).lean();
+
+    if (!existingSession) {
+      return NextResponse.json({ error: 'Session not found or already revoked' }, { status: 404 });
+    }
+
+    if (!canAccessTournament(user.userId, user.role, { _id: (existingSession as any).tournamentId }, user.assignedTournaments)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const session = await OverlaySessionModel.findOneAndUpdate(
       { _id: sessionToken, isActive: true },
