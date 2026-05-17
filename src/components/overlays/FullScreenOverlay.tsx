@@ -9,7 +9,7 @@ import { FullScreenT1Content } from './theme1/FullScreenT1Content';
 export default function FullScreenOverlay({ tournamentId }: { tournamentId: string }) {
   return (
     <div className="w-screen h-screen overflow-hidden" style={{ background: 'var(--overlay-bg-fullscreen)' }}>
-      <OverlayWrapper tournamentId={tournamentId}>
+      <OverlayWrapper tournamentId={tournamentId} overlayType="fullscreen">
         {(data) => {
           if (data.tournament?.overlayTheme === 'theme2') {
             return <FullScreenT2Content {...data} />;

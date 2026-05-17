@@ -129,9 +129,11 @@ export async function GET(
   try {
     // Overlay token auth — allows OBS browser sources to read tournament data without JWT
     const overlayToken = getOverlayTokenFromRequest(request);
+    const expectedOverlayType = request.nextUrl.searchParams.get('overlayType');
+    const { id } = await params;
     const isOverlayAuth = overlayToken && (
       validateOverlayToken(overlayToken) ||
-      await validateOverlaySessionToken(overlayToken)
+      await validateOverlaySessionToken(overlayToken, expectedOverlayType, id)
     );
 
     // Authenticate user
@@ -140,7 +142,6 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = await params;
     const tournament = await tournamentDB.getById(id);
     if (!tournament) {
       return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });

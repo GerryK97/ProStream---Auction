@@ -9,7 +9,7 @@ import { CustomT1Content } from './theme1/CustomT1Content';
 export default function CustomOverlay({ tournamentId }: { tournamentId: string }) {
   return (
     <div className="w-screen h-screen overflow-hidden bg-transparent">
-      <OverlayWrapper tournamentId={tournamentId}>
+      <OverlayWrapper tournamentId={tournamentId} overlayType="custom">
         {(data) => {
           if (data.tournament?.overlayTheme === 'theme2') {
             return <CustomT2Content {...data} />;

@@ -16,9 +16,10 @@ export async function GET(request: NextRequest) {
 
     // Overlay token auth — allows OBS browser sources to read player data without JWT
     const overlayToken = getOverlayTokenFromRequest(request);
+    const expectedOverlayType = searchParams.get('overlayType');
     const isOverlayAuth = overlayToken && (
       validateOverlayToken(overlayToken) ||
-      await validateOverlaySessionToken(overlayToken)
+      await validateOverlaySessionToken(overlayToken, expectedOverlayType, tournamentId)
     );
 
     // Authenticate user

@@ -385,7 +385,7 @@ export default function TeamOwnerOverlay({ tournamentId }: { tournamentId: strin
     const searchParams = useSearchParams();
     const urlToken = searchParams.get('token') ?? undefined;
 
-    const { tournament, players, teams, isConnected, isRevoked } = usePusherAuction(tournamentId, undefined, urlToken);
+    const { tournament, players, teams, isConnected, isRevoked } = usePusherAuction(tournamentId, undefined, urlToken, 'team_owners');
 
     // Derive palette CSS vars — same logic as OverlayWrapper
     const theme = tournament?.overlayTheme || 'standard';

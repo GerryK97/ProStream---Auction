@@ -169,9 +169,9 @@ export default function WalletPage() {
 
           <div className="rounded-3xl border p-6" style={{ backgroundColor: 'var(--surface-card)', borderColor: 'var(--border-primary)' }}>
             <p className="text-sm font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--text-muted)' }}>Charge point enabled</p>
-            <p className="mt-3 text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Auction overlay sessions</p>
+            <p className="mt-3 text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Auction overlay outputs</p>
             <p className="mt-2 text-sm" style={{ color: 'var(--text-tertiary)' }}>
-              Pricing key: <span className="font-mono">auction_overlay_create</span>. If this key is missing or set to 0, creation remains free.
+              Pricing keys: <span className="font-mono">auction_overlay_custom</span>, <span className="font-mono">auction_overlay_fullscreen</span>, <span className="font-mono">auction_overlay_fullscreen2</span>, and <span className="font-mono">auction_overlay_team_owners</span>.
             </p>
           </div>
         </div>

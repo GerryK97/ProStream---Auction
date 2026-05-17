@@ -7,6 +7,7 @@ import { Tournament, AuctionState, Player, Team } from '@/types';
 import { getPusherClient } from '@/lib/pusher-client';
 import { OVERLAY_PALETTES } from '@/config/overlayPalettes';
 import type { OverlaySettingsEvent, WheelSpinEvent } from '@/types/pusher-events';
+import type { AuctionOverlayType } from '@/lib/overlays/auctionOverlayTypes';
 import '../../styles/animations.css';
 
 export interface OverlaySettings {
@@ -49,6 +50,7 @@ const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
 
 interface OverlayWrapperProps {
     tournamentId?: string;
+    overlayType: AuctionOverlayType;
     children: (data: {
         tournament: Tournament | null;
         auctionState: AuctionState;
@@ -64,6 +66,7 @@ interface OverlayWrapperProps {
 
 const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
     tournamentId,
+    overlayType,
     children
 }) => {
     const searchParams = useSearchParams();
@@ -128,7 +131,7 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
         teams,
         isConnected,
         isRevoked,
-    } = usePusherAuction(liveTournamentId, undefined, urlToken ?? undefined);
+    } = usePusherAuction(liveTournamentId, undefined, urlToken ?? undefined, overlayType);
 
     const currentPlayer = players.find(p => p._id === auctionState.currentPlayerId);
     const soldPlayers = players.filter(p => p.isSold);
