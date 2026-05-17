@@ -384,15 +384,22 @@ function TeamOwnerDashboard({ tournament, players, teams, isConnected, tournamen
 export default function TeamOwnerOverlay({ tournamentId }: { tournamentId: string }) {
     const searchParams = useSearchParams();
     const urlToken = searchParams.get('token') ?? undefined;
+    const requestedTheme = searchParams.get('theme');
+    const requestedPalette = searchParams.get('palette');
 
     const { tournament, players, teams, isConnected, isRevoked } = usePusherAuction(tournamentId, undefined, urlToken, 'team_owners');
 
-    // Derive palette CSS vars — same logic as OverlayWrapper
-    const theme = tournament?.overlayTheme || 'standard';
-    const paletteId = tournament?.overlayPalette || 'default';
+    // Derive palette CSS vars — same URL override/fallback contract as OverlayWrapper
+    const theme = requestedTheme && requestedTheme in OVERLAY_PALETTES
+        ? requestedTheme as keyof typeof OVERLAY_PALETTES
+        : tournament?.overlayTheme || 'standard';
+    const paletteId = requestedPalette || tournament?.overlayPalette || 'default';
     const activePalette = OVERLAY_PALETTES[theme]?.find(p => p.id === paletteId)
         || OVERLAY_PALETTES[theme]?.[0]
         || { cssVars: {} };
+    const effectiveTournament = tournament
+        ? { ...tournament, overlayTheme: theme as Tournament['overlayTheme'], overlayPalette: activePalette.id }
+        : tournament;
 
     if (isRevoked) {
         return (
@@ -417,12 +424,12 @@ export default function TeamOwnerOverlay({ tournamentId }: { tournamentId: strin
             {/* Tournament header bar */}
             <div className="px-4 py-3 border-b flex items-center gap-3"
                  style={{ borderColor: 'var(--overlay-border-accent-subtle)', background: 'rgba(0,0,0,0.3)' }}>
-                {tournament?.logoURL && (
-                    <img src={tournament.logoURL} alt={tournament.name} className="w-7 h-7 object-contain flex-shrink-0" />
+                {effectiveTournament?.logoURL && (
+                    <img src={effectiveTournament.logoURL} alt={effectiveTournament.name} className="w-7 h-7 object-contain flex-shrink-0" />
                 )}
                 <span className="text-sm font-bold uppercase tracking-widest truncate"
                       style={{ color: 'var(--overlay-color-primary)', fontFamily: "'Rajdhani', sans-serif" }}>
-                    {tournament?.name ?? 'Loading...'}
+                    {effectiveTournament?.name ?? 'Loading...'}
                 </span>
                 <a href="/" target="_blank" rel="noopener noreferrer"
                    className="ml-auto flex-shrink-0"
@@ -433,7 +440,7 @@ export default function TeamOwnerOverlay({ tournamentId }: { tournamentId: strin
             </div>
 
             <TeamOwnerDashboard
-                tournament={tournament}
+                tournament={effectiveTournament}
                 players={players}
                 teams={teams}
                 isConnected={isConnected}
