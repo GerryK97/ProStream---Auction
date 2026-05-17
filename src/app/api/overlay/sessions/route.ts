@@ -8,6 +8,7 @@ import {
   creditWalletBalance,
   deductWalletBalance,
   getPrice,
+  getPricesWithFallbacks,
   InsufficientWalletBalanceError,
 } from '@/lib/pg/wallet-queries';
 import {
@@ -17,14 +18,9 @@ import {
   getAuctionOverlayConfig,
   isAuctionOverlayType,
 } from '@/lib/overlays/auctionOverlayTypes';
-import { randomUUID } from 'crypto';
+import { DEFAULT_OVERLAY_PRICES, getOverlayPricingDefaultsByKey } from '@/lib/overlays/overlayPricing';
 
-const DEFAULT_OVERLAY_PRICES: Record<AuctionOverlayType, number> = {
-  custom: 500,
-  fullscreen: 1000,
-  fullscreen2: 1000,
-  team_owners: 300,
-};
+import { randomUUID } from 'crypto';
 
 function canGenerateOverlays(user: RequestUser) {
   return canPerformAction(user.role, 'create', 'overlayConfig');
@@ -42,14 +38,13 @@ async function assertTournamentAccess(user: RequestUser, tournamentId: string) {
 }
 
 async function getOverlayPriceMap() {
-  const entries = await Promise.all(
-    AUCTION_OVERLAY_TYPE_KEYS.map(async (type) => {
+  const pricesByKey = await getPricesWithFallbacks(getOverlayPricingDefaultsByKey());
+  return Object.fromEntries(
+    AUCTION_OVERLAY_TYPE_KEYS.map((type) => {
       const config = getAuctionOverlayConfig(type);
-      const price = await getPrice(config.pricingKey, DEFAULT_OVERLAY_PRICES[type]);
-      return [type, price] as const;
+      return [type, pricesByKey[config.pricingKey] ?? DEFAULT_OVERLAY_PRICES[type]] as const;
     })
-  );
-  return Object.fromEntries(entries) as Record<AuctionOverlayType, number>;
+  ) as Record<AuctionOverlayType, number>;
 }
 
 // GET /api/overlay/sessions?tournamentId=xxx — list sessions for accessible tournaments

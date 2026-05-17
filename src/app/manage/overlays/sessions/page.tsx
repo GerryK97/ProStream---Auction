@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { getAuthHeaders } from '@/lib/api-client';
 import { useTournamentContext } from '@/contexts/TournamentContext';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   AUCTION_OVERLAY_TYPES,
   AUCTION_OVERLAY_TYPE_KEYS,
@@ -53,6 +54,7 @@ function buildSessionUrl(session: OverlaySession) {
 
 function SessionsPage() {
   const { tournaments, loading: tournamentsLoading } = useTournamentContext();
+  const { user } = useAuth();
 
   const [sessions, setSessions] = useState<OverlaySession[]>([]);
   const [prices, setPrices] = useState<OverlayPrices>(DEFAULT_PRICES);
@@ -164,9 +166,16 @@ function SessionsPage() {
             Tournaments and auction control remain free. Wallet is charged only when an overlay output is generated.
           </p>
         </div>
-        <Link href="/wallet" className="rounded-full px-4 py-2 text-sm font-semibold" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}>
-          View Wallet
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          {user?.role === 'Admin' && (
+            <Link href="/manage/overlay-prices" className="rounded-full px-4 py-2 text-sm font-semibold" style={{ backgroundColor: 'var(--brand-primary)', color: '#fff' }}>
+              Manage Prices
+            </Link>
+          )}
+          <Link href="/wallet" className="rounded-full px-4 py-2 text-sm font-semibold" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}>
+            View Wallet
+          </Link>
+        </div>
       </div>
 
       <section className="rounded-2xl p-5" style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)' }}>

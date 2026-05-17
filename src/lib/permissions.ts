@@ -41,6 +41,7 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
 
   // Overlay session manager
   { path: '/manage/overlays/sessions', allowedRoles: ['Admin', 'Tournament'] },
+  { path: '/manage/overlay-prices', allowedRoles: ['Admin'] },
 
   // InvoiceIt routes
   { path: '/invoiceit', allowedRoles: ['Admin', 'Tournament'] },

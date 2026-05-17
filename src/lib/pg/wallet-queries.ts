@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 import { pgDb } from './db';
 import { pricingConfig, walletTransactions, wallets } from './users-schema';
 
@@ -93,6 +93,54 @@ export async function getPrice(key: string, fallbackValue = 0): Promise<number> 
     return fallbackValue >= 0 ? fallbackValue : 0;
   }
   return value;
+}
+
+export async function getPricesWithFallbacks(defaults: Record<string, number>): Promise<Record<string, number>> {
+  const keys = Object.keys(defaults);
+  if (keys.length === 0) return {};
+
+  const rows = await pgDb.query.pricingConfig.findMany({
+    where: inArray(pricingConfig.key, keys),
+  });
+  const storedValues = new Map(rows.map(row => [row.key, row.value]));
+
+  return Object.fromEntries(
+    keys.map(key => {
+      const fallbackValue = defaults[key] ?? 0;
+      const value = storedValues.get(key) ?? fallbackValue;
+      const safeValue = Number.isInteger(value) && value >= 0
+        ? value
+        : (fallbackValue >= 0 ? fallbackValue : 0);
+      return [key, safeValue];
+    })
+  );
+}
+
+export async function upsertPrice(key: string, value: number) {
+  if (!key.trim()) throw new Error('Pricing key is required');
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error('Pricing value must be a non-negative integer');
+  }
+
+  const [row] = await pgDb
+    .insert(pricingConfig)
+    .values({ key, value, updatedAt: new Date() })
+    .onConflictDoUpdate({
+      target: pricingConfig.key,
+      set: { value, updatedAt: new Date() },
+    })
+    .returning();
+
+  return row;
+}
+
+export async function upsertPrices(values: Record<string, number>) {
+  const entries = Object.entries(values);
+  const result = [];
+  for (const [key, value] of entries) {
+    result.push(await upsertPrice(key, value));
+  }
+  return result;
 }
 
 export async function deductWalletBalance({
