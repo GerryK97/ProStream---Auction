@@ -6,6 +6,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { getAuthHeaders } from '@/lib/api-client';
 import { useTournamentContext } from '@/contexts/TournamentContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { OVERLAY_PALETTES } from '@/config/overlayPalettes';
 import {
   AUCTION_OVERLAY_TYPES,
   AUCTION_OVERLAY_TYPE_KEYS,
@@ -28,6 +29,7 @@ interface OverlaySession {
 }
 
 type OverlayPrices = Record<AuctionOverlayType, number>;
+type OverlayThemeId = keyof typeof OVERLAY_PALETTES;
 
 const DEFAULT_PRICES: OverlayPrices = {
   custom: 500,
@@ -35,6 +37,13 @@ const DEFAULT_PRICES: OverlayPrices = {
   fullscreen2: 1000,
   team_owners: 300,
 };
+
+const THEME_OPTIONS: Array<{ id: OverlayThemeId; label: string; description: string; available: boolean }> = [
+  { id: 'standard', label: 'Theme 1 Classic', description: 'Broadcast-safe classic auction layout.', available: true },
+  { id: 'theme2', label: 'Theme 2 Palette System', description: 'Palette-driven overlay design with stronger visual identity.', available: true },
+  { id: 'premium', label: 'Premium', description: 'Coming soon.', available: false },
+  { id: 'neon', label: 'Neon', description: 'Coming soon.', available: false },
+];
 
 function formatAmount(amount: number) {
   return `LKR ${amount.toLocaleString('en-LK')}`;
@@ -48,10 +57,6 @@ function sessionOverlayType(session: OverlaySession): AuctionOverlayType {
   return session.overlayType && session.overlayType in AUCTION_OVERLAY_TYPES ? session.overlayType : 'fullscreen';
 }
 
-function buildSessionUrl(session: OverlaySession) {
-  return buildAuctionOverlayUrl(getOrigin(), session.tournamentId, sessionOverlayType(session), session._id);
-}
-
 function SessionsPage() {
   const { tournaments, loading: tournamentsLoading } = useTournamentContext();
   const { user } = useAuth();
@@ -62,7 +67,10 @@ function SessionsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [createTournamentId, setCreateTournamentId] = useState('');
-  const [creatingType, setCreatingType] = useState<AuctionOverlayType | null>(null);
+  const [selectedType, setSelectedType] = useState<AuctionOverlayType>('fullscreen');
+  const [selectedTheme, setSelectedTheme] = useState<OverlayThemeId>('standard');
+  const [selectedPalette, setSelectedPalette] = useState('default');
+  const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
   const [justCreated, setJustCreated] = useState<OverlaySession | null>(null);
@@ -93,16 +101,42 @@ function SessionsPage() {
     fetchSessions();
   }, [fetchSessions]);
 
-  const handleCreate = async (overlayType: AuctionOverlayType) => {
+  const availablePalettes = OVERLAY_PALETTES[selectedTheme] || [];
+  const selectedPaletteConfig = availablePalettes.find(p => p.id === selectedPalette) || availablePalettes[0];
+  const selectedTypeConfig = getAuctionOverlayConfig(selectedType);
+  const previewUrl = createTournamentId
+    ? buildAuctionOverlayUrl(getOrigin(), createTournamentId, selectedType, undefined, {
+        theme: selectedTheme,
+        palette: selectedPaletteConfig?.id || selectedPalette,
+        debug: true,
+      })
+    : '';
+
+  useEffect(() => {
+    const palettes = OVERLAY_PALETTES[selectedTheme] || [];
+    if (!palettes.some(p => p.id === selectedPalette)) {
+      setSelectedPalette(palettes[0]?.id || 'default');
+    }
+  }, [selectedTheme, selectedPalette]);
+
+  const buildSessionUrl = (session: OverlaySession) => buildAuctionOverlayUrl(
+    getOrigin(),
+    session.tournamentId,
+    sessionOverlayType(session),
+    session._id,
+    { theme: selectedTheme, palette: selectedPaletteConfig?.id || selectedPalette }
+  );
+
+  const handleCreate = async () => {
     if (!createTournamentId) return;
-    setCreatingType(overlayType);
+    setCreating(true);
     setCreateError(null);
     setJustCreated(null);
     try {
       const res = await fetch('/api/overlay/sessions', {
         method: 'POST',
         headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tournamentId: createTournamentId, overlayType }),
+        body: JSON.stringify({ tournamentId: createTournamentId, overlayType: selectedType }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -114,11 +148,16 @@ function SessionsPage() {
         return;
       }
       setJustCreated(data.session);
+      const url = buildAuctionOverlayUrl(getOrigin(), data.session.tournamentId, sessionOverlayType(data.session), data.session._id, {
+        theme: selectedTheme,
+        palette: selectedPaletteConfig?.id || selectedPalette,
+      });
+      await copyToClipboard(url);
       await fetchSessions();
     } catch {
       setCreateError('An error occurred while creating the overlay. If wallet was deducted, the server will attempt an automatic refund.');
     } finally {
-      setCreatingType(null);
+      setCreating(false);
     }
   };
 
@@ -163,27 +202,23 @@ function SessionsPage() {
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>OBS Sessions</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
-            Tournaments and auction control remain free. Wallet is charged only when an overlay output is generated.
+            Generate paid overlay links with a selected layout, theme, and color palette.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           {user?.role === 'Admin' && (
-            <Link href="/manage/overlay-prices" className="rounded-full px-4 py-2 text-sm font-semibold" style={{ backgroundColor: 'var(--brand-primary)', color: '#fff' }}>
-              Manage Prices
-            </Link>
+            <Link href="/manage/overlay-prices" className="rounded-full px-4 py-2 text-sm font-semibold" style={{ backgroundColor: 'var(--brand-primary)', color: '#fff' }}>Manage Prices</Link>
           )}
-          <Link href="/wallet" className="rounded-full px-4 py-2 text-sm font-semibold" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}>
-            View Wallet
-          </Link>
+          <Link href="/wallet" className="rounded-full px-4 py-2 text-sm font-semibold" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}>View Wallet</Link>
         </div>
       </div>
 
       <section className="rounded-2xl p-5" style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)' }}>
-        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Generate Paid Overlay</h2>
+            <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Generate Overlay Link</h2>
             <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-              Choose a tournament, then generate exactly one paid overlay output. Each generated URL has its own price and wallet transaction.
+              Select the tournament, output layout, theme, and palette. Preview first, then generate and copy the OBS URL.
             </p>
           </div>
           {tournamentsLoading ? (
@@ -196,74 +231,156 @@ function SessionsPage() {
               style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
             >
               <option value="">— Select tournament —</option>
-              {tournaments.map(t => (
-                <option key={t._id} value={t._id}>{t.name} ({t.year})</option>
-              ))}
+              {tournaments.map(t => <option key={t._id} value={t._id}>{t.name} ({t.year})</option>)}
             </select>
           )}
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {AUCTION_OVERLAY_TYPE_KEYS.map((type) => {
-            const config = getAuctionOverlayConfig(type);
-            const creating = creatingType === type;
-            return (
-              <div key={type} className="rounded-2xl p-4" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{config.label}</p>
-                    <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>{config.useCase}</p>
-                  </div>
-                  <span className="rounded-full px-2 py-1 text-[10px] font-bold" style={{ backgroundColor: `${config.accent}22`, color: config.accent }}>
-                    {formatAmount(prices[type] ?? 0)}
-                  </span>
-                </div>
-                <p className="mt-3 text-[11px] font-mono" style={{ color: 'var(--text-muted)' }}>{config.pricingKey}</p>
-                <button
-                  onClick={() => handleCreate(type)}
-                  disabled={!!creatingType || !createTournamentId}
-                  className="mt-4 w-full rounded-lg px-3 py-2 text-xs font-bold disabled:opacity-50"
-                  style={{ backgroundColor: config.accent, color: '#fff' }}
-                >
-                  {creating ? 'Generating…' : `Generate ${config.shortLabel}`}
-                </button>
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+          <div className="space-y-5">
+            <div>
+              <h3 className="mb-2 text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>1. Overlay layout</h3>
+              <div className="grid gap-3 md:grid-cols-2">
+                {AUCTION_OVERLAY_TYPE_KEYS.map((type) => {
+                  const config = getAuctionOverlayConfig(type);
+                  const selected = selectedType === type;
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setSelectedType(type)}
+                      className="rounded-2xl p-4 text-left transition"
+                      style={{ backgroundColor: selected ? `${config.accent}18` : 'var(--surface-elevated)', border: `1px solid ${selected ? config.accent : 'var(--border-primary)'}` }}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{config.label}</p>
+                          <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>{config.useCase}</p>
+                        </div>
+                        <span className="rounded-full px-2 py-1 text-[10px] font-bold" style={{ backgroundColor: `${config.accent}22`, color: config.accent }}>{formatAmount(prices[type] ?? 0)}</span>
+                      </div>
+                      <p className="mt-3 text-[11px] font-mono" style={{ color: 'var(--text-muted)' }}>/overlays/:id{config.path || ''}</p>
+                    </button>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
-        {createError && (
-          <div className="mt-4 rounded-lg p-3 text-sm" style={{ backgroundColor: '#7f1d1d22', color: '#fca5a5', border: '1px solid #7f1d1d' }}>
-            {createError} <Link href="/wallet" className="font-semibold underline">Open wallet</Link>
+            </div>
+
+            <div>
+              <h3 className="mb-2 text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>2. Theme</h3>
+              <div className="grid gap-3 md:grid-cols-2">
+                {THEME_OPTIONS.map(theme => {
+                  const selected = selectedTheme === theme.id;
+                  return (
+                    <button
+                      key={theme.id}
+                      type="button"
+                      disabled={!theme.available}
+                      onClick={() => theme.available && setSelectedTheme(theme.id)}
+                      className="rounded-2xl p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50"
+                      style={{ backgroundColor: selected ? 'rgba(79,70,229,0.16)' : 'var(--surface-elevated)', border: `1px solid ${selected ? 'var(--brand-primary)' : 'var(--border-primary)'}` }}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{theme.label}</p>
+                        {!theme.available && <span className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>Coming soon</span>}
+                      </div>
+                      <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>{theme.description}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="mb-2 text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>3. Color palette</h3>
+              <div className="grid gap-3 md:grid-cols-2">
+                {availablePalettes.length === 0 ? (
+                  <div className="rounded-2xl p-4 text-sm" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-tertiary)' }}>No palettes available for this theme yet.</div>
+                ) : availablePalettes.map(palette => {
+                  const selected = selectedPalette === palette.id;
+                  const vars = palette.cssVars as Record<string, string>;
+                  const swatches = ['--overlay-color-primary', '--overlay-bg-panel', '--overlay-text-bright', '--overlay-color-success']
+                    .map(key => vars[key])
+                    .filter(Boolean);
+                  return (
+                    <button
+                      key={palette.id}
+                      type="button"
+                      onClick={() => setSelectedPalette(palette.id)}
+                      className="rounded-2xl p-4 text-left transition"
+                      style={{ backgroundColor: selected ? 'rgba(79,70,229,0.16)' : 'var(--surface-elevated)', border: `1px solid ${selected ? 'var(--brand-primary)' : 'var(--border-primary)'}` }}
+                    >
+                      <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{palette.name}</p>
+                      <div className="mt-3 flex gap-1.5">
+                        {swatches.slice(0, 4).map((color, index) => <span key={`${palette.id}-${index}`} className="h-6 w-8 rounded" style={{ background: color, border: '1px solid var(--border-primary)' }} />)}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-        )}
+
+          <aside className="space-y-4">
+            <div className="rounded-2xl p-4" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Live preview</p>
+                  <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{selectedTypeConfig.label} · {selectedPaletteConfig?.name || selectedPalette}</p>
+                </div>
+                {previewUrl && <a href={previewUrl} target="_blank" className="text-xs font-semibold underline" style={{ color: 'var(--brand-primary)' }}>Open</a>}
+              </div>
+              <div className="aspect-video overflow-hidden rounded-xl" style={{ backgroundColor: '#020617', border: '1px solid var(--border-primary)' }}>
+                {previewUrl ? (
+                  <iframe title="Overlay preview" src={previewUrl} className="h-full w-full" />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-xs" style={{ color: 'var(--text-tertiary)' }}>Select a tournament to preview</div>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl p-4" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}>
+              <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Selected link settings</p>
+              <dl className="mt-3 space-y-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                <div className="flex justify-between gap-3"><dt>Layout</dt><dd>{selectedTypeConfig.label}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Theme</dt><dd>{THEME_OPTIONS.find(t => t.id === selectedTheme)?.label}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Palette</dt><dd>{selectedPaletteConfig?.name || selectedPalette}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Charge</dt><dd>{formatAmount(prices[selectedType] ?? 0)}</dd></div>
+              </dl>
+              <button
+                onClick={handleCreate}
+                disabled={creating || !createTournamentId || availablePalettes.length === 0}
+                className="mt-4 w-full rounded-lg px-3 py-2 text-sm font-bold disabled:opacity-50"
+                style={{ backgroundColor: selectedTypeConfig.accent, color: '#fff' }}
+              >
+                {creating ? 'Generating…' : 'Generate & Copy Link'}
+              </button>
+            </div>
+          </aside>
+        </div>
+
+        {createError && <div className="mt-4 rounded-lg p-3 text-sm" style={{ backgroundColor: '#7f1d1d22', color: '#fca5a5', border: '1px solid #7f1d1d' }}>{createError} <Link href="/wallet" className="font-semibold underline">Open wallet</Link></div>}
 
         {justCreated && (
           <div className="mt-4 rounded-lg p-4 space-y-3" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--brand-primary)' }}>
             <p className="text-sm font-semibold" style={{ color: 'var(--brand-primary)' }}>
               {getAuctionOverlayConfig(sessionOverlayType(justCreated)).label} generated for &quot;{justCreated.label}&quot;
             </p>
+            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Theme: {selectedTheme} · Palette: {selectedPaletteConfig?.name || selectedPalette} · Charged: {formatAmount(justCreated.priceCharged ?? 0)} · Payment: {justCreated.paymentStatus ?? 'free'}</p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 text-xs truncate rounded px-2 py-1 font-mono" style={{ backgroundColor: 'var(--surface-card)', color: 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}>
-                {buildSessionUrl(justCreated)}
-              </code>
-              <button
-                onClick={() => copyToClipboard(buildSessionUrl(justCreated))}
-                className="shrink-0 px-3 py-1 rounded text-xs font-medium transition-colors"
-                style={{ backgroundColor: copiedUrl === buildSessionUrl(justCreated) ? '#16a34a' : 'var(--surface-card)', color: copiedUrl === buildSessionUrl(justCreated) ? '#fff' : 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}
-              >
-                {copiedUrl === buildSessionUrl(justCreated) ? 'Copied!' : 'Copy URL'}
-              </button>
+              <code className="flex-1 text-xs truncate rounded px-2 py-1 font-mono" style={{ backgroundColor: 'var(--surface-card)', color: 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}>{buildSessionUrl(justCreated)}</code>
+              <button onClick={() => copyToClipboard(buildSessionUrl(justCreated))} className="shrink-0 px-3 py-1 rounded text-xs font-medium" style={{ backgroundColor: copiedUrl === buildSessionUrl(justCreated) ? '#16a34a' : 'var(--surface-card)', color: copiedUrl === buildSessionUrl(justCreated) ? '#fff' : 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}>{copiedUrl === buildSessionUrl(justCreated) ? 'Copied!' : 'Copy URL'}</button>
             </div>
-            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-              Charged: {formatAmount(justCreated.priceCharged ?? 0)} · Payment: {justCreated.paymentStatus ?? 'free'}
-            </p>
           </div>
         )}
       </section>
 
       <section className="rounded-2xl" style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)' }}>
         <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid var(--border-primary)' }}>
-          <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Active Overlay Outputs</h2>
+          <div>
+            <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Active Overlay Outputs</h2>
+            <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>Copy actions use the currently selected theme and palette above.</p>
+          </div>
           <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: '#16a34a22', color: '#4ade80' }}>{activeSessions.length} active</span>
         </div>
 
@@ -290,24 +407,14 @@ function SessionsPage() {
                         <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ backgroundColor: `${config.accent}22`, color: config.accent }}>{config.shortLabel}</span>
                         <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ backgroundColor: session.paymentStatus === 'paid' ? '#16a34a22' : 'var(--surface-elevated)', color: session.paymentStatus === 'paid' ? '#4ade80' : 'var(--text-muted)' }}>{session.paymentStatus ?? 'free'}</span>
                       </div>
-                      <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-                        {tournament ? `${tournament.name} (${tournament.year})` : 'Unknown tournament'} · Created {formatDate(session.createdAt)} · Charged {formatAmount(session.priceCharged ?? 0)}
-                      </p>
+                      <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>{tournament ? `${tournament.name} (${tournament.year})` : 'Unknown tournament'} · Created {formatDate(session.createdAt)} · Charged {formatAmount(session.priceCharged ?? 0)}</p>
                       <p className="text-xs mt-1 font-mono" style={{ color: 'var(--text-tertiary)' }}>Token: {session._id.slice(0, 8)}…</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                      <button
-                        onClick={() => copyToClipboard(url)}
-                        className="px-3 py-1.5 rounded text-xs font-medium transition-colors"
-                        style={{ backgroundColor: copied ? '#16a34a' : 'rgba(79,70,229,0.12)', color: copied ? '#fff' : 'var(--brand-primary)', border: '1px solid var(--brand-primary)' }}
-                      >
-                        {copied ? '✓ Copied URL' : '⧉ Copy URL'}
-                      </button>
+                      <button onClick={() => copyToClipboard(url)} className="px-3 py-1.5 rounded text-xs font-medium transition-colors" style={{ backgroundColor: copied ? '#16a34a' : 'rgba(79,70,229,0.12)', color: copied ? '#fff' : 'var(--brand-primary)', border: '1px solid var(--brand-primary)' }}>{copied ? '✓ Copied URL' : '⧉ Copy current style URL'}</button>
                       {confirmingRevoke === session._id ? (
                         <div className="flex items-center gap-1">
-                          <button onClick={() => handleRevoke(session._id)} disabled={revoking === session._id} className="px-3 py-1.5 rounded text-xs font-semibold disabled:opacity-50" style={{ backgroundColor: '#991b1b', color: '#fca5a5', border: '1px solid #b91c1c' }}>
-                            {revoking === session._id ? 'Revoking…' : 'Yes, Revoke'}
-                          </button>
+                          <button onClick={() => handleRevoke(session._id)} disabled={revoking === session._id} className="px-3 py-1.5 rounded text-xs font-semibold disabled:opacity-50" style={{ backgroundColor: '#991b1b', color: '#fca5a5', border: '1px solid #b91c1c' }}>{revoking === session._id ? 'Revoking…' : 'Yes, Revoke'}</button>
                           <button onClick={() => setConfirmingRevoke(null)} className="px-2 py-1.5 rounded text-xs" style={{ color: 'var(--text-tertiary)', border: '1px solid var(--border-primary)' }}>Cancel</button>
                         </div>
                       ) : (
@@ -331,15 +438,7 @@ function SessionsPage() {
           </button>
           {showRevoked && (
             <ul className="divide-y" style={{ borderColor: 'var(--border-primary)', borderTop: '1px solid var(--border-primary)' }}>
-              {revokedSessions.map(session => (
-                <li key={session._id} className="p-4 flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm line-through" style={{ color: 'var(--text-tertiary)' }}>{session.label}</p>
-                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>Created {formatDate(session.createdAt)}{session.revokedAt && ` · Revoked ${formatDate(session.revokedAt)}`}</p>
-                  </div>
-                  <span className="text-xs px-2 py-0.5 rounded shrink-0" style={{ backgroundColor: '#7f1d1d22', color: '#f87171' }}>Revoked</span>
-                </li>
-              ))}
+              {revokedSessions.map(session => <li key={session._id} className="p-4 flex items-start justify-between gap-4"><div><p className="text-sm line-through" style={{ color: 'var(--text-tertiary)' }}>{session.label}</p><p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>Created {formatDate(session.createdAt)}{session.revokedAt && ` · Revoked ${formatDate(session.revokedAt)}`}</p></div><span className="text-xs px-2 py-0.5 rounded shrink-0" style={{ backgroundColor: '#7f1d1d22', color: '#f87171' }}>Revoked</span></li>)}
             </ul>
           )}
         </section>

@@ -49,7 +49,25 @@ export function getAuctionOverlayConfig(type: AuctionOverlayType) {
   return AUCTION_OVERLAY_TYPES[type];
 }
 
-export function buildAuctionOverlayUrl(origin: string, tournamentId: string, overlayType: AuctionOverlayType, token: string) {
+export interface AuctionOverlayUrlOptions {
+  theme?: string;
+  palette?: string;
+  debug?: boolean;
+}
+
+export function buildAuctionOverlayUrl(
+  origin: string,
+  tournamentId: string,
+  overlayType: AuctionOverlayType,
+  token?: string,
+  options: AuctionOverlayUrlOptions = {}
+) {
   const config = getAuctionOverlayConfig(overlayType);
-  return `${origin}/overlays/${tournamentId}${config.path}?token=${token}`;
+  const params = new URLSearchParams();
+  if (token) params.set('token', token);
+  if (options.theme) params.set('theme', options.theme);
+  if (options.palette) params.set('palette', options.palette);
+  if (options.debug) params.set('debug', 'true');
+  const query = params.toString();
+  return `${origin}/overlays/${tournamentId}${config.path}${query ? `?${query}` : ''}`;
 }

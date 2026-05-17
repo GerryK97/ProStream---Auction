@@ -6,6 +6,8 @@ Overlay themes are output-facing design systems for OBS/browser-source rendering
 ## Theme Architecture
 - Overlay palette definitions live in `src/config/overlayPalettes.ts`.
 - `OverlayWrapper` selects `tournament.overlayTheme` and `tournament.overlayPalette`, then applies the selected CSS variables to the overlay subtree.
+- Overlay links may include `theme` and `palette` query parameters for generated OBS URLs and management-page preview URLs. These parameters override the tournament defaults for that browser source only and do not mutate tournament settings.
+- Overlay URL generation is centralized in `src/lib/overlays/auctionOverlayTypes.ts`; management screens should use that helper instead of duplicating route/path logic.
 - Theme 1 components use the shared `--overlay-*` palette surface.
 - Theme 2 components use the `--t2-*` namespace and compatibility `--overlay-*` aliases where needed.
 
@@ -28,6 +30,7 @@ Overlay themes may define:
 - Overlay routes should render without app shell navigation or sidebar.
 - Overlay components must tolerate live auction state changes, missing player/team images, and session revocation/error states.
 - Theme changes should preserve existing overlay data flow and layout wiring unless the task explicitly changes behavior.
+- Invalid or unavailable `theme`/`palette` query values should fall back to the configured tournament theme, default palette, or first available palette without crashing the overlay route.
 
 ## Adding Or Refining Themes
 - Define palette tokens first.
