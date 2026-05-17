@@ -33,12 +33,6 @@ const sortTournamentsByStatus = (items: TournamentWithCreator[]) => {
   });
 };
 
-const DEFAULT_BID_INCREMENTS: BidIncrementRange[] = [
-  { upTo: 50000, increment: 5000 },
-  { upTo: 100000, increment: 10000 },
-  { upTo: 200000, increment: 25000 },
-];
-
 const EMPTY_FORM = {
   name: '',
   year: new Date().getFullYear(),
@@ -82,10 +76,6 @@ function TournamentsManagePage() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [pendingAccessNotice, setPendingAccessNotice] = useState(false);
-  const [auctionPriceSettings, setAuctionPriceSettings] = useState({
-    basePricePerPlayer: EMPTY_FORM.basePricePerPlayer,
-    bidIncrements: DEFAULT_BID_INCREMENTS,
-  });
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
@@ -115,23 +105,6 @@ function TournamentsManagePage() {
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  useEffect(() => {
-    const fetchAuctionPriceSettings = async () => {
-      try {
-        const res = await fetch('/api/admin/auction-price-settings', { headers: getAuthHeaders() });
-        if (!res.ok) return;
-        const data = await res.json();
-        setAuctionPriceSettings({
-          basePricePerPlayer: data.basePricePerPlayer ?? EMPTY_FORM.basePricePerPlayer,
-          bidIncrements: data.bidIncrements?.length ? data.bidIncrements : DEFAULT_BID_INCREMENTS,
-        });
-      } catch {
-        // Keep built-in defaults if settings are unavailable.
-      }
-    };
-    fetchAuctionPriceSettings();
   }, []);
 
   useEffect(() => {
@@ -168,8 +141,6 @@ function TournamentsManagePage() {
     setEditingTournament(null);
     setForm({
       ...EMPTY_FORM,
-      basePricePerPlayer: auctionPriceSettings.basePricePerPlayer,
-      bidIncrements: auctionPriceSettings.bidIncrements,
       wheelCenterImageURL: currentUser?.logoURL || '',
     });
     setCreateError(null);
@@ -315,14 +286,6 @@ function TournamentsManagePage() {
             <p className="text-gray-400 text-sm mt-1">Manage your leagues and series</p>
           </div>
           <div className="flex items-center gap-3">
-            {currentUser?.role === 'Admin' && (
-              <button
-                onClick={() => router.push('/manage/auction-price-settings')}
-                className="px-4 py-2 bg-orange-700 hover:bg-orange-600 text-white rounded font-medium"
-              >
-                Price Settings
-              </button>
-            )}
             <button
               onClick={() => {
                 setShowCreate(true);
@@ -330,8 +293,6 @@ function TournamentsManagePage() {
                 setEditingTournament(null);
                 setForm({
                   ...EMPTY_FORM,
-                  basePricePerPlayer: auctionPriceSettings.basePricePerPlayer,
-                  bidIncrements: auctionPriceSettings.bidIncrements,
                   wheelCenterImageURL: currentUser?.logoURL || '',
                 });
               }}
@@ -685,7 +646,11 @@ function TournamentsManagePage() {
                           ...f,
                           biddingMode: 'team',
                           // Set default brackets if none yet
-                          bidIncrements: f.bidIncrements.length > 0 ? f.bidIncrements : auctionPriceSettings.bidIncrements,
+                          bidIncrements: f.bidIncrements.length > 0 ? f.bidIncrements : [
+                            { upTo: 50000,  increment: 5000  },
+                            { upTo: 100000, increment: 10000 },
+                            { upTo: 200000, increment: 25000 },
+                          ],
                         }))}
                         className="mt-0.5"
                       />
