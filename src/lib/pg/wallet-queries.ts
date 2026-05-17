@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, gte, sql } from 'drizzle-orm';
 import { pgDb } from './db';
 import { pricingConfig, walletTransactions, wallets } from './users-schema';
 
@@ -42,12 +42,26 @@ function toWalletResponse(wallet: typeof wallets.$inferSelect): WalletResponse {
   };
 }
 
-export async function ensureWalletForUser(userId: string): Promise<WalletResponse> {
-  const existing = await pgDb.query.wallets.findFirst({ where: eq(wallets.userId, userId) });
-  if (existing) return toWalletResponse(existing);
+async function ensureWalletRow(userId: string, tx: typeof pgDb = pgDb) {
+  const existing = await tx.query.wallets.findFirst({ where: eq(wallets.userId, userId) });
+  if (existing) return existing;
 
-  const [created] = await pgDb.insert(wallets).values({ userId, balance: 0 }).returning();
-  return toWalletResponse(created);
+  const [created] = await tx
+    .insert(wallets)
+    .values({ userId, balance: 0 })
+    .onConflictDoNothing({ target: wallets.userId })
+    .returning();
+
+  if (created) return created;
+
+  const afterConflict = await tx.query.wallets.findFirst({ where: eq(wallets.userId, userId) });
+  if (!afterConflict) throw new Error('Failed to ensure wallet');
+  return afterConflict;
+}
+
+export async function ensureWalletForUser(userId: string): Promise<WalletResponse> {
+  const wallet = await ensureWalletRow(userId);
+  return toWalletResponse(wallet);
 }
 
 export async function getWalletWithRecentTransactions(userId: string, limit = 10) {
@@ -73,7 +87,12 @@ export async function getWalletTransactions(userId: string) {
 
 export async function getPrice(key: string, fallbackValue = 0): Promise<number> {
   const row = await pgDb.query.pricingConfig.findFirst({ where: eq(pricingConfig.key, key) });
-  return row?.value ?? fallbackValue;
+  const value = row?.value ?? fallbackValue;
+  if (!Number.isInteger(value) || value < 0) {
+    console.error(`[wallet] Invalid pricing value for ${key}:`, value);
+    return fallbackValue >= 0 ? fallbackValue : 0;
+  }
+  return value;
 }
 
 export async function deductWalletBalance({
@@ -94,24 +113,33 @@ export async function deductWalletBalance({
   }
 
   return pgDb.transaction(async (tx) => {
-    let wallet = await tx.query.wallets.findFirst({ where: eq(wallets.userId, userId) });
-    if (!wallet) {
-      const [created] = await tx.insert(wallets).values({ userId, balance: 0 }).returning();
-      wallet = created;
+    await tx
+      .insert(wallets)
+      .values({ userId, balance: 0 })
+      .onConflictDoNothing({ target: wallets.userId });
+
+    const [updatedWallet] = await tx
+      .update(wallets)
+      .set({
+        balance: sql`${wallets.balance} - ${amount}`,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(wallets.userId, userId), gte(wallets.balance, amount)))
+      .returning();
+
+    if (!updatedWallet) {
+      const currentWallet = await tx.query.wallets.findFirst({ where: eq(wallets.userId, userId) });
+      throw new InsufficientWalletBalanceError(currentWallet?.balance ?? 0, amount);
     }
 
-    if (wallet.balance < amount) {
-      throw new InsufficientWalletBalanceError(wallet.balance, amount);
-    }
-
-    const balanceAfter = wallet.balance - amount;
-    await tx.update(wallets).set({ balance: balanceAfter, updatedAt: new Date() }).where(eq(wallets.id, wallet.id));
+    const balanceAfter = updatedWallet.balance;
+    const balanceBefore = balanceAfter + amount;
 
     const [transaction] = await tx.insert(walletTransactions).values({
-      walletId: wallet.id,
+      walletId: updatedWallet.id,
       type: 'deduction',
       amount: -amount,
-      balanceBefore: wallet.balance,
+      balanceBefore,
       balanceAfter,
       description,
       referenceId: referenceId ?? null,
@@ -119,7 +147,7 @@ export async function deductWalletBalance({
     }).returning();
 
     return {
-      wallet: toWalletResponse({ ...wallet, balance: balanceAfter, updatedAt: new Date() }),
+      wallet: toWalletResponse(updatedWallet),
       transaction,
     };
   });
@@ -143,20 +171,30 @@ export async function creditWalletBalance({
   }
 
   return pgDb.transaction(async (tx) => {
-    let wallet = await tx.query.wallets.findFirst({ where: eq(wallets.userId, userId) });
-    if (!wallet) {
-      const [created] = await tx.insert(wallets).values({ userId, balance: 0 }).returning();
-      wallet = created;
-    }
+    await tx
+      .insert(wallets)
+      .values({ userId, balance: 0 })
+      .onConflictDoNothing({ target: wallets.userId });
 
-    const balanceAfter = wallet.balance + amount;
-    await tx.update(wallets).set({ balance: balanceAfter, updatedAt: new Date() }).where(eq(wallets.id, wallet.id));
+    const [updatedWallet] = await tx
+      .update(wallets)
+      .set({
+        balance: sql`${wallets.balance} + ${amount}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(wallets.userId, userId))
+      .returning();
+
+    if (!updatedWallet) throw new Error('Failed to credit wallet');
+
+    const balanceAfter = updatedWallet.balance;
+    const balanceBefore = balanceAfter - amount;
 
     const [transaction] = await tx.insert(walletTransactions).values({
-      walletId: wallet.id,
+      walletId: updatedWallet.id,
       type: 'topup',
       amount,
-      balanceBefore: wallet.balance,
+      balanceBefore,
       balanceAfter,
       description,
       referenceId: referenceId ?? null,
@@ -164,7 +202,7 @@ export async function creditWalletBalance({
     }).returning();
 
     return {
-      wallet: toWalletResponse({ ...wallet, balance: balanceAfter, updatedAt: new Date() }),
+      wallet: toWalletResponse(updatedWallet),
       transaction,
     };
   });

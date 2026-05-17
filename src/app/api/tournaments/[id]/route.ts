@@ -3,7 +3,7 @@ import { tournamentDB } from '@/lib/db-mongodb';
 import { PlayerClassConfig } from '@/types';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction, canAccessTournament } from '@/lib/permissions';
-import { validateOverlayToken, validateOverlaySessionToken, getOverlayTokenFromRequest } from '@/lib/overlay-auth';
+import { validateOverlaySessionToken, getOverlayTokenFromRequest } from '@/lib/overlay-auth';
 import { connectToDatabase } from '@/lib/mongodb';
 import { PlayerModel } from '@/models/Player';
 import { TeamModel } from '@/models/Team';
@@ -132,7 +132,6 @@ export async function GET(
     const expectedOverlayType = request.nextUrl.searchParams.get('overlayType');
     const { id } = await params;
     const isOverlayAuth = overlayToken && (
-      validateOverlayToken(overlayToken) ||
       await validateOverlaySessionToken(overlayToken, expectedOverlayType, id)
     );
 
