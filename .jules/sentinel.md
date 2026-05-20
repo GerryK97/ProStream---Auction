@@ -1,0 +1,4 @@
+## 2024-05-20 - MONGODB_URI Password Disclosure Risk via Partial String Masking
+**Vulnerability:** The public unauthenticated `/debug` endpoint was outputting `process.env.MONGODB_URI.substring(0, 60)`, intending to show a truncated preview of the string. However, since MongoDB URIs take the format `mongodb+srv://<username>:<password>@<cluster>.mongodb.net/...`, the first 60 characters usually include the entire username and plaintext password.
+**Learning:** Developers sometimes assume taking the beginning of a string is safe for logging, failing to consider the internal structure of the secret (like connection URIs) where the most sensitive data is at the very beginning.
+**Prevention:** Never use substring on connection strings or URLs to mask them. Either log a boolean (presence check) or use a dedicated parser to extract non-sensitive parts (like the host) if partial logging is truly needed.
