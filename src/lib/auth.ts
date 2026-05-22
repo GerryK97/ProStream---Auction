@@ -2,8 +2,21 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { IUser } from '@/models/User';
 import { NextRequest } from 'next/server';
+import crypto from 'crypto';
 
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'your-secret-key-change-this';
+// Security Fix: Prevent use of hardcoded secret key for JWT signing.
+// If NEXTAUTH_SECRET is not provided, we fail securely in production.
+// In development, we use a strong random byte string so tokens are secure (though they invalidate on restart).
+let JWT_SECRET = process.env.NEXTAUTH_SECRET;
+if (!JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('CRITICAL SECURITY ERROR: NEXTAUTH_SECRET environment variable is not set.');
+  } else {
+    console.warn('WARNING: NEXTAUTH_SECRET is not set. Generating a temporary random secret for development.');
+    JWT_SECRET = crypto.randomBytes(32).toString('hex');
+  }
+}
+
 const JWT_EXPIRY = '7d'; // 7 days
 
 export interface JWTPayload {
@@ -79,7 +92,7 @@ export function generateToken(user: IUser): string {
     assignedTournaments: user.assignedTournaments || [],
   };
 
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
+  return jwt.sign(payload, JWT_SECRET as string, { expiresIn: JWT_EXPIRY });
 }
 
 /**
@@ -87,7 +100,7 @@ export function generateToken(user: IUser): string {
  */
 export function verifyToken(token: string): JWTPayload | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const decoded = jwt.verify(token, JWT_SECRET as string) as JWTPayload;
     return decoded;
   } catch (error) {
     return null;
