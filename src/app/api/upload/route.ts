@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
         api_secret: !!process.env.CLOUDINARY_API_SECRET
       });
       return NextResponse.json(
-        { error: 'Cloudinary is not configured. Please set environment variables.' },
+        { error: 'Server configuration error' },
         { status: 500 }
       );
     }
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Upload error:', error);
 
-    // Return detailed error message
+    // Return detailed error message internally, but a generic one to the client
     const errorMessage = error?.message || error?.error?.message || 'Failed to upload image';
     const errorDetails = {
       error: errorMessage,
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     console.error('Full error details:', errorDetails);
 
     return NextResponse.json(
-      errorDetails,
+      { error: 'Failed to upload image' },
       { status: 500 }
     );
   }
