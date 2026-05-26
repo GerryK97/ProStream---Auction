@@ -1,0 +1,4 @@
+## 2024-03-01 - Cloudinary Error Details Information Disclosure
+**Vulnerability:** The API route for image upload (`src/app/api/upload/route.ts`) was returning a verbose `errorDetails` object (containing `cloudinaryError` details, `http_code`, and specific error messages) to the client upon failure.
+**Learning:** Detailed API error responses generated during service integration (like Cloudinary) often expose sensitive internal service configurations or state which can be leveraged for reconnaissance.
+**Prevention:** Always sanitize server error responses returned to the client. Keep detailed logs server-side (`console.error`) while returning generic error messages (e.g., `{ error: 'Failed to upload image' }`) via the API.

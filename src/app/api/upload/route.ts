@@ -70,8 +70,9 @@ export async function POST(request: NextRequest) {
 
     console.error('Full error details:', errorDetails);
 
+    // 🛡️ Sentinel: Secure error message - Don't leak details
     return NextResponse.json(
-      errorDetails,
+      { error: 'Failed to upload image' },
       { status: 500 }
     );
   }
