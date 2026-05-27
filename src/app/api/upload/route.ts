@@ -11,8 +11,9 @@ export async function POST(request: NextRequest) {
         api_key: !!process.env.CLOUDINARY_API_KEY,
         api_secret: !!process.env.CLOUDINARY_API_SECRET
       });
+      // 🛡️ Sentinel: Fail securely - do not expose internal service details to the client
       return NextResponse.json(
-        { error: 'Cloudinary is not configured. Please set environment variables.' },
+        { error: 'Internal server configuration error.' },
         { status: 500 }
       );
     }
@@ -60,18 +61,17 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Upload error:', error);
 
-    // Return detailed error message
-    const errorMessage = error?.message || error?.error?.message || 'Failed to upload image';
     const errorDetails = {
-      error: errorMessage,
+      error: error?.message || error?.error?.message || 'Failed to upload image',
       details: error?.http_code ? `HTTP ${error.http_code}` : undefined,
       cloudinaryError: error?.error || undefined
     };
 
     console.error('Full error details:', errorDetails);
 
+    // 🛡️ Sentinel: Fail securely - do not expose internal service details to the client
     return NextResponse.json(
-      errorDetails,
+      { error: 'An error occurred during file upload.' },
       { status: 500 }
     );
   }
