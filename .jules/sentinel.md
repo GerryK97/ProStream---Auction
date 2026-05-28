@@ -1,0 +1,4 @@
+## 2024-05-15 - Information Exposure via Public Debug Endpoint
+**Vulnerability:** A public debug endpoint (`/debug`) was exposing sensitive environment variables, including `MONGODB_URI` (truncated but still leaking the password and cluster info) and `NEXTAUTH_URL`.
+**Learning:** Even partial exposure of connection strings (e.g., using `substring(0, 60)`) can leak sensitive authentication material like passwords. Furthermore, debug endpoints intended for local development should never be accessible without authentication or deployed to production.
+**Prevention:** Remove or strictly authenticate and authorize debug routes. Never expose environment variables or connection strings, even partially, in API responses. Use internal logging instead of public-facing endpoints for debugging configuration issues.
