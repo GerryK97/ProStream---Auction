@@ -6,13 +6,9 @@ export async function POST(request: NextRequest) {
   try {
     // Verify Cloudinary configuration
     if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-      console.error('Missing Cloudinary credentials:', {
-        cloud_name: !!process.env.CLOUDINARY_CLOUD_NAME,
-        api_key: !!process.env.CLOUDINARY_API_KEY,
-        api_secret: !!process.env.CLOUDINARY_API_SECRET
-      });
+      console.error('Missing Cloudinary credentials.');
       return NextResponse.json(
-        { error: 'Cloudinary is not configured. Please set environment variables.' },
+        { error: 'Internal server error' },
         { status: 500 }
       );
     }
@@ -60,18 +56,8 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Upload error:', error);
 
-    // Return detailed error message
-    const errorMessage = error?.message || error?.error?.message || 'Failed to upload image';
-    const errorDetails = {
-      error: errorMessage,
-      details: error?.http_code ? `HTTP ${error.http_code}` : undefined,
-      cloudinaryError: error?.error || undefined
-    };
-
-    console.error('Full error details:', errorDetails);
-
     return NextResponse.json(
-      errorDetails,
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
