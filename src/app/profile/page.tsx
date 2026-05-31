@@ -5,11 +5,12 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAuthHeaders } from '@/lib/api-client';
 import ImageUpload from '@/components/ImageUpload';
+import { buildImageUrl } from '@/lib/cloudinaryUtils';
 
 interface ProfileFormState {
   username: string;
   email: string;
-  logoURL: string;
+  logoURL: string;   // stores bare publicId after upload
   mobileNumber: string;
 }
 
@@ -100,7 +101,7 @@ function ProfilePageContent() {
           <div className="flex items-center justify-between gap-4 pb-5 border-b border-gray-700 mb-5">
             <div className="flex items-center gap-4">
               <img
-                src={form.logoURL || 'https://placehold.co/96x96/374151/F3F4F6/png?text=User'}
+                src={buildImageUrl(form.logoURL, { width: 96, height: 96 }) || 'https://placehold.co/96x96/374151/F3F4F6/png?text=User'}
                 alt="User logo"
                 className="w-16 h-16 rounded-full object-cover border border-gray-600"
               />

@@ -3,6 +3,8 @@
  * Generates optimized image URLs with dynamic transformations based on usage context
  */
 
+import { buildImageUrl } from './cloudinaryUtils';
+
 export type ImageSize =
   | 'thumbnail' // 64x64 - Small avatars, icons
   | 'small'     // 150x150 - List items, small cards
@@ -47,6 +49,14 @@ export function optimizeImage(
   // Return placeholder if URL is empty or undefined
   if (!url) {
     return 'https://placehold.co/100x100/374151/F3F4F6/png?text=No+Image';
+  }
+
+  // If it's a bare public_id (no http/https), build via buildImageUrl
+  if (!url.startsWith('http') && !url.startsWith('data:')) {
+    const options: TransformOptions = typeof size === 'string' && size !== 'original'
+      ? SIZE_PRESETS[size as Exclude<ImageSize, 'original'>]
+      : typeof size === 'string' ? {} : size;
+    return buildImageUrl(url, { width: options.width ?? 200, height: options.height ?? 200 })
   }
 
   // Return original URL if not a Cloudinary URL

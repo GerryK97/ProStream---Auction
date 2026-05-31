@@ -40,7 +40,7 @@ export function toAuctionUser(user: PgUser): AuctionUser {
     role: user.role,
     status: user.status,
     plan: user.plan,
-    logoURL: user.photoCloudinaryId ?? '',   // stored as full URL in this column
+    logoURL: user.photoCloudinaryId ?? '',   // bare publicId; use buildImageUrl() to render
     mobileNumber: user.phone ?? '',
     assignedTournaments: user.assignedTournaments ?? [],
     createdAt: user.createdAt,
