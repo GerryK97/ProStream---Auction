@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { PlayerModel } from '@/models/Player';
 import { TournamentModel } from '@/models/Tournament';
 import { TeamModel } from '@/models/Team';
 import { connectToDatabase } from '@/lib/mongodb';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
-import { Tournament, Player } from '@/types';
+import { Tournament } from '@/types';
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,129 +22,93 @@ export async function GET(request: NextRequest) {
     const tournamentId = searchParams.get('tournamentId');
 
     if (!tournamentId) {
-      return NextResponse.json(
-        { error: 'tournamentId is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'tournamentId is required' }, { status: 400 });
     }
 
-    // Fetch tournament
     const tournament = await TournamentModel.findById(tournamentId).lean() as Tournament | null;
     if (!tournament) {
-      return NextResponse.json(
-        { error: 'Tournament not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
     }
 
-    // Fetch all players in tournament
     const tournamentPlayers = await PlayerModel.find({ tournamentId })
       .sort({ playerNo: 1, name: 1 })
       .lean() as any[];
 
     if (tournamentPlayers.length === 0) {
-      return NextResponse.json(
-        { error: 'No players found in this tournament' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'No players found in this tournament' }, { status: 400 });
     }
 
-    // Fetch tournament teams for winning team resolution
     const tournamentTeams = await TeamModel.find({ tournamentId }).lean() as any[];
+    const teamMap = new Map(tournamentTeams.map(t => [String(t._id), t.name]));
 
-    // Create team map for quick lookup
-    const teamMap = new Map(tournamentTeams.map(t => [t._id, t.name]));
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Tournament Players');
 
-    // Build export data based on tournament configuration
-    const exportData = tournamentPlayers.map(player => {
-      const row: any = {
-        'Player No': player.playerNo || player._id.substring(0, 3),
-        'Name': player.name,
-        'Position': player.position || '',
-        'Current Club': player.currentClub || '',
-      'Age': player.age || '',
-      };
-
-      // Include player class column only if tournament uses classes
-      if (tournament.usePlayerClasses) {
-        row['Player Class'] = player.playerClass || '';
-      }
-
-      // Add stats
-      row['Matches Played'] = player.stats?.matchesPlayed || 0;
-      row['Total Score'] = player.stats?.totalScore || 0;
-      row['Total Wickets'] = player.stats?.totalWickets || 0;
-
-      // Add auction data
-      row['Status'] = player.isIconic ? 'ICONIC' : (player.isSold ? 'SOLD' : player.isUnsold ? 'UNSOLD' : 'AVAILABLE');
-      row['Final Price'] = player.isIconic ? 'ICONIC' : (player.finalPrice || '');
-      row['Winning Team'] = player.winningTeamId ? (teamMap.get(player.winningTeamId) || 'Unknown') : '';
-
-      return row;
-    });
-
-    // Create workbook
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-
-    // Set column widths
-    const columnWidths = [
-      { wch: 10 },  // Player No
-      { wch: 25 },  // Name
-      { wch: 15 },  // Position
-      { wch: 25 },  // Current Club
-      { wch: 8 },   // Age
+    // Build columns
+    const columns: Partial<ExcelJS.Column>[] = [
+      { header: 'Player No',    key: 'playerNo',    width: 12 },
+      { header: 'Name',         key: 'name',        width: 25 },
+      { header: 'Position',     key: 'position',    width: 15 },
+      { header: 'Current Club', key: 'currentClub', width: 25 },
+      { header: 'Age',          key: 'age',         width: 8  },
     ];
-
     if (tournament.usePlayerClasses) {
-      columnWidths.push({ wch: 15 }); // Player Class
+      columns.push({ header: 'Player Class', key: 'playerClass', width: 15 });
+    }
+    columns.push(
+      { header: 'Matches Played', key: 'matchesPlayed', width: 15 },
+      { header: 'Total Score',    key: 'totalScore',    width: 13 },
+      { header: 'Total Wickets',  key: 'totalWickets',  width: 14 },
+      { header: 'Status',         key: 'status',        width: 12 },
+      { header: 'Final Price',    key: 'finalPrice',    width: 15 },
+      { header: 'Winning Team',   key: 'winningTeam',   width: 25 },
+    );
+    worksheet.columns = columns;
+
+    for (const player of tournamentPlayers) {
+      const row: any = {
+        playerNo:     player.playerNo || player._id?.toString().substring(0, 3),
+        name:         player.name,
+        position:     player.position || '',
+        currentClub:  player.currentClub || '',
+        age:          player.age || '',
+        matchesPlayed: player.stats?.matchesPlayed || 0,
+        totalScore:   player.stats?.totalScore || 0,
+        totalWickets: player.stats?.totalWickets || 0,
+        status:       player.isIconic ? 'ICONIC' : (player.isSold ? 'SOLD' : player.isUnsold ? 'UNSOLD' : 'AVAILABLE'),
+        finalPrice:   player.isIconic ? 'ICONIC' : (player.finalPrice || ''),
+        winningTeam:  player.winningTeamId ? (teamMap.get(String(player.winningTeamId)) || 'Unknown') : '',
+      };
+      if (tournament.usePlayerClasses) row.playerClass = player.playerClass || '';
+      worksheet.addRow(row);
     }
 
-    columnWidths.push(
-      { wch: 12 },  // Matches
-      { wch: 12 },  // Score
-      { wch: 12 },  // Wickets
-      { wch: 12 },  // Status
-      { wch: 15 },  // Final Price
-      { wch: 25 }   // Winning Team
-    );
+    // Summary sheet
+    const summary = workbook.addWorksheet('Summary');
+    summary.columns = [
+      { header: 'Metric', key: 'metric', width: 25 },
+      { header: 'Value',  key: 'value',  width: 25 },
+    ] as Partial<ExcelJS.Column>[];
 
-    worksheet['!cols'] = columnWidths;
+    const soldCount  = tournamentPlayers.filter(p => p.isSold).length;
+    const totalPrize = tournamentPlayers.filter(p => p.finalPrice).reduce((s, p) => s + (p.finalPrice || 0), 0);
+    [
+      ['Tournament Name',    tournament.name],
+      ['Tournament Year',    tournament.year],
+      ['Total Players',      tournamentPlayers.length],
+      ['Sold Players',       soldCount],
+      ['Available Players',  tournamentPlayers.length - soldCount],
+      ['Total Prize Pool',   totalPrize],
+      ['Budget Per Team',    tournament.budgetPerTeam],
+      ['Squad Size',         tournament.squadSize],
+      ['Base Price',         tournament.basePricePerPlayer],
+      ['Export Date',        new Date().toLocaleString()],
+    ].forEach(([m, v]) => summary.addRow({ metric: m, value: v }));
 
-    // Add main sheet
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Tournament Players');
-
-    // Create summary sheet
-    const soldCount = tournamentPlayers.filter(p => p.isSold).length;
-    const unsoldCount = tournamentPlayers.length - soldCount;
-    const totalPrize = tournamentPlayers
-      .filter(p => p.finalPrice)
-      .reduce((sum, p) => sum + (p.finalPrice || 0), 0);
-
-    const summaryData = [
-      { 'Metric': 'Tournament Name', 'Value': tournament.name },
-      { 'Metric': 'Tournament Year', 'Value': tournament.year },
-      { 'Metric': 'Total Players', 'Value': tournamentPlayers.length },
-      { 'Metric': 'Sold Players', 'Value': soldCount },
-      { 'Metric': 'Available Players', 'Value': unsoldCount },
-      { 'Metric': 'Total Prize Pool', 'Value': totalPrize },
-      { 'Metric': 'Budget Per Team', 'Value': tournament.budgetPerTeam },
-      { 'Metric': 'Squad Size', 'Value': tournament.squadSize },
-      { 'Metric': 'Base Price Per Player', 'Value': tournament.basePricePerPlayer },
-      { 'Metric': 'Export Date', 'Value': new Date().toLocaleString() },
-    ];
-
-    const summarySheet = XLSX.utils.json_to_sheet(summaryData);
-    summarySheet['!cols'] = [{ wch: 25 }, { wch: 25 }];
-    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
-
-    // Generate Excel file
-    const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-
-    // Return file
+    const buffer = await workbook.xlsx.writeBuffer();
     const fileName = `tournament_players_export_${tournament.name.replace(/\s+/g, '_')}_${Date.now()}.xlsx`;
 
-    return new NextResponse(excelBuffer, {
+    return new NextResponse(buffer as unknown as BodyInit, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'Content-Disposition': `attachment; filename="${fileName}"`,
@@ -152,9 +116,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Tournament export error:', error);
-    return NextResponse.json(
-      { error: `Failed to export tournament players: ${error.message}` },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: `Failed to export tournament players: ${error.message}` }, { status: 500 });
   }
 }

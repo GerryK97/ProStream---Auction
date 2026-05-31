@@ -11,23 +11,26 @@
   },
   "dependencies": {
     "@google/genai": "^1.28.0",
+    "@neondatabase/serverless": "^1.1.0",
     "@react-pdf/renderer": "^4.3.1",
     "@types/pdfkit": "^0.17.4",
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.8.0",
+    "drizzle-orm": "^0.45.2",
+    "exceljs": "^4.4.0",
     "expo-server-sdk": "^6.1.0",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.556.0",
     "mongodb": "^6.20.0",
-    "mongoose": "^8.19.2",
-    "next": "^15.5.15",
+    "mongoose": "^9.6.3",
+    "next": "^15.5.18",
     "pdfkit": "^0.17.2",
     "pusher": "^5.2.0",
     "pusher-js": "^8.4.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-easy-crop": "^5.5.6",
-    "xlsx": "^0.18.5"
+    "ws": "^8.21.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
@@ -38,8 +41,12 @@
     "autoprefixer": "^10.4.17",
     "eslint": "^9.0.0",
     "eslint-config-next": "^15.1.6",
-    "postcss": "^8.4.35",
+    "postcss": "^8.5.15",
     "tailwindcss": "^3.4.0",
     "typescript": "~5.8.2"
+  },
+  "overrides": {
+    "uuid": "^11.1.1",
+    "postcss": "$postcss"
   }
 }

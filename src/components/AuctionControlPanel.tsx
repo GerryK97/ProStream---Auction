@@ -7,7 +7,7 @@ import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { imageOptimizers } from '@/lib/imageOptimization';
 import ClassBadge from '@/components/shared/ClassBadge';
 import { getFormattedBasePrice, getClassBasePrice, getMinClassBasePrice } from '@/lib/playerClassUtils';
-import { getBidIncrement, getNextTeamBid } from '@/lib/bidIncrementUtils';
+import { getBidIncrement, getNextTeamBid, getPreviousSlabBid } from '@/lib/bidIncrementUtils';
 import { getAuthHeaders } from '@/lib/api-client';
 import { useTournamentContext } from '@/contexts/TournamentContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -333,7 +333,16 @@ export const CurrentAuctionPanel: React.FC<{
 
     const { currentBid, currentAuctionStatus } = auctionState;
     const isSold = currentAuctionStatus === 'Sold';
-    const bidIncrements = [1000, 5000, 10000, 20000, 25000, 50000];
+    const DEFAULT_QUICK_BIDS = [1000, 5000, 10000, 20000, 25000, 50000];
+    const basePrice = getClassBasePrice(tournament, currentPlayer ?? null);
+    const slabIncrements = tournament.bidIncrements ?? [];
+    const directSlabEnabled = tournament.biddingMode === 'direct' && tournament.directBidSlabEnabled;
+    const nextSlabBid = currentBid > 0 ? currentBid + getBidIncrement(slabIncrements, currentBid) : basePrice;
+    const previousSlabBid = getPreviousSlabBid(slabIncrements, currentBid, basePrice);
+    const currentSlabIncrement = currentBid > 0 ? getBidIncrement(slabIncrements, currentBid) : basePrice;
+    const quickBidAmounts = (tournament.directQuickBidsEnabled && tournament.directQuickBids && tournament.directQuickBids.length > 0)
+        ? tournament.directQuickBids.map(b => b.amount).filter(a => a > 0)
+        : DEFAULT_QUICK_BIDS;
     const isCorrection = currentBid > 0 && bidAmount > 0 && bidAmount < currentBid;
     const statusText = currentAuctionStatus === 'Bidding' ? 'BIDDING ACTIVE' : (isSold ? 'PLAYER SOLD' : 'BIDDING PENDING');
     const statusColor = currentAuctionStatus === 'Bidding' ? 'text-yellow-400' : (isSold ? 'text-green-400' : 'text-[var(--text-tertiary)]');
@@ -375,11 +384,42 @@ export const CurrentAuctionPanel: React.FC<{
                     isSold={isSold}
                     isMobile={isMobile}
                 />
+            ) : directSlabEnabled ? (
+            <div className="shrink-0 rounded-lg p-3 border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-elevated)' }}>
+                <div className="flex items-center justify-between mb-2">
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>Bid Increase Slab</p>
+                        <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Increment: +{formatCurrency(currentSlabIncrement)}</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>Next Bid</p>
+                        <p className="text-xl font-black" style={{ color: 'var(--brand-secondary)' }}>{formatCurrency(nextSlabBid)}</p>
+                    </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                    <button
+                        onClick={async () => { setIsSubmitting(true); try { await onBid(nextSlabBid); } finally { setIsSubmitting(false); } }}
+                        disabled={isSold || isSubmitting}
+                        className="rounded-md py-3 text-sm font-bold transition-colors disabled:opacity-40"
+                        style={{ backgroundColor: 'rgba(34,197,94,0.12)', color: '#4ade80', border: '1.5px solid rgba(34,197,94,0.45)' }}
+                    >
+                        Increase Bid
+                    </button>
+                    <button
+                        onClick={async () => { setIsSubmitting(true); try { await onCorrectBid(previousSlabBid); } finally { setIsSubmitting(false); } }}
+                        disabled={isSold || isSubmitting || currentBid <= basePrice}
+                        className="rounded-md py-3 text-sm font-bold transition-colors disabled:opacity-40"
+                        style={{ backgroundColor: 'rgba(251,146,60,0.12)', color: '#fb923c', border: '1.5px solid rgba(251,146,60,0.45)' }}
+                    >
+                        Decrease Bid
+                    </button>
+                </div>
+            </div>
             ) : (
             <div className="shrink-0">
                 <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--text-tertiary)' }}>Quick Bid</p>
                 <div className={`grid gap-1.5 ${isMobile ? 'grid-cols-3' : 'grid-cols-6'}`}>
-                    {bidIncrements.map(inc => (
+                    {quickBidAmounts.map(inc => (
                         <button
                             key={inc}
                             onClick={() => handleQuickBid(inc)}
@@ -976,6 +1016,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const [isSpinning, setIsSpinning] = useState(false);
     const spinTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
     const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const bidInFlightRef = useRef(false);
     const [hidePremiumCard, setHidePremiumCard] = useState(false);
     const [autoSwitch, setAutoSwitch] = useState(false);
     const [autoSwitchDuration, setAutoSwitchDuration] = useState(5);
@@ -1230,13 +1271,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         if (!liveTournamentId || !selectedTournament) return;
         if (selectedTournament._id !== liveTournamentId) return;
         refreshData();
-    }, [
-        liveTournamentId,
-        selectedTournament?._id,
-        selectedTournament?.budgetPerTeam,
-        selectedTournament?.squadSize,
-        refreshData,
-    ]);
+    }, [liveTournamentId, selectedTournament, refreshData]);
 
     const handleStartAuction = async () => {
         if (!selectedTournament) return;
@@ -1568,6 +1603,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
 
     const handleBid = async (amount: number, teamId?: string) => {
         if (!liveTournament) return;
+        if (bidInFlightRef.current) return;
 
         // Client-side validation
         const currentBid = auctionState.currentBid || 0;
@@ -1582,6 +1618,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             setError(`First bid must be at least base price of ${formatCurrency(basePrice)}`);
             return;
         }
+
+        bidInFlightRef.current = true;
 
         // Optimistic update: snapshot the previous auctionState, apply new bid
         // immediately so the UI feels instant, then revert if the server rejects.
@@ -1609,6 +1647,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             restoreAuctionState(snapshot);
             console.error('Failed to place bid:', error);
             setError('An error occurred while placing the bid');
+        } finally {
+            bidInFlightRef.current = false;
         }
     };
 

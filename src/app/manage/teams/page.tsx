@@ -20,8 +20,6 @@ function TeamsManagePage() {
     const [loadingTeams, setLoadingTeams] = useState(false);
     const [isAddModalOpen, setAddModalOpen] = useState(false);
     const [editingTeam, setEditingTeam] = useState<Team | null>(null);
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
-
     const fetchTeams = useCallback(async () => {
         if (!selectedTournamentId) { setTeams([]); return; }
         setLoadingTeams(true);
@@ -33,14 +31,14 @@ function TeamsManagePage() {
         } finally {
             setLoadingTeams(false);
         }
-    }, [selectedTournamentId, refreshTrigger]);
+    }, [selectedTournamentId]);
 
     useEffect(() => { fetchTeams(); }, [fetchTeams]);
 
     const handleDelete = async (teamId: string) => {
         try {
             const res = await fetch(`/api/teams/${teamId}`, { method: 'DELETE', headers: getAuthHeaders() });
-            if (res.ok) setRefreshTrigger(p => p + 1);
+            if (res.ok) fetchTeams();
         } catch (err) {
             console.error('Failed to delete team:', err);
         }
@@ -150,7 +148,7 @@ function TeamsManagePage() {
                 <TeamForm
                     tournaments={tournaments}
                     defaultTournamentId={selectedTournamentId || ''}
-                    onSuccess={() => { setRefreshTrigger(p => p + 1); setAddModalOpen(false); }}
+                    onSuccess={() => { fetchTeams(); setAddModalOpen(false); }}
                     onCancel={() => setAddModalOpen(false)}
                 />
             </Modal>
@@ -161,7 +159,7 @@ function TeamsManagePage() {
                     <TeamForm
                         tournaments={tournaments}
                         editTeam={editingTeam}
-                        onSuccess={() => { setRefreshTrigger(p => p + 1); setEditingTeam(null); }}
+                        onSuccess={() => { fetchTeams(); setEditingTeam(null); }}
                         onCancel={() => setEditingTeam(null)}
                     />
                 )}

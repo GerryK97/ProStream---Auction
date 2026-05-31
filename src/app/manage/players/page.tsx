@@ -22,7 +22,6 @@ function PlayersManagePage() {
     const [isBulkModalOpen, setBulkModalOpen] = useState(false);
     const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
     const [exportingPlayers, setExportingPlayers] = useState(false);
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [bulkDeleting, setBulkDeleting] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -40,7 +39,7 @@ function PlayersManagePage() {
         } finally {
             setLoadingPlayers(false);
         }
-    }, [selectedTournamentId, refreshTrigger]);
+    }, [selectedTournamentId]);
 
     // Clear selection and filters when tournament changes
     useEffect(() => { setSelectedIds(new Set()); setSearchQuery(''); setNoImageOnly(false); setStatusFilters(new Set()); }, [selectedTournamentId]);
@@ -50,7 +49,7 @@ function PlayersManagePage() {
     const handleDelete = async (playerId: string) => {
         try {
             const res = await fetch(`/api/players/${playerId}`, { method: 'DELETE', headers: getAuthHeaders() });
-            if (res.ok) setRefreshTrigger(p => p + 1);
+            if (res.ok) fetchPlayers();
         } catch (err) {
             console.error('Failed to delete player:', err);
         }
@@ -136,7 +135,7 @@ function PlayersManagePage() {
             const data = await res.json();
             if (!res.ok) { alert(data.error || 'Failed to delete players'); return; }
             setSelectedIds(new Set());
-            setRefreshTrigger(p => p + 1);
+            fetchPlayers();
         } catch (err) {
             console.error('Bulk delete failed:', err);
         } finally {
@@ -383,7 +382,7 @@ function PlayersManagePage() {
                 <PlayerForm
                     tournaments={tournaments}
                     defaultTournamentId={selectedTournamentId || ''}
-                    onSuccess={() => { setRefreshTrigger(p => p + 1); setAddModalOpen(false); }}
+                    onSuccess={() => { fetchPlayers(); setAddModalOpen(false); }}
                     onCancel={() => setAddModalOpen(false)}
                 />
             </Modal>
@@ -394,7 +393,7 @@ function PlayersManagePage() {
                     <PlayerForm
                         tournaments={tournaments}
                         editPlayer={editingPlayer}
-                        onSuccess={() => { setRefreshTrigger(p => p + 1); setEditingPlayer(null); }}
+                        onSuccess={() => { fetchPlayers(); setEditingPlayer(null); }}
                         onCancel={() => setEditingPlayer(null)}
                     />
                 )}
@@ -405,7 +404,7 @@ function PlayersManagePage() {
                 <Modal isOpen={isBulkModalOpen} onClose={() => setBulkModalOpen(false)} title="Bulk Import Players" size="2xl">
                     <BulkAddTournamentPlayers
                         tournament={selectedTournament}
-                        onSuccess={() => setRefreshTrigger(p => p + 1)}
+                        onSuccess={() => fetchPlayers()}
                     />
                 </Modal>
             )}

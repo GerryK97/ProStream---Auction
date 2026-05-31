@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { PlayerModel } from '@/models/Player';
 import { TournamentModel } from '@/models/Tournament';
 import { playerDB } from '@/lib/db-mongodb';
@@ -94,9 +94,22 @@ export async function POST(request: NextRequest) {
     const statFields = ppf?.statFields ?? [];
 
     const arrayBuffer = await file.arrayBuffer();
-    const workbook = XLSX.read(Buffer.from(arrayBuffer), { type: 'buffer' });
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    const jsonData: ExcelRow[] = XLSX.utils.sheet_to_json(worksheet);
+    const workbook = new ExcelJS.Workbook();
+    // @ts-expect-error — Node 22 Buffer<ArrayBuffer> generic incompatible with ExcelJS Buffer typedef at compile time
+    await workbook.xlsx.load(Buffer.from(new Uint8Array(arrayBuffer)));
+    const worksheet = workbook.worksheets[0];
+
+    // Convert worksheet to JSON rows (skip header row)
+    const headerRow = worksheet.getRow(1).values as any[];
+    const headers = headerRow.slice(1).map((h: any) => String(h ?? '').trim());
+    const jsonData: ExcelRow[] = [];
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return;
+      const values = row.values as any[];
+      const obj: ExcelRow = {} as ExcelRow;
+      headers.forEach((h, i) => { obj[h] = values[i + 1] ?? ''; });
+      jsonData.push(obj);
+    });
 
     if (jsonData.length === 0) {
       return NextResponse.json({ error: 'Excel file is empty or has no data rows' }, { status: 400 });

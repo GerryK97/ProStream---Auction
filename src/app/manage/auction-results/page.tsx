@@ -49,7 +49,6 @@ function AuctionResultsPage() {
     const [showNameFilter, setShowNameFilter] = useState(false);
     const [playerNoFilter, setPlayerNoFilter] = useState('');
     const [showPlayerNoFilter, setShowPlayerNoFilter] = useState(false);
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [exportingPdf, setExportingPdf] = useState(false);
     const [exportError, setExportError] = useState('');
 
@@ -74,7 +73,7 @@ function AuctionResultsPage() {
         } finally {
             setLoadingPlayers(false);
         }
-    }, [selectedTournamentId, refreshTrigger]);
+    }, [selectedTournamentId]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -109,7 +108,7 @@ function AuctionResultsPage() {
             const data = await res.json();
             if (!res.ok) { setSaveError(data.error || 'Failed to save'); return; }
             setEditState(null);
-            setRefreshTrigger(p => p + 1);
+            fetchData();
         } catch {
             setSaveError('Network error. Please try again.');
         } finally {

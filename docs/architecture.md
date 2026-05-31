@@ -10,6 +10,18 @@ ProStream Auction is a Next.js App Router application with internal auction-mana
 - Overlay renderers live in `src/components/overlays`; these are output-facing components.
 - Realtime auction state flows through hooks such as `usePusherAuction` and server/client Pusher utilities.
 - Data models live under `src/models`; shared runtime types live in `src/types`.
+- Shared user and wallet data live in Neon Postgres through `src/lib/pg`; auction domain data remains in MongoDB/Mongoose.
+
+## Shared Wallet Integration
+- `src/lib/pg/users-schema.ts` mirrors the Scoreboard-owned Neon tables for `wallets`, `wallet_transactions`, and `pricing_config`.
+- `src/lib/pg/wallet-queries.ts` is the Auction wallet access layer. It ensures a wallet exists, reads balance/transactions, reads pricing keys, and records server-side deductions.
+- `GET /api/wallet` returns the authenticated user's wallet balance plus recent transactions for Auction web clients and the Expo App.
+- `GET /api/wallet/transactions` returns the authenticated user's full transaction history.
+- `POST /api/overlay/sessions` accepts `overlayType` and charges only for generated overlay outputs. Tournaments and auction operation remain free.
+- Supported paid overlay types and pricing keys are: `custom` → `auction_overlay_custom`, `fullscreen` → `auction_overlay_fullscreen`, `fullscreen2` → `auction_overlay_fullscreen2`, and `team_owners` → `auction_overlay_team_owners`.
+- The API uses deduct-first/create-second flow. If Neon wallet deduction succeeds but Mongo overlay-session creation fails, the server attempts an automatic wallet refund/top-up transaction and logs a critical error if refund also fails.
+- Each overlay session stores `overlayType`, `paymentStatus`, `walletTransactionId`, `refundTransactionId`, and `priceCharged` for auditability.
+- Wallet amounts follow the existing Scoreboard convention: integer LKR credits, immutable transaction rows, and backend-only deductions.
 
 ## Rendering Flow
 - `src/app/layout.tsx` wraps the app with auth, tournament, auction, sidebar, and theme providers.

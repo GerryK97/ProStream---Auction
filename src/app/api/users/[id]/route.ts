@@ -1,8 +1,30 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { User } from '@/models/User';
-import { verifyToken, getTokenFromRequest, hashPassword } from '@/lib/auth';
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { verifyToken, getTokenFromRequest, hashPassword, validateEmail, validateUsername } from '@/lib/auth';
 import { isAdmin } from '@/lib/permissions';
-import { connectToDatabase } from '@/lib/mongodb';
+import {
+  deleteUser,
+  getUserByEmail,
+  getUserById,
+  getUserByUsername,
+  toPublicUser,
+  updateUser,
+  type UserPlan,
+  type UserRole,
+  type UserStatus,
+} from '@/lib/pg/user-queries';
+
+const ALLOWED_ROLES: UserRole[] = ['Admin', 'Tournament', 'Player', 'Audience'];
+const ALLOWED_STATUSES: UserStatus[] = ['Active', 'PendingApproval', 'Suspended'];
+const ALLOWED_PLANS: UserPlan[] = ['Free', 'Standard', 'Offer'];
+
+async function requireAdmin(request: NextRequest) {
+  const token = getTokenFromRequest(request);
+  if (!token) return { ok: false as const, response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+  const payload = verifyToken(token);
+  if (!payload) return { ok: false as const, response: NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 }) };
+  if (!isAdmin(payload.role)) return { ok: false as const, response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) };
+  return { ok: true as const, payload };
+}
 
 /**
  * GET /api/users/[id] - Get user details (Admin only)
@@ -13,34 +35,10 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    await connectToDatabase();
+    const auth = await requireAdmin(request);
+    if (!auth.ok) return auth.response;
 
-    // Verify authentication
-    const token = getTokenFromRequest(request);
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.json(
-        { error: 'Invalid or expired token' },
-        { status: 401 }
-      );
-    }
-
-    // Check if user is admin
-    if (!isAdmin(payload.role)) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
-    }
-
-    const user = await User.findById(id).select('-passwordHash');
+    const user = await getUserById(id);
 
     if (!user) {
       return NextResponse.json(
@@ -52,7 +50,7 @@ export async function GET(
     return NextResponse.json(
       {
         success: true,
-        data: user,
+        data: toPublicUser(user),
       },
       { status: 200 }
     );
@@ -74,32 +72,8 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    await connectToDatabase();
-
-    // Verify authentication
-    const token = getTokenFromRequest(request);
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.json(
-        { error: 'Invalid or expired token' },
-        { status: 401 }
-      );
-    }
-
-    // Check if user is admin
-    if (!isAdmin(payload.role)) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
-    }
+    const auth = await requireAdmin(request);
+    if (!auth.ok) return auth.response;
 
     const {
       username,
@@ -108,27 +82,44 @@ export async function PUT(
       role,
       status,
       assignedTournaments,
-      assignedTeams,
-      assignedPlayer,
       plan,
-      logoURL,
       mobileNumber,
     } = await request.json();
 
     const updateDoc: Record<string, any> = {};
-    if (username)                          updateDoc.username             = username.toLowerCase();
-    if (email)                             updateDoc.email                = email.toLowerCase();
-    if (password)                          updateDoc.passwordHash         = await hashPassword(password);
-    if (role)                              updateDoc.role                 = role;
-    if (status)                            updateDoc.status               = status;
-    if (assignedTournaments !== undefined) updateDoc.assignedTournaments  = assignedTournaments;
-    if (assignedTeams !== undefined)       updateDoc.assignedTeams        = assignedTeams;
-    if (assignedPlayer !== undefined)      updateDoc.assignedPlayer       = assignedPlayer;
-    if (logoURL !== undefined)             updateDoc.logoURL              = logoURL;
-    if (mobileNumber !== undefined)        updateDoc.mobileNumber         = mobileNumber;
+
+    if (username) {
+      if (!validateUsername(username)) return NextResponse.json({ error: 'Invalid username' }, { status: 400 });
+      const existing = await getUserByUsername(username);
+      if (existing && existing.id !== id) return NextResponse.json({ error: 'Username already exists' }, { status: 409 });
+      updateDoc.username = username.toLowerCase();
+      updateDoc.displayName = username.toLowerCase();
+    }
+
+    if (email) {
+      if (!validateEmail(email)) return NextResponse.json({ error: 'Invalid email' }, { status: 400 });
+      const existing = await getUserByEmail(email);
+      if (existing && existing.id !== id) return NextResponse.json({ error: 'Email already exists' }, { status: 409 });
+      updateDoc.email = email.toLowerCase();
+    }
+
+    if (password) updateDoc.passwordHash = await hashPassword(password);
+
+    if (role) {
+      if (!ALLOWED_ROLES.includes(role)) return NextResponse.json({ error: 'Invalid role selected' }, { status: 400 });
+      updateDoc.role = role;
+    }
+
+    if (status) {
+      if (!ALLOWED_STATUSES.includes(status)) return NextResponse.json({ error: 'Invalid status selected' }, { status: 400 });
+      updateDoc.status = status;
+    }
+
+    if (assignedTournaments !== undefined) updateDoc.assignedTournaments = assignedTournaments;
+    if (mobileNumber !== undefined) updateDoc.phone = mobileNumber || null;
+
     if (plan) {
-      const allowedPlans = ['Free', 'Standard', 'Offer'];
-      if (!allowedPlans.includes(plan)) {
+      if (!ALLOWED_PLANS.includes(plan)) {
         return NextResponse.json(
           { error: 'Invalid plan selected' },
           { status: 400 }
@@ -137,7 +128,7 @@ export async function PUT(
       updateDoc.plan = plan;
     }
 
-    const updatedUser = await User.findByIdAndUpdate(id, { $set: updateDoc }, { new: true });
+    const updatedUser = await updateUser(id, updateDoc);
 
     if (!updatedUser) {
       return NextResponse.json(
@@ -150,15 +141,7 @@ export async function PUT(
       {
         success: true,
         message: 'User updated successfully',
-        user: {
-          id: updatedUser._id,
-          username: updatedUser.username,
-          email: updatedUser.email,
-          logoURL: updatedUser.logoURL || '',
-          mobileNumber: updatedUser.mobileNumber || '',
-          role: updatedUser.role,
-          status: updatedUser.status,
-        },
+        user: toPublicUser(updatedUser),
       },
       { status: 200 }
     );
@@ -180,44 +163,19 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    await connectToDatabase();
+    const auth = await requireAdmin(request);
+    if (!auth.ok) return auth.response;
 
-    // Verify authentication
-    const token = getTokenFromRequest(request);
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.json(
-        { error: 'Invalid or expired token' },
-        { status: 401 }
-      );
-    }
-
-    // Check if user is admin
-    if (!isAdmin(payload.role)) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
-    }
-
-    // Prevent admin from deleting themselves
-    if (id === payload.userId) {
+    if (id === auth.payload.userId) {
       return NextResponse.json(
         { error: 'Cannot delete yourself' },
         { status: 400 }
       );
     }
 
-    const result = await User.deleteOne({ _id: id });
+    const deleted = await deleteUser(id);
 
-    if (result.deletedCount === 0) {
+    if (!deleted) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }

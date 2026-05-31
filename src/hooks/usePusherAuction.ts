@@ -374,7 +374,8 @@ export function usePusherAuction(
     players?: Player[];
     teams?: Team[];
   },
-  overlayToken?: string
+  overlayToken?: string,
+  overlayType?: string,
 ): UsePusherAuctionReturn {
   // Overlay mode = OBS browser source with a token in the URL.
   // In overlay mode we use the wake channel strategy (lazy connect).
@@ -401,10 +402,11 @@ export function usePusherAuction(
   const buildHeaders = useCallback(() => {
     const headers = getAuthHeaders();
     const needsToken = !headers['Authorization'] && overlayToken;
-    const tkQ = needsToken ? `?token=${encodeURIComponent(overlayToken!)}` : '';
-    const tk  = needsToken ? `&token=${encodeURIComponent(overlayToken!)}` : '';
+    const typeParam = needsToken && overlayType ? `&overlayType=${encodeURIComponent(overlayType)}` : '';
+    const tkQ = needsToken ? `?token=${encodeURIComponent(overlayToken!)}${typeParam}` : '';
+    const tk  = needsToken ? `&token=${encodeURIComponent(overlayToken!)}${typeParam}` : '';
     return { headers, tkQ, tk };
-  }, [overlayToken]);
+  }, [overlayToken, overlayType]);
 
   // Fetch full auction data (tournament + state + players + teams in parallel)
   const fetchInitialData = useCallback(async () => {
@@ -538,7 +540,7 @@ export function usePusherAuction(
       wakeChannel.unbind('overlay:revoke');
       pusher.unsubscribe(WAKE_CHANNEL);
     };
-  }, [tournamentId, isOverlayMode]);
+  }, [tournamentId, isOverlayMode, overlayToken]);
 
   // ─── Effect 3: Auto-disconnect when status goes inactive (overlay mode only) ─
   // Watches tournament.status updates that arrive through Pusher events.

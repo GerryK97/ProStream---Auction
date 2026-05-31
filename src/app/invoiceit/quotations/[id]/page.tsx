@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -58,13 +58,8 @@ export default function QuotationDetailPage() {
   const [converting, setConverting] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
-  useEffect(() => {
-    if (params.id) {
-      fetchQuotation();
-    }
-  }, [params.id]);
-
-  const fetchQuotation = async () => {
+  const fetchQuotation = useCallback(async () => {
+    if (!params.id) return;
     try {
       setLoading(true);
       const response = await fetch(`/api/quotations/${params.id}`, {
@@ -92,7 +87,9 @@ export default function QuotationDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id]);
+
+  useEffect(() => { fetchQuotation(); }, [fetchQuotation]);
 
   const updateStatus = async (newStatus: Quotation['status']) => {
     if (!quotation) return;
@@ -181,7 +178,7 @@ export default function QuotationDetailPage() {
 
   if (loading) {
     return (
-      <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'MasterManager']}>
+      <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
         <div className="p-6">
           <div className="mx-auto max-w-5xl">
             <div className="rounded-2xl p-12 border text-center" style={{ backgroundColor: 'var(--surface-card)', borderColor: 'var(--border-primary)' }}>
@@ -195,7 +192,7 @@ export default function QuotationDetailPage() {
 
   if (error || !quotation) {
     return (
-      <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'MasterManager']}>
+      <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
         <div className="p-6">
           <div className="mx-auto max-w-5xl">
             <div className="rounded-2xl p-12 border text-center" style={{ backgroundColor: 'var(--surface-card)', borderColor: 'var(--border-primary)' }}>
@@ -213,7 +210,7 @@ export default function QuotationDetailPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'MasterManager']}>
+    <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
       <div className="p-6">
         <div className="mx-auto max-w-5xl">
           {/* Header */}
@@ -249,7 +246,7 @@ export default function QuotationDetailPage() {
                     className="px-4 py-2 rounded-xl font-medium text-white transition hover:scale-105 disabled:opacity-50"
                     style={{ backgroundColor: 'var(--brand-primary)' }}
                   >
-                    {converting ? 'Converting…' : 'Convert to Invoice'}
+                    {converting ? 'Convertingâ€¦' : 'Convert to Invoice'}
                   </button>
                 )}
                 {quotation.convertedToInvoiceId && (

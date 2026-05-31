@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { TournamentModel } from '@/models/Tournament';
 import { Tournament } from '@/types';
 import { connectToDatabase } from '@/lib/mongodb';
@@ -17,212 +17,141 @@ export async function GET(request: NextRequest) {
     await connectToDatabase();
 
     const user = await getUserFromRequest(request);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
     const tournamentId = searchParams.get('tournamentId');
-
-    if (!tournamentId) {
-      return NextResponse.json({ error: 'tournamentId is required' }, { status: 400 });
-    }
+    if (!tournamentId) return NextResponse.json({ error: 'tournamentId is required' }, { status: 400 });
 
     const tournament = await TournamentModel.findById(tournamentId).lean() as Tournament | null;
-    if (!tournament) {
-      return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
-    }
+    if (!tournament) return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
 
-    const playerClasses = tournament.usePlayerClasses && tournament.playerClasses
+    const playerClasses = (tournament.usePlayerClasses && tournament.playerClasses)
       ? tournament.playerClasses.map((c: any) => c.name)
       : [];
 
-    const ppf = tournament.playerProfileFields;
+    const ppf             = tournament.playerProfileFields;
     const showAge          = ppf?.showAge          ?? false;
     const showBattingStyle = ppf?.showBattingStyle  ?? false;
     const showBowlingStyle = ppf?.showBowlingStyle  ?? false;
     const statFields       = ppf?.statFields        ?? [];
 
-    // Build the ordered column list so we can derive column letters dynamically
-    const colNames: string[] = [
-      'Player No',
-      'Name',
-      'Position',
-      'Current Club',
-      ...(showAge          ? ['Age']           : []),
-      ...(showBattingStyle ? ['Batting Style'] : []),
-      ...(showBowlingStyle ? ['Bowling Style'] : []),
-      ...statFields.map(sf => sf.label),
-      'Add (Yes/No)',
-      ...(playerClasses.length > 0 ? ['Player Class'] : []),
+    const workbook  = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Players');
+
+    // Build ordered column list
+    const colDefs: { header: string; key: string; width: number }[] = [
+      { header: 'Player No',    key: 'playerNo',    width: 12 },
+      { header: 'Name',         key: 'name',        width: 25 },
+      { header: 'Position',     key: 'position',    width: 18 },
+      { header: 'Current Club', key: 'currentClub', width: 30 },
+      ...(showAge          ? [{ header: 'Age',           key: 'age',          width: 8  }] : []),
+      ...(showBattingStyle ? [{ header: 'Batting Style', key: 'battingStyle', width: 22 }] : []),
+      ...(showBowlingStyle ? [{ header: 'Bowling Style', key: 'bowlingStyle', width: 26 }] : []),
+      ...statFields.map((sf: any) => ({ header: sf.label, key: sf.label, width: 18 })),
+      { header: 'Add (Yes/No)',  key: 'add',         width: 15 },
+      ...(playerClasses.length > 0 ? [{ header: 'Player Class', key: 'playerClass', width: 20 }] : []),
     ];
+    worksheet.columns = colDefs as Partial<ExcelJS.Column>[];
 
-    const addColIdx   = colNames.indexOf('Add (Yes/No)');
-    const classColIdx = colNames.indexOf('Player Class');
-    const battingColIdx = colNames.indexOf('Batting Style');
-    const bowlingColIdx = colNames.indexOf('Bowling Style');
+    // Sample rows
+    const makeSampleRow = (no: string, name: string, pos: string, club: string,
+      age: string, batting: string, bowling: string, stat1: string, add: string, cls: string) => {
+      const r: any = { playerNo: no, name, position: pos, currentClub: club };
+      if (showAge)          r.age          = age;
+      if (showBattingStyle) r.battingStyle = batting;
+      if (showBowlingStyle) r.bowlingStyle = bowling;
+      statFields.forEach((sf: any, i: number) => { r[sf.label] = i === 0 ? stat1 : ''; });
+      r.add = add;
+      if (playerClasses.length > 0) r.playerClass = cls;
+      return r;
+    };
 
-    const addColLetter   = XLSX.utils.encode_col(addColIdx);
-    const classColLetter = classColIdx >= 0 ? XLSX.utils.encode_col(classColIdx) : null;
-    const battingColLetter = battingColIdx >= 0 ? XLSX.utils.encode_col(battingColIdx) : null;
-    const bowlingColLetter = bowlingColIdx >= 0 ? XLSX.utils.encode_col(bowlingColIdx) : null;
-
-    // Build sample rows
-    const makeRow = (
-      no: string, name: string, pos: string, club: string,
-      age: number | string, batting: string, bowling: string,
-      stat1: string, addVal: string, cls: string
-    ) => ({
-      'Player No': no,
-      'Name': name,
-      'Position': pos,
-      'Current Club': club,
-      ...(showAge          ? { 'Age': age }                 : {}),
-      ...(showBattingStyle ? { 'Batting Style': batting }   : {}),
-      ...(showBowlingStyle ? { 'Bowling Style': bowling }   : {}),
-      ...Object.fromEntries(statFields.map((sf, i) => [sf.label, i === 0 ? stat1 : ''])),
-      'Add (Yes/No)': addVal,
-      ...(playerClasses.length > 0 ? { 'Player Class': cls } : {}),
-    });
-
-    const sampleRows: Record<string, any>[] = [
-      makeRow('001', 'John Smith',   'Batsman', 'Mumbai FC',     25, 'Right-handed', 'Right-arm Medium', '42', 'Yes', playerClasses[0] || ''),
-      makeRow('002', 'Alex Johnson', 'Bowler',  'Delhi Tigers',  28, 'Left-handed',  'Left-arm Orthodox', '18', 'No',  playerClasses[1] || playerClasses[0] || ''),
-    ];
-
-    // Empty rows for data entry
+    worksheet.addRow(makeSampleRow('001', 'John Smith',   'Batsman', 'Mumbai FC',    '25', 'Right-handed', 'Right-arm Medium',  '42', 'Yes', playerClasses[0] || ''));
+    worksheet.addRow(makeSampleRow('002', 'Alex Johnson', 'Bowler',  'Delhi Tigers', '28', 'Left-handed',  'Left-arm Orthodox', '18', 'No',  playerClasses[1] || playerClasses[0] || ''));
     for (let i = 0; i < 20; i++) {
-      sampleRows.push(makeRow('', '', '', '', '' as any, '', '', '', 'Yes', ''));
+      worksheet.addRow(makeSampleRow('', '', '', '', '', '', '', '', 'Yes', ''));
     }
 
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.json_to_sheet(sampleRows);
+    // Data validations
+    const totalRows = 22 + 1; // header + 2 samples + 20 blank
 
-    // Column widths matching column order
-    worksheet['!cols'] = colNames.map(col => {
-      if (col === 'Player No')    return { wch: 12 };
-      if (col === 'Name')         return { wch: 25 };
-      if (col === 'Position')     return { wch: 18 };
-      if (col === 'Current Club') return { wch: 30 };
-      if (col === 'Age')          return { wch: 8 };
-      if (col === 'Batting Style') return { wch: 22 };
-      if (col === 'Bowling Style') return { wch: 26 };
-      if (col === 'Add (Yes/No)') return { wch: 15 };
-      if (col === 'Player Class') return { wch: 20 };
-      return { wch: 18 }; // stat fields
-    });
-
-    if (!worksheet['!dataValidation']) {
-      (worksheet as any)['!dataValidation'] = [];
+    // Add (Yes/No)
+    const addColIdx = colDefs.findIndex(c => c.key === 'add') + 1;
+    for (let r = 2; r <= totalRows; r++) {
+      worksheet.getCell(r, addColIdx).dataValidation = {
+        type: 'list', allowBlank: true,
+        formulae: ['"Yes,No"'],
+        showErrorMessage: true, error: 'Please select Yes or No', errorTitle: 'Invalid Value',
+      };
     }
 
-    const totalRows = sampleRows.length + 1;
-
-    // Yes/No dropdown for "Add" column
-    for (let i = 2; i <= totalRows; i++) {
-      (worksheet as any)['!dataValidation'].push({
-        sqref: `${addColLetter}${i}`,
-        type: 'list',
-        formula1: '"Yes,No"',
-        showErrorMessage: true,
-        error: 'Please select Yes or No',
-        errorTitle: 'Invalid Value',
-      });
-    }
-
-    // Batting Style dropdown
-    if (battingColLetter) {
-      const battingFormula = `"${BATTING_STYLES.join(',')}"`;
-      for (let i = 2; i <= totalRows; i++) {
-        (worksheet as any)['!dataValidation'].push({
-          sqref: `${battingColLetter}${i}`,
-          type: 'list',
-          formula1: battingFormula,
-          showErrorMessage: false,
-        });
+    // Batting Style
+    if (showBattingStyle) {
+      const col = colDefs.findIndex(c => c.key === 'battingStyle') + 1;
+      for (let r = 2; r <= totalRows; r++) {
+        worksheet.getCell(r, col).dataValidation = {
+          type: 'list', allowBlank: true,
+          formulae: [`"${BATTING_STYLES.join(',')}"`],
+        };
       }
     }
 
-    // Bowling Style dropdown
-    if (bowlingColLetter) {
-      const bowlingFormula = `"${BOWLING_STYLES.join(',')}"`;
-      for (let i = 2; i <= totalRows; i++) {
-        (worksheet as any)['!dataValidation'].push({
-          sqref: `${bowlingColLetter}${i}`,
-          type: 'list',
-          formula1: bowlingFormula,
-          showErrorMessage: false,
-        });
+    // Bowling Style
+    if (showBowlingStyle) {
+      const col = colDefs.findIndex(c => c.key === 'bowlingStyle') + 1;
+      for (let r = 2; r <= totalRows; r++) {
+        worksheet.getCell(r, col).dataValidation = {
+          type: 'list', allowBlank: true,
+          formulae: [`"${BOWLING_STYLES.join(',')}"`],
+        };
       }
     }
 
-    // Player class dropdown
-    if (classColLetter && playerClasses.length > 0) {
-      const classListFormula = `"${playerClasses.join(',')}"`;
-      for (let i = 2; i <= totalRows; i++) {
-        (worksheet as any)['!dataValidation'].push({
-          sqref: `${classColLetter}${i}`,
-          type: 'list',
-          formula1: classListFormula,
+    // Player Class
+    if (playerClasses.length > 0) {
+      const col = colDefs.findIndex(c => c.key === 'playerClass') + 1;
+      for (let r = 2; r <= totalRows; r++) {
+        worksheet.getCell(r, col).dataValidation = {
+          type: 'list', allowBlank: true,
+          formulae: [`"${playerClasses.join(',')}"`],
           showErrorMessage: true,
-          error: `Please select from: ${playerClasses.join(', ')}`,
-          errorTitle: 'Invalid Player Class',
-        });
+          error: `Select from: ${playerClasses.join(', ')}`, errorTitle: 'Invalid Player Class',
+        };
       }
     }
-
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Players');
 
     // Instructions sheet
-    const instructions: Array<{ Step: number | string; Instruction: string }> = [
-      { Step: 1, Instruction: 'Fill in player details in the "Players" sheet. The first two rows are examples — replace them with real data.' },
-      { Step: 2, Instruction: `Required columns: Name, Position, Current Club, Add (Yes/No). Optional: Player No (e.g. 001, 002)` },
-      { Step: 3, Instruction: 'Set "Add (Yes/No)" to "Yes" for rows you want to import. Rows set to "No" will be skipped.' },
+    const instructions = workbook.addWorksheet('Instructions');
+    instructions.columns = [
+      { header: 'Step',        key: 'step',        width: 12 },
+      { header: 'Instruction', key: 'instruction', width: 80 },
+    ] as Partial<ExcelJS.Column>[];
+
+    const rows: { step: string | number; instruction: string }[] = [
+      { step: 1, instruction: 'Fill in player details in the "Players" sheet. The first two rows are examples — replace with real data.' },
+      { step: 2, instruction: 'Required: Name, Position, Current Club, Add (Yes/No). Optional: Player No.' },
+      { step: 3, instruction: 'Set "Add (Yes/No)" to "Yes" to import a row. Rows set to "No" will be skipped.' },
     ];
-
     let step = 4;
-    if (showAge)          instructions.push({ Step: step++, Instruction: 'Age: Enter the player\'s age as a number (optional).' });
-    if (showBattingStyle) instructions.push({ Step: step++, Instruction: `Batting Style: Select from dropdown — ${BATTING_STYLES.join(', ')} (optional).` });
-    if (showBowlingStyle) instructions.push({ Step: step++, Instruction: `Bowling Style: Select from dropdown — ${BOWLING_STYLES.join(', ')} (optional).` });
-    if (statFields.length > 0) instructions.push({ Step: step++, Instruction: `Stat fields: ${statFields.map(sf => sf.label).join(', ')} — enter numeric or text values (optional).` });
-
+    if (showAge)          rows.push({ step: step++, instruction: "Age: Enter the player's age as a number (optional)." });
+    if (showBattingStyle) rows.push({ step: step++, instruction: `Batting Style: Select from dropdown — ${BATTING_STYLES.join(', ')}` });
+    if (showBowlingStyle) rows.push({ step: step++, instruction: `Bowling Style: Select from dropdown — ${BOWLING_STYLES.join(', ')}` });
+    if (statFields.length > 0) rows.push({ step: step++, instruction: `Stat fields: ${statFields.map((sf: any) => sf.label).join(', ')}` });
     if (playerClasses.length > 0) {
-      instructions.push(
-        { Step: step++, Instruction: `Select a Player Class from the dropdown: ${playerClasses.join(', ')}` },
-        { Step: step++, Instruction: 'TIP: You can use short codes to reduce typos! (e.g., P=Platinum, G=Gold, S=Silver, B=Bronze, E=Elite, Pr=Premium, St=Standard)' },
-        { Step: step++, Instruction: 'Short codes are case-insensitive. Examples: "P" or "p" → Platinum, "G" → Gold, "S" → Silver' },
-        { Step: step++, Instruction: 'Save the file and upload it back to the application.' },
-      );
-    } else {
-      instructions.push(
-        { Step: step++, Instruction: 'This tournament does not use player classes — no class column needed.' },
-        { Step: step++, Instruction: 'Save the file and upload it back to the application.' },
-      );
+      rows.push({ step: step++, instruction: `Player Class: select from — ${playerClasses.join(', ')}` });
+      const classCodes = tournament.playerClasses?.map((c: any) => `${c.code} (${c.name})`).join(', ') || '';
+      rows.push({ step: step++, instruction: `Short codes accepted: ${classCodes}` });
     }
-
-    instructions.push(
-      { Step: '', Instruction: '' },
-      { Step: 'Tournament', Instruction: tournament.name },
-      { Step: 'Positions', Instruction: 'Batsman, Bowler, All-rounder, Batting All-rounder, Bowling All-rounder, Wicket-keeper, Wicket Keeper Batsman' },
+    rows.push(
+      { step: '', instruction: '' },
+      { step: 'Tournament', instruction: tournament.name },
+      { step: 'Positions',  instruction: 'Batsman, Bowler, All-rounder, Batting All-rounder, Bowling All-rounder, Wicket-keeper, Wicket Keeper Batsman' },
     );
+    rows.forEach(r => instructions.addRow(r));
 
-    if (playerClasses.length > 0) {
-      const classCodesInfo = tournament.playerClasses
-        ?.map((c: any) => `${c.code} (${c.name})`)
-        .join(', ') || '';
-      instructions.push(
-        { Step: 'Classes', Instruction: `Configured: ${playerClasses.join(', ')}` },
-        { Step: 'Short Codes', Instruction: `Use these codes in the Player Class column: ${classCodesInfo}` },
-      );
-    }
-
-    const instructionsSheet = XLSX.utils.json_to_sheet(instructions);
-    instructionsSheet['!cols'] = [{ wch: 12 }, { wch: 80 }];
-    XLSX.utils.book_append_sheet(workbook, instructionsSheet, 'Instructions');
-
-    const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-
-    return new NextResponse(excelBuffer, {
+    const buffer = await workbook.xlsx.writeBuffer();
+    return new NextResponse(buffer as unknown as BodyInit, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'Content-Disposition': `attachment; filename="players_import_${tournament.name.replace(/\s+/g, '_')}_${Date.now()}.xlsx"`,

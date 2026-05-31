@@ -66,6 +66,12 @@ const tournamentSchema = new Schema<Tournament>(
       ],
       default: [],
     },
+    directBidSlabEnabled: { type: Boolean, default: false },
+    directQuickBidsEnabled: { type: Boolean, default: false },
+    directQuickBids: {
+      type: [{ amount: { type: Number, required: true } }],
+      default: [],
+    },
     playerProfileFields: {
       type: {
         showAge:          { type: Boolean, default: false },

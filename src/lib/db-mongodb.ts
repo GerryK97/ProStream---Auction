@@ -1,9 +1,9 @@
-// MongoDB database operations using Mongoose
+﻿// MongoDB database operations using Mongoose
 import { connectToDatabase } from './mongodb';
 import { TournamentModel } from '@/models/Tournament';
 import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
-import { User } from '@/models/User';
+import { addAssignedTournament, getAssignedTournaments } from '@/lib/pg/user-queries';
 import { OverlayConfigModel, OverlaySceneModel, OverlayHistoryModel, OverlayAnalyticsModel } from '@/models/OverlayConfig';
 import { Tournament, Team, Player, OverlayConfig, OverlayScene, OverlayHistory } from '@/types';
 import { canAccessTournament, canAccessTeam, canAccessPlayer } from './permissions';
@@ -65,8 +65,7 @@ export const tournamentDB = {
   /**
    * Get all tournaments accessible to a user based on their role and permissions
    * Admin: sees all tournaments
-   * Tournament/Team: sees tournaments they created or were assigned to
-   * MasterManager: sees tournaments they created
+   * Tournament: sees tournaments assigned through Postgres
    * Player/Audience: no tournament access (empty array)
    */
   getAllForUser: async (
@@ -81,9 +80,13 @@ export const tournamentDB = {
       return await TournamentModel.find().lean() as any;
     }
 
-    // All non-admin roles: only tournaments explicitly assigned to user
+    // All non-admin roles: only tournaments explicitly assigned to user in Postgres
+    const allowedTournamentIds = assignedTournaments.length > 0
+      ? assignedTournaments
+      : await getAssignedTournaments(userId);
+
     const tournaments = await TournamentModel.find({
-      _id: { $in: assignedTournaments },
+      _id: { $in: allowedTournamentIds },
     }).lean() as any;
 
     return tournaments;
@@ -107,12 +110,8 @@ export const tournamentDB = {
   },
 
   grantUserAccess: async (userId: string, tournamentId: string): Promise<boolean> => {
-    await connectToDatabase();
-    const result = await User.updateOne(
-      { _id: userId },
-      { $addToSet: { assignedTournaments: tournamentId } }
-    );
-    return result.matchedCount > 0;
+    const updated = await addAssignedTournament(userId, tournamentId);
+    return updated !== null;
   },
 
   update: async (id: string, data: Partial<Omit<Tournament, '_id'>>): Promise<Tournament | null> => {
@@ -307,7 +306,7 @@ export const seedDatabase = async () => {
 
   const tournamentsCount = await TournamentModel.countDocuments();
   if (tournamentsCount === 0) {
-    console.log('🌱 Seeding database with initial data...');
+    console.log('ðŸŒ± Seeding database with initial data...');
 
     // Seed Tournaments
     await TournamentModel.insertMany([
@@ -446,7 +445,7 @@ export const seedDatabase = async () => {
       { _id: '004', playerNo: '004', tournamentId: 't1', name: 'Rogue', position: 'Wicket-keeper', currentClub: 'Galle CC', isSold: false },
     ]);
 
-    console.log('✅ Database seeded successfully!');
+    console.log('âœ… Database seeded successfully!');
   }
 };
 

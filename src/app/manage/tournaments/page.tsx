@@ -44,7 +44,10 @@ const EMPTY_FORM = {
   basePriceStrategy: 'tournament-level' as 'tournament-level' | 'player-class-based',
   playerClasses: [] as ClassRow[],
   biddingMode: 'direct' as 'direct' | 'team',
+  directBidSlabEnabled: false,
   bidIncrements: [] as BidIncrementRange[],
+  directQuickBidsEnabled: false,
+  directQuickBids: [1000, 5000, 10000, 20000, 25000, 50000].map(a => ({ amount: a })) as { amount: number }[],
   playerProfileFields: { showAge: false, showBattingStyle: false, showBowlingStyle: false, statFields: [] as StatFieldDef[] },
 };
 
@@ -130,7 +133,10 @@ function TournamentsManagePage() {
         code: cls.code,
       })),
       biddingMode: t.biddingMode ?? 'direct',
+      directBidSlabEnabled: t.directBidSlabEnabled ?? false,
       bidIncrements: t.bidIncrements ?? [],
+      directQuickBidsEnabled: t.directQuickBidsEnabled ?? false,
+      directQuickBids: (t.directQuickBids && t.directQuickBids.length > 0) ? t.directQuickBids : [1000, 5000, 10000, 20000, 25000, 50000].map(a => ({ amount: a })),
       playerProfileFields: t.playerProfileFields ?? { showAge: false, showBattingStyle: false, showBowlingStyle: false, statFields: [] },
     });
     setShowCreate(true);
@@ -197,7 +203,10 @@ function TournamentsManagePage() {
           }))
         : [],
       biddingMode: form.biddingMode,
-      bidIncrements: form.biddingMode === 'team' ? sortedIncrements : [],
+      directBidSlabEnabled: form.biddingMode === 'direct' ? form.directBidSlabEnabled : false,
+      bidIncrements: form.biddingMode === 'team' || (form.biddingMode === 'direct' && form.directBidSlabEnabled) ? sortedIncrements : [],
+      directQuickBidsEnabled: form.biddingMode === 'direct' ? form.directQuickBidsEnabled : false,
+      directQuickBids: form.biddingMode === 'direct' && form.directQuickBidsEnabled ? form.directQuickBids.filter(b => b.amount > 0) : [],
       playerProfileFields: {
         showAge: form.playerProfileFields.showAge,
         showBattingStyle: form.playerProfileFields.showBattingStyle,
@@ -661,8 +670,31 @@ function TournamentsManagePage() {
                     </label>
                   </div>
 
-                  {/* Bracket Builder — only shown in team mode */}
-                  {form.biddingMode === 'team' && (
+                  {/* Bid Increase Slab */}
+                  <div className="pt-2 border-t border-gray-700">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      {form.biddingMode === 'direct' && (
+                        <input
+                          type="checkbox"
+                          checked={form.directBidSlabEnabled}
+                          onChange={e => setForm(f => ({
+                            ...f,
+                            directBidSlabEnabled: e.target.checked,
+                            bidIncrements: e.target.checked && f.bidIncrements.length === 0 ? [
+                              { upTo: 50000,  increment: 5000  },
+                              { upTo: 100000, increment: 10000 },
+                              { upTo: 200000, increment: 25000 },
+                            ] : f.bidIncrements,
+                          }))}
+                          className="cursor-pointer"
+                        />
+                      )}
+                      <p className="text-sm font-medium text-white">Bid Increase Slab</p>
+                    </label>
+                  </div>
+
+                  {/* Bracket Builder — team always, direct only when enabled */}
+                  {(form.biddingMode === 'team' || (form.biddingMode === 'direct' && form.directBidSlabEnabled)) && (
                     <div className="space-y-3 pt-2 border-t border-gray-700">
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium text-orange-300">Bid Increment Brackets</p>
@@ -725,6 +757,61 @@ function TournamentsManagePage() {
                     </div>
                   )}
                 </div>
+
+                {/* Direct Quick Bid Buttons */}
+                {form.biddingMode === 'direct' && (
+                  <div className="border border-gray-700 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={form.directQuickBidsEnabled}
+                        onChange={e => setForm(f => ({ ...f, directQuickBidsEnabled: e.target.checked }))}
+                        className="cursor-pointer"
+                      />
+                      <p className="text-sm font-medium text-white">Custom Quick Bid Buttons</p>
+                    </div>
+                    {form.directQuickBidsEnabled && (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span />
+                          <button
+                            type="button"
+                            onClick={() => setForm(f => ({ ...f, directQuickBids: [...f.directQuickBids, { amount: 0 }] }))}
+                            disabled={form.directQuickBids.length >= 8}
+                            className="px-3 py-1 bg-blue-700 hover:bg-blue-600 disabled:opacity-40 text-white rounded text-xs font-medium"
+                          >
+                            + Add Button
+                          </button>
+                        </div>
+                        <div className="space-y-2">
+                          {form.directQuickBids.map((btn, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                value={btn.amount || ''}
+                                min={1}
+                                onChange={e => setForm(f => ({
+                                  ...f,
+                                  directQuickBids: f.directQuickBids.map((b, j) => j === i ? { amount: parseInt(e.target.value) || 0 } : b),
+                                }))}
+                                placeholder="e.g. 5000"
+                                className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-white text-sm focus:outline-none focus:border-blue-500"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setForm(f => ({ ...f, directQuickBids: f.directQuickBids.filter((_, j) => j !== i) }))}
+                                className="text-gray-400 hover:text-red-400 text-lg leading-none px-1"
+                                title="Remove"
+                              >
+                                &times;
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
 
                 {/* Player Profile Fields */}
                 <div className="border border-gray-700 rounded-lg p-4 space-y-4">

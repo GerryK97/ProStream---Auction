@@ -661,15 +661,6 @@ export function FullScreenT1Content({
         if (toastTimersRef.current.clear) clearTimeout(toastTimersRef.current.clear);
         setSoldToast({ player: currentPlayer, team: winningTeam, price });
         setToastExiting(false);
-
-        // Auto-dismiss after 5 seconds with exit animation
-        toastTimersRef.current.exit = setTimeout(() => {
-          setToastExiting(true);
-          toastTimersRef.current.clear = setTimeout(() => {
-            setSoldToast(null);
-            setToastExiting(false);
-          }, 600);
-        }, 5000);
       }
     }
     prevAuctionStatusRef.current = status;

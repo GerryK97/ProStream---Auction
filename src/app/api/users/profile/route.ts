@@ -1,7 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { User } from '@/models/User';
-import { connectToDatabase } from '@/lib/mongodb';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest, verifyToken, validateEmail, validateUsername } from '@/lib/auth';
+import { getUserByEmail, getUserById, getUserByUsername, toPublicUser, updateUser } from '@/lib/pg/user-queries';
 
 function isValidMobileNumber(mobileNumber: string): boolean {
   return /^[+\d][\d\s\-()]{6,19}$/.test(mobileNumber);
@@ -9,8 +8,6 @@ function isValidMobileNumber(mobileNumber: string): boolean {
 
 export async function GET(request: NextRequest) {
   try {
-    await connectToDatabase();
-
     const token = getTokenFromRequest(request);
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -21,23 +18,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
     }
 
-    const user = await User.findById(payload.userId).select('-passwordHash');
+    const user = await getUserById(payload.userId);
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     return NextResponse.json({
       success: true,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-        status: user.status,
-        plan: user.plan,
-        logoURL: user.logoURL || '',
-        mobileNumber: user.mobileNumber || '',
-      },
+      user: toPublicUser(user),
     });
   } catch (error) {
     console.error('Get profile error:', error);
@@ -47,8 +35,6 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    await connectToDatabase();
-
     const token = getTokenFromRequest(request);
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -59,7 +45,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
     }
 
-    const { username, email, logoURL = '', mobileNumber = '' } = await request.json();
+    const { username, email, mobileNumber = '', logoURL = '' } = await request.json();
 
     if (!username || !email) {
       return NextResponse.json({ error: 'Username and email are required' }, { status: 400 });
@@ -84,28 +70,23 @@ export async function PUT(request: NextRequest) {
     const normalizedUsername = username.toLowerCase();
     const normalizedEmail = email.toLowerCase();
 
-    const existingUsername = await User.findOne({ username: normalizedUsername, _id: { $ne: payload.userId } });
-    if (existingUsername) {
+    const existingUsername = await getUserByUsername(normalizedUsername);
+    if (existingUsername && existingUsername.id !== payload.userId) {
       return NextResponse.json({ error: 'Username already taken' }, { status: 409 });
     }
 
-    const existingEmail = await User.findOne({ email: normalizedEmail, _id: { $ne: payload.userId } });
-    if (existingEmail) {
+    const existingEmail = await getUserByEmail(normalizedEmail);
+    if (existingEmail && existingEmail.id !== payload.userId) {
       return NextResponse.json({ error: 'Email already registered' }, { status: 409 });
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
-      payload.userId,
-      {
-        $set: {
-          username: normalizedUsername,
-          email: normalizedEmail,
-          logoURL: String(logoURL || '').trim(),
-          mobileNumber: normalizedMobile,
-        },
-      },
-      { new: true }
-    ).select('-passwordHash');
+    const updatedUser = await updateUser(payload.userId, {
+      username: normalizedUsername,
+      email: normalizedEmail,
+      displayName: normalizedUsername,
+      phone: normalizedMobile,
+      photoCloudinaryId: logoURL || null,
+    });
 
     if (!updatedUser) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -114,16 +95,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Profile updated successfully',
-      user: {
-        id: updatedUser._id,
-        username: updatedUser.username,
-        email: updatedUser.email,
-        role: updatedUser.role,
-        status: updatedUser.status,
-        plan: updatedUser.plan,
-        logoURL: updatedUser.logoURL || '',
-        mobileNumber: updatedUser.mobileNumber || '',
-      },
+      user: toPublicUser(updatedUser),
     });
   } catch (error) {
     console.error('Update profile error:', error);

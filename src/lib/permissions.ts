@@ -1,6 +1,6 @@
-import { JWTPayload } from './auth';
+﻿import { JWTPayload } from './auth';
 
-export type UserRole = 'Admin' | 'Tournament' | 'MasterManager' | 'Team' | 'Player' | 'Audience';
+export type UserRole = 'Admin' | 'Tournament' | 'Player' | 'Audience';
 export type Action = 'create' | 'read' | 'update' | 'delete' | 'manage';
 
 export interface RoutePermission {
@@ -8,15 +8,17 @@ export interface RoutePermission {
   allowedRoles: UserRole[];
 }
 
+const ALL_ROLES: UserRole[] = ['Admin', 'Tournament', 'Player', 'Audience'];
+
 /**
  * Define which roles can access which routes
  */
 export const ROUTE_PERMISSIONS: RoutePermission[] = [
   // Public routes (no authentication required)
-  { path: '/', allowedRoles: ['Admin', 'Tournament', 'MasterManager', 'Team', 'Player', 'Audience'] },
-  { path: '/auth/login', allowedRoles: ['Admin', 'Tournament', 'MasterManager', 'Team', 'Player', 'Audience'] },
-  { path: '/auth/signup', allowedRoles: ['Admin', 'Tournament', 'MasterManager', 'Team', 'Player', 'Audience'] },
-  { path: '/contact', allowedRoles: ['Admin', 'Tournament', 'MasterManager', 'Team', 'Player', 'Audience'] },
+  { path: '/', allowedRoles: ALL_ROLES },
+  { path: '/auth/login', allowedRoles: ALL_ROLES },
+  { path: '/auth/signup', allowedRoles: ALL_ROLES },
+  { path: '/contact', allowedRoles: ALL_ROLES },
 
   // Auction routes
   { path: '/auction', allowedRoles: ['Admin', 'Tournament'] },
@@ -28,52 +30,48 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
   { path: '/manage/teams', allowedRoles: ['Admin', 'Tournament'] },
   { path: '/manage/players', allowedRoles: ['Admin', 'Tournament'] },
 
-  // Overlay redirect page — kept so /overlays still works for bookmarks
+  // Overlay redirect page - kept so /overlays still works for bookmarks
   { path: '/overlays', allowedRoles: ['Admin'] },
 
-  // Output page — overlay setup management (Admin only)
-  { path: '/output', allowedRoles: ['Admin'] },
+  // Output page - theme selection and overlay link generation
+  { path: '/output', allowedRoles: ['Admin', 'Tournament'] },
 
   // User management (Admin only)
   { path: '/users', allowedRoles: ['Admin'] },
 
-  // Overlay session manager (Admin only)
+  // Overlay session manager
   { path: '/manage/overlays/sessions', allowedRoles: ['Admin'] },
+  { path: '/manage/overlay-prices', allowedRoles: ['Admin'] },
 
   // InvoiceIt routes
-  { path: '/invoiceit', allowedRoles: ['Admin', 'Tournament', 'MasterManager'] },
-  { path: '/invoiceit/', allowedRoles: ['Admin', 'Tournament', 'MasterManager'] },
+  { path: '/invoiceit', allowedRoles: ['Admin', 'Tournament'] },
+  { path: '/invoiceit/', allowedRoles: ['Admin', 'Tournament'] },
 
   // API routes for InvoiceIt (allow through to be handled by route handlers)
-  { path: '/api/invoices/', allowedRoles: ['Admin', 'Tournament', 'MasterManager'] },
-  { path: '/api/quotations/', allowedRoles: ['Admin', 'Tournament', 'MasterManager'] },
-  { path: '/api/customers/', allowedRoles: ['Admin', 'Tournament', 'MasterManager'] },
+  { path: '/api/invoices/', allowedRoles: ['Admin', 'Tournament'] },
+  { path: '/api/quotations/', allowedRoles: ['Admin', 'Tournament'] },
+  { path: '/api/customers/', allowedRoles: ['Admin', 'Tournament'] },
   // All other /api/ routes (tournaments, teams, players, etc.)
-  { path: '/api/', allowedRoles: ['Admin', 'Tournament', 'MasterManager', 'Team', 'Player', 'Audience'] },
+  { path: '/api/', allowedRoles: ALL_ROLES },
 ];
 
 /**
  * Check if a user has access to a specific route
  */
 export function canAccessRoute(userRole: UserRole | string, path: string): boolean {
-  // Extract the base path (remove trailing slash and query params)
   const basePath = path.split('?')[0].replace(/\/$/, '') || '/';
 
   const permission = ROUTE_PERMISSIONS.find((perm) => {
-    // Exact match
     if (perm.path === basePath) return true;
-    // Trailing-slash prefix match (e.g., '/overlays/' matches '/overlays/abc123' and sub-paths)
-    // Exclude root '/' to prevent it from matching every absolute path
     if (perm.path.length > 1 && perm.path.endsWith('/') && basePath.startsWith(perm.path)) return true;
     return false;
   });
 
   if (!permission) {
-    // If no specific permission found, deny access (default deny)
     return false;
   }
 
-  return permission.allowedRoles.includes(userRole as any);
+  return permission.allowedRoles.includes(userRole as UserRole);
 }
 
 /**
@@ -101,22 +99,6 @@ export function canPerformAction(
       auction: ['read', 'update', 'manage'],
       overlayConfig: ['create', 'read', 'update', 'delete'],
       invoice: ['create', 'read', 'update', 'delete'],
-      user: [],
-    },
-    MasterManager: {
-      invoice: ['create', 'read', 'update', 'delete'],
-      tournament: ['read'],
-      team: ['read'],
-      player: ['read'],
-      auction: ['read'],
-      user: [],
-    },
-    Team: {
-      tournament: ['read'],
-      team: ['read'],
-      player: ['read'],
-      auction: ['read'],
-      overlayConfig: ['read'],
       user: [],
     },
     Player: {
@@ -175,23 +157,6 @@ export function getAllowedTournaments(
 }
 
 /**
- * Get allowed teams for a user
- */
-export function getAllowedTeams(
-  userRole: UserRole,
-  assignedTeams: string[] | undefined,
-  allTeams: string[]
-): string[] {
-  if (userRole === 'Admin') {
-    return allTeams;
-  }
-  if (userRole === 'Team') {
-    return assignedTeams || [];
-  }
-  return [];
-}
-
-/**
  * Check if user should be auto-approved on signup
  */
 export function shouldAutoApproveRole(role: UserRole): boolean {
@@ -200,11 +165,6 @@ export function shouldAutoApproveRole(role: UserRole): boolean {
 
 /**
  * Check if user can access a tournament
- * User can access if:
- * - User is Admin (can access all)
- * - Tournament is explicitly assigned to user (in assignedTournaments)
- *
- * Note: createdBy no longer grants access — admin must explicitly assign the tournament.
  */
 export function canAccessTournament(
   userId: string,
@@ -212,19 +172,12 @@ export function canAccessTournament(
   tournament: { _id: string; createdBy?: string },
   assignedTournaments: string[] = []
 ): boolean {
-  // Admin can access all tournaments
   if (userRole === 'Admin') return true;
-
-  // User can access only if explicitly assigned
   return assignedTournaments.includes(tournament._id);
 }
 
 /**
  * Check if user can access a team
- * User can access if:
- * - User is Admin (can access all)
- * - User has access to team's tournament
- * - User created the team (createdBy === userId)
  */
 export function canAccessTeam(
   userId: string,
@@ -232,24 +185,14 @@ export function canAccessTeam(
   team: { _id: string; tournamentId?: string; createdBy?: string },
   canAccessTournament: boolean
 ): boolean {
-  // Admin can access all teams
   if (userRole === 'Admin') return true;
-
-  // User can access if tournament is accessible
   if (canAccessTournament) return true;
-
-  // User can access if they created the team
   if (team.createdBy === userId) return true;
-
   return false;
 }
 
 /**
  * Check if user can access a player
- * User can access if:
- * - User is Admin (can access all)
- * - User has access to player's tournament
- * - User created the player (createdBy === userId)
  */
 export function canAccessPlayer(
   userId: string,
@@ -257,41 +200,27 @@ export function canAccessPlayer(
   player: { _id: string; tournamentId?: string; createdBy?: string },
   canAccessTournament: boolean
 ): boolean {
-  // Admin can access all players
   if (userRole === 'Admin') return true;
-
-  // User can access if tournament is accessible
   if (canAccessTournament) return true;
-
-  // User can access if they created the player
   if (player.createdBy === userId) return true;
-
   return false;
 }
 
 /**
  * Check if user can modify (edit/delete) a resource
- * User can modify if:
- * - User is Admin (can modify all)
- * - User created the resource (createdBy === userId)
  */
 export function canModifyResource(
   userId: string,
   userRole: UserRole | string,
   resource: { createdBy?: string }
 ): boolean {
-  // Admin can modify all
   if (userRole === 'Admin') return true;
-
-  // User can modify if they created it
   if (resource.createdBy === userId) return true;
-
   return false;
 }
 
 /**
  * Check if user can transfer ownership
- * Only Admin can transfer ownership
  */
 export function canTransferOwnership(userRole: UserRole | string): boolean {
   return userRole === 'Admin';

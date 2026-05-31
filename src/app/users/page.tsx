@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Navigation from '@/components/Navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -537,8 +537,6 @@ export default function UsersPage() {
                       >
                         <option value="Admin">Admin</option>
                         <option value="Tournament">Tournament Manager</option>
-                        <option value="MasterManager">Master Data Manager</option>
-                        <option value="Team">Team Manager</option>
                         <option value="Player">Player</option>
                         <option value="Audience">Audience</option>
                       </select>
@@ -638,8 +636,6 @@ export default function UsersPage() {
                       >
                         <option value="Admin">Admin</option>
                         <option value="Tournament">Tournament Manager</option>
-                        <option value="MasterManager">Master Data Manager</option>
-                        <option value="Team">Team Manager</option>
                         <option value="Player">Player</option>
                         <option value="Audience">Audience</option>
                       </select>

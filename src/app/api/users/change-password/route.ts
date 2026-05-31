@@ -1,12 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { User } from '@/models/User';
-import { connectToDatabase } from '@/lib/mongodb';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest, verifyToken, comparePassword, hashPassword } from '@/lib/auth';
+import { getUserById, setUserPassword } from '@/lib/pg/user-queries';
 
 export async function POST(request: NextRequest) {
   try {
-    await connectToDatabase();
-
     const token = getTokenFromRequest(request);
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -27,7 +24,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'New password must be at least 8 characters' }, { status: 400 });
     }
 
-    const user = await User.findById(payload.userId);
+    const user = await getUserById(payload.userId);
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
@@ -42,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     const newHash = await hashPassword(newPassword);
-    await User.findByIdAndUpdate(payload.userId, { $set: { passwordHash: newHash } });
+    await setUserPassword(payload.userId, newHash);
 
     return NextResponse.json({ success: true, message: 'Password updated successfully' });
   } catch (error) {

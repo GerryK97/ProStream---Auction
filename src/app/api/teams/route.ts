@@ -5,7 +5,7 @@ import { TournamentModel } from '@/models/Tournament';
 import { connectToDatabase } from '@/lib/mongodb';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
-import { validateOverlayToken, validateOverlaySessionToken, getOverlayTokenFromRequest } from '@/lib/overlay-auth';
+import { validateOverlaySessionToken, getOverlayTokenFromRequest } from '@/lib/overlay-auth';
 
 // GET /api/teams - Get teams accessible to the authenticated user
 export async function GET(request: NextRequest) {
@@ -15,9 +15,9 @@ export async function GET(request: NextRequest) {
 
     // Overlay token auth — allows OBS browser sources to read team data without JWT
     const overlayToken = getOverlayTokenFromRequest(request);
+    const expectedOverlayType = searchParams.get('overlayType');
     const isOverlayAuth = overlayToken && (
-      validateOverlayToken(overlayToken) ||
-      await validateOverlaySessionToken(overlayToken)
+      await validateOverlaySessionToken(overlayToken, expectedOverlayType, tournamentId)
     );
 
     // Authenticate user

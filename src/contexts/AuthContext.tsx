@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
@@ -8,11 +8,9 @@ export interface User {
   email: string;
   logoURL?: string;
   mobileNumber?: string;
-  role: 'Admin' | 'Tournament' | 'MasterManager' | 'Team' | 'Player' | 'Audience';
+  role: 'Admin' | 'Tournament' | 'Player' | 'Audience';
   status: 'Active' | 'PendingApproval' | 'Suspended';
   assignedTournaments?: string[];
-  assignedTeams?: string[];
-  assignedPlayer?: string;
    plan?: 'Free' | 'Standard' | 'Offer';
 }
 

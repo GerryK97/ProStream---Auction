@@ -72,6 +72,18 @@ const NAV_GROUPS = [
           </svg>
         ),
       },
+      {
+        label: 'Wallet',
+        href: '/wallet',
+        roles: null,
+        icon: (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0">
+            <rect x="2" y="5" width="20" height="14" rx="2" />
+            <path d="M2 10h20" />
+            <path d="M16 15h2" />
+          </svg>
+        ),
+      },
     ],
   },
   {
@@ -96,7 +108,7 @@ const NAV_GROUPS = [
       {
         label: 'Overlays',
         href: '/output',
-        roles: ['Admin'],
+        roles: ['Admin', 'Tournament'],
         icon: (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0">
             <rect x="2" y="3" width="20" height="14" rx="2" />

@@ -152,16 +152,15 @@ export async function POST(request: NextRequest) {
         },
         { new: true }
       ).lean();
-      void triggerClassCompleted(tournamentId, {
+      await triggerClassCompleted(tournamentId, {
         completedClassCode: activeClass,
         completedClasses: (finalState as any)?.completedClasses ?? [activeClass],
         auctionState: finalState as any,
         message: `${activeClass} class auction completed`,
-      }).catch(err => console.error('[sell] triggerClassCompleted failed:', err));
+      });
     }
 
-    // Fire-and-forget Pusher — respond immediately, event broadcasts in background
-    void triggerPlayerSold(tournamentId, {
+    await triggerPlayerSold(tournamentId, {
       soldPlayer: updatedPlayer as any,
       winningTeam: updatedTeam as any,
       finalPrice: currentBid,
@@ -169,7 +168,7 @@ export async function POST(request: NextRequest) {
       remainingBudget: (updatedTeam as any).currentBalance,
       auctionState: updatedState as any,
       message: `${(updatedPlayer as any).name} sold to ${(updatedTeam as any).name} for ${currentBid.toLocaleString()}`,
-    }).catch(err => console.error('Failed to trigger Pusher event:', err));
+    });
 
     return NextResponse.json({
       auctionState: updatedState,

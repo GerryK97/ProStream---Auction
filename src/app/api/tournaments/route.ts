@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { tournamentDB } from '@/lib/db-mongodb';
 import { PlayerClassConfig } from '@/types';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
-import { User } from '@/models/User';
+import { getUsersByIds } from '@/lib/pg/user-queries';
 
 /**
  * Validate player class codes
@@ -66,10 +66,10 @@ export async function GET(request: NextRequest) {
     );
 
     const creators = creatorIds.length > 0
-      ? await User.find({ _id: { $in: creatorIds } }).select('_id username').lean() as Array<{ _id: string; username?: string }>
+      ? await getUsersByIds(creatorIds)
       : [];
 
-    const creatorNameById = new Map(creators.map(creator => [creator._id, creator.username || creator._id]));
+    const creatorNameById = new Map(creators.map(creator => [creator.id, creator.username || creator.id]));
     const tournamentsWithCreatorName = tournaments.map(tournament => ({
       ...tournament,
       createdByUsername: tournament.createdBy ? creatorNameById.get(tournament.createdBy) : undefined,

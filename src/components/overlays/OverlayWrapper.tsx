@@ -7,6 +7,7 @@ import { Tournament, AuctionState, Player, Team } from '@/types';
 import { getPusherClient } from '@/lib/pusher-client';
 import { OVERLAY_PALETTES } from '@/config/overlayPalettes';
 import type { OverlaySettingsEvent, WheelSpinEvent } from '@/types/pusher-events';
+import type { AuctionOverlayType } from '@/lib/overlays/auctionOverlayTypes';
 import '../../styles/animations.css';
 
 export interface OverlaySettings {
@@ -49,6 +50,7 @@ const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
 
 interface OverlayWrapperProps {
     tournamentId?: string;
+    overlayType: AuctionOverlayType;
     children: (data: {
         tournament: Tournament | null;
         auctionState: AuctionState;
@@ -64,6 +66,7 @@ interface OverlayWrapperProps {
 
 const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
     tournamentId,
+    overlayType,
     children
 }) => {
     const searchParams = useSearchParams();
@@ -71,9 +74,11 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(!tournamentId);
 
-    // Get debug mode and token from URL
+    // Get debug mode, token, and optional preview style overrides from URL
     const isDebugMode = searchParams.get('debug') === 'true';
     const urlToken = searchParams.get('token');
+    const requestedTheme = searchParams.get('theme');
+    const requestedPalette = searchParams.get('palette');
 
     // Fetch active tournament if no tournamentId provided
     useEffect(() => {
@@ -128,7 +133,7 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
         teams,
         isConnected,
         isRevoked,
-    } = usePusherAuction(liveTournamentId, undefined, urlToken ?? undefined);
+    } = usePusherAuction(liveTournamentId, undefined, urlToken ?? undefined, overlayType);
 
     const currentPlayer = players.find(p => p._id === auctionState.currentPlayerId);
     const soldPlayers = players.filter(p => p.isSold);
@@ -237,12 +242,17 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
         );
     }
 
-    // Determine active palette CSS variables
-    const theme = tournament?.overlayTheme || 'standard';
-    const paletteId = tournament?.overlayPalette || 'default';
-    const activePalette = OVERLAY_PALETTES[theme]?.find(p => p.id === paletteId) 
-        || OVERLAY_PALETTES[theme]?.[0] 
+    // Determine active palette CSS variables. Query params are used for safe preview/link overrides.
+    const theme = requestedTheme && requestedTheme in OVERLAY_PALETTES
+        ? requestedTheme as keyof typeof OVERLAY_PALETTES
+        : tournament?.overlayTheme || 'standard';
+    const paletteId = requestedPalette || tournament?.overlayPalette || 'default';
+    const activePalette = OVERLAY_PALETTES[theme]?.find(p => p.id === paletteId)
+        || OVERLAY_PALETTES[theme]?.[0]
         || { cssVars: {} };
+    const effectiveTournament = tournament
+        ? { ...tournament, overlayTheme: theme as Tournament['overlayTheme'], overlayPalette: activePalette.id }
+        : tournament;
 
     return (
         <div 
@@ -254,7 +264,8 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
                 <div className="fixed top-2 right-2 bg-black/90 text-white p-3 text-xs font-mono rounded border border-green-500 z-50 max-w-xs">
                     <div className="font-bold mb-2 text-green-400">🔍 Debug Mode</div>
                     <div className="space-y-1">
-                        <div>Tournament: {tournament?._id ? `✓ ${tournament.name}` : '✗ None'}</div>
+                        <div>Tournament: {effectiveTournament?._id ? `✓ ${effectiveTournament.name}` : '✗ None'}</div>
+                        <div>Theme: {theme} / {activePalette.id ?? paletteId}</div>
                         <div>Connected: {isConnected ? '✓ Yes' : '✗ No'}</div>
                         <div>Current Player: {currentPlayer?.name || 'None'}</div>
                         <div>URL Token: {urlToken ? '✓ Present' : '✗ Missing'}</div>
@@ -267,7 +278,7 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
 
             {/* Render children with data */}
             {children({
-                tournament,
+                tournament: effectiveTournament,
                 auctionState,
                 players,
                 teams,

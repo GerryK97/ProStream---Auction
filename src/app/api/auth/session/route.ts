@@ -1,64 +1,41 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, getTokenFromRequest } from '@/lib/auth';
-import { User } from '@/models/User';
-import { connectToDatabase } from '@/lib/mongodb';
+import { getUserById, toPublicUser } from '@/lib/pg/user-queries';
+
+async function getSessionUser(token: string | null) {
+  if (!token) {
+    return { error: 'No token provided', status: 401 as const, user: null };
+  }
+
+  const payload = verifyToken(token);
+  if (!payload) {
+    return { error: 'Invalid or expired token', status: 401 as const, user: null };
+  }
+
+  const user = await getUserById(payload.userId);
+
+  if (!user) {
+    return { error: 'User not found', status: 404 as const, user: null };
+  }
+
+  if (user.status !== 'Active') {
+    return { error: 'User account is not active', status: 403 as const, user: null };
+  }
+
+  return { error: null, status: 200 as const, user };
+}
 
 export async function GET(request: NextRequest) {
   try {
-    // Get token from request
-    const token = getTokenFromRequest(request);
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'No token provided' },
-        { status: 401 }
-      );
-    }
-
-    // Verify token
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.json(
-        { error: 'Invalid or expired token' },
-        { status: 401 }
-      );
-    }
-
-    // Connect to database and fetch user
-    await connectToDatabase();
-    const user = await User.findById(payload.userId);
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    // Check if user is still active
-    if (user.status !== 'Active') {
-      return NextResponse.json(
-        { error: 'User account is not active' },
-        { status: 403 }
-      );
+    const result = await getSessionUser(getTokenFromRequest(request));
+    if (!result.user) {
+      return NextResponse.json({ error: result.error }, { status: result.status });
     }
 
     return NextResponse.json(
       {
         success: true,
-        user: {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          logoURL: user.logoURL || '',
-          mobileNumber: user.mobileNumber || '',
-          role: user.role,
-          status: user.status,
-          assignedTournaments: user.assignedTournaments,
-          assignedTeams: user.assignedTeams,
-          assignedPlayer: user.assignedPlayer,
-          plan: (user as any).plan || 'Free',
-        },
+        user: toPublicUser(result.user),
       },
       { status: 200 }
     );
@@ -73,59 +50,16 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { token } = await request.json();
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Token is required' },
-        { status: 400 }
-      );
-    }
-
-    // Verify token
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.json(
-        { error: 'Invalid or expired token' },
-        { status: 401 }
-      );
-    }
-
-    // Connect to database and fetch user
-    await connectToDatabase();
-    const user = await User.findById(payload.userId);
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    // Check if user is still active
-    if (user.status !== 'Active') {
-      return NextResponse.json(
-        { error: 'User account is not active' },
-        { status: 403 }
-      );
+    const body = await request.json();
+    const result = await getSessionUser(body.token);
+    if (!result.user) {
+      return NextResponse.json({ error: result.error }, { status: result.status });
     }
 
     return NextResponse.json(
       {
         success: true,
-        user: {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          logoURL: user.logoURL || '',
-          mobileNumber: user.mobileNumber || '',
-          role: user.role,
-          status: user.status,
-          assignedTournaments: user.assignedTournaments,
-          assignedTeams: user.assignedTeams,
-          assignedPlayer: user.assignedPlayer,
-          plan: (user as any).plan || 'Free',
-        },
+        user: toPublicUser(result.user),
       },
       { status: 200 }
     );

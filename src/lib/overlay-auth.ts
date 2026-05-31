@@ -31,13 +31,20 @@ export function validateOverlayToken(token: string | null | undefined): boolean 
  * @param token - The session token to validate
  * @returns true if the token exists and is active, false otherwise
  */
-export async function validateOverlaySessionToken(token: string | null | undefined): Promise<boolean> {
+export async function validateOverlaySessionToken(
+  token: string | null | undefined,
+  expectedOverlayType?: string | null,
+  expectedTournamentId?: string | null,
+): Promise<boolean> {
   if (!token) return false;
   try {
     const { connectToDatabase } = await import('@/lib/mongodb');
     const { OverlaySessionModel } = await import('@/models/OverlaySession');
     await connectToDatabase();
-    const session = await OverlaySessionModel.findOne({ _id: token, isActive: true }).lean();
+    const query: Record<string, unknown> = { _id: token, isActive: true };
+    if (expectedOverlayType) query.overlayType = expectedOverlayType;
+    if (expectedTournamentId) query.tournamentId = expectedTournamentId;
+    const session = await OverlaySessionModel.findOne(query).lean();
     return !!session;
   } catch {
     return false;

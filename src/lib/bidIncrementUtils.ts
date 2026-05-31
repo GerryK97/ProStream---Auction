@@ -50,3 +50,28 @@ export function getNextTeamBid(
   }
   return currentBid + getBidIncrement(bidIncrements, currentBid);
 }
+
+/**
+ * Compute the previous bid amount using slab increments.
+ * Used by direct bidding slab controls for the Decrease Bid button.
+ */
+export function getPreviousSlabBid(
+  bidIncrements: BidIncrementRange[],
+  currentBid: number,
+  basePrice: number
+): number {
+  if (currentBid <= basePrice) return 0;
+
+  const sorted = [...(bidIncrements || [])].sort((a, b) => a.upTo - b.upTo);
+  if (sorted.length === 0) return Math.max(basePrice, currentBid - 1000);
+
+  let previous = basePrice;
+  let next = basePrice;
+  while (next < currentBid) {
+    previous = next;
+    next += getBidIncrement(sorted, next);
+    if (next >= currentBid) return previous;
+  }
+
+  return Math.max(basePrice, previous);
+}

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import Link from 'next/link';
@@ -7,7 +7,7 @@ import QuotationForm from '@/components/invoiceit/QuotationForm';
 
 export default function CreateQuotationPage() {
   return (
-    <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'MasterManager']}>
+    <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
       <div className="p-6">
         <div className="mx-auto max-w-5xl">
           <div className="mb-6">
