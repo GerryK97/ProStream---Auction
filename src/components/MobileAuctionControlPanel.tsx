@@ -6,7 +6,7 @@ import { useTournamentContext } from '@/contexts/TournamentContext';
 import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { imageOptimizers } from '@/lib/imageOptimization';
 import { getClassBasePrice, getFormattedBasePrice, getMinClassBasePrice } from '@/lib/playerClassUtils';
-import { getBidIncrement, getNextTeamBid } from '@/lib/bidIncrementUtils';
+import { getBidIncrement, getNextTeamBid, getPreviousSlabBid } from '@/lib/bidIncrementUtils';
 import ClassBadge from '@/components/shared/ClassBadge';
 import Modal from '@/components/Modal';
 import type { AuctionState, Player, Team, Tournament } from '@/types';
@@ -350,6 +350,12 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
     const quickBidIncrements = (liveTournament.directQuickBidsEnabled && liveTournament.directQuickBids && liveTournament.directQuickBids.length > 0)
         ? liveTournament.directQuickBids.map(b => b.amount).filter(a => a > 0)
         : DEFAULT_QUICK_BIDS_MOBILE;
+    const basePrice = getClassBasePrice(liveTournament, currentPlayer ?? null);
+    const slabIncrements = liveTournament.bidIncrements ?? [];
+    const directSlabEnabled = liveTournament.biddingMode === 'direct' && liveTournament.directBidSlabEnabled;
+    const nextSlabBid = currentBid > 0 ? currentBid + getBidIncrement(slabIncrements, currentBid) : basePrice;
+    const previousSlabBid = getPreviousSlabBid(slabIncrements, currentBid, basePrice);
+    const currentSlabIncrement = currentBid > 0 ? getBidIncrement(slabIncrements, currentBid) : basePrice;
     const filteredPlayers = availablePlayers.filter(p =>
         !playerSearch || p.name.toLowerCase().includes(playerSearch.toLowerCase()) ||
         String(p.playerNo || '').includes(playerSearch)
@@ -589,7 +595,39 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
                                 )}
 
                                 {/* ── Quick Bid (direct mode) ──────────────── */}
-                                {liveTournament.biddingMode !== 'team' && (
+                                {liveTournament.biddingMode !== 'team' && directSlabEnabled && (
+                                    <div className="rounded-xl border border-[var(--border-primary)] p-3"
+                                        style={{ backgroundColor: 'var(--surface-secondary)' }}>
+                                        <div className="flex items-center justify-between mb-2.5">
+                                            <div>
+                                                <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Bid Increase Slab</p>
+                                                <p className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>Increment: +{formatCurrency(currentSlabIncrement)}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>Next Bid</p>
+                                                <p className="text-xl font-black" style={{ color: 'var(--brand-secondary)' }}>{formatCurrency(nextSlabBid)}</p>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <button
+                                                onClick={() => handleBid(nextSlabBid)}
+                                                disabled={isSold || isSubmitting}
+                                                className="py-4 rounded-xl text-base font-bold transition-all active:scale-95 disabled:opacity-40"
+                                                style={{ backgroundColor: 'rgba(34,197,94,0.12)', color: '#4ade80', border: '1.5px solid rgba(34,197,94,0.45)' }}>
+                                                Increase Bid
+                                            </button>
+                                            <button
+                                                onClick={() => handleCorrectBid(previousSlabBid)}
+                                                disabled={isSold || isSubmitting || currentBid <= basePrice}
+                                                className="py-4 rounded-xl text-base font-bold transition-all active:scale-95 disabled:opacity-40"
+                                                style={{ backgroundColor: 'rgba(251,146,60,0.12)', color: '#fb923c', border: '1.5px solid rgba(251,146,60,0.45)' }}>
+                                                Decrease Bid
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {liveTournament.biddingMode !== 'team' && !directSlabEnabled && (
                                     <div className="rounded-xl border border-[var(--border-primary)] p-3"
                                         style={{ backgroundColor: 'var(--surface-secondary)' }}>
                                         <p className="text-xs font-semibold uppercase tracking-widest mb-2.5"

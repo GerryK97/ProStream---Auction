@@ -44,6 +44,7 @@ const EMPTY_FORM = {
   basePriceStrategy: 'tournament-level' as 'tournament-level' | 'player-class-based',
   playerClasses: [] as ClassRow[],
   biddingMode: 'direct' as 'direct' | 'team',
+  directBidSlabEnabled: false,
   bidIncrements: [] as BidIncrementRange[],
   directQuickBidsEnabled: false,
   directQuickBids: [1000, 5000, 10000, 20000, 25000, 50000].map(a => ({ amount: a })) as { amount: number }[],
@@ -132,6 +133,7 @@ function TournamentsManagePage() {
         code: cls.code,
       })),
       biddingMode: t.biddingMode ?? 'direct',
+      directBidSlabEnabled: t.directBidSlabEnabled ?? false,
       bidIncrements: t.bidIncrements ?? [],
       directQuickBidsEnabled: t.directQuickBidsEnabled ?? false,
       directQuickBids: (t.directQuickBids && t.directQuickBids.length > 0) ? t.directQuickBids : [1000, 5000, 10000, 20000, 25000, 50000].map(a => ({ amount: a })),
@@ -201,7 +203,8 @@ function TournamentsManagePage() {
           }))
         : [],
       biddingMode: form.biddingMode,
-      bidIncrements: form.biddingMode === 'team' ? sortedIncrements : [],
+      directBidSlabEnabled: form.biddingMode === 'direct' ? form.directBidSlabEnabled : false,
+      bidIncrements: form.biddingMode === 'team' || (form.biddingMode === 'direct' && form.directBidSlabEnabled) ? sortedIncrements : [],
       directQuickBidsEnabled: form.biddingMode === 'direct' ? form.directQuickBidsEnabled : false,
       directQuickBids: form.biddingMode === 'direct' && form.directQuickBidsEnabled ? form.directQuickBids.filter(b => b.amount > 0) : [],
       playerProfileFields: {
@@ -667,8 +670,31 @@ function TournamentsManagePage() {
                     </label>
                   </div>
 
-                  {/* Bracket Builder — only shown in team mode */}
-                  {form.biddingMode === 'team' && (
+                  {/* Bid Increase Slab */}
+                  <div className="pt-2 border-t border-gray-700">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      {form.biddingMode === 'direct' && (
+                        <input
+                          type="checkbox"
+                          checked={form.directBidSlabEnabled}
+                          onChange={e => setForm(f => ({
+                            ...f,
+                            directBidSlabEnabled: e.target.checked,
+                            bidIncrements: e.target.checked && f.bidIncrements.length === 0 ? [
+                              { upTo: 50000,  increment: 5000  },
+                              { upTo: 100000, increment: 10000 },
+                              { upTo: 200000, increment: 25000 },
+                            ] : f.bidIncrements,
+                          }))}
+                          className="cursor-pointer"
+                        />
+                      )}
+                      <p className="text-sm font-medium text-white">Bid Increase Slab</p>
+                    </label>
+                  </div>
+
+                  {/* Bracket Builder — team always, direct only when enabled */}
+                  {(form.biddingMode === 'team' || (form.biddingMode === 'direct' && form.directBidSlabEnabled)) && (
                     <div className="space-y-3 pt-2 border-t border-gray-700">
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium text-orange-300">Bid Increment Brackets</p>
