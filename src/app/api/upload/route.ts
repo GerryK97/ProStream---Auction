@@ -6,13 +6,15 @@ export async function POST(request: NextRequest) {
   try {
     // Verify Cloudinary configuration
     if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      // 🛡️ SECURITY: Log missing credentials state server-side only
       console.error('Missing Cloudinary credentials:', {
         cloud_name: !!process.env.CLOUDINARY_CLOUD_NAME,
         api_key: !!process.env.CLOUDINARY_API_KEY,
         api_secret: !!process.env.CLOUDINARY_API_SECRET
       });
+      // 🛡️ SECURITY: Do not leak internal configuration state or service details to the client
       return NextResponse.json(
-        { error: 'Cloudinary is not configured. Please set environment variables.' },
+        { error: 'Service configuration error' },
         { status: 500 }
       );
     }
@@ -58,9 +60,10 @@ export async function POST(request: NextRequest) {
       publicId: uploadResult.public_id,
     });
   } catch (error: any) {
+    // 🛡️ SECURITY: Log detailed errors server-side only to prevent information leakage
     console.error('Upload error:', error);
 
-    // Return detailed error message
+    // Return generic error message
     const errorMessage = error?.message || error?.error?.message || 'Failed to upload image';
     const errorDetails = {
       error: errorMessage,
@@ -70,8 +73,9 @@ export async function POST(request: NextRequest) {
 
     console.error('Full error details:', errorDetails);
 
+    // 🛡️ SECURITY: Fail securely by returning a generic error message to the client, preventing exposure of Cloudinary specifics
     return NextResponse.json(
-      errorDetails,
+      { error: 'An error occurred during file upload' },
       { status: 500 }
     );
   }
