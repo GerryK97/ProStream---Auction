@@ -123,7 +123,8 @@ const THEMES = [
 export default function OutputPage() {
   const router = useRouter();
   const { selectedTournamentId, selectedTournament, setTournaments, tournaments, setSelectedTournamentId, refreshTournaments } = useTournamentContext();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const isAdmin = user?.role === 'Admin';
   const [saving, setSaving] = useState(false);
 
   // OBS setup instructions toggle
@@ -150,7 +151,7 @@ export default function OutputPage() {
   // ── Sessions data fetching ──────────────────────────────────────────────
 
   const fetchSessions = useCallback(async () => {
-    if (!selectedTournamentId) { setSessions([]); return; }
+    if (!isAdmin || !selectedTournamentId) { setSessions([]); return; }
     setLoadingSessions(true);
     setSessionsError(null);
     try {
@@ -165,7 +166,7 @@ export default function OutputPage() {
     } finally {
       setLoadingSessions(false);
     }
-  }, [selectedTournamentId]);
+  }, [selectedTournamentId, isAdmin]);
 
   useEffect(() => {
     fetchSessions();
@@ -321,7 +322,9 @@ ${'─'.repeat(60)}`;
       <div className="mb-8">
         <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Overlay Setup</h1>
         <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          Choose a theme and manage OBS session URLs for your auction broadcast.
+          {isAdmin
+            ? 'Choose a theme and manage OBS session URLs for your auction broadcast.'
+            : 'Choose a theme and generate overlay links for your auction broadcast.'}
         </p>
       </div>
 
@@ -423,7 +426,69 @@ ${'─'.repeat(60)}`;
         </div>
       )}
 
+      {/* ── Overlay Link Generation (Tournament users) ───────────────────── */}
+      {!isAdmin && (
+        <div className="mb-8 rounded-xl border p-5" style={{ backgroundColor: 'var(--surface-elevated)', borderColor: 'var(--border-primary)' }}>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Overlay Link Generation</h2>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                Generate a paid overlay link for the selected tournament. Session lists and revoke controls are admin-only.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleCreate}
+              disabled={!selectedTournamentId || creating}
+              className="shrink-0 px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50"
+              style={{ backgroundColor: 'var(--brand-primary)', color: '#fff' }}
+            >
+              {creating ? 'Generating…' : 'Generate Overlay Link'}
+            </button>
+          </div>
+
+          {!selectedTournamentId && (
+            <p className="mt-4 text-sm text-center rounded-lg py-4" style={{ color: 'var(--text-muted)', border: '1px dashed var(--border-primary)' }}>
+              Select a tournament above to generate an overlay link.
+            </p>
+          )}
+
+          {createError && <p className="mt-4 text-red-400 text-sm">{createError}</p>}
+
+          {justCreated && (
+            <div className="mt-4 space-y-3 rounded-lg p-4" style={{ backgroundColor: 'rgba(79,70,229,0.08)', border: '1px solid var(--brand-primary)' }}>
+              <p className="text-sm font-semibold" style={{ color: 'var(--brand-primary)' }}>Overlay link generated — copy your URL:</p>
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{justCreated.label}</p>
+              {OVERLAY_TYPES.map(type => {
+                const url = buildOverlayUrl(selectedTournamentId || justCreated.tournamentId, type.path, justCreated._id);
+                const copied = copiedUrl === url;
+                return (
+                  <div key={type.path} className="flex items-center gap-2">
+                    <span className="text-xs w-28 shrink-0" style={{ color: 'var(--text-tertiary)' }}>{type.label}</span>
+                    <code className="flex-1 text-xs truncate rounded px-2 py-1 font-mono" style={{ backgroundColor: 'var(--surface-card)', color: 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}>
+                      {url}
+                    </code>
+                    <button
+                      onClick={() => copyToClipboard(url)}
+                      className="shrink-0 px-3 py-1 rounded text-xs font-medium transition-colors"
+                      style={{
+                        backgroundColor: copied ? '#16a34a' : 'var(--surface-card)',
+                        color: copied ? '#fff' : 'var(--text-secondary)',
+                        border: '1px solid var(--border-primary)',
+                      }}
+                    >
+                      {copied ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── OBS Sessions ──────────────────────────────────────────────────── */}
+      {isAdmin && (
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -615,6 +680,7 @@ ${'─'.repeat(60)}`;
           </div>
         )}
       </div>
+      )}
 
       {/* OBS Setup Instructions (collapsible) */}
       <div
@@ -642,7 +708,7 @@ ${'─'.repeat(60)}`;
               </li>
               <li className="flex gap-3">
                 <span className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ backgroundColor: 'var(--brand-primary)' }}>2</span>
-                <span>Click <strong>+ Create Session</strong> above, then copy the overlay URL into OBS.</span>
+                <span>Click <strong>{isAdmin ? 'Generate Paid Overlay' : 'Generate Overlay Link'}</strong>, then copy the overlay URL into OBS.</span>
               </li>
               <li className="flex gap-3">
                 <span className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ backgroundColor: 'var(--brand-primary)' }}>3</span>

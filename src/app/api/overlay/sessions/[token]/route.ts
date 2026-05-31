@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { OverlaySessionModel } from '@/models/OverlaySession';
-import { canAccessTournament, canPerformAction } from '@/lib/permissions';
+import { canAccessTournament } from '@/lib/permissions';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { triggerOverlayRevoke } from '@/lib/pusher-server';
 
@@ -15,7 +15,7 @@ export async function DELETE(
 
     const user = await getUserFromRequest(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (!canPerformAction(user.role, 'delete', 'overlayConfig')) {
+    if (user.role !== 'Admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

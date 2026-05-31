@@ -47,14 +47,14 @@ async function getOverlayPriceMap() {
   ) as Record<AuctionOverlayType, number>;
 }
 
-// GET /api/overlay/sessions?tournamentId=xxx — list sessions for accessible tournaments
+// GET /api/overlay/sessions?tournamentId=xxx — list sessions (admin only)
 export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
 
     const user = await getUserFromRequest(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (!canGenerateOverlays(user)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (user.role !== 'Admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const tournamentId = request.nextUrl.searchParams.get('tournamentId');
     let query: Record<string, unknown> = {};

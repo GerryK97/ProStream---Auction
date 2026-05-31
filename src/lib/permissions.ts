@@ -33,14 +33,14 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
   // Overlay redirect page - kept so /overlays still works for bookmarks
   { path: '/overlays', allowedRoles: ['Admin'] },
 
-  // Output page - overlay setup management (Admin only)
-  { path: '/output', allowedRoles: ['Admin'] },
+  // Output page - theme selection and overlay link generation
+  { path: '/output', allowedRoles: ['Admin', 'Tournament'] },
 
   // User management (Admin only)
   { path: '/users', allowedRoles: ['Admin'] },
 
   // Overlay session manager
-  { path: '/manage/overlays/sessions', allowedRoles: ['Admin', 'Tournament'] },
+  { path: '/manage/overlays/sessions', allowedRoles: ['Admin'] },
   { path: '/manage/overlay-prices', allowedRoles: ['Admin'] },
 
   // InvoiceIt routes
