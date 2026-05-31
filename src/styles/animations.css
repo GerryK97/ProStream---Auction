@@ -1,0 +1,549 @@
+/* Overlay Animations for Auction System */
+
+/* Player Selection Animations */
+@keyframes slideInFromTop {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Bid Animation - Pulse effect when bid changes */
+@keyframes bidPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes bidGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 5px rgba(34, 197, 94, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(34, 197, 94, 1));
+  }
+}
+
+/* Sold Celebration Animation */
+@keyframes soldCelebration {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.1) rotate(5deg);
+  }
+  50% {
+    transform: scale(1.2) rotate(-5deg);
+  }
+  75% {
+    transform: scale(1.1) rotate(3deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes soldFlash {
+  0%, 100% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: rgba(34, 197, 94, 0.3);
+  }
+}
+
+@keyframes soldCheckmark {
+  0% {
+    transform: scale(0) rotate(-45deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+/* Sold Stamp Animation */
+@keyframes stampSeal {
+  0%   { transform: rotate(-20deg) scale(3);    opacity: 0; }
+  55%  { transform: rotate(-20deg) scale(0.92); opacity: 1; }
+  75%  { transform: rotate(-20deg) scale(1.04); opacity: 1; }
+  100% { transform: rotate(-20deg) scale(1);    opacity: 1; }
+}
+.animate-stamp-seal {
+  animation: stampSeal 0.55s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+/* Team Highlight Animations */
+@keyframes teamHighlight {
+  0%, 100% {
+    border-color: rgba(239, 68, 68, 0.5);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+  }
+  50% {
+    border-color: rgba(239, 68, 68, 1);
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.8);
+  }
+}
+
+@keyframes teamBalanceUpdate {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-5px);
+  }
+  75% {
+    transform: translateY(5px);
+  }
+}
+
+@keyframes neonPulseGlow {
+  0% {
+    box-shadow: 0 0 12px rgba(14, 165, 233, 0.35);
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(192, 132, 252, 0.45);
+    transform: translateY(-2px) scale(1.01);
+  }
+  100% {
+    box-shadow: 0 0 18px rgba(45, 212, 191, 0.4);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes emberHeatWave {
+  0% {
+    box-shadow: 0 0 12px rgba(251, 146, 60, 0.4);
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    box-shadow: 0 0 32px rgba(248, 113, 113, 0.55);
+    transform: translateY(-2px) scale(1.015);
+  }
+  100% {
+    box-shadow: 0 0 16px rgba(251, 191, 36, 0.35);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes midnightSlatePulse {
+  0% {
+    box-shadow: 0 0 10px rgba(15, 23, 42, 0.4);
+    transform: translateY(0);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(37, 99, 235, 0.35);
+    transform: translateY(-1px);
+  }
+  100% {
+    box-shadow: 0 0 14px rgba(15, 118, 110, 0.3);
+    transform: translateY(0);
+  }
+}
+
+/* Glow effect for active elements */
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(59, 130, 246, 1);
+  }
+}
+
+/* Sale Banner Animations */
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutToLeft {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+/* Ticker Animation - Continuous horizontal scroll */
+@keyframes ticker {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* Confetti particle animation */
+@keyframes confetti {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+/* Fade animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Bounce animation for attention */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Shake animation */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+/* Utility animation classes */
+.animate-slide-in-top {
+  animation: slideInFromTop 600ms ease-out forwards;
+}
+
+.animate-slide-in-bottom {
+  animation: slideInFromBottom 600ms ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 400ms ease-out forwards;
+}
+
+.animate-bid-pulse {
+  animation: bidPulse 400ms ease-in-out;
+}
+
+.animate-bid-glow {
+  animation: bidGlow 400ms ease-in-out;
+}
+
+.animate-sold-celebration {
+  animation: soldCelebration 800ms ease-in-out;
+}
+
+.animate-sold-flash {
+  animation: soldFlash 1000ms ease-in-out;
+}
+
+.animate-team-highlight {
+  animation: teamHighlight 1000ms ease-in-out infinite;
+}
+
+.animate-team-balance-update {
+  animation: teamBalanceUpdate 300ms ease-in-out;
+}
+
+.animate-glow {
+  animation: glow 2000ms ease-in-out infinite;
+}
+
+.animate-slide-in-right {
+  animation: slideInFromRight 500ms ease-out forwards;
+}
+
+.animate-slide-in-left {
+  animation: slideInFromLeft 500ms ease-out forwards;
+}
+
+.animate-slide-out-left {
+  animation: slideOutToLeft 500ms ease-in forwards;
+}
+
+.animate-ticker {
+  animation: ticker 30s linear infinite;
+}
+
+.animate-fade-in {
+  animation: fadeIn 300ms ease-in forwards;
+}
+
+.animate-fade-out {
+  animation: fadeOut 300ms ease-out forwards;
+}
+
+.animate-bounce {
+  animation: bounce 500ms ease-in-out;
+}
+
+.animate-shake {
+  animation: shake 300ms ease-in-out;
+}
+
+/* Landing Page Animations */
+@keyframes floatParticle {
+  0%, 100% {
+    transform: translate(0, 0);
+    opacity: 0.3;
+  }
+  25% {
+    transform: translate(10px, -10px);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate(-5px, -15px);
+    opacity: 0.7;
+  }
+  75% {
+    transform: translate(-10px, -5px);
+    opacity: 0.5;
+  }
+}
+
+@keyframes gradientShift {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.animate-float-particle {
+  animation: floatParticle 30s ease-in-out infinite;
+}
+
+.animate-gradient-shift {
+  animation: gradientShift 10s ease-in-out infinite;
+}
+
+/* Neon Cyberpunk Ticker Animations */
+@keyframes neon-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
+    opacity: 1;
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.9));
+    opacity: 0.9;
+  }
+}
+
+.animate-neon-pulse {
+  animation: neon-pulse 2s ease-in-out infinite;
+}
+
+/* Elegant Minimalist Ticker Animations */
+@keyframes elegant-ticker {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* ── Resting Time Overlay Animations ── */
+@keyframes coinFlip {
+  0%   { transform: perspective(500px) rotateY(0deg); }
+  100% { transform: perspective(500px) rotateY(360deg); }
+}
+
+@keyframes orbitCW {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes orbitCCW {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(-360deg); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 30px 8px rgba(245,158,11,0.45), 0 0 80px 20px rgba(245,158,11,0.15); }
+  50%       { box-shadow: 0 0 60px 16px rgba(245,158,11,0.75), 0 0 140px 40px rgba(245,158,11,0.3); }
+}
+.animate-pulse-glow {
+  animation: pulseGlow 2.5s ease-in-out infinite;
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 0.15; transform: scale(0.8); }
+  50%       { opacity: 1;    transform: scale(1.2); }
+}
+
+/* Stadium Premiere Theme Animation */
+@keyframes stadiumSpotlight {
+  0% {
+    box-shadow:
+      0 0 25px rgba(76, 201, 240, 0.5),
+      0 0 50px rgba(255, 215, 0, 0.2),
+      inset 0 0 30px rgba(255, 255, 255, 0.05);
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    box-shadow:
+      0 0 45px rgba(76, 201, 240, 0.7),
+      0 0 90px rgba(255, 215, 0, 0.4),
+      inset 0 0 50px rgba(255, 255, 255, 0.08);
+    transform: translateY(-3px) scale(1.015);
+  }
+  100% {
+    box-shadow:
+      0 0 30px rgba(76, 201, 240, 0.6),
+      0 0 60px rgba(255, 215, 0, 0.3),
+      inset 0 0 35px rgba(255, 255, 255, 0.06);
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Sold Message Toast ────────────────────────────────────────── */
+@keyframes soldToastEnter {
+  0%   { transform: translateX(110%) scale(0.92); opacity: 0; }
+  60%  { transform: translateX(-8px) scale(1.01); opacity: 1; }
+  100% { transform: translateX(0) scale(1); opacity: 1; }
+}
+
+@keyframes soldToastExit {
+  0%   { transform: translateX(0) scale(1); opacity: 1; }
+  100% { transform: translateX(110%) scale(0.92); opacity: 0; }
+}
+
+.sold-toast-enter { animation: soldToastEnter 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.sold-toast-exit  { animation: soldToastExit  0.55s ease-in forwards; }
+
+/* ── Sold Message Toast — Left-side variants ───────────────────── */
+@keyframes soldToastEnterLeft {
+  0%   { transform: translateX(-110%) scale(0.92); opacity: 0; }
+  60%  { transform: translateX(8px) scale(1.01); opacity: 1; }
+  100% { transform: translateX(0) scale(1); opacity: 1; }
+}
+@keyframes soldToastExitLeft {
+  0%   { transform: translateX(0) scale(1); opacity: 1; }
+  100% { transform: translateX(-110%) scale(0.92); opacity: 0; }
+}
+.sold-toast-enter-left { animation: soldToastEnterLeft 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.sold-toast-exit-left  { animation: soldToastExitLeft  0.55s ease-in forwards; }
+
+/* ── Full-Screen Sold Panel (SoldMessageFullScreen) ───────────── */
+@keyframes fsmPanelEnter {
+  0%   { opacity: 0; transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fsmPanelExit {
+  0%   { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.04); }
+}
+
+.fsm-panel-enter { animation: fsmPanelEnter 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+.fsm-panel-exit  { animation: fsmPanelExit  0.45s ease-in forwards; }
+
+/* ── New Player Cross-Fade ─────────────────────────────────────── */
+@keyframes playerFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fs-player-enter { animation: playerFadeIn 0.4s ease-out forwards; }
+
+/* ── Bid Value Pop ─────────────────────────────────────────────── */
+@keyframes bidValuePop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+.fs-bid-pop { animation: bidValuePop 0.3s ease-out forwards; }
+
+/* ── Bid Card Glow Pulse ───────────────────────────────────────── */
+@keyframes bidCardPulse {
+  0%, 100% { box-shadow: none; }
+  50%      { box-shadow: 0 0 24px rgba(255,201,25,0.22), inset 0 0 16px rgba(255,201,25,0.06); }
+}
+.fs-bid-card-active { animation: bidCardPulse 1.5s ease-in-out infinite; }
+
+/* ── Summary Overlay Exit ──────────────────────────────────────── */
+@keyframes summaryFadeOut {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.97); }
+}
+.fs-summary-exit { animation: summaryFadeOut 0.5s ease-in forwards; }

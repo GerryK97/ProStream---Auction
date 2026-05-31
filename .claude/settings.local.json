@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(git check-ignore *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "PowerShell(gh pr list --head claude/elegant-curie-8b1c84 --json url,number)",
+      "PowerShell(Get-Command gh -ErrorAction SilentlyContinue; if \\(Test-Path \"$env:ProgramFiles\\\\GitHub CLI\\\\gh.exe\"\\) { Write-Output \"Found: $env:ProgramFiles\\\\GitHub CLI\\\\gh.exe\" }; if \\(Test-Path \"$env:LOCALAPPDATA\\\\GitHub CLI\\\\gh.exe\"\\) { Write-Output \"Found local: $env:LOCALAPPDATA\\\\GitHub CLI\\\\gh.exe\" }; where.exe gh 2>$null)",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Users/gerry/AppData/Local/**)",
+      "Read(//c/Users/gerry/AppData/Local/Programs//**)",
+      "Bash(gh --version)",
+      "Bash('/c/Program Files/GitHub CLI/gh.exe' --version)",
+      "Bash('/c/Program Files/GitHub CLI/gh.exe' auth status)",
+      "Bash(git push *)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
