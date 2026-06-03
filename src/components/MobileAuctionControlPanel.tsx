@@ -53,6 +53,9 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
     const [selectingClass, setSelectingClass] = useState(false);
     const [classCompletionAlert, setClassCompletionAlert] = useState<string | null>(null);
     const [playerSearch, setPlayerSearch] = useState('');
+    const undoInFlightRef = useRef(false);
+    const sellInFlightRef = useRef(false);
+    const [undoPending, setUndoPending] = useState(false);
     const prevCompletedClassesRef = useRef<string[]>([]);
 
     const initialTournamentId = initialData?.tournament?._id ?? null;
@@ -194,9 +197,19 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
         await post('/api/auction/restart', { tournamentId: liveTournament!._id });
     });
 
-    const handleUndo = handle(async () => {
-        await post('/api/auction/undo', { tournamentId: liveTournament!._id });
-    });
+    const handleUndo = async () => {
+        if (!liveTournament || undoInFlightRef.current || sellInFlightRef.current) return;
+        undoInFlightRef.current = true;
+        setUndoPending(true);
+        try {
+            await post('/api/auction/undo', { tournamentId: liveTournament._id });
+        } catch (e: any) {
+            setError(e.message);
+        } finally {
+            undoInFlightRef.current = false;
+            setUndoPending(false);
+        }
+    };
 
     const handleCleanupAll = handle(async () => {
         await post('/api/auction/cleanup-all', { tournamentId: liveTournament!._id });
@@ -258,8 +271,14 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
     };
 
     const handleSell = handle(async () => {
+        if (sellInFlightRef.current || undoInFlightRef.current) return;
         if (!biddingTeamId) throw new Error('Select a winning team first');
-        await post('/api/auction/sell', { tournamentId: liveTournament!._id, teamId: biddingTeamId });
+        sellInFlightRef.current = true;
+        try {
+            await post('/api/auction/sell', { tournamentId: liveTournament!._id, teamId: biddingTeamId });
+        } finally {
+            sellInFlightRef.current = false;
+        }
     });
 
     const handleReset = handle(async () => {
@@ -729,7 +748,7 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
                                     {/* Sell — full width primary action */}
                                     <button
                                         onClick={handleSell}
-                                        disabled={isSold || currentBid === 0 || !biddingTeamId}
+                                        disabled={isSold || currentBid === 0 || !biddingTeamId || isSubmitting || undoPending}
                                         className="w-full py-4 rounded-xl text-base font-black tracking-widest uppercase transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
                                         style={{
                                             background: isSold || currentBid === 0 || !biddingTeamId
@@ -918,10 +937,10 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
                                 <div className="flex gap-2">
                                     <button
                                         onClick={handleUndo}
-                                        disabled={soldPlayers.length + unsoldPlayers.length === 0}
+                                        disabled={soldPlayers.length + unsoldPlayers.length === 0 || undoPending || isSubmitting}
                                         className="px-3 py-1.5 rounded-lg text-xs font-bold disabled:opacity-40"
                                         style={{ background: 'rgba(99,102,241,0.12)', color: '#a5b4fc', border: '1.5px solid rgba(99,102,241,0.35)' }}>
-                                        Undo
+                                        {undoPending ? 'Undoing…' : 'Undo'}
                                     </button>
                                     <button
                                         onClick={handleCleanupAll}

@@ -644,9 +644,10 @@ export const TeamsAndSoldPlayersPanel: React.FC<{
     winningTeamId: string | null;
     currentBid: number;
     onUndo: () => void;
+    undoPending?: boolean;
     onCleanup: () => void;
     onEditSaved: (player: Player, teams: Team[]) => void;
-}> = ({ teams, soldPlayers, unsoldPlayers, tournament, winningTeamId, currentBid, onUndo, onCleanup, onEditSaved }) => {
+}> = ({ teams, soldPlayers, unsoldPlayers, tournament, winningTeamId, currentBid, onUndo, undoPending = false, onCleanup, onEditSaved }) => {
     const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
     const [editStatus, setEditStatus] = useState<'sold' | 'unsold' | 'available'>('sold');
     const [editPrice, setEditPrice] = useState('');
@@ -753,12 +754,12 @@ export const TeamsAndSoldPlayersPanel: React.FC<{
                     <div className="flex gap-1.5">
                         <button
                             onClick={onUndo}
-                            disabled={allPlayers.length === 0}
+                            disabled={allPlayers.length === 0 || undoPending}
                             className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide px-3 py-1.5 rounded-md transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                             style={{ background: 'rgba(99,102,241,0.12)', color: '#a5b4fc', border: '1.5px solid rgba(99,102,241,0.35)' }}
                             onMouseEnter={e => { if (allPlayers.length > 0) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(99,102,241,0.25)'; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(99,102,241,0.12)'; }}>
-                            Undo
+                            {undoPending ? 'Undoing…' : 'Undo'}
                         </button>
                         <ClearAllButton onClick={onCleanup} disabled={allPlayers.length === 0} label="Clear" size="sm" />
                     </div>
@@ -1017,6 +1018,9 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const spinTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
     const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const bidInFlightRef = useRef(false);
+    const sellInFlightRef = useRef(false);
+    const undoInFlightRef = useRef(false);
+    const [undoPending, setUndoPending] = useState(false);
     const [hidePremiumCard, setHidePremiumCard] = useState(false);
     const [autoSwitch, setAutoSwitch] = useState(false);
     const [autoSwitchDuration, setAutoSwitchDuration] = useState(5);
@@ -1672,6 +1676,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
 
     const handleSell = async () => {
         if (!liveTournament) return;
+        if (sellInFlightRef.current || undoInFlightRef.current) return;
         if (!biddingTeamId) {
             setError('Please select a winning team before selling');
             return;
@@ -1687,6 +1692,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         // Optimistic update: mark sold + deduct balance immediately. The
         // PLAYER_SOLD Pusher event will replace this with the authoritative
         // server state. On failure we restore from the snapshot.
+        sellInFlightRef.current = true;
         const snapshot = optimisticSell({ teamId: biddingTeamId, playerId, bid });
 
         try {
@@ -1707,6 +1713,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             restoreSell(snapshot);
             console.error('Failed to sell player:', error);
             setError('An error occurred while selling the player');
+        } finally {
+            sellInFlightRef.current = false;
         }
     };
 
@@ -1754,6 +1762,9 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
 
     const handleUndo = async () => {
         if (!liveTournament) return;
+        if (undoInFlightRef.current || sellInFlightRef.current) return;
+        undoInFlightRef.current = true;
+        setUndoPending(true);
         try {
             const response = await fetch('/api/auction/undo', {
                 method: 'POST',
@@ -1774,6 +1785,9 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         } catch (error) {
             console.error('Failed to undo sale:', error);
             setError('An error occurred while undoing the sale');
+        } finally {
+            undoInFlightRef.current = false;
+            setUndoPending(false);
         }
     };
 
@@ -2012,6 +2026,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                         winningTeamId={auctionState.winningTeamId}
                         currentBid={auctionState.currentBid ?? 0}
                         onUndo={handleUndo}
+                        undoPending={undoPending}
                         onCleanup={handleCleanupAll}
                         onEditSaved={updatePlayerAndTeams}
                     />
