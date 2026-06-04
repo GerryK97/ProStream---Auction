@@ -69,3 +69,71 @@ export function normalizePublicId(value: string | null | undefined): string | nu
   }
   return value
 }
+
+/**
+ * Resolve any stored image value (bare publicId or full URL) to a full
+ * Cloudinary delivery URL suitable for <img src>. Server-safe — uses
+ * CLOUDINARY_CLOUD_NAME (falls back to NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME).
+ * Returns null if value is empty.
+ */
+export function resolveImageUrl(
+  value: string | null | undefined,
+  options: { width?: number; height?: number; fit?: 'fill' | 'thumb' | 'crop' } = {}
+): string | null {
+  if (!value) return null
+  // Already a non-cloudinary external URL — keep as-is
+  if ((value.startsWith('http') || value.startsWith('data:')) && !value.includes('cloudinary.com')) {
+    return value
+  }
+  const cloudName =
+    process.env.CLOUDINARY_CLOUD_NAME ??
+    process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ??
+    ''
+  if (!cloudName) return value
+  const { width = 400, height = 400, fit = 'fill' } = options
+  const transform = `c_${fit},w_${width},h_${height},f_webp`
+
+  // Full cloudinary URL → rebuild with transforms
+  if (value.includes('res.cloudinary.com')) {
+    const uploadIdx = value.indexOf('/upload/')
+    if (uploadIdx === -1) return value
+    let rest = value.slice(uploadIdx + '/upload/'.length)
+    // Strip existing transform segments
+    rest = rest.replace(/^(?:[a-z_]+_[^/]+,?)+\//, '')
+    // Strip version prefix
+    rest = rest.replace(/^v\d+\//, '')
+    // Strip extension
+    rest = rest.replace(/\.[a-zA-Z]{2,5}$/, '')
+    return `https://res.cloudinary.com/${cloudName}/image/upload/${transform}/${rest}`
+  }
+
+  // Bare public_id
+  return `https://res.cloudinary.com/${cloudName}/image/upload/${transform}/${value}`
+}
+
+/**
+ * Serialize a player/team/tournament document for API responses.
+ * Resolves all image fields to full delivery URLs so every consumer
+ * (overlays, manage pages, mobile app) always gets a usable <img src>.
+ */
+export function serializePlayer(doc: Record<string, any>): Record<string, any> {
+  return {
+    ...doc,
+    photoURL: resolveImageUrl(doc.photoURL, { width: 600, height: 600 }) ?? doc.photoURL ?? null,
+    secondaryImageURL: resolveImageUrl(doc.secondaryImageURL, { width: 800, height: 450, fit: 'fill' }) ?? doc.secondaryImageURL ?? null,
+  }
+}
+
+export function serializeTeam(doc: Record<string, any>): Record<string, any> {
+  return {
+    ...doc,
+    logoURL: resolveImageUrl(doc.logoURL, { width: 400, height: 400 }) ?? doc.logoURL ?? null,
+  }
+}
+
+export function serializeTournament(doc: Record<string, any>): Record<string, any> {
+  return {
+    ...doc,
+    logoURL: resolveImageUrl(doc.logoURL, { width: 400, height: 400 }) ?? doc.logoURL ?? null,
+  }
+}

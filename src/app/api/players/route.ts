@@ -7,6 +7,7 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
 import { validateOverlaySessionToken, getOverlayTokenFromRequest } from '@/lib/overlay-auth';
+import { serializePlayer } from '@/lib/cloudinaryUtils';
 
 // GET /api/players - Get players accessible to the authenticated user
 export async function GET(request: NextRequest) {
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
       }
       await connectToDatabase();
       const players = await PlayerModel.find({ tournamentId }).lean();
-      return NextResponse.json(players);
+      return NextResponse.json(players.map(serializePlayer));
     }
 
     // Check if user has permission to read players
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
       }
 
       const players = await PlayerModel.find({ tournamentId }).lean();
-      return NextResponse.json(players);
+      return NextResponse.json(players.map(serializePlayer));
     }
 
     // Otherwise, return players accessible to the user
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
       user!.role,
       user!.assignedTournaments
     );
-    return NextResponse.json(players);
+    return NextResponse.json(players.map(serializePlayer));
   } catch (error) {
     console.error('Error fetching players:', error);
     return NextResponse.json(
@@ -142,7 +143,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return NextResponse.json(newPlayer, { status: 201 });
+    return NextResponse.json(serializePlayer(newPlayer as any), { status: 201 });
   } catch (error: any) {
     console.error('Error creating player:', error);
     return NextResponse.json({ error: error.message || 'Failed to create player' }, { status: 500 });

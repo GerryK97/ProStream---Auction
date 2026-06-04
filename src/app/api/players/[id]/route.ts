@@ -4,6 +4,7 @@ import { TeamModel } from '@/models/Team';
 import { connectToDatabase } from '@/lib/mongodb';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction, canAccessPlayer, canModifyResource } from '@/lib/permissions';
+import { serializePlayer } from '@/lib/cloudinaryUtils';
 
 // GET /api/players/[id] - Get player by ID
 export async function GET(
@@ -54,7 +55,7 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    return NextResponse.json(player);
+    return NextResponse.json(serializePlayer(player as any));
   } catch (error) {
     return NextResponse.json(
       { error: 'Failed to fetch player' },
@@ -146,7 +147,7 @@ export async function PUT(
         { status: 404 }
       );
     }
-    return NextResponse.json(updatedPlayer);
+    return NextResponse.json(serializePlayer(updatedPlayer as any));
   } catch (error) {
     return NextResponse.json(
       { error: 'Failed to update player' },

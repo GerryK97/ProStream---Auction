@@ -4,6 +4,7 @@ import { PlayerClassConfig } from '@/types';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
 import { getUsersByIds } from '@/lib/pg/user-queries';
+import { serializeTournament } from '@/lib/cloudinaryUtils';
 
 /**
  * Validate player class codes
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
 
     const creatorNameById = new Map(creators.map(creator => [creator.id, creator.username || creator.id]));
     const tournamentsWithCreatorName = tournaments.map(tournament => ({
-      ...tournament,
+      ...serializeTournament(tournament as any),
       createdByUsername: tournament.createdBy ? creatorNameById.get(tournament.createdBy) : undefined,
     }));
 

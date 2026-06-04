@@ -6,6 +6,7 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
 import { validateOverlaySessionToken, getOverlayTokenFromRequest } from '@/lib/overlay-auth';
+import { serializeTeam } from '@/lib/cloudinaryUtils';
 
 // GET /api/teams - Get teams accessible to the authenticated user
 export async function GET(request: NextRequest) {
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
       }
       await connectToDatabase();
       const teams = await TeamModel.find({ tournamentId }).lean();
-      return NextResponse.json(teams);
+      return NextResponse.json(teams.map(serializeTeam));
     }
 
     // Check if user has permission to read teams
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
       }
 
       const teams = await TeamModel.find({ tournamentId }).lean();
-      return NextResponse.json(teams);
+      return NextResponse.json(teams.map(serializeTeam));
     }
 
     // Otherwise, return teams accessible to the user
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
       user!.role,
       []
     );
-    return NextResponse.json(teams);
+    return NextResponse.json(teams.map(serializeTeam));
   } catch (error) {
     console.error('Error fetching teams:', error);
     return NextResponse.json(
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
       { name, shortCode, ownerName, logoURL, tournamentId },
       user.userId
     );
-    return NextResponse.json(newTeam, { status: 201 });
+    return NextResponse.json(serializeTeam(newTeam as any), { status: 201 });
   } catch (error: any) {
     console.error('Error creating team:', error);
     return NextResponse.json({ error: error.message || 'Failed to create team' }, { status: 500 });
