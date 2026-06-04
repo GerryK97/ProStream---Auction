@@ -1,6 +1,7 @@
 ﻿import { and, count, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { pgDb } from './db';
 import { users, type NewPgUser, type PgUser } from './users-schema';
+import { resolveImageUrl } from '@/lib/cloudinaryUtils';
 
 export type UserRole = 'Admin' | 'Tournament' | 'Player' | 'Audience';
 export type UserStatus = 'Active' | 'PendingApproval' | 'Suspended';
@@ -40,7 +41,7 @@ export function toAuctionUser(user: PgUser): AuctionUser {
     role: user.role,
     status: user.status,
     plan: user.plan,
-    logoURL: user.photoCloudinaryId ?? '',   // bare publicId; use buildImageUrl() to render
+    logoURL: resolveImageUrl(user.photoCloudinaryId, { width: 200, height: 200 }) ?? user.photoCloudinaryId ?? '',
     mobileNumber: user.phone ?? '',
     assignedTournaments: user.assignedTournaments ?? [],
     createdAt: user.createdAt,

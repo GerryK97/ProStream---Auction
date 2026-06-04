@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import Cropper from 'react-easy-crop';
 import type { Area } from 'react-easy-crop';
-import { resolveImageUrl } from '@/lib/cloudinaryUtils';
+import { resolveImageUrl, buildImageUrl } from '@/lib/cloudinaryUtils';
 
 interface ImageUploadProps {
   value: string;
@@ -283,7 +283,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           {/* Image Preview */}
           <div className="relative shrink-0">
             <img
-              src={resolveImageUrl(value, { width: 400, height: 400 }) || value || placeholderUrl}
+              src={buildImageUrl(value, { width: 400, height: 400 }) || placeholderUrl}
               alt="Preview"
               className={`${previewClassName} ${previewShapeClass} object-cover`}
               style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}

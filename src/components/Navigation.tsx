@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useSidebar } from '@/contexts/SidebarContext';
+import { buildImageUrl } from '@/lib/cloudinaryUtils';
 
 const Navigation: React.FC = () => {
   const pathname = usePathname();
@@ -108,7 +109,7 @@ const Navigation: React.FC = () => {
           style={{ borderColor: 'var(--border-primary)', backgroundColor: 'var(--surface-elevated)' }}
         >
           <img
-            src={user.logoURL || 'https://placehold.co/96x96/374151/F3F4F6/png?text=U'}
+            src={buildImageUrl(user.logoURL, { width: 96, height: 96 }) || 'https://placehold.co/96x96/374151/F3F4F6/png?text=U'}
             alt={user.username}
             className="w-full h-full rounded-full object-cover"
           />
