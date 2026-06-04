@@ -15,9 +15,6 @@ export async function DELETE(
 
     const user = await getUserFromRequest(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (user.role !== 'Admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
 
     const { token: sessionToken } = await params;
     const existingSession = await OverlaySessionModel.findOne({ _id: sessionToken, isActive: true }).lean();

@@ -179,7 +179,7 @@ export default function OutputPage() {
   // ── Sessions data fetching ──────────────────────────────────────────────
 
   const fetchSessions = useCallback(async () => {
-    if (!isAdmin || !selectedTournamentId) { setSessions([]); return; }
+    if (!selectedTournamentId) { setSessions([]); return; }
     setLoadingSessions(true);
     setSessionsError(null);
     try {
@@ -194,7 +194,7 @@ export default function OutputPage() {
     } finally {
       setLoadingSessions(false);
     }
-  }, [selectedTournamentId, isAdmin]);
+  }, [selectedTournamentId]);
 
   useEffect(() => {
     fetchSessions();
@@ -375,11 +375,11 @@ ${'─'.repeat(60)}`;
   // ── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
+    <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'Player', 'Audience']}>
     <div className="max-w-4xl mx-auto py-8 px-6">
       {/* Steps Progress */}
       <div className="mb-8">
-        <StepsProgress currentStep={4} />
+        <StepsProgress currentStep={5} />
       </div>
 
       {/* Header */}
@@ -593,7 +593,7 @@ ${'─'.repeat(60)}`;
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Overlay Link Generation</h2>
               <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                Generate a paid overlay link for the selected tournament. Session lists and revoke controls are admin-only.
+                Generate a paid overlay link for the selected tournament. Active session URLs and revoke controls are shown below.
               </p>
             </div>
             <button
@@ -649,7 +649,6 @@ ${'─'.repeat(60)}`;
       )}
 
       {/* ── OBS Sessions ──────────────────────────────────────────────────── */}
-      {isAdmin && (
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -658,7 +657,7 @@ ${'─'.repeat(60)}`;
               Each session generates a unique URL. Revoke any session to instantly disconnect that OBS source.
             </p>
           </div>
-          {selectedTournamentId && (
+          {selectedTournamentId && isAdmin && (
             <Link
               href="/manage/overlays/sessions"
               className="shrink-0 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
@@ -726,7 +725,7 @@ ${'─'.repeat(60)}`;
               <p className="p-4 text-red-400 text-sm">{sessionsError}</p>
             ) : activeSessions.length === 0 ? (
               <p className="p-6 text-center text-sm" style={{ color: 'var(--text-tertiary)' }}>
-                No active sessions. Open OBS Sessions to generate a paid overlay URL.
+                No active sessions. Generate an overlay link for this tournament to create one.
               </p>
             ) : (
               <ul className="divide-y" style={{ borderColor: 'var(--border-primary)' }}>
@@ -843,7 +842,6 @@ ${'─'.repeat(60)}`;
           </div>
         )}
       </div>
-      )}
 
       {/* OBS Setup Instructions (collapsible) */}
       <div
