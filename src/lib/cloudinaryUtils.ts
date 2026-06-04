@@ -8,7 +8,7 @@
  * 4. Placeholder/external URL → pass through as-is
  */
 
-const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ?? ''
+const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ?? process.env.CLOUDINARY_CLOUD_NAME ?? 'diitsd6nz'
 
 /**
  * Build a Cloudinary transformation URL from any stored value.
