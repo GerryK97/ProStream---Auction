@@ -27,14 +27,12 @@ export function buildImageUrl(
     const uploadIdx = value.indexOf('/upload/')
     if (uploadIdx !== -1) {
       let rest = value.slice(uploadIdx + '/upload/'.length)
-      // Strip existing transformation segments (anything before the first path that looks like a folder/id)
-      rest = rest.replace(/^[^/]+\//, (seg) =>
-        /^[a-z_,]+$/.test(seg.replace(/\d+/g, '')) ? '' : seg
-      )
+      // Strip existing Cloudinary transform segments (e.g. c_fill,w_200,h_200,f_webp)
+      rest = rest.replace(/^(?:[a-z]+_[^/]+,?)+\//, '')
       // Strip version prefix v1234567890/
       rest = rest.replace(/^v\d+\//, '')
       // Strip file extension
-      rest = rest.replace(/\.[a-zA-Z]+$/, '')
+      rest = rest.replace(/\.[a-zA-Z]{2,5}$/, '')
       return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/c_${fit},w_${width},h_${height},f_webp/${rest}`
     }
     return value // fallback: return as-is
@@ -58,11 +56,13 @@ export function normalizePublicId(value: string | null | undefined): string | nu
   if (value.startsWith('https://') || value.startsWith('http://')) {
     if (value.includes('/upload/')) {
       let rest = value.slice(value.indexOf('/upload/') + '/upload/'.length)
-      rest = rest.replace(/^[^/]+\//, (seg) =>
-        /^[a-z_,]+$/.test(seg.replace(/\d+/g, '')) ? '' : seg
-      )
+      // Strip all leading Cloudinary transform segments (e.g. c_fill,w_200,h_200,f_webp)
+      // A transform segment contains a Cloudinary param like c_, w_, h_, f_, q_, etc.
+      rest = rest.replace(/^(?:[a-z]+_[^/]+,?)+\//, '')
+      // Strip version prefix v1234567890/
       rest = rest.replace(/^v\d+\//, '')
-      rest = rest.replace(/\.[a-zA-Z]+$/, '')
+      // Strip file extension
+      rest = rest.replace(/\.[a-zA-Z]{2,5}$/, '')
       return rest || null
     }
     return null // non-Cloudinary URL — don't store
