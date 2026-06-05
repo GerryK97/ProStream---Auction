@@ -379,7 +379,7 @@ ${'─'.repeat(60)}`;
     <div className="max-w-4xl mx-auto py-8 px-6">
       {/* Steps Progress */}
       <div className="mb-8">
-        <StepsProgress currentStep={5} />
+        <StepsProgress currentStep={4} />
       </div>
 
       {/* Header */}

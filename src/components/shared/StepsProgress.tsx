@@ -19,8 +19,8 @@ const DEFAULT_STEPS: Step[] = [
   { label: 'Tournament Setup', href: '/manage/tournaments' },
   { label: 'Teams Setup', href: '/manage/teams' },
   { label: 'Players Setup', href: '/manage/players' },
-  { label: 'Auction Control', href: '/auction' },
   { label: 'Overlay / Output', href: '/output' },
+  { label: 'Auction Control', href: '/auction' },
 ];
 
 const getStepStatus = (index: number, currentIndex: number) => {
