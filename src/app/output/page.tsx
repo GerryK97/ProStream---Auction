@@ -11,7 +11,6 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { OVERLAY_PALETTES } from '@/config/overlayPalettes';
 import {
   AUCTION_OVERLAY_TYPES,
-  AUCTION_OVERLAY_TYPE_KEYS,
   AuctionOverlayType,
   buildAuctionOverlayUrl,
   getAuctionOverlayConfig,
@@ -132,6 +131,9 @@ const THEMES = [
     available: false,
   },
 ];
+
+const USER_SELECTABLE_OVERLAY_TYPES: AuctionOverlayType[] = ['fullscreen', 'fullscreen2'];
+const OUTPUT_LAYOUT_ORDER: AuctionOverlayType[] = ['custom', 'team_owners', 'fullscreen', 'fullscreen2'];
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -325,13 +327,9 @@ ${'─'.repeat(60)}`;
   const revokedSessions = sessions.filter(s => !s.isActive);
   const formatDate = (iso: string) => new Date(iso).toLocaleString();
 
-  const toggleSelectedOverlayType = (type: AuctionOverlayType) => {
-    setSelectedOverlayTypes(prev => {
-      if (prev.includes(type)) {
-        return prev.length === 1 ? prev : prev.filter(t => t !== type);
-      }
-      return [...prev, type];
-    });
+  const selectOverlayType = (type: AuctionOverlayType) => {
+    if (!USER_SELECTABLE_OVERLAY_TYPES.includes(type)) return;
+    setSelectedOverlayTypes([type]);
   };
 
   // ── Theme / palette actions ─────────────────────────────────────────────
@@ -418,43 +416,34 @@ ${'─'.repeat(60)}`;
 
       {/* Overlay layout cards */}
       <div className="mb-8">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-            Choose Layout
-          </h2>
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+              Choose Layout
+            </h2>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+              Users can generate one Full Screen overlay type at a time.
+            </p>
+          </div>
           <div className="flex items-center gap-2">
             <span className="rounded-full px-3 py-1 text-xs font-bold" style={{ backgroundColor: 'rgba(79,70,229,0.12)', color: 'var(--brand-primary)', border: '1px solid var(--brand-primary)' }}>
               Total: {formatAmount(selectedTotalCharge)}
             </span>
-            <button
-              type="button"
-              onClick={() => setSelectedOverlayTypes([...AUCTION_OVERLAY_TYPE_KEYS])}
-              className="text-[11px] font-semibold underline"
-              style={{ color: 'var(--brand-primary)' }}
-            >
-              Select all
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedOverlayTypes(['fullscreen'])}
-              className="text-[11px] font-semibold underline"
-              style={{ color: 'var(--text-tertiary)' }}
-            >
-              Reset
-            </button>
-            <span className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>{selectedOverlayTypes.length} selected</span>
+            <span className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>1 selected</span>
           </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          {AUCTION_OVERLAY_TYPE_KEYS.map((type) => {
+          {OUTPUT_LAYOUT_ORDER.map((type) => {
             const config = getAuctionOverlayConfig(type);
             const isSelected = selectedOverlayTypes.includes(type);
+            const isSelectable = USER_SELECTABLE_OVERLAY_TYPES.includes(type);
             return (
               <button
                 key={type}
                 type="button"
-                onClick={() => toggleSelectedOverlayType(type)}
-                className="rounded-xl p-4 text-left transition-all duration-200 hover:scale-[1.01]"
+                disabled={!isSelectable}
+                onClick={() => selectOverlayType(type)}
+                className={`rounded-xl p-4 text-left transition-all duration-200 ${isSelectable ? 'hover:scale-[1.01]' : 'cursor-not-allowed opacity-55'}`}
                 style={{
                   backgroundColor: isSelected ? `${config.accent}18` : 'var(--surface-elevated)',
                   border: `2px solid ${isSelected ? config.accent : 'var(--border-primary)'}`,
@@ -475,7 +464,7 @@ ${'─'.repeat(60)}`;
                         border: `1px solid ${isSelected ? config.accent : 'var(--border-primary)'}`,
                       }}
                     >
-                      {isSelected ? 'Selected' : 'Select'}
+                      {isSelected ? 'Selected' : isSelectable ? 'Select' : 'Locked'}
                     </span>
                   </div>
                 </div>
