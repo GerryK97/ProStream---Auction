@@ -376,11 +376,13 @@ ${'─'.repeat(60)}`;
 
   return (
     <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'Player', 'Audience']}>
-    <div className="max-w-4xl mx-auto py-8 px-6">
+    <div>
       {/* Steps Progress */}
-      <div className="mb-8">
+      <div className="px-6 pt-6 pb-2">
         <StepsProgress currentStep={4} />
       </div>
+
+      <div className="max-w-4xl mx-auto py-8 px-6">
 
       {/* Header */}
       <div className="mb-8">
@@ -900,6 +902,7 @@ ${'─'.repeat(60)}`;
         >
           Continue to Auction →
         </button>
+      </div>
       </div>
     </div>
     </ProtectedRoute>
