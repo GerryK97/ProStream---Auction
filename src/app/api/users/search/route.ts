@@ -24,8 +24,10 @@ export async function GET(request: NextRequest) {
 
     // Return only the fields the client needs — no sensitive data
     return NextResponse.json({
-      _id: found._id,
+      _id: found.id,
+      id: found.id,
       username: found.username,
+      displayName: found.displayName,
       role: found.role,
       assignedTournaments: found.assignedTournaments ?? [],
     });
