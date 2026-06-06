@@ -58,12 +58,12 @@ Only these step pages show the step progress component. Non-step pages such as a
 
 `/output` currently lists layouts in this order:
 
-1. Custom Overlay — locked/display-only
-2. Team Owners Overlay — locked/display-only
-3. Full Screen — selectable
-4. Full Screen 2 — selectable
+1. Custom Overlay — optional selectable
+2. Team Owners Overlay — optional selectable
+3. Full Screen — selectable fullscreen option
+4. Full Screen 2 — selectable fullscreen option
 
-The selector behaves as a single-choice/radio-style control for selectable full-screen outputs.
+Custom Overlay and Team Owners Overlay can be selected independently. Full Screen and Full Screen 2 are mutually exclusive, so users can generate at most one full-screen layout in the same selection set.
 
 ### Sidebar / navigation
 

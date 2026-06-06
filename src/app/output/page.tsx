@@ -132,7 +132,7 @@ const THEMES = [
   },
 ];
 
-const USER_SELECTABLE_OVERLAY_TYPES: AuctionOverlayType[] = ['fullscreen', 'fullscreen2'];
+const FULLSCREEN_OVERLAY_TYPES: AuctionOverlayType[] = ['fullscreen', 'fullscreen2'];
 const OUTPUT_LAYOUT_ORDER: AuctionOverlayType[] = ['custom', 'team_owners', 'fullscreen', 'fullscreen2'];
 
 // ── Page ─────────────────────────────────────────────────────────────────────
@@ -328,8 +328,15 @@ ${'─'.repeat(60)}`;
   const formatDate = (iso: string) => new Date(iso).toLocaleString();
 
   const selectOverlayType = (type: AuctionOverlayType) => {
-    if (!USER_SELECTABLE_OVERLAY_TYPES.includes(type)) return;
-    setSelectedOverlayTypes([type]);
+    setSelectedOverlayTypes(prev => {
+      if (FULLSCREEN_OVERLAY_TYPES.includes(type)) {
+        return [...prev.filter(selectedType => !FULLSCREEN_OVERLAY_TYPES.includes(selectedType)), type];
+      }
+
+      return prev.includes(type)
+        ? prev.filter(selectedType => selectedType !== type)
+        : [...prev, type];
+    });
   };
 
   // ── Theme / palette actions ─────────────────────────────────────────────
@@ -422,28 +429,27 @@ ${'─'.repeat(60)}`;
               Choose Layout
             </h2>
             <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-              Users can generate one Full Screen overlay type at a time.
+              Select Custom and Team Owners independently. Choose only one Full Screen version.
             </p>
           </div>
           <div className="flex items-center gap-2">
             <span className="rounded-full px-3 py-1 text-xs font-bold" style={{ backgroundColor: 'rgba(79,70,229,0.12)', color: 'var(--brand-primary)', border: '1px solid var(--brand-primary)' }}>
               Total: {formatAmount(selectedTotalCharge)}
             </span>
-            <span className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>1 selected</span>
+            <span className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>{selectedOverlayTypes.length} selected</span>
           </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           {OUTPUT_LAYOUT_ORDER.map((type) => {
             const config = getAuctionOverlayConfig(type);
             const isSelected = selectedOverlayTypes.includes(type);
-            const isSelectable = USER_SELECTABLE_OVERLAY_TYPES.includes(type);
+            const isFullscreenType = FULLSCREEN_OVERLAY_TYPES.includes(type);
             return (
               <button
                 key={type}
                 type="button"
-                disabled={!isSelectable}
                 onClick={() => selectOverlayType(type)}
-                className={`rounded-xl p-4 text-left transition-all duration-200 ${isSelectable ? 'hover:scale-[1.01]' : 'cursor-not-allowed opacity-55'}`}
+                className="rounded-xl p-4 text-left transition-all duration-200 hover:scale-[1.01]"
                 style={{
                   backgroundColor: isSelected ? `${config.accent}18` : 'var(--surface-elevated)',
                   border: `2px solid ${isSelected ? config.accent : 'var(--border-primary)'}`,
@@ -464,7 +470,7 @@ ${'─'.repeat(60)}`;
                         border: `1px solid ${isSelected ? config.accent : 'var(--border-primary)'}`,
                       }}
                     >
-                      {isSelected ? 'Selected' : isSelectable ? 'Select' : 'Locked'}
+                      {isSelected ? 'Selected' : isFullscreenType ? 'Choose One' : 'Optional'}
                     </span>
                   </div>
                 </div>

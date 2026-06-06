@@ -55,12 +55,12 @@ The step-progress UI appears only on those assigned pages.
 
 Current `/output` layout order:
 
-1. Custom Overlay — locked/display-only
-2. Team Owners Overlay — locked/display-only
-3. Full Screen — selectable
-4. Full Screen 2 — selectable
+1. Custom Overlay — optional selectable
+2. Team Owners Overlay — optional selectable
+3. Full Screen — selectable fullscreen option
+4. Full Screen 2 — selectable fullscreen option
 
-The full-screen layouts behave as radio-style single selection.
+Custom Overlay and Team Owners Overlay can be selected independently. Full Screen and Full Screen 2 behave as a radio pair, so only one full-screen layout can be selected at a time.
 
 ## OBS/browser-source overlays
 
