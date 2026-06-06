@@ -1,40 +1,167 @@
-# Architecture
+# ProStream Auction — Architecture
 
 ## Summary
-ProStream Auction is a Next.js App Router application with internal auction-management surfaces and separate output-facing overlay routes. The key architectural boundary is visual: System UI and Overlay Output themes are separate systems and must remain isolated.
 
-## Main Areas
-- App routes and API routes live under `src/app`.
-- System UI components live in `src/components`, including shell, navigation, forms, controls, and management surfaces.
-- Overlay controls live in `src/components/overlay-controls`; these are System UI because they are admin/editor controls.
-- Overlay renderers live in `src/components/overlays`; these are output-facing components.
-- Realtime auction state flows through hooks such as `usePusherAuction` and server/client Pusher utilities.
-- Data models live under `src/models`; shared runtime types live in `src/types`.
-- Shared user and wallet data live in Neon Postgres through `src/lib/pg`; auction domain data remains in MongoDB/Mongoose.
+ProStream Auction is a Next.js App Router application for cricket auction management, output overlays, wallet-backed paid overlay sessions, user management, and the InvoiceIT module. It integrates with the Expo app as the Auction/Auth/Wallet API backend and shares user/wallet data with Scoreboard through Neon Postgres.
 
-## Shared Wallet Integration
-- `src/lib/pg/users-schema.ts` mirrors the Scoreboard-owned Neon tables for `wallets`, `wallet_transactions`, and `pricing_config`.
-- `src/lib/pg/wallet-queries.ts` is the Auction wallet access layer. It ensures a wallet exists, reads balance/transactions, reads pricing keys, and records server-side deductions.
-- `GET /api/wallet` returns the authenticated user's wallet balance plus recent transactions for Auction web clients and the Expo App.
-- `GET /api/wallet/transactions` returns the authenticated user's full transaction history.
-- `POST /api/overlay/sessions` accepts `overlayType` and charges only for generated overlay outputs. Tournaments and auction operation remain free.
-- Supported paid overlay types and pricing keys are: `custom` → `auction_overlay_custom`, `fullscreen` → `auction_overlay_fullscreen`, `fullscreen2` → `auction_overlay_fullscreen2`, and `team_owners` → `auction_overlay_team_owners`.
-- The API uses deduct-first/create-second flow. If Neon wallet deduction succeeds but Mongo overlay-session creation fails, the server attempts an automatic wallet refund/top-up transaction and logs a critical error if refund also fails.
-- Each overlay session stores `overlayType`, `paymentStatus`, `walletTransactionId`, `refundTransactionId`, and `priceCharged` for auditability.
-- Wallet amounts follow the existing Scoreboard convention: integer LKR credits, immutable transaction rows, and backend-only deductions.
+The key architectural boundary remains:
 
-## Rendering Flow
-- `src/app/layout.tsx` wraps the app with auth, tournament, auction, sidebar, and theme providers.
-- `src/components/AppShell.tsx` renders navigation and sidebar for normal app routes.
-- `/overlays/[id]...` routes bypass app chrome so OBS/browser-source output is not polluted by System UI.
-- `OverlayWrapper` loads auction data, subscribes to overlay events, selects the active overlay palette, and applies overlay CSS variables to the overlay subtree.
+- **System UI**: management pages, auction controls, InvoiceIT, wallet, users, admin controls.
+- **Overlay Output**: OBS/browser-source routes under `/overlays/...`, intentionally isolated from app chrome and system UI themes.
 
-## Theme And Token Ownership
-- System UI tokens are global variables in `src/app/globals.css`, scoped by `:root[data-theme]`.
-- Overlay palettes are defined in `src/config/overlayPalettes.ts` and applied inside overlay rendering only.
-- Theme-specific overlay components own their visual language inside their theme folders.
+## Current top-level app areas
 
-## Known Debt
-- Some styling is inline and token use is not fully centralized.
-- The app currently uses global CSS utilities for several System UI controls.
-- There is limited automated test coverage for visual/theme boundaries.
+```text
+src/app/
+├── api/                         # JSON/API routes
+│   ├── auth/                    # login/logout/session/signup
+│   ├── auction/                 # live auction operations
+│   ├── tournaments/             # tournament CRUD + active
+│   ├── teams/                   # team CRUD + bulk delete
+│   ├── players/                 # player CRUD + bulk/import/export
+│   ├── overlay/                 # sessions/settings/prices/token/spin
+│   ├── overlay-configs/         # overlay config CRUD
+│   ├── overlay-library/         # overlay library + seed
+│   ├── overlay-scenes/          # overlay scene CRUD
+│   ├── wallet/                  # wallet balance + transactions
+│   ├── users/                   # user CRUD/profile/approval/password
+│   ├── push/                    # register/unregister push token
+│   ├── invoices/ quotations/    # InvoiceIT APIs
+│   ├── customers/ reports/      # InvoiceIT support APIs
+│   ├── upload/ remove-background/
+│   └── admin/notifications, admin/overlay-prices
+├── auction/                     # auction control page + setup
+├── manage/                      # tournament/team/player/output management
+├── output/                      # Output selector page
+├── overlays/                    # overlay browser-source outputs
+├── invoiceit/                   # InvoiceIT pages
+├── wallet/                      # web wallet
+├── profile/ users/ contact/
+└── auth/                        # login/signup/unauthorized
+```
+
+## Important routes
+
+### Management flow
+
+```text
+/manage/tournaments  -> step 1
+/manage/teams        -> step 2
+/manage/players      -> step 3
+/output              -> step 4 overlays/output selection
+/auction             -> step 5 auction control
+```
+
+Only these step pages show the step progress component. Non-step pages such as auction results do not show it.
+
+### Output / overlay selection
+
+`/output` currently lists layouts in this order:
+
+1. Custom Overlay — locked/display-only
+2. Team Owners Overlay — locked/display-only
+3. Full Screen — selectable
+4. Full Screen 2 — selectable
+
+The selector behaves as a single-choice/radio-style control for selectable full-screen outputs.
+
+### Sidebar / navigation
+
+Current management sidebar order keeps **Overlays** immediately after **Players**. The Overlays nav item is visible to all roles (`roles: null`), while individual pages still apply their own authorization rules.
+
+InvoiceIT navigation is visible to all users, with restricted pages enforcing Admin/Tournament-style permissions where applicable.
+
+## Auction flow
+
+```text
+Start auction -> select class/player -> bids -> sell/unsold -> repeat
+                                      -> undo/re-auction/edit result as needed
+```
+
+Key API operations live under `src/app/api/auction/`:
+
+- `start`, `stop`, `restart`, `reset`, `reset-all`
+- `select-class`, `select-player`
+- `bid`, `undo`
+- `sell`, `mark-unsold`, `re-auction`, `edit-player-result`
+- `live`, `state`, `recalculate-balances`
+
+Client auction logic is shared by `hooks/useAuction.tsx`, `hooks/usePusherAuction.tsx`, and auction components under `src/components/auction/`.
+
+## Overlay architecture
+
+### Overlay routes
+
+```text
+/overlays/[id]             # Full Screen overlay
+/overlays/[id]/custom      # Custom overlay
+/overlays/[id]/fullscreen2 # Full Screen 2 overlay
+/overlays/[id]/team-owner  # Team owner overlay
+```
+
+Overlay routes bypass app chrome and are intended for OBS/browser-source usage.
+
+### Overlay controls and paid sessions
+
+Paid overlay/session creation is wallet-backed through:
+
+- `POST /api/overlay/sessions`
+- `GET /api/overlay/prices`
+- `GET/PATCH /api/overlay/settings`
+- `POST /api/overlay/token`
+- `POST /api/overlay/spin`
+
+Chargeable overlay types and pricing keys:
+
+| Overlay type | Pricing key |
+|---|---|
+| `custom` | `auction_overlay_custom` |
+| `fullscreen` | `auction_overlay_fullscreen` |
+| `fullscreen2` | `auction_overlay_fullscreen2` |
+| `team_owners` | `auction_overlay_team_owners` |
+
+The server uses a deduct-first/create-second flow. If Neon wallet deduction succeeds but Mongo overlay-session creation fails, the server attempts an automatic refund transaction.
+
+## Data stores
+
+| Store | Used for |
+|---|---|
+| MongoDB/Mongoose | Auction domain data: tournaments, teams, players, auction state, overlays |
+| Neon Postgres | Shared users, wallets, wallet transactions, pricing config |
+
+Shared wallet code:
+
+```text
+src/lib/pg/users-schema.ts
+src/lib/pg/wallet-queries.ts
+```
+
+## Expo app integration
+
+The Expo app uses this project as its Auction/Auth/Wallet backend via:
+
+```env
+EXPO_PUBLIC_API_BASE_URL=https://prostream-auction.vercel.app
+```
+
+Important API groups consumed by Expo:
+
+- `/api/auth/login`, `/api/auth/session`, `/api/auth/logout`
+- `/api/tournaments`, `/api/tournaments/active`, `/api/tournaments/:id`
+- `/api/teams`, `/api/players`
+- `/api/wallet`, `/api/wallet/transactions`
+- `/api/users/profile`, `/api/users/change-password`
+- `/api/users/all` / tournament assignment APIs for admin features
+
+## Theme and design boundaries
+
+- System UI theme tokens live in app CSS and shared components.
+- Overlay themes and palettes are isolated in overlay renderer/config files.
+- Do not let overlay palette variables leak into System UI.
+- Do not wrap overlay output pages with normal app chrome.
+
+## Known debt
+
+- Some inline styles remain in System UI pages.
+- Overlay/theme code is more mature than general page-level component extraction.
+- Automated visual regression coverage is limited.
