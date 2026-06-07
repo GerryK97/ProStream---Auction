@@ -15,6 +15,7 @@ const PLAYERS_PER_PAGE = 15;
 const PAGE_DURATION = 6000;
 const COLS = 5;
 const NAME_H = 40;
+const CARD_ASPECT = '4 / 5';
 
 const GOLD           = 'var(--t2-accent)';
 const WHITE_BG       = 'var(--t2-bg-card)';
@@ -249,8 +250,8 @@ const TeamWiseImageT2: React.FC<Props> = ({
             padding: '16px 24px',
             backgroundColor: WHITE_BG,
             overflow: 'hidden',
-            alignItems: 'stretch',
-            justifyItems: 'stretch',
+            alignItems: 'center',
+            justifyItems: 'center',
             boxSizing: 'border-box',
             minHeight: 0,
           }}>
@@ -260,6 +261,9 @@ const TeamWiseImageT2: React.FC<Props> = ({
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
+                  height: '100%',
+                  maxWidth: '100%',
+                  aspectRatio: CARD_ASPECT,
                   minWidth: 0,
                   minHeight: 0,
                   animation: `t2ImgCardIn 0.4s ${0.1 + i * 0.05}s cubic-bezier(0.22, 1, 0.36, 1) both`,

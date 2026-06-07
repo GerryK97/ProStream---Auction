@@ -15,6 +15,7 @@ const PLAYERS_PER_PAGE = 15;
 const PAGE_DURATION    = 6000;
 const COLS             = 5;
 const NAME_H           = 42;
+const CARD_ASPECT      = '4 / 5';
 
 const FONT_HEADING = "'Bebas Neue', cursive";
 const FONT_BODY    = "'Rajdhani', sans-serif";
@@ -260,8 +261,8 @@ const TeamWiseImageT1: React.FC<Props> = ({
             gap: 12,
             padding: '16px 24px',
             overflow: 'hidden',
-            alignItems: 'stretch',
-            justifyItems: 'stretch',
+            alignItems: 'center',
+            justifyItems: 'center',
             boxSizing: 'border-box',
             minHeight: 0,
           }}
@@ -272,6 +273,9 @@ const TeamWiseImageT1: React.FC<Props> = ({
               style={{
                 display: 'flex',
                 flexDirection: 'column',
+                height: '100%',
+                maxWidth: '100%',
+                aspectRatio: CARD_ASPECT,
                 minWidth: 0,
                 minHeight: 0,
                 borderRadius: 8,
