@@ -14,9 +14,7 @@ interface Props {
 const PLAYERS_PER_PAGE = 15;
 const PAGE_DURATION = 6000;
 const COLS = 5;
-const GRID_AVAIL_H = 762; // 940 total − 90 header − 56 footer − 32 grid padding
 const NAME_H = 40;
-const MAX_IMG_H = 380;
 
 const GOLD           = 'var(--t2-accent)';
 const WHITE_BG       = 'var(--t2-bg-card)';
@@ -96,10 +94,9 @@ const TeamWiseImageT2: React.FC<Props> = ({
   const pageStart      = currentPage * PLAYERS_PER_PAGE;
   const currentPlayers = allCurrentPlayers.slice(pageStart, pageStart + PLAYERS_PER_PAGE);
 
-  // Dynamic sizing: rows are based on the team's total count (capped at PLAYERS_PER_PAGE)
-  // so card size stays consistent across pages of the same team.
-  const rows   = Math.max(1, Math.ceil(Math.min(allCurrentPlayers.length, PLAYERS_PER_PAGE) / COLS));
-  const imageH = Math.min(MAX_IMG_H, Math.max(100, Math.floor((GRID_AVAIL_H - (rows - 1) * 12) / rows) - NAME_H));
+  // Divide the actual remaining overlay height between visible rows so every
+  // player card, including the name strip, stays fully inside the panel.
+  const rows = Math.max(1, Math.ceil(currentPlayers.length / COLS));
 
   const balance = currentTeam.currentBalance ?? currentTeam.initialBudget ?? 0;
   const initial = currentTeam.initialBudget ?? 0;
@@ -245,36 +242,38 @@ const TeamWiseImageT2: React.FC<Props> = ({
           {/* Player image grid */}
           <div style={{
             flex: 1,
-            display: 'flex',
-            flexWrap: 'wrap',
+            display: 'grid',
+            gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`,
+            gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
             gap: 12,
             padding: '16px 24px',
             backgroundColor: WHITE_BG,
             overflow: 'hidden',
-            alignContent: 'center',
-            justifyContent: 'center',
+            alignItems: 'stretch',
+            justifyItems: 'stretch',
             boxSizing: 'border-box',
+            minHeight: 0,
           }}>
             {currentPlayers.map((player, i) => (
               <div
                 key={`${currentTeamIndex}-${currentPage}-${player._id}`}
                 style={{
-                  width: `calc((100% - ${(COLS - 1) * 12}px) / ${COLS})`,
                   display: 'flex',
                   flexDirection: 'column',
-                  flexShrink: 0,
+                  minWidth: 0,
+                  minHeight: 0,
                   animation: `t2ImgCardIn 0.4s ${0.1 + i * 0.05}s cubic-bezier(0.22, 1, 0.36, 1) both`,
                 }}
               >
                 {/* Photo */}
                 <div style={{
                   width: '100%',
-                  height: imageH,
+                  flex: 1,
                   background: 'var(--t2-bg-muted)',
                   position: 'relative',
                   overflow: 'hidden',
                   borderRadius: '6px 6px 0 0',
-                  flexShrink: 0,
+                  minHeight: 0,
                 }}>
                   {player.photoURL ? (
                     <img
@@ -306,7 +305,7 @@ const TeamWiseImageT2: React.FC<Props> = ({
                 {/* Name strip */}
                 <div style={{
                   width: '100%',
-                  height: 40,
+                  height: NAME_H,
                   background: GOLD,
                   color: TEXT_DARK,
                   textAlign: 'center',
