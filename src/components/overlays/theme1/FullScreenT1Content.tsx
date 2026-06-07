@@ -8,6 +8,7 @@ import TeamWiseImageT1 from './TeamWiseImageT1';
 import RestingTimeOverlay from './RestingTimeT1';
 import Top10SummaryOverlay from './Top10SummaryT1';
 import WheelSpinOverlay from '../shared/WheelSpinOverlay';
+import ResilientImage from '../shared/ResilientImage';
 import SoldMessageFullScreen from './SoldMessageT1';
 import { AuctionState, Player, Team, Tournament } from '@/types';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
@@ -354,7 +355,7 @@ function PlayerAuctionPanel({
         background: 'var(--overlay-bg-photo, #0d1117)',
       }}>
         {photoUrl ? (
-          <img
+          <ResilientImage
             src={photoUrl}
             alt={hasPlayer ? currentPlayer!.name : ''}
             style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}

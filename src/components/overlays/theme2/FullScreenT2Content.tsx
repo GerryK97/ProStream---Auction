@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import WheelSpinOverlay from '../shared/WheelSpinOverlay';
+import ResilientImage from '../shared/ResilientImage';
 import SoldPlayersSummaryT2 from './SoldPlayersSummaryT2';
 import TeamSummaryT2 from './TeamSummaryT2';
 import Top10SummaryT2 from './Top10SummaryT2';
@@ -95,7 +96,7 @@ function PlayerPanelT2({
         backgroundColor: 'var(--t2-bg-photo)',
       }}>
         {photoUrl ? (
-          <img
+          <ResilientImage
             src={photoUrl}
             alt={hasPlayer ? currentPlayer!.name : ''}
             style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}

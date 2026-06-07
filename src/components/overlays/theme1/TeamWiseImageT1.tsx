@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Player, Team, Tournament } from '@/types';
+import ResilientImage from '@/components/overlays/shared/ResilientImage';
 
 interface Props {
   players: Player[];
@@ -145,7 +146,7 @@ const TeamWiseImageT1: React.FC<Props> = ({
         >
           {/* Team logo / initials fallback */}
           {currentTeam.logoURL ? (
-            <img
+            <ResilientImage
               src={currentTeam.logoURL}
               alt={currentTeam.name}
               style={{
@@ -292,7 +293,7 @@ const TeamWiseImageT1: React.FC<Props> = ({
                 minHeight: 0,
               }}>
                 {player.photoURL ? (
-                  <img
+                  <ResilientImage
                     src={player.photoURL}
                     alt={player.name}
                     style={{

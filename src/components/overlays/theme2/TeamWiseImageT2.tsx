@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Player, Team, Tournament } from '@/types';
+import ResilientImage from '@/components/overlays/shared/ResilientImage';
 
 interface Props {
   players: Player[];
@@ -174,7 +175,7 @@ const TeamWiseImageT2: React.FC<Props> = ({
               border: `2px solid ${GOLD}`,
             }}>
               {currentTeam.logoURL ? (
-                <img
+                <ResilientImage
                   src={currentTeam.logoURL}
                   alt={currentTeam.name}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -280,7 +281,7 @@ const TeamWiseImageT2: React.FC<Props> = ({
                   minHeight: 0,
                 }}>
                   {player.photoURL ? (
-                    <img
+                    <ResilientImage
                       src={player.photoURL}
                       alt={player.name}
                       style={{

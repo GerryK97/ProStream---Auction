@@ -9,6 +9,7 @@ import TeamWiseSummaryT2 from './TeamWiseSummaryT2';
 import TeamWiseImageT2 from './TeamWiseImageT2';
 import RestingTimeT2 from './RestingTimeT2';
 import SoldMessageToast from '../shared/SoldMessageToast';
+import ResilientImage from '../shared/ResilientImage';
 import TickerT2Shared from './TickerT2Shared';
 import { AuctionState, Player, Team, Tournament } from '@/types';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
@@ -55,7 +56,7 @@ function ImagePanel({ currentPlayer, tournament }: {
   if (imgSrc) {
     return (
       <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-        <img
+        <ResilientImage
           src={imgSrc}
           alt={currentPlayer!.name}
           style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }}
@@ -77,7 +78,7 @@ function ImagePanel({ currentPlayer, tournament }: {
       background: 'var(--overlay-bg-photo-fallback)',
     }}>
       {tournament?.logoURL ? (
-        <img src={tournament.logoURL} alt={tournament.name} style={{ width: 320, height: 320, objectFit: 'contain', opacity: 0.85 }} />
+        <ResilientImage src={tournament.logoURL} alt={tournament.name} style={{ width: 320, height: 320, objectFit: 'contain', opacity: 0.85 }} />
       ) : (
         <svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="var(--t2-text-disabled)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
