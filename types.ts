@@ -9,6 +9,7 @@ export interface Tournament {
   basePricePerPlayer: number;
   logoURL?: string;
   status: 'Draft' | 'Completed' | 'Setup' | 'Pending' | 'Live' | 'Paused';
+  playerCardTemplates?: Array<{ id: string; name: string; pngUrl: string; layoutId?: string }>;
 }
 
 export interface Team {

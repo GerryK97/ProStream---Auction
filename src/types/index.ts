@@ -48,6 +48,7 @@ export interface Tournament {
   directQuickBidsEnabled?: boolean;
   directQuickBids?: { amount: number }[];
   playerProfileFields?: PlayerProfileFieldsConfig; // Optional player data fields enabled for this tournament
+  playerCardTemplates?: Array<{ id: string; name: string; pngUrl: string; layoutId?: string }>; // Uploaded card background templates
 }
 
 export interface Team {

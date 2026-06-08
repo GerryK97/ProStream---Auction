@@ -81,6 +81,17 @@ const tournamentSchema = new Schema<Tournament>(
       },
       default: () => ({ showAge: false, showBattingStyle: false, showBowlingStyle: false, statFields: [] }),
     },
+    playerCardTemplates: {
+      type: [
+        {
+          id:       { type: String, required: true },
+          name:     { type: String, required: true },
+          pngUrl:   { type: String, required: true },
+          layoutId: { type: String },
+        },
+      ],
+      default: [],
+    },
   },
   {
     timestamps: true,
