@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { TournamentModel } from '@/models/Tournament';
@@ -14,12 +14,10 @@ export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
 
-    // Authenticate request
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
     if (!canPerformAction(user.role, 'manage', 'auction')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -34,108 +32,78 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch auction state and tournament in parallel
+    // ── Round-trip 1: fetch auction state + tournament in parallel ────────
     const [auctionState, tournament] = await Promise.all([
       AuctionStateModel.findOne({ tournamentId }),
-      TournamentModel.findOne({ _id: tournamentId }).lean(),
+      TournamentModel.findOne(
+        { _id: tournamentId },
+        { status: 1, playerBasePrice: 1, classPrices: 1, baseStrategy: 1 }
+      ).lean(),
     ]);
 
     if (!auctionState) {
-      return NextResponse.json(
-        { error: 'Auction state not found for this tournament' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Auction state not found for this tournament' }, { status: 404 });
     }
-
-    // Validate tournament is live
     if (!tournament || (tournament as any).status !== 'Live') {
-      return NextResponse.json(
-        { error: 'Auction is not live' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Auction is not live' }, { status: 400 });
     }
-
-    // Validate player
     if (!auctionState.currentPlayerId) {
-      return NextResponse.json(
-        { error: 'No player is currently up for auction' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'No player is currently up for auction' }, { status: 400 });
     }
 
-    const player = await PlayerModel.findOne({ _id: auctionState.currentPlayerId }).lean();
-    if (!player) {
-      return NextResponse.json(
-        { error: 'Player not found' },
-        { status: 404 }
-      );
-    }
-
-    if ((player as any).isSold) {
-      return NextResponse.json(
-        { error: 'Player is already sold' },
-        { status: 400 }
-      );
-    }
-
-    // Validate bid amount
+    // ── Bid amount validation (cheap, no DB) ─────────────────────────────
     if (amount <= auctionState.currentBid) {
-      return NextResponse.json(
-        { error: 'Bid must be higher than the current bid' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Bid must be higher than the current bid' }, { status: 400 });
     }
 
-    // Get the actual base price based on tournament strategy
-    const actualBasePrice = getClassBasePrice(tournament as any, player as any);
+    // ── Round-trip 2: fetch player + update state + lookup team — all parallel
+    const previousBid = auctionState.currentBid;
+    const newBid = { teamId: teamId || null, amount, timestamp: Date.now() };
 
-    if (auctionState.currentBid === 0 && amount < actualBasePrice) {
+    const [player, updatedState, winningTeam] = await Promise.all([
+      PlayerModel.findOne(
+        { _id: auctionState.currentPlayerId },
+        { isSold: 1, playerClass: 1, basePrice: 1, name: 1, displayName: 1 }
+      ).lean(),
+      AuctionStateModel.findOneAndUpdate(
+        { tournamentId },
+        { $set: { currentBid: amount, currentAuctionStatus: 'Bidding' }, $push: { history: newBid } },
+        { new: true }
+      ).lean(),
+      teamId ? TeamModel.findById(teamId, { name: 1, shortName: 1, logoUrl: 1 }).lean() : Promise.resolve(null),
+    ]);
+
+    // Validate player (checked after parallel write — reject double-sold race)
+    if (!player) {
+      return NextResponse.json({ error: 'Player not found' }, { status: 404 });
+    }
+    if ((player as any).isSold) {
+      return NextResponse.json({ error: 'Player is already sold' }, { status: 400 });
+    }
+
+    // Base price check (needs player, done after fetch)
+    const actualBasePrice = getClassBasePrice(tournament as any, player as any);
+    if (previousBid === 0 && amount < actualBasePrice) {
       return NextResponse.json(
         { error: `The first bid must be at least the base price of ${actualBasePrice.toLocaleString()}` },
         { status: 400 }
       );
     }
 
-    // Update auction state (team will be assigned when selling)
-    const newBid = {
-      teamId: teamId || null,
-      amount,
-      timestamp: Date.now(),
-    };
-
-    const previousBid = auctionState.currentBid;
-
-    // Parallelize the state update and team lookup
-    const [updatedState, winningTeam] = await Promise.all([
-      AuctionStateModel.findOneAndUpdate(
-        { tournamentId },
-        {
-          $set: {
-            currentBid: amount,
-            currentAuctionStatus: 'Bidding',
-          },
-          $push: { history: newBid },
-        },
-        { new: true }
-      ).lean(),
-      teamId ? TeamModel.findById(teamId).lean() : Promise.resolve(null),
-    ]);
-
-    await triggerBidPlaced(tournamentId, {
+    // ── Fire Pusher without awaiting — overlay gets event asynchronously ──
+    // The HTTP response returns to the app IMMEDIATELY.
+    triggerBidPlaced(tournamentId, {
       auctionState: updatedState as any,
       currentPlayer: player as any,
       winningTeam: winningTeam as any,
       currentBid: amount,
       previousBid,
       message: `New bid placed: ${amount.toLocaleString()}`,
-    });
+    }).catch((err) => console.error('[bid] Pusher trigger failed:', err));
 
     return NextResponse.json(updatedState);
   } catch (error) {
     console.error('Error placing bid:', error);
-    return NextResponse.json(
-      { error: 'Failed to place bid' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to place bid' }, { status: 500 });
   }
 }
