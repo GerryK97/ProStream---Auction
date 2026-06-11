@@ -70,7 +70,10 @@ export async function POST(request: NextRequest) {
         { $set: { currentBid: amount, currentAuctionStatus: 'Bidding' }, $push: { history: newBid } },
         { new: true }
       ).lean(),
-      teamId ? TeamModel.findById(teamId, { name: 1, shortName: 1, logoUrl: 1 }).lean() : Promise.resolve(null),
+      // Fetch full team document so BID_PLACED event carries currentBalance,
+      // playersPurchased etc. — partial projection was stripping those fields
+      // and causing "Can't Bid" / balance-0 on all teams after the first bid.
+      teamId ? TeamModel.findById(teamId).lean() : Promise.resolve(null),
     ]);
 
     // Validate player (checked after parallel write — reject double-sold race)

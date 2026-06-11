@@ -187,7 +187,7 @@ const TeamBiddingPanel: React.FC<{
 
     // Count actual players in squad (sold + iconic) — more accurate than playersPurchased
     const calcMaxBid = (team: Team): number => {
-        if (!tournament || !team.currentBalance) return 0;
+        if (!tournament || team.currentBalance == null) return 0;
         const squadSize = tournament.squadSize;
         const minBase = getMinClassBasePrice(tournament);
         const purchased = players.filter(p => p.isSold && p.winningTeamId === team._id).length;
@@ -699,7 +699,7 @@ export const TeamsAndSoldPlayersPanel: React.FC<{
     };
 
     const calculateMaxBid = (team: Team) => {
-        if (!tournament || !team.currentBalance) return 0;
+        if (!tournament || team.currentBalance == null) return 0;
         const squadSize = tournament.squadSize;
         const basePrice = getMinClassBasePrice(tournament);
         // Count actual sold players (including iconics) rather than playersPurchased

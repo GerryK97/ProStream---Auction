@@ -348,7 +348,7 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
 
     // Team bid panel helpers
     const calcMaxBid = (team: Team): number => {
-        if (!liveTournament || !team.currentBalance) return 0;
+        if (!liveTournament || team.currentBalance == null) return 0;
         const purchased = players.filter(p => p.isSold && p.winningTeamId === team._id).length;
         const remaining = liveTournament.squadSize - purchased;
         if (remaining <= 1) return team.currentBalance;

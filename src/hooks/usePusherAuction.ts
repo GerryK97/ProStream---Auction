@@ -159,11 +159,13 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
       // exists in our list. Re-using the same reference when nothing
       // structurally changed lets memoised consumers (TeamRow, SoldPlayerRow)
       // skip reconciliation on every bid.
+      // Merge (not replace) so that a partial incomingTeam never strips
+      // currentBalance / playersPurchased from the local state.
       let updatedTeams = state.teams;
       const incomingTeam = action.data.winningTeam;
       if (incomingTeam && state.teams.some((t) => t._id === incomingTeam._id)) {
         updatedTeams = state.teams.map((team) =>
-          team._id === incomingTeam._id ? incomingTeam : team
+          team._id === incomingTeam._id ? { ...team, ...incomingTeam } : team
         );
       }
 
