@@ -19,6 +19,7 @@ export type AuctionUser = {
   plan: UserPlan;
   logoURL: string;
   mobileNumber: string;
+  phoneVerified: boolean;
   assignedTournaments: string[];
   createdAt: Date;
   updatedAt: Date;
@@ -43,6 +44,7 @@ export function toAuctionUser(user: PgUser): AuctionUser {
     plan: user.plan,
     logoURL: resolveImageUrl(user.photoCloudinaryId, { width: 200, height: 200 }) ?? user.photoCloudinaryId ?? '',
     mobileNumber: user.phone ?? '',
+    phoneVerified: user.phoneVerified ?? false,
     assignedTournaments: user.assignedTournaments ?? [],
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,

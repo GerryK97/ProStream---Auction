@@ -1,5 +1,5 @@
 ﻿import { sql } from 'drizzle-orm';
-import { integer, pgEnum, pgTable, serial, text, timestamp, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
+import { boolean, integer, pgEnum, pgTable, serial, text, timestamp, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 
 export const userRoleEnum = pgEnum('user_role', ['Admin', 'Tournament', 'Player', 'Audience']);
 export const userStatusEnum = pgEnum('user_status', ['Active', 'PendingApproval', 'Suspended']);
@@ -18,6 +18,7 @@ export const users = pgTable(
     status: userStatusEnum('status').notNull().default('Active'),
     plan: userPlanEnum('plan').notNull().default('Free'),
     phone: varchar('phone', { length: 20 }),
+    phoneVerified: boolean('phone_verified').notNull().default(false),
     photoCloudinaryId: text('photo_cloudinary_id'),
     assignedTournaments: text('assigned_tournaments').array().notNull().default(sql`'{}'::text[]`),
     createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -86,3 +87,17 @@ export const devicePushTokens = pgTable(
 );
 
 export type PgDevicePushToken = typeof devicePushTokens.$inferSelect;
+
+/* ── Phone OTP Verifications ─────────────────────────────────────────────── */
+export const phoneVerifications = pgTable('phone_verifications', {
+  id:         serial('id').primaryKey(),
+  userId:     text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  phone:      varchar('phone', { length: 20 }).notNull(),
+  otpHash:    text('otp_hash').notNull(),          // bcrypt hash of OTP
+  attempts:   integer('attempts').notNull().default(0),
+  expiresAt:  timestamp('expires_at').notNull(),
+  verifiedAt: timestamp('verified_at'),
+  createdAt:  timestamp('created_at').defaultNow().notNull(),
+});
+
+export type PgPhoneVerification = typeof phoneVerifications.$inferSelect;
