@@ -1018,6 +1018,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const spinTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
     const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const bidInFlightRef = useRef(false);
+    const bidSequenceRef = useRef(0);
     const sellInFlightRef = useRef(false);
     const undoInFlightRef = useRef(false);
     const [undoPending, setUndoPending] = useState(false);
@@ -1624,6 +1625,15 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         }
 
         bidInFlightRef.current = true;
+        const bidSequence = ++bidSequenceRef.current;
+        // Prevent accidental double-clicks, but do not wait for the HTTP/Pusher
+        // response before enabling the next bid. The local optimistic state is
+        // authoritative for operator controls until the server confirms/rejects.
+        window.setTimeout(() => {
+            if (bidSequenceRef.current === bidSequence) {
+                bidInFlightRef.current = false;
+            }
+        }, 120);
 
         // Optimistic update: snapshot the previous auctionState, apply new bid
         // immediately so the UI feels instant, then revert if the server rejects.
@@ -1644,15 +1654,17 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             });
             if (!response.ok) {
                 const data = await response.json().catch(() => ({}));
-                restoreAuctionState(snapshot);
-                setError(data.error || 'Failed to place bid');
+                if (bidSequenceRef.current === bidSequence) {
+                    restoreAuctionState(snapshot);
+                    setError(data.error || 'Failed to place bid');
+                }
             }
         } catch (error) {
-            restoreAuctionState(snapshot);
+            if (bidSequenceRef.current === bidSequence) {
+                restoreAuctionState(snapshot);
+                setError('An error occurred while placing the bid');
+            }
             console.error('Failed to place bid:', error);
-            setError('An error occurred while placing the bid');
-        } finally {
-            bidInFlightRef.current = false;
         }
     };
 

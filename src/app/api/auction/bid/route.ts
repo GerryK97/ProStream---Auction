@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
         { isSold: 1, playerClass: 1, basePrice: 1, name: 1, displayName: 1 }
       ).lean(),
       AuctionStateModel.findOneAndUpdate(
-        { tournamentId },
+        { tournamentId, currentBid: { $lt: amount } },
         {
           $set: {
             currentBid: amount,
@@ -90,6 +90,10 @@ export async function POST(request: NextRequest) {
     }
     if ((player as any).isSold) {
       return NextResponse.json({ error: 'Player is already sold' }, { status: 400 });
+    }
+
+    if (!updatedState) {
+      return NextResponse.json({ error: 'Bid was superseded by a newer bid' }, { status: 409 });
     }
 
     // Base price check (needs player, done after fetch)
