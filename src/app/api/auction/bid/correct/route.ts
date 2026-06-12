@@ -51,6 +51,12 @@ export async function POST(request: NextRequest) {
     }
 
     const previousBid = auctionState.currentBid;
+    const now = Date.now();
+    const previousLeaderId = (auctionState as any).winningTeamId ?? null;
+    const eventHistory = [
+      ...(previousBid > 0 ? [{ teamId: previousLeaderId, amount: previousBid, timestamp: now - 1 }] : []),
+      { teamId: teamId || null, amount, timestamp: now },
+    ];
 
     const updatedState = await AuctionStateModel.findOneAndUpdate(
       { tournamentId },
@@ -59,14 +65,19 @@ export async function POST(request: NextRequest) {
           currentBid: amount,
           winningTeamId: teamId || null,
           currentAuctionStatus: 'Bidding',
+          history: [],
         },
-        $push: { history: { teamId: teamId || null, amount, timestamp: Date.now() } },
       },
       { new: true }
     ).lean();
 
+    const eventAuctionState = {
+      ...(updatedState as any),
+      history: eventHistory,
+    };
+
     await triggerBidPlaced(tournamentId, {
-      auctionState: updatedState as any,
+      auctionState: eventAuctionState as any,
       currentPlayer: serializePlayer(player as any) as any,
       winningTeam: null,
       currentBid: amount,

@@ -58,7 +58,12 @@ export async function POST(request: NextRequest) {
 
     // ── Round-trip 2: fetch player + update state — both parallel
     const previousBid = auctionState.currentBid;
-    const newBid = { teamId: teamId || null, amount, timestamp: Date.now() };
+    const now = Date.now();
+    const previousLeaderId = (auctionState as any).winningTeamId ?? null;
+    const eventHistory = [
+      ...(previousBid > 0 ? [{ teamId: previousLeaderId, amount: previousBid, timestamp: now - 1 }] : []),
+      { teamId: teamId || null, amount, timestamp: now },
+    ];
 
     const [player, updatedState] = await Promise.all([
       PlayerModel.findOne(
@@ -72,8 +77,8 @@ export async function POST(request: NextRequest) {
             currentBid: amount,
             winningTeamId: teamId || null,
             currentAuctionStatus: 'Bidding',
+            history: [],
           },
-          $push: { history: newBid },
         },
         { new: true }
       ).lean(),
@@ -96,12 +101,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const eventAuctionState = {
+      ...(updatedState as any),
+      history: eventHistory,
+    };
+
     // ── Await Pusher for bids — overlay must receive this in real time ──
     // Web operator already does optimistic UI locally, so the small Pusher
     // round-trip is acceptable and prevents serverless/local requests from
     // finishing before the event is actually delivered.
     await triggerBidPlaced(tournamentId, {
-      auctionState: updatedState as any,
+      auctionState: eventAuctionState as any,
       currentPlayer: serializePlayer(player as any) as any,
       // Teams are already loaded in clients; auctionState.winningTeamId and
       // history[-1].teamId identify the leader. Avoid a team DB read + payload.
