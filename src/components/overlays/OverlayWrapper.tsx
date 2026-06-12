@@ -147,10 +147,11 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
 
     useEffect(() => {
         if (!liveTournamentId) return;
-        // Only subscribe when the tournament channel is active (Live/Paused/Stopped)
-        const status = tournament?.status;
-        if (!status || !['Live', 'Paused', 'Stopped'].includes(status)) return;
-
+        // Bind overlay:settings and overlay:wheel-spin on the tournament channel.
+        // We subscribe here (same as usePusherAuction) — Pusher returns the same
+        // channel object if already subscribed, so this is safe and adds no extra
+        // connection. We explicitly NOT unsubscribe in cleanup because
+        // usePusherAuction owns the subscription lifecycle.
         const pusher = getPusherClient();
         const channel = pusher.subscribe(`tournament-${liveTournamentId}`);
         channel.bind('overlay:settings', (data: OverlaySettingsEvent) => {
@@ -188,7 +189,7 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
             if (wheelResetTimerRef.current) clearTimeout(wheelResetTimerRef.current);
             // Don't unsubscribe the channel here — usePusherAuction owns it
         };
-    }, [liveTournamentId, tournament?.status]);
+    }, [liveTournamentId]); // dep: liveTournamentId only — don't re-bind on every status change
 
     // Revoked state — shown when admin revokes this session
     if (isRevoked) {

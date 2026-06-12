@@ -5,6 +5,7 @@ import { TournamentModel } from '@/models/Tournament';
 import { PlayerModel } from '@/models/Player';
 import { TeamModel } from '@/models/Team';
 import { triggerBidPlaced } from '@/lib/pusher-server';
+import { serializeTeam, serializePlayer } from '@/lib/cloudinaryUtils';
 
 // POST /api/auction/bid/correct
 // Corrects the current bid to any positive amount — bypasses the "must be higher" rule.
@@ -70,14 +71,14 @@ export async function POST(request: NextRequest) {
       winningTeam = await TeamModel.findById(teamId).lean();
     }
 
-    await triggerBidPlaced(tournamentId, {
+    triggerBidPlaced(tournamentId, {
       auctionState: updatedState as any,
-      currentPlayer: player as any,
-      winningTeam: winningTeam as any,
+      currentPlayer: serializePlayer(player as any) as any,
+      winningTeam: winningTeam ? serializeTeam(winningTeam as any) as any : null,
       currentBid: amount,
       previousBid,
       message: `Bid corrected to: ${amount.toLocaleString()}`,
-    });
+    }).catch((err) => console.error('[bid/correct] Pusher trigger failed:', err));
 
     return NextResponse.json(updatedState);
   } catch (error) {

@@ -68,12 +68,13 @@ export async function POST(request: NextRequest) {
 
     const basePrice = getClassBasePrice(tournament as any, player as any);
 
-    await triggerPlayerSelected(tournamentId, {
+    // Fire Pusher without awaiting — reduces operator round-trip latency.
+    triggerPlayerSelected(tournamentId, {
       currentPlayer: serializePlayer(player as any) as any,
       basePrice,
       auctionState: updatedState as any,
       message: `Player ${(player as any).name} selected for auction`,
-    });
+    }).catch((err) => console.error('[select-player] Pusher trigger failed:', err));
 
     return NextResponse.json(updatedState);
   } catch (error) {

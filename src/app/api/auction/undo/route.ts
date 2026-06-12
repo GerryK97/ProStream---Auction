@@ -126,13 +126,14 @@ export async function POST(request: NextRequest) {
         ).lean();
       }
 
-      await triggerAuctionUndo(tournamentId, {
+      // Fire Pusher without awaiting — overlay gets event asynchronously.
+      triggerAuctionUndo(tournamentId, {
         restoredPlayer: serializePlayer(restoredPlayer as any) as any,
         updatedTeam: updatedTeam ? serializeTeam(updatedTeam as any) as any : null,
         refundedAmount: finalPrice,
         auctionState: auctionState as any,
         message: 'Last sale undone successfully',
-      });
+      }).catch((err) => console.error('[undo] Pusher trigger failed:', err));
 
       return NextResponse.json({
         message: 'Last sale undone successfully',
@@ -160,13 +161,13 @@ export async function POST(request: NextRequest) {
 
       const auctionState = await AuctionStateModel.findOne({ tournamentId }).lean();
 
-      await triggerAuctionUndo(tournamentId, {
+      triggerAuctionUndo(tournamentId, {
         restoredPlayer: serializePlayer(restoredPlayer as any) as any,
         updatedTeam: null,
         refundedAmount: 0,
         auctionState: auctionState as any,
         message: 'Unsold marking reversed',
-      });
+      }).catch((err) => console.error('[undo-unsold] Pusher trigger failed:', err));
 
       return NextResponse.json({
         message: 'Unsold marking reversed successfully',

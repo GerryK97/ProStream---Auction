@@ -643,10 +643,18 @@ export function usePusherAuction(
         }
       });
 
-      const handleConnectionStateChange = (states: { current: string }) => {
+      const handleConnectionStateChange = (states: { current: string; previous: string }) => {
         setIsConnected(states.current === 'connected');
         if (states.current === 'connected' || states.current === 'unavailable' || states.current === 'failed') {
           dispatch({ type: 'CLEAR_ERROR' });
+        }
+        // When the connection recovers from a disconnect, re-fetch full auction
+        // state to catch any events that were missed while the WS was down.
+        // This is the primary fix for "overlay shows stale data after reconnect"
+        // and "hard refresh needed to see latest state".
+        if (states.current === 'connected' && states.previous === 'connecting') {
+          dlog('[usePusherAuction] WS reconnected — re-fetching auction data to sync missed events');
+          refreshData().catch(() => {});
         }
       };
 
@@ -683,7 +691,7 @@ export function usePusherAuction(
       console.error('[Pusher] Error setting up connection:', err);
       setIsConnected(false);
     }
-  }, [tournamentId, connectTournamentChannel]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tournamentId, connectTournamentChannel, refreshData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Effect 5: Re-fetch when overlay token hydrates (mobile SSR delay) ───────
   // On mobile, useSearchParams may return null for the token on the first render.

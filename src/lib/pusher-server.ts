@@ -81,6 +81,18 @@ export function getTournamentChannel(tournamentId: string): string {
 }
 
 /**
+ * Strip the bid history array from an AuctionState before sending via Pusher.
+ * Overlays only need the live fields (currentBid, winningTeamId, status, etc.)
+ * not the full history. This keeps event payloads small and well under the
+ * Pusher 10KB per-message limit even after hundreds of bids on a single player.
+ */
+function slimState(state: any): any {
+  if (!state) return state;
+  const { history: _history, ...slim } = state;
+  return slim;
+}
+
+/**
  * Trigger a Pusher event on a tournament channel
  * @param tournamentId - The tournament ID
  * @param eventName - The event name
@@ -95,9 +107,11 @@ export async function triggerAuctionEvent(
     const pusher = getPusherInstance();
     const channel = getTournamentChannel(tournamentId);
 
-    // Add metadata to the event
+    // Add metadata to the event.
+    // Slim any nested auctionState to strip history[] and keep payload small.
     const payload = {
-      ...data,
+      ...(data as any),
+      ...(('auctionState' in (data as any)) ? { auctionState: slimState((data as any).auctionState) } : {}),
       tournamentId,
       timestamp: Date.now(),
     };
