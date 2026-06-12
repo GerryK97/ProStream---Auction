@@ -702,6 +702,52 @@ export function usePusherAuction(
     fetchInitialData();
   }, [overlayToken, tournamentId, fetchInitialData]);
 
+  // ─── Effect 6: Page visibility recovery ──────────────────────────────────────
+  // When a browser tab is backgrounded, Chrome/Firefox throttle JS execution and
+  // can delay WebSocket ping/pong responses enough to cause Pusher disconnects.
+  // When the tab becomes visible again, reconnect Pusher if needed and re-fetch
+  // the current auction state to catch any events missed while backgrounded.
+  useEffect(() => {
+    if (!tournamentId || !connectTournamentChannel) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        dlog('[usePusherAuction] Tab visible — checking Pusher connection + re-syncing state');
+        // Re-fetch immediately to sync any missed events regardless of WS state
+        refreshData().catch(() => {});
+        // Also reconnect Pusher if it dropped
+        if (pusherRef.current && pusherRef.current.connection.state !== 'connected') {
+          dlog('[usePusherAuction] Pusher disconnected — reconnecting');
+          pusherRef.current.connect();
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [tournamentId, connectTournamentChannel, refreshData]);
+
+  // ─── Effect 7: Heartbeat poll for overlay mode ───────────────────────────────
+  // When running as an OBS Browser Source or in a browser with a token, the WS
+  // connection can silently stall even with generous timeouts. As a backstop,
+  // poll the auction state every 15 seconds while the auction is Live so the
+  // overlay is NEVER more than 15 seconds out of date regardless of WS health.
+  // Only active in overlay mode to avoid unnecessary load on the operator panel.
+  useEffect(() => {
+    if (!isOverlayMode || !tournamentId || !connectTournamentChannel) return;
+
+    const POLL_INTERVAL_MS = 15_000;
+    const intervalId = setInterval(() => {
+      // Only re-fetch when the auction is actively running.
+      // Use stateRef for current status without needing it as a dep.
+      if (stateRef.current.tournament?.status === 'Live') {
+        refreshData().catch(() => {});
+      }
+    }, POLL_INTERVAL_MS);
+
+    return () => clearInterval(intervalId);
+  }, [isOverlayMode, tournamentId, connectTournamentChannel, refreshData]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const setPlayerUnsold = useCallback((playerId: string) => {
     dispatch({ type: 'SET_PLAYER_UNSOLD', playerId });
   }, []);
