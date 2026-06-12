@@ -81,15 +81,17 @@ export function getTournamentChannel(tournamentId: string): string {
 }
 
 /**
- * Strip the bid history array from an AuctionState before sending via Pusher.
- * Overlays only need the live fields (currentBid, winningTeamId, status, etc.)
- * not the full history. This keeps event payloads small and well under the
- * Pusher 10KB per-message limit even after hundreds of bids on a single player.
+ * Keep Pusher AuctionState payload small while preserving the data overlays need.
+ *
+ * Full history[] can grow large during competitive bidding and approach Pusher's
+ * per-message limit. However, the leading-bid overlay needs the latest and
+ * previous bid to show the current leader and prior leader. Keep only a tiny
+ * tail instead of removing history completely.
  */
 function slimState(state: any): any {
   if (!state) return state;
-  const { history: _history, ...slim } = state;
-  return slim;
+  const history = Array.isArray(state.history) ? state.history.slice(-5) : [];
+  return { ...state, history };
 }
 
 /**
