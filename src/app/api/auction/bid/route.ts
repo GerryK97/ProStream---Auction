@@ -8,6 +8,7 @@ import { triggerBidPlaced } from '@/lib/pusher-server';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
+import { serializeTeam, serializePlayer } from '@/lib/cloudinaryUtils';
 
 // POST /api/auction/bid - Place a bid for the current player
 export async function POST(request: NextRequest) {
@@ -94,11 +95,12 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Fire Pusher without awaiting — overlay gets event asynchronously ──
-    // The HTTP response returns to the app IMMEDIATELY.
+    // Serialize team/player so logoURL/photoURL are full Cloudinary delivery
+    // URLs (not bare publicIds) when the overlay receives the event.
     triggerBidPlaced(tournamentId, {
       auctionState: updatedState as any,
-      currentPlayer: player as any,
-      winningTeam: winningTeam as any,
+      currentPlayer: serializePlayer(player as any) as any,
+      winningTeam: winningTeam ? serializeTeam(winningTeam as any) as any : null,
       currentBid: amount,
       previousBid,
       message: `New bid placed: ${amount.toLocaleString()}`,

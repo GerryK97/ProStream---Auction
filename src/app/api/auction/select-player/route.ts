@@ -4,6 +4,7 @@ import { AuctionStateModel } from '@/models/AuctionState';
 import { PlayerModel } from '@/models/Player';
 import { TournamentModel } from '@/models/Tournament';
 import { triggerPlayerSelected } from '@/lib/pusher-server';
+import { serializePlayer } from '@/lib/cloudinaryUtils';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
 
 // POST /api/auction/select-player - Select a specific player for auction
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
     const basePrice = getClassBasePrice(tournament as any, player as any);
 
     await triggerPlayerSelected(tournamentId, {
-      currentPlayer: player as any,
+      currentPlayer: serializePlayer(player as any) as any,
       basePrice,
       auctionState: updatedState as any,
       message: `Player ${(player as any).name} selected for auction`,

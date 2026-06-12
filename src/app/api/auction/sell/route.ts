@@ -6,6 +6,7 @@ import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
 import { triggerPlayerSold, triggerClassCompleted } from '@/lib/pusher-server';
 import { getMinClassBasePrice } from '@/lib/playerClassUtils';
+import { serializeTeam, serializePlayer } from '@/lib/cloudinaryUtils';
 
 // POST /api/auction/sell - Sell the current player to the winning team
 export async function POST(request: NextRequest) {
@@ -161,8 +162,8 @@ export async function POST(request: NextRequest) {
     }
 
     await triggerPlayerSold(tournamentId, {
-      soldPlayer: updatedPlayer as any,
-      winningTeam: updatedTeam as any,
+      soldPlayer: serializePlayer(updatedPlayer as any) as any,
+      winningTeam: serializeTeam(updatedTeam as any) as any,
       finalPrice: currentBid,
       remainingPlayers,
       remainingBudget: (updatedTeam as any).currentBalance,

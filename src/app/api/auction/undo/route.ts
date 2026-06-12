@@ -4,6 +4,7 @@ import { AuctionStateModel } from '@/models/AuctionState';
 import { PlayerModel } from '@/models/Player';
 import { TeamModel } from '@/models/Team';
 import { triggerAuctionUndo } from '@/lib/pusher-server';
+import { serializeTeam, serializePlayer } from '@/lib/cloudinaryUtils';
 
 // POST /api/auction/undo - Undo the last player sale or unsold marking
 export async function POST(request: NextRequest) {
@@ -126,8 +127,8 @@ export async function POST(request: NextRequest) {
       }
 
       await triggerAuctionUndo(tournamentId, {
-        restoredPlayer: restoredPlayer as any,
-        updatedTeam: updatedTeam as any,
+        restoredPlayer: serializePlayer(restoredPlayer as any) as any,
+        updatedTeam: updatedTeam ? serializeTeam(updatedTeam as any) as any : null,
         refundedAmount: finalPrice,
         auctionState: auctionState as any,
         message: 'Last sale undone successfully',
@@ -160,7 +161,7 @@ export async function POST(request: NextRequest) {
       const auctionState = await AuctionStateModel.findOne({ tournamentId }).lean();
 
       await triggerAuctionUndo(tournamentId, {
-        restoredPlayer: restoredPlayer as any,
+        restoredPlayer: serializePlayer(restoredPlayer as any) as any,
         updatedTeam: null,
         refundedAmount: 0,
         auctionState: auctionState as any,
