@@ -161,10 +161,11 @@ export async function POST(request: NextRequest) {
       }).catch((err) => console.error('[sell] classCompleted Pusher failed:', err));
     }
 
-    // Fire Pusher without awaiting — overlay gets the event asynchronously.
-    // Not awaiting means the HTTP response returns immediately to the operator,
-    // eliminating the ap2-cluster round-trip delay from the operator's perspective.
-    triggerPlayerSold(tournamentId, {
+    // Await Pusher for sold events — overlays must receive sold-player and team
+    // balance changes in real time. Fire-and-forget promises can be dropped when
+    // a serverless function returns, which leaves OBS overlays stale until a hard
+    // refresh fetches the updated Mongo state.
+    await triggerPlayerSold(tournamentId, {
       soldPlayer: serializePlayer(updatedPlayer as any) as any,
       winningTeam: serializeTeam(updatedTeam as any) as any,
       finalPrice: currentBid,
@@ -172,8 +173,7 @@ export async function POST(request: NextRequest) {
       remainingBudget: (updatedTeam as any).currentBalance,
       auctionState: updatedState as any,
       message: `${(updatedPlayer as any).name} sold to ${(updatedTeam as any).name} for ${currentBid.toLocaleString()}`,
-    }).catch((err) => console.error('[sell] Pusher trigger failed:', err));
-
+    });
     return NextResponse.json({
       auctionState: updatedState,
       player: updatedPlayer,
