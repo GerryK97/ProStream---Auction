@@ -9,12 +9,26 @@ The key architectural boundary remains:
 - **System UI**: management pages, auction controls, InvoiceIT, wallet, users, admin controls.
 - **Overlay Output**: OBS/browser-source routes under `/overlays/...`, intentionally isolated from app chrome and system UI themes.
 
+## Shared utilities package
+
+The Auction app consumes `@prostream/shared` (installed via `file:../prostream-shared`).
+
+| Import path | Contents |
+|---|---|
+| `@prostream/shared/phone` | `normalizeMobile`, `isValidE164`, `maskPhone` |
+| `@prostream/shared/sms` | `sendSMS` (text.lk v3), `generateOTP` |
+| `@prostream/shared/otp` | `createOtpRecord`, `getLatestOtpRecord`, `checkCooldown`, `validateOtpRecord`, `incrementOtpAttempts`, `markOtpVerified`, OTP constants |
+
+`src/lib/textlk.ts` is a thin re-export shim that re-exports from `@prostream/shared` for backward compatibility.
+
 ## Current top-level app areas
 
 ```text
 src/app/
 ├── api/                         # JSON/API routes
 │   ├── auth/                    # login/logout/session/signup
+│   │   ├── otp/send/            # POST — send OTP SMS to user's mobile
+│   │   └── otp/verify/          # POST — verify OTP and mark phone verified
 │   ├── auction/                 # live auction operations
 │   ├── tournaments/             # tournament CRUD + active
 │   ├── teams/                   # team CRUD + bulk delete
@@ -135,6 +149,34 @@ Shared wallet code:
 src/lib/pg/users-schema.ts
 src/lib/pg/wallet-queries.ts
 ```
+
+### Neon schema additions (OTP / phone verification)
+
+Two columns/tables were added to Neon to support mobile OTP verification:
+
+**`users` table additions:**
+
+| Column | Type | Notes |
+|---|---|---|
+| `phone_verified` | `BOOLEAN DEFAULT FALSE` | Set to `true` by `/api/auth/otp/verify` after successful OTP confirmation |
+
+**`phone_verifications` table:**
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `serial` | Primary key |
+| `userId` | `text` | FK → `users.id` |
+| `phone` | `varchar(20)` | E.164 normalised mobile number |
+| `otpHash` | `text` | bcrypt hash of the 6-digit OTP |
+| `attempts` | `integer` | Incremented on each wrong guess; blocked after 5 |
+| `expiresAt` | `timestamp` | 10 minutes from creation |
+| `verifiedAt` | `timestamp` | Nullable — set on successful verify |
+| `createdAt` | `timestamp` | Default now |
+
+OTP flow constants (from `@prostream/shared/otp`):
+- `OTP_EXPIRY_MINUTES = 10`
+- `OTP_COOLDOWN_SECONDS = 60`
+- `OTP_MAX_ATTEMPTS = 5`
 
 ## Expo app integration
 
