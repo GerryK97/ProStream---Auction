@@ -1,0 +1,49 @@
+{
+  "name": "@prostream/shared",
+  "version": "1.0.0",
+  "description": "Shared utilities across ProStream Auction, Scoreboard, and Expo apps",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./sms": {
+      "import": "./dist/sms/index.js",
+      "require": "./dist/sms/index.js",
+      "types": "./dist/sms/index.d.ts"
+    },
+    "./otp": {
+      "import": "./dist/otp/index.js",
+      "require": "./dist/otp/index.js",
+      "types": "./dist/otp/index.d.ts"
+    },
+    "./phone": {
+      "import": "./dist/phone/index.js",
+      "require": "./dist/phone/index.js",
+      "types": "./dist/phone/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "bcryptjs": ">=2.4.0",
+    "drizzle-orm": ">=0.40.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^22.0.0",
+    "drizzle-orm": "^0.45.1",
+    "typescript": "^5.7.3"
+  },
+  "files": [
+    "dist",
+    "src"
+  ]
+}
