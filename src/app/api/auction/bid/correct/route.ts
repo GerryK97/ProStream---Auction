@@ -71,14 +71,14 @@ export async function POST(request: NextRequest) {
       winningTeam = await TeamModel.findById(teamId).lean();
     }
 
-    triggerBidPlaced(tournamentId, {
+    await triggerBidPlaced(tournamentId, {
       auctionState: updatedState as any,
       currentPlayer: serializePlayer(player as any) as any,
       winningTeam: winningTeam ? serializeTeam(winningTeam as any) as any : null,
       currentBid: amount,
       previousBid,
       message: `Bid corrected to: ${amount.toLocaleString()}`,
-    }).catch((err) => console.error('[bid/correct] Pusher trigger failed:', err));
+    });
 
     return NextResponse.json(updatedState);
   } catch (error) {

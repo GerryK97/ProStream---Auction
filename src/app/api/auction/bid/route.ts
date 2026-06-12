@@ -94,17 +94,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Fire Pusher without awaiting — overlay gets event asynchronously ──
-    // Serialize team/player so logoURL/photoURL are full Cloudinary delivery
-    // URLs (not bare publicIds) when the overlay receives the event.
-    triggerBidPlaced(tournamentId, {
+    // ── Await Pusher for bids — overlay must receive this in real time ──
+    // Web operator already does optimistic UI locally, so the small Pusher
+    // round-trip is acceptable and prevents serverless/local requests from
+    // finishing before the event is actually delivered.
+    await triggerBidPlaced(tournamentId, {
       auctionState: updatedState as any,
       currentPlayer: serializePlayer(player as any) as any,
       winningTeam: winningTeam ? serializeTeam(winningTeam as any) as any : null,
       currentBid: amount,
       previousBid,
       message: `New bid placed: ${amount.toLocaleString()}`,
-    }).catch((err) => console.error('[bid] Pusher trigger failed:', err));
+    });
 
     return NextResponse.json(updatedState);
   } catch (error) {
