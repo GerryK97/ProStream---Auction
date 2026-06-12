@@ -60,6 +60,7 @@ interface UsePusherAuctionReturn {
   teams: Team[];
   isConnected: boolean;
   isRevoked: boolean;
+  lastEvent: string | null;
   error: string | null;
   setPlayerUnsold: (playerId: string) => void;
   setPlayerAvailable: (playerId: string) => void;
@@ -379,13 +380,18 @@ export function usePusherAuction(
   overlayToken?: string,
   overlayType?: string,
 ): UsePusherAuctionReturn {
-  // Overlay mode = OBS browser source with a token in the URL.
-  // In overlay mode we use the wake channel strategy (lazy connect).
-  // Without a token (control panel, auction page) we connect immediately — old behaviour.
+  // Overlay view = OBS/browser overlay page. Some legacy/public overlay URLs may
+  // not include a token, but they still need overlay-grade reconnect + polling
+  // behavior. Auth/token handling remains separate in buildHeaders().
+  const isOverlayView = !!overlayType;
+  // Overlay mode = token-authenticated overlay lifecycle/wake strategy.
+  // Without a token, keep old immediate-connect behavior but still enable
+  // overlay recovery behavior via isOverlayView.
   const isOverlayMode = !!overlayToken;
 
   const [isConnected, setIsConnected] = useState(false);
   const [isRevoked, setIsRevoked] = useState(false);
+  const [lastEvent, setLastEvent] = useState<string | null>(null);
   // In non-overlay mode start as true so Effect 4 fires immediately on mount.
   const [connectTournamentChannel, setConnectTournamentChannel] = useState(!isOverlayMode);
 
@@ -600,14 +606,17 @@ export function usePusherAuction(
       });
 
       channel.bind('auction:player-selected', (data: PlayerSelectedEvent) => {
+        setLastEvent(`auction:player-selected ${new Date().toLocaleTimeString()}`);
         dispatch({ type: 'PLAYER_SELECTED', data });
       });
 
       channel.bind('auction:bid-placed', (data: BidPlacedEvent) => {
+        setLastEvent(`auction:bid-placed bid=${data.currentBid} ${new Date().toLocaleTimeString()}`);
         dispatch({ type: 'BID_PLACED', data });
       });
 
       channel.bind('auction:player-sold', (data: PlayerSoldEvent) => {
+        setLastEvent(`auction:player-sold ${new Date().toLocaleTimeString()}`);
         dispatch({ type: 'PLAYER_SOLD', data });
       });
 
@@ -732,9 +741,9 @@ export function usePusherAuction(
   // connection can silently stall even with generous timeouts. As a backstop,
   // poll the auction state every 15 seconds while the auction is Live so the
   // overlay is NEVER more than 15 seconds out of date regardless of WS health.
-  // Only active in overlay mode to avoid unnecessary load on the operator panel.
+  // Only active in overlay views to avoid unnecessary load on operator panels.
   useEffect(() => {
-    if (!isOverlayMode || !tournamentId || !connectTournamentChannel) return;
+    if (!isOverlayView || !tournamentId || !connectTournamentChannel) return;
 
     const POLL_INTERVAL_MS = 15_000;
     const intervalId = setInterval(() => {
@@ -746,7 +755,7 @@ export function usePusherAuction(
     }, POLL_INTERVAL_MS);
 
     return () => clearInterval(intervalId);
-  }, [isOverlayMode, tournamentId, connectTournamentChannel, refreshData]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOverlayView, tournamentId, connectTournamentChannel, refreshData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setPlayerUnsold = useCallback((playerId: string) => {
     dispatch({ type: 'SET_PLAYER_UNSOLD', playerId });
@@ -803,6 +812,7 @@ export function usePusherAuction(
     teams: state.teams,
     isConnected,
     isRevoked,
+    lastEvent,
     error: state.error,
     setPlayerUnsold,
     setPlayerAvailable,

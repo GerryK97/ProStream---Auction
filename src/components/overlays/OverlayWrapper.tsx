@@ -57,6 +57,7 @@ interface OverlayWrapperProps {
         players: Player[];
         teams: Team[];
         isConnected: boolean;
+        lastEvent: string | null;
         currentPlayer: Player | undefined;
         soldPlayers: Player[];
         overlaySettings: OverlaySettings;
@@ -133,6 +134,7 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
         teams,
         isConnected,
         isRevoked,
+        lastEvent,
     } = usePusherAuction(liveTournamentId, undefined, urlToken ?? undefined, overlayType);
 
     const currentPlayer = players.find(p => p._id === auctionState.currentPlayerId);
@@ -268,6 +270,7 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
                         <div>Tournament: {effectiveTournament?._id ? `✓ ${effectiveTournament.name}` : '✗ None'}</div>
                         <div>Theme: {theme} / {activePalette.id ?? paletteId}</div>
                         <div>Connected: {isConnected ? '✓ Yes' : '✗ No'}</div>
+                        <div>Last Event: {lastEvent || 'None yet'}</div>
                         <div>Current Player: {currentPlayer?.name || 'None'}</div>
                         <div>URL Token: {urlToken ? '✓ Present' : '✗ Missing'}</div>
                         <div>Teams: {teams.length}</div>
@@ -284,6 +287,7 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
                 players,
                 teams,
                 isConnected,
+                lastEvent,
                 currentPlayer,
                 soldPlayers,
                 overlaySettings,
