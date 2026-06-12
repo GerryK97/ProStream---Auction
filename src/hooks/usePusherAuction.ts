@@ -380,13 +380,10 @@ export function usePusherAuction(
   overlayToken?: string,
   overlayType?: string,
 ): UsePusherAuctionReturn {
-  // Overlay view = OBS/browser overlay page. Some legacy/public overlay URLs may
-  // not include a token, but they still need overlay-grade reconnect + polling
-  // behavior. Auth/token handling remains separate in buildHeaders().
-  const isOverlayView = !!overlayType;
-  // Overlay mode = token-authenticated overlay lifecycle/wake strategy.
-  // Without a token, keep old immediate-connect behavior but still enable
-  // overlay recovery behavior via isOverlayView.
+  // Overlay mode = OBS browser source with a token in the URL.
+  // In overlay mode we use the wake channel strategy (lazy connect).
+  // Without a token (control panel, auction page, legacy public overlays),
+  // connect immediately.
   const isOverlayMode = !!overlayToken;
 
   const [isConnected, setIsConnected] = useState(false);
@@ -735,27 +732,6 @@ export function usePusherAuction(
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [tournamentId, connectTournamentChannel, refreshData]);
-
-  // ─── Effect 7: Heartbeat poll for overlay mode ───────────────────────────────
-  // When running as an OBS Browser Source or in a browser with a token, the WS
-  // connection can silently stall even with generous timeouts. As a backstop,
-  // poll the auction state every 15 seconds while the auction is Live so the
-  // overlay is NEVER more than 15 seconds out of date regardless of WS health.
-  // Only active in overlay views to avoid unnecessary load on operator panels.
-  useEffect(() => {
-    if (!isOverlayView || !tournamentId || !connectTournamentChannel) return;
-
-    const POLL_INTERVAL_MS = 15_000;
-    const intervalId = setInterval(() => {
-      // Only re-fetch when the auction is actively running.
-      // Use stateRef for current status without needing it as a dep.
-      if (stateRef.current.tournament?.status === 'Live') {
-        refreshData().catch(() => {});
-      }
-    }, POLL_INTERVAL_MS);
-
-    return () => clearInterval(intervalId);
-  }, [isOverlayView, tournamentId, connectTournamentChannel, refreshData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setPlayerUnsold = useCallback((playerId: string) => {
     dispatch({ type: 'SET_PLAYER_UNSOLD', playerId });
