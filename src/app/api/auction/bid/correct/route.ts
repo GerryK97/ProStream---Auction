@@ -3,9 +3,8 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { TournamentModel } from '@/models/Tournament';
 import { PlayerModel } from '@/models/Player';
-import { TeamModel } from '@/models/Team';
 import { triggerBidPlaced } from '@/lib/pusher-server';
-import { serializeTeam, serializePlayer } from '@/lib/cloudinaryUtils';
+import { serializePlayer } from '@/lib/cloudinaryUtils';
 
 // POST /api/auction/bid/correct
 // Corrects the current bid to any positive amount — bypasses the "must be higher" rule.
@@ -58,6 +57,7 @@ export async function POST(request: NextRequest) {
       {
         $set: {
           currentBid: amount,
+          winningTeamId: teamId || null,
           currentAuctionStatus: 'Bidding',
         },
         $push: { history: { teamId: teamId || null, amount, timestamp: Date.now() } },
@@ -65,16 +65,10 @@ export async function POST(request: NextRequest) {
       { new: true }
     ).lean();
 
-    // Look up the team if provided
-    let winningTeam = null;
-    if (teamId) {
-      winningTeam = await TeamModel.findById(teamId).lean();
-    }
-
     await triggerBidPlaced(tournamentId, {
       auctionState: updatedState as any,
       currentPlayer: serializePlayer(player as any) as any,
-      winningTeam: winningTeam ? serializeTeam(winningTeam as any) as any : null,
+      winningTeam: null,
       currentBid: amount,
       previousBid,
       message: `Bid corrected to: ${amount.toLocaleString()}`,

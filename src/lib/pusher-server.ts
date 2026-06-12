@@ -85,12 +85,12 @@ export function getTournamentChannel(tournamentId: string): string {
  *
  * Full history[] can grow large during competitive bidding and approach Pusher's
  * per-message limit. However, the leading-bid overlay needs the latest and
- * previous bid to show the current leader and prior leader. Keep only a tiny
- * tail instead of removing history completely.
+ * previous bid to show the current leader and prior leader. Keep only the last
+ * two entries instead of removing history completely.
  */
 function slimState(state: any): any {
   if (!state) return state;
-  const history = Array.isArray(state.history) ? state.history.slice(-5) : [];
+  const history = Array.isArray(state.history) ? state.history.slice(-2) : [];
   return { ...state, history };
 }
 

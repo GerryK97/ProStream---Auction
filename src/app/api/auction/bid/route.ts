@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { TournamentModel } from '@/models/Tournament';
-import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
 import { triggerBidPlaced } from '@/lib/pusher-server';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
-import { serializeTeam, serializePlayer } from '@/lib/cloudinaryUtils';
+import { serializePlayer } from '@/lib/cloudinaryUtils';
 
 // POST /api/auction/bid - Place a bid for the current player
 export async function POST(request: NextRequest) {
@@ -57,24 +56,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Bid must be higher than the current bid' }, { status: 400 });
     }
 
-    // ── Round-trip 2: fetch player + update state + lookup team — all parallel
+    // ── Round-trip 2: fetch player + update state — both parallel
     const previousBid = auctionState.currentBid;
     const newBid = { teamId: teamId || null, amount, timestamp: Date.now() };
 
-    const [player, updatedState, winningTeam] = await Promise.all([
+    const [player, updatedState] = await Promise.all([
       PlayerModel.findOne(
         { _id: auctionState.currentPlayerId },
         { isSold: 1, playerClass: 1, basePrice: 1, name: 1, displayName: 1 }
       ).lean(),
       AuctionStateModel.findOneAndUpdate(
         { tournamentId },
-        { $set: { currentBid: amount, currentAuctionStatus: 'Bidding' }, $push: { history: newBid } },
+        {
+          $set: {
+            currentBid: amount,
+            winningTeamId: teamId || null,
+            currentAuctionStatus: 'Bidding',
+          },
+          $push: { history: newBid },
+        },
         { new: true }
       ).lean(),
-      // Fetch full team document so BID_PLACED event carries currentBalance,
-      // playersPurchased etc. — partial projection was stripping those fields
-      // and causing "Can't Bid" / balance-0 on all teams after the first bid.
-      teamId ? TeamModel.findById(teamId).lean() : Promise.resolve(null),
     ]);
 
     // Validate player (checked after parallel write — reject double-sold race)
@@ -101,7 +103,9 @@ export async function POST(request: NextRequest) {
     await triggerBidPlaced(tournamentId, {
       auctionState: updatedState as any,
       currentPlayer: serializePlayer(player as any) as any,
-      winningTeam: winningTeam ? serializeTeam(winningTeam as any) as any : null,
+      // Teams are already loaded in clients; auctionState.winningTeamId and
+      // history[-1].teamId identify the leader. Avoid a team DB read + payload.
+      winningTeam: null,
       currentBid: amount,
       previousBid,
       message: `New bid placed: ${amount.toLocaleString()}`,
