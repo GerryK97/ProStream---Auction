@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (!smsResult.ok) {
-      console.error('text.lk SMS error:', smsResult.error);
+      console.error('notify.lk SMS error:', smsResult.error);
       return NextResponse.json({ error: 'Failed to send OTP. Please try again.' }, { status: 502 });
     }
 

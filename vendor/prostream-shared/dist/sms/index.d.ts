@@ -1,12 +1,13 @@
 /**
- * @prostream/shared — text.lk SMS gateway client
+ * @prostream/shared — notify.lk SMS gateway client
  *
- * API:  https://app.text.lk/api/v3/
- * Auth: Bearer token (OAuth 2.0)
+ * API:  https://app.notify.lk/api/v1/send
+ * Auth: user_id + api_key query parameters
  *
  * Credentials are read from environment variables:
- *   TEXTLK_API_TOKEN   — OAuth token from text.lk dashboard
- *   TEXTLK_SENDER_ID   — Approved sender ID (default: "ProStream")
+ *   NOTIFYLK_USER_ID   — User ID from notify.lk settings page
+ *   NOTIFYLK_API_KEY   — API key from notify.lk settings page
+ *   NOTIFYLK_SENDER_ID — Approved Sender ID (default: "NotifyDEMO" for dev)
  *
  * Both ProStream Auction and ProStream Scoreboard reference this module.
  * Do not duplicate — update here and rebuild.
@@ -17,14 +18,15 @@ export interface SmsSendResult {
     error?: string;
 }
 /**
- * Send an SMS via text.lk v3 API.
+ * Send an SMS via notify.lk API.
  *
- * @param to      Recipient phone in E.164 format (e.g. +94771234567)
- * @param message SMS body text
- * @param opts    Override token/senderId (useful for testing)
+ * @param to      Recipient phone — notify.lk expects format 9471XXXXXXX (no leading +)
+ * @param message SMS body text (max 621 chars)
+ * @param opts    Override credentials/senderId (useful for testing)
  */
 export declare function sendSMS(to: string, message: string, opts?: {
-    token?: string;
+    userId?: string;
+    apiKey?: string;
     senderId?: string;
 }): Promise<SmsSendResult>;
 /**
