@@ -49,6 +49,7 @@ export interface Tournament {
   directQuickBids?: { amount: number }[];
   playerProfileFields?: PlayerProfileFieldsConfig; // Optional player data fields enabled for this tournament
   playerCardTemplates?: Array<{ id: string; name: string; pngUrl: string; layoutId?: string }>; // Uploaded card background templates
+  auctionDate?: string; // ISO date string e.g. "2026-07-15"
 }
 
 export interface Team {

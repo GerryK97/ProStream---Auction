@@ -92,6 +92,7 @@ const tournamentSchema = new Schema<Tournament>(
       ],
       default: [],
     },
+    auctionDate: { type: String },
   },
   {
     timestamps: true,
