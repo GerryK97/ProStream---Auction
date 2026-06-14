@@ -6,6 +6,7 @@ import { TournamentModel } from '@/models/Tournament';
 import { triggerWheelSpin } from '@/lib/pusher-server';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
+import { resolveImageUrl } from '@/lib/cloudinaryUtils';
 
 // POST /api/overlay/spin
 // Picks a random winner from available players, broadcasts overlay:wheel-spin
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
       AuctionStateModel.findOne({ tournamentId }).lean(),
       TournamentModel.findById(tournamentId).select('wheelCenterImageURL').lean(),
     ]);
-    const centerImageURL = (tournament as any)?.wheelCenterImageURL as string | undefined;
+    const centerImageURL = resolveImageUrl((tournament as any)?.wheelCenterImageURL, { width: 400, height: 400 }) ?? undefined;
     const currentPlayerId = (auctionState as any)?.currentPlayerId ?? null;
     const currentAuctionClass = (auctionState as any)?.currentAuctionClass ?? null;
 
