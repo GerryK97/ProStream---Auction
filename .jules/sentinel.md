@@ -1,0 +1,4 @@
+## 2026-05-14 - Information Leakage in File Upload
+**Vulnerability:** The API endpoint `src/app/api/upload/route.ts` previously exposed internal configuration status (missing environment variables) and full underlying Cloudinary error objects (including message, `http_code`, and raw `error`) to the client when a file upload failed.
+**Learning:** Returning full error details to the client on generic Catch blocks is a common anti-pattern that can expose underlying third-party dependencies, API structure, or stack traces which an attacker can use for reconnaissance.
+**Prevention:** Always implement an error handling boundary in API endpoints where server-side logs capture full raw errors/trace, while the HTTP responses mask these details with a generic user-facing message such as `Internal server error` or `Failed to upload image`.
