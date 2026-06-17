@@ -1,19 +1,18 @@
 /**
- * @prostream/shared — notify.lk SMS gateway client
+ * @prostream/shared — text.lk SMS gateway client
  *
- * API:  https://app.notify.lk/api/v1/send
- * Auth: user_id + api_key query parameters
+ * API:  https://app.text.lk/api/v3/sms/send
+ * Auth: Bearer token in Authorization header
  *
  * Credentials are read from environment variables:
- *   NOTIFYLK_USER_ID   — User ID from notify.lk settings page
- *   NOTIFYLK_API_KEY   — API key from notify.lk settings page
- *   NOTIFYLK_SENDER_ID — Approved Sender ID (default: "NotifyDEMO" for dev)
+ *   TEXTLK_API_TOKEN  — Bearer token from text.lk dashboard
+ *   TEXTLK_SENDER_ID  — Approved Sender ID (e.g. "ProStream")
  *
  * Both ProStream Auction and ProStream Scoreboard reference this module.
  * Do not duplicate — update here and rebuild.
  */
 
-const BASE = 'https://app.notify.lk/api/v1/send'
+const BASE = 'https://app.text.lk/api/v3/sms/send'
 
 export interface SmsSendResult {
   ok: boolean
@@ -22,47 +21,56 @@ export interface SmsSendResult {
 }
 
 /**
- * Send an SMS via notify.lk API.
+ * Send an SMS via text.lk v3 API.
  *
- * @param to      Recipient phone — notify.lk expects format 9471XXXXXXX (no leading +)
- * @param message SMS body text (max 621 chars)
+ * @param to      Recipient phone in E.164 format (+94XXXXXXXXX) or 94XXXXXXXXX
+ * @param message SMS body text
  * @param opts    Override credentials/senderId (useful for testing)
  */
 export async function sendSMS(
   to: string,
   message: string,
-  opts?: { userId?: string; apiKey?: string; senderId?: string },
+  opts?: { apiToken?: string; senderId?: string },
 ): Promise<SmsSendResult> {
-  const userId   = opts?.userId   ?? process.env.NOTIFYLK_USER_ID
-  const apiKey   = opts?.apiKey   ?? process.env.NOTIFYLK_API_KEY
-  const senderId = opts?.senderId ?? process.env.NOTIFYLK_SENDER_ID ?? 'NotifyDEMO'
+  const apiToken = opts?.apiToken ?? process.env.TEXTLK_API_TOKEN
+  const senderId = opts?.senderId ?? process.env.TEXTLK_SENDER_ID ?? 'ProStream'
 
-  if (!userId || !apiKey) {
-    return { ok: false, error: 'NOTIFYLK_USER_ID or NOTIFYLK_API_KEY is not set' }
+  if (!apiToken) {
+    return { ok: false, error: 'TEXTLK_API_TOKEN is not set' }
   }
 
-  // notify.lk expects the number without a leading '+', e.g. 94771234567
+  // text.lk expects the number without a leading '+', e.g. 94772801110
   const recipient = to.startsWith('+') ? to.slice(1) : to
 
-  const url = new URL(BASE)
-  url.searchParams.set('user_id',   userId)
-  url.searchParams.set('api_key',   apiKey)
-  url.searchParams.set('sender_id', senderId)
-  url.searchParams.set('to',        recipient)
-  url.searchParams.set('message',   message)
-
   try {
-    const res = await fetch(url.toString(), { method: 'GET' })
-    const json = await res.json().catch(() => ({})) as { status?: string; data?: string; message?: string }
+    const res = await fetch(BASE, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiToken}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        recipient,
+        sender_id: senderId,
+        message,
+      }),
+    })
+
+    const json = await res.json().catch(() => ({})) as {
+      status?: string
+      message?: string
+      data?: { uid?: string; status?: string }
+    }
 
     if (!res.ok || json.status !== 'success') {
       return {
         ok: false,
-        error: json.message ?? json.data ?? `notify.lk HTTP ${res.status}`,
+        error: json.message ?? `text.lk HTTP ${res.status}`,
       }
     }
 
-    return { ok: true }
+    return { ok: true, messageId: json.data?.uid }
   } catch (err: any) {
     return { ok: false, error: err?.message ?? 'SMS send failed' }
   }
