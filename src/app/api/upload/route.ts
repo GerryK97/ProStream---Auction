@@ -6,13 +6,11 @@ export async function POST(request: NextRequest) {
   try {
     // Verify Cloudinary configuration
     if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-      console.error('Missing Cloudinary credentials:', {
-        cloud_name: !!process.env.CLOUDINARY_CLOUD_NAME,
-        api_key: !!process.env.CLOUDINARY_API_KEY,
-        api_secret: !!process.env.CLOUDINARY_API_SECRET
-      });
+      // 🛡️ Sentinel Security Fix: Do not expose which specific environment variables are missing
+      console.error('Upload service configuration error: Missing required credentials');
       return NextResponse.json(
-        { error: 'Cloudinary is not configured. Please set environment variables.' },
+        // 🛡️ Sentinel Security Fix: Provide a generic error message to avoid information disclosure
+        { error: 'Upload service unavailable. Please contact administrator.' },
         { status: 500 }
       );
     }
@@ -58,20 +56,12 @@ export async function POST(request: NextRequest) {
       publicId: uploadResult.public_id,
     });
   } catch (error: any) {
-    console.error('Upload error:', error);
-
-    // Return detailed error message
-    const errorMessage = error?.message || error?.error?.message || 'Failed to upload image';
-    const errorDetails = {
-      error: errorMessage,
-      details: error?.http_code ? `HTTP ${error.http_code}` : undefined,
-      cloudinaryError: error?.error || undefined
-    };
-
-    console.error('Full error details:', errorDetails);
+    // 🛡️ Sentinel Security Fix: Log detailed error internally but don't expose stack traces or Cloudinary details to the client
+    console.error('Upload error:', error?.message || error, error?.error || '');
 
     return NextResponse.json(
-      errorDetails,
+      // 🛡️ Sentinel Security Fix: Provide a generic error message to the client
+      { error: 'Failed to upload image. Please try again later.' },
       { status: 500 }
     );
   }
