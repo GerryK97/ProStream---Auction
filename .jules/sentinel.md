@@ -1,0 +1,4 @@
+## 2025-03-09 - Information Disclosure via API Error Responses
+**Vulnerability:** API endpoints, particularly the upload route (`src/app/api/upload/route.ts`), were directly passing internal error objects (like Cloudinary stack traces) and configuration states (missing environment variables) to the client via `NextResponse.json`.
+**Learning:** Returning detailed error objects helps debugging during development but leaks sensitive architecture and configuration information when deployed. This was happening due to the `errorDetails` object passing through without sanitization.
+**Prevention:** Always log detailed error information internally via `console.error` for debugging, but fail securely by explicitly mapping the response body to generic, sanitized error strings (e.g., "Internal server configuration error") before sending to the client.
