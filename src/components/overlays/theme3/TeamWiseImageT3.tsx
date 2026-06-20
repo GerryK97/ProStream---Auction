@@ -1,306 +1,23 @@
 'use client';
 
 /**
- * TeamWiseImageT3 — Team Standings Leaderboard (Theme 3)
+ * TeamWiseImageT3 / TeamWiseImageryT3
  *
- * Pixel-accurate React replica of the Singular.live "Leaderboard - Olympic"
- * template (app instance 6629856, template 518 v49).
+ * Redesign based on the provided saved overlays.uno sample:
+ * "Double Starting Lineup - Bold".
  *
- * Visual structure (1920×1080 canvas):
- *   ┌─ infoMask panel — left:192px top:54px w:1536 h:972 ───────────────────┐
- *   │  [gold accent strip — full width, 14px at bottom, z=-11]              │
- *   │  [dark panel 98.5% height — #2a2f35, z=-10]                           │
- *   │  [white title block 11% — 107px, z=-9]                                │
- *   │  [header row 16.8% — 163px, dark 90% brightness, z=-8]                │
- *   │  [table 77.5% from 18.95% — 10 staggered rows, z=-1]                  │
- *   └────────────────────────────────────────────────────────────────────────┘
- *
- * Adapted columns (auction context):
- *   # | Logo | Team Name | Sqd | Budget | Spend | Balance
+ * Sample structure extracted from Singular DOM:
+ * - Team 1 Formation: top 0.1%, height 42.4%, transform-origin bottom
+ * - Team 2 Formation: top 57.4%, height 42.4%, transform-origin top
+ * - Middle band with team names and VS
+ * - 5 player cards per team
+ * - Each player card contains: background logo, darken overlay, headshot,
+ *   side position/number, first name, last name
  */
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Theme3Canvas, THEME3_CANVAS_WIDTH, THEME3_CANVAS_HEIGHT } from './Theme3Canvas';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { Player, Team, Tournament } from '@/types';
 
-// ─── Exact Singular colour tokens ─────────────────────────────────────────────
-const CLR_DARK   = '#2a2f35';   // panel / header background
-const CLR_GOLD   = '#b9aa62';   // accent line
-const CLR_WHITE  = '#ffffff';
-const CLR_MUTED  = '#cccccc';   // row divider
-const CLR_DIM    = 'rgba(255,255,255,0.70)'; // stat values
-
-// ─── Canvas geometry (pixels, 1920×1080 base) ─────────────────────────────────
-const MASK_LEFT   = 0.10 * THEME3_CANVAS_WIDTH;   // 192
-const MASK_TOP    = 0.05 * THEME3_CANVAS_HEIGHT;  // 54
-const MASK_W      = 0.80 * THEME3_CANVAS_WIDTH;   // 1536
-const MASK_H      = 0.90 * THEME3_CANVAS_HEIGHT;  // 972
-
-// Block heights (% of MASK_H)
-const TITLE_H     = 0.11  * MASK_H;  // 106.9
-const HEADER_H    = 0.168 * MASK_H;  // 163.3
-const TABLE_TOP   = 0.1895 * MASK_H; // 184.3  (18.95% of 972)
-const TABLE_H     = 0.775  * MASK_H; // 753.3
-const GOLD_STRIP  = 0.015  * MASK_H; // 14.6   (last 1.5% = gold strip)
-const DARK_H      = 0.985  * MASK_H; // 957.4
-
-const MAX_ROWS    = 10;
-
-// ─── Column layout (% of MASK_W) — adapted from Singular header positions ─────
-// Original:  PL@37.7  W@45.2  D@52.6  L@60.1  GF@67.7  GD@82.7  Pts@89.5
-// Adapted:   Sqd@37.7  Budget@48  Spend@63  Bal@82.7   (big label replaced)
-const COL_RANK_L  = 0.0325;  // 3.25%
-const COL_RANK_W  = 0.04;
-
-const COL_LOGO_L  = 0.0725;  // 7.25%
-const COL_LOGO_W  = 0.055;
-
-const COL_NAME_L  = 0.135;   // 13.5%
-const COL_NAME_W  = 0.215;
-
-const COL_SQD_L   = 0.377;   // matches PL header exactly
-const COL_BDG_L   = 0.481;   // budget
-const COL_SPD_L   = 0.601;   // spend
-const COL_BAL_L   = 0.759;   // balance remaining
-const COL_PTS_L   = 0.895;   // "big" column (balance highlight)
-const COL_STAT_W  = 0.065;
-const COL_PTS_W   = 0.09;
-
-// Row height in the table (% of TABLE_H) — 10 rows with tight spacing
-const ROW_H = TABLE_H / MAX_ROWS; // ~75.3px
-
-// ─── Animation ────────────────────────────────────────────────────────────────
-const STAGGER_MS  = 60;   // delay per row (topToBottom)
-const ENTER_MS    = 360;  // slide-in duration
-const EXIT_MS     = 280;
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function fmtCompact(n: number): string {
-  if (n === 0) return '0';
-  const cr = 10_000_000;
-  const lk = 100_000;
-  if (Math.abs(n) >= cr) return (n / cr).toFixed(1).replace(/\.0$/, '') + 'Cr';
-  if (Math.abs(n) >= lk) return (n / lk).toFixed(1).replace(/\.0$/, '') + 'L';
-  return n.toLocaleString('en-IN');
-}
-
-function fmtInt(n: number): string {
-  return n.toLocaleString('en-IN');
-}
-
-// ─── Sub-component: single table row ─────────────────────────────────────────
-interface RowData {
-  rank: number;
-  team: Team;
-  logoURL: string;
-  squadCount: number;
-  budget: number;
-  spend: number;
-  balance: number;
-}
-
-interface RowProps {
-  row: RowData;
-  index: number;        // 0-based visual row position
-  visible: boolean;
-  exiting: boolean;
-  highlighted: boolean;
-}
-
-function LeaderboardRow({ row, index, visible, exiting, highlighted }: RowProps) {
-  const [entered, setEntered] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (visible && !exiting) {
-      timerRef.current = setTimeout(() => setEntered(true), index * STAGGER_MS);
-    }
-    if (exiting) {
-      setEntered(false);
-    }
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [visible, exiting, index]);
-
-  const translateY = entered ? '0%' : '110%';
-  const opacity    = entered ? 1 : 0;
-
-  const y = TABLE_TOP + index * ROW_H;
-
-  const hlBg = highlighted
-    ? `linear-gradient(90deg, rgba(185,170,98,0.18) 0%, rgba(185,170,98,0.08) 100%)`
-    : 'transparent';
-
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        left: 0,
-        top: y,
-        width: MASK_W,
-        height: ROW_H,
-        transform: `translateY(${translateY})`,
-        opacity,
-        transition: `transform ${ENTER_MS}ms cubic-bezier(0.22,1,0.36,1), opacity ${ENTER_MS * 0.6}ms ease`,
-        pointerEvents: 'none',
-      }}
-    >
-      {/* Row background (for highlighted row) */}
-      {highlighted && (
-        <div
-          style={{
-            position: 'absolute',
-            left: 0, top: 0,
-            width: '100%', height: '100%',
-            background: hlBg,
-          }}
-        />
-      )}
-
-      {/* Divider line at bottom */}
-      <div
-        style={{
-          position: 'absolute',
-          left: '2.5%', bottom: 0,
-          width: '95%', height: 1,
-          background: highlighted ? CLR_GOLD : CLR_MUTED,
-          opacity: 0.45,
-        }}
-      />
-
-      {/* Rank */}
-      <div
-        style={{
-          position: 'absolute',
-          left: `${COL_RANK_L * 100}%`,
-          top: '18%', height: '64%', width: `${COL_RANK_W * 100}%`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: 'Montserrat, sans-serif',
-          fontWeight: 400,
-          fontSize: Math.round(ROW_H * 0.48),
-          color: highlighted ? CLR_GOLD : CLR_WHITE,
-          lineHeight: 1,
-        }}
-      >
-        {row.rank}
-      </div>
-
-      {/* Team Logo */}
-      <div
-        style={{
-          position: 'absolute',
-          left: `${COL_LOGO_L * 100}%`,
-          top: '22.5%', height: '55%', width: `${COL_LOGO_W * 100}%`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          overflow: 'hidden',
-        }}
-      >
-        {row.logoURL ? (
-          <img
-            src={row.logoURL}
-            alt=""
-            style={{
-              maxWidth: '100%', maxHeight: '100%',
-              objectFit: 'contain', display: 'block',
-            }}
-          />
-        ) : (
-          <div
-            style={{
-              width: Math.round(ROW_H * 0.55),
-              height: Math.round(ROW_H * 0.55),
-              borderRadius: '50%',
-              background: highlighted ? CLR_GOLD : 'rgba(255,255,255,0.2)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: 'Montserrat, sans-serif', fontWeight: 700,
-              fontSize: Math.round(ROW_H * 0.28),
-              color: highlighted ? CLR_DARK : CLR_WHITE,
-            }}
-          >
-            {row.team.shortCode?.charAt(0) ?? row.team.name.charAt(0)}
-          </div>
-        )}
-      </div>
-
-      {/* Team Name */}
-      <div
-        style={{
-          position: 'absolute',
-          left: `${COL_NAME_L * 100}%`,
-          top: '18%', height: '64%', width: `${COL_NAME_W * 100}%`,
-          display: 'flex', alignItems: 'center',
-          overflow: 'hidden',
-          fontFamily: 'Montserrat, sans-serif',
-          fontWeight: 400,
-          fontSize: Math.round(ROW_H * 0.48),
-          color: highlighted ? CLR_GOLD : CLR_WHITE,
-          whiteSpace: 'nowrap', textOverflow: 'ellipsis',
-          lineHeight: 1,
-        }}
-      >
-        {row.team.name}
-      </div>
-
-      {/* Squad count */}
-      <StatCell value={String(row.squadCount)} x={COL_SQD_L} rowH={ROW_H} highlighted={highlighted} />
-
-      {/* Budget */}
-      <StatCell value={fmtCompact(row.budget)} x={COL_BDG_L} rowH={ROW_H} highlighted={highlighted} />
-
-      {/* Spend */}
-      <StatCell value={fmtCompact(row.spend)} x={COL_SPD_L} rowH={ROW_H} highlighted={highlighted} />
-
-      {/* Balance */}
-      <StatCell value={fmtCompact(row.balance)} x={COL_BAL_L} rowH={ROW_H} highlighted={highlighted} />
-
-      {/* BIG right column — balance with stronger styling */}
-      <div
-        style={{
-          position: 'absolute',
-          left: `${COL_PTS_L * 100}%`,
-          top: '18%', height: '64%', width: `${COL_PTS_W * 100}%`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: 'Montserrat, sans-serif',
-          fontWeight: 600,
-          fontSize: Math.round(ROW_H * 0.48),
-          color: highlighted ? CLR_GOLD : CLR_WHITE,
-          lineHeight: 1,
-        }}
-      >
-        {row.squadCount}
-      </div>
-    </div>
-  );
-}
-
-function StatCell({
-  value, x, rowH, highlighted,
-}: {
-  value: string;
-  x: number;
-  rowH: number;
-  highlighted: boolean;
-}) {
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        left: `${x * 100}%`,
-        top: '21.75%', height: '56.5%', width: `${COL_STAT_W * 100}%`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontFamily: 'Montserrat, sans-serif',
-        fontWeight: 400,
-        fontSize: Math.round(rowH * 0.36),
-        color: highlighted ? 'rgba(185,170,98,0.9)' : CLR_DIM,
-        lineHeight: 1,
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {value}
-    </div>
-  );
-}
-
-// ─── Props & data computation ─────────────────────────────────────────────────
 interface Props {
   players: Player[];
   teams: Team[];
@@ -309,273 +26,539 @@ interface Props {
   isExiting?: boolean;
 }
 
-function buildRows(teams: Team[], players: Player[]): RowData[] {
-  const rows: RowData[] = teams.map(team => {
-    const budget  = team.initialBudget ?? 0;
-    const balance = team.currentBalance ?? budget;
-    const spend   = Math.max(0, budget - balance);
+const CANVAS_W = 1920;
+const CANVAS_H = 1080;
 
-    // Count from players array (more accurate than playersPurchased)
-    const squadCount = players.filter(
-      p => p.winningTeamId === team._id && p.isSold,
-    ).length || team.playersPurchased?.length || 0;
+const FORMATION_H = 458; // 42.4% of 1080
+const TOP_FORMATION_Y = 1;
+const BOTTOM_FORMATION_Y = 620; // 57.4% of 1080
+const CARD_W = 300;
+const CARD_H = 400;
+const CARD_GAP = 18;
+const CARD_TOP = 28;
+const LEFT_PAD = 156;
 
-    return {
-      rank: 0,
-      team,
-      logoURL: team.logoURL ?? '',
-      squadCount,
-      budget,
-      spend,
-      balance,
-    };
-  });
+const DARK = '#101214';
+const PANEL = '#1b1f24';
+const GOLD = '#b9aa62';
+const WHITE = '#ffffff';
+const LIGHT = '#ebebeb';
+const MUTED = 'rgba(255,255,255,0.68)';
 
-  // Sort by spend descending (highest bidder first), then by squad
-  rows.sort((a, b) => b.spend - a.spend || b.squadCount - a.squadCount);
-  rows.forEach((r, i) => { r.rank = i + 1; });
+const CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap');
 
-  return rows.slice(0, MAX_ROWS);
+  @keyframes t3LineupFormationTopIn {
+    from { opacity: 0; transform: translateY(-34px) scaleY(0.94); }
+    to   { opacity: 1; transform: translateY(0) scaleY(1); }
+  }
+  @keyframes t3LineupFormationBottomIn {
+    from { opacity: 0; transform: translateY(34px) scaleY(0.94); }
+    to   { opacity: 1; transform: translateY(0) scaleY(1); }
+  }
+  @keyframes t3LineupCardIn {
+    from { opacity: 0; transform: translateY(28px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes t3LineupCenterIn {
+    from { opacity: 0; transform: scaleX(0.88); }
+    to   { opacity: 1; transform: scaleX(1); }
+  }
+  @keyframes t3LineupShine {
+    from { transform: translateX(-160%) skewX(-18deg); }
+    to   { transform: translateX(310%) skewX(-18deg); }
+  }
+`;
+
+function splitName(name: string): { first: string; last: string } {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return { first: '', last: parts[0] ?? '' };
+  return { first: parts.slice(0, -1).join(' '), last: parts[parts.length - 1] };
 }
 
-// ─── Header column helper ─────────────────────────────────────────────────────
-function HeaderCell({
-  label, x, w = COL_STAT_W, fontSize,
-}: {
-  label: string; x: number; w?: number; fontSize: number;
-}) {
+function imageForPlayer(player: Player): string {
+  return player.photoURL?.trim() || player.secondaryImageURL?.trim() || '';
+}
+
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map(part => part[0])
+    .join('')
+    .toUpperCase() || '?';
+}
+
+function formatMoney(n?: number | null): string {
+  if (!n) return '—';
+  return n.toLocaleString('en-IN');
+}
+
+interface TeamBlock {
+  team: Team;
+  players: Player[];
+  total: number;
+}
+
+function buildTeamBlocks(teams: Team[], players: Player[], teamId: string): [TeamBlock | null, TeamBlock | null] {
+  const blocks = teams
+    .map(team => {
+      const sold = players
+        .filter(p => p.isSold && p.winningTeamId === team._id)
+        .sort((a, b) => (b.finalPrice ?? 0) - (a.finalPrice ?? 0) || a.name.localeCompare(b.name));
+      return {
+        team,
+        players: sold.slice(0, 5),
+        total: sold.reduce((sum, p) => sum + (p.finalPrice ?? 0), 0),
+      };
+    })
+    .filter(block => block.players.length > 0)
+    .sort((a, b) => b.total - a.total || b.players.length - a.players.length);
+
+  if (blocks.length === 0) {
+    const fallback = teams.slice(0, 2).map(team => ({ team, players: [], total: 0 }));
+    return [fallback[0] ?? null, fallback[1] ?? null];
+  }
+
+  const selected = teamId ? blocks.find(block => block.team._id === teamId) : null;
+  const first = selected ?? blocks[0] ?? null;
+  const second = blocks.find(block => block.team._id !== first?.team._id) ?? blocks[1] ?? null;
+  return [first, second];
+}
+
+function teamLabel(team: Team | null): { top: string; bottom: string } {
+  if (!team) return { top: 'TEAM', bottom: '—' };
+  const parts = team.name.trim().split(/\s+/);
+  if (parts.length <= 1) return { top: team.shortCode || 'TEAM', bottom: team.name.toUpperCase() };
+  return {
+    top: parts.slice(0, -1).join(' '),
+    bottom: parts[parts.length - 1].toUpperCase(),
+  };
+}
+
+const TeamWiseImageT3: React.FC<Props> = ({ players, teams, tournament, teamId, isExiting = false }) => {
+  const [entered, setEntered] = useState(false);
+  const [topBlock, bottomBlock] = useMemo(
+    () => buildTeamBlocks(teams, players, teamId),
+    [teams, players, teamId],
+  );
+
+  useEffect(() => {
+    if (isExiting) {
+      setEntered(false);
+      return;
+    }
+    const raf = requestAnimationFrame(() => requestAnimationFrame(() => setEntered(true)));
+    return () => cancelAnimationFrame(raf);
+  }, [isExiting, topBlock?.team._id, bottomBlock?.team._id]);
+
   return (
     <div
       style={{
         position: 'absolute',
-        left: `${x * 100}%`,
-        top: '12.5%', height: '3%',
-        width: `${w * 100}%`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontFamily: 'Montserrat, sans-serif',
-        fontWeight: 400, fontSize,
-        color: CLR_WHITE,
-        letterSpacing: '0.02em',
-        whiteSpace: 'nowrap',
+        inset: 0,
+        width: CANVAS_W,
+        height: CANVAS_H,
+        overflow: 'hidden',
+        fontFamily: 'Roboto, Helvetica, sans-serif',
+        opacity: entered ? 1 : 0,
+        transition: 'opacity 280ms ease',
       }}
     >
-      {label}
+      <style>{CSS}</style>
+
+      {/* Transparent OBS-safe background with subtle dark focus vignette */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'radial-gradient(circle at 50% 50%, rgba(0,0,0,0.24), rgba(0,0,0,0.02) 58%, rgba(0,0,0,0) 78%)',
+        }}
+      />
+
+      <FormationBand
+        block={topBlock}
+        side="top"
+        y={TOP_FORMATION_Y}
+        visible={entered}
+        delay={0}
+      />
+
+      <CenterStrip
+        tournament={tournament}
+        topTeam={topBlock?.team ?? null}
+        bottomTeam={bottomBlock?.team ?? null}
+        topTotal={topBlock?.total ?? 0}
+        bottomTotal={bottomBlock?.total ?? 0}
+        visible={entered}
+      />
+
+      <FormationBand
+        block={bottomBlock}
+        side="bottom"
+        y={BOTTOM_FORMATION_Y}
+        visible={entered}
+        delay={120}
+      />
+    </div>
+  );
+};
+
+function FormationBand({
+  block,
+  side,
+  y,
+  visible,
+  delay,
+}: {
+  block: TeamBlock | null;
+  side: 'top' | 'bottom';
+  y: number;
+  visible: boolean;
+  delay: number;
+}) {
+  const team = block?.team ?? null;
+  const lineup = Array.from({ length: 5 }, (_, i) => block?.players[i] ?? null);
+  const reverse = side === 'bottom';
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        left: 0,
+        top: y,
+        width: '100%',
+        height: FORMATION_H,
+        overflow: 'hidden',
+        opacity: visible ? 1 : 0,
+        transformOrigin: side === 'top' ? '50% 100%' : '50% 0%',
+        animation: visible
+          ? `${side === 'top' ? 't3LineupFormationTopIn' : 't3LineupFormationBottomIn'} 520ms ${delay}ms cubic-bezier(0.22,1,0.36,1) both`
+          : undefined,
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 0,
+          background: `linear-gradient(${side === 'top' ? '180deg' : '0deg'}, rgba(16,18,20,0.98), rgba(16,18,20,0.76))`,
+          borderTop: side === 'bottom' ? `2px solid ${GOLD}` : undefined,
+          borderBottom: side === 'top' ? `2px solid ${GOLD}` : undefined,
+        }}
+      />
+
+      {/* Oversized team logo watermark, matching sample Logo widget (-15%, 130%, opacity) */}
+      {team?.logoURL && (
+        <img
+          src={team.logoURL}
+          alt=""
+          style={{
+            position: 'absolute',
+            right: side === 'top' ? -170 : undefined,
+            left: side === 'bottom' ? -170 : undefined,
+            top: -80,
+            width: 560,
+            height: 560,
+            objectFit: 'contain',
+            opacity: 0.16,
+            filter: 'grayscale(1) contrast(1.2)',
+          }}
+        />
+      )}
+
+      <div
+        style={{
+          position: 'absolute',
+          left: LEFT_PAD,
+          top: CARD_TOP,
+          display: 'flex',
+          flexDirection: reverse ? 'row-reverse' : 'row',
+          gap: CARD_GAP,
+        }}
+      >
+        {lineup.map((player, index) => (
+          <PlayerCard
+            key={player?._id ?? `${side}-empty-${index}`}
+            player={player}
+            team={team}
+            index={index}
+            reverse={reverse}
+          />
+        ))}
+      </div>
     </div>
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
-const TeamWiseImageT3: React.FC<Props> = ({
-  players,
-  teams,
-  tournament,
-  teamId,
-  isExiting = false,
-}) => {
-  const rows = buildRows(teams, players);
-  const today = new Date().toLocaleDateString('en-GB', {
-    day: '2-digit', month: '2-digit', year: '2-digit',
-  });
-
-  const titleFontSize    = Math.round(MASK_H * 0.041);  // ~40px
-  const subtitleFontSize = Math.round(MASK_H * 0.0205); // ~20px
-  const headerFontSize   = Math.round(MASK_H * 0.0245); // ~24px
-
-  // Panel-level enter/exit
-  const [panelIn, setPanelIn] = useState(false);
-  useEffect(() => {
-    if (!isExiting) {
-      const t = requestAnimationFrame(() => requestAnimationFrame(() => setPanelIn(true)));
-      return () => cancelAnimationFrame(t as unknown as number);
-    }
-    setPanelIn(false);
-  }, [isExiting]);
-
-  const panelScale   = panelIn ? 1 : 0.97;
-  const panelOpacity = panelIn ? 1 : 0;
+function PlayerCard({
+  player,
+  team,
+  index,
+  reverse,
+}: {
+  player: Player | null;
+  team: Team | null;
+  index: number;
+  reverse: boolean;
+}) {
+  const name = splitName(player?.name ?? 'AVAILABLE SLOT');
+  const photo = player ? imageForPlayer(player) : '';
+  const number = player?.playerNo?.trim() || String(index + 1);
+  const position = player?.position?.trim() || player?.playerClass?.trim() || '—';
 
   return (
-    <Theme3Canvas transparent>
-      {/* ── Google Font ── */}
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+    <div
+      style={{
+        position: 'relative',
+        width: CARD_W,
+        height: CARD_H,
+        overflow: 'hidden',
+        background: PANEL,
+        boxShadow: '0 16px 36px rgba(0,0,0,0.46)',
+        animation: `t3LineupCardIn 430ms ${0.18 + index * 0.07}s cubic-bezier(0.22,1,0.36,1) both`,
+      }}
+    >
+      {/* Logo widget behind headshot */}
+      {team?.logoURL && (
+        <img
+          src={team.logoURL}
+          alt=""
+          style={{
+            position: 'absolute',
+            left: '-15%',
+            top: '-15%',
+            width: '130%',
+            height: '130%',
+            objectFit: 'contain',
+            opacity: player ? 0.32 : 0.46,
+            filter: 'grayscale(1)',
+          }}
+        />
+      )}
 
-        @keyframes twi-gloss {
-          0%,100% { opacity: 0.18; }
-          50%      { opacity: 0.08; }
-        }
-      `}</style>
+      {/* Headshot widget */}
+      {photo ? (
+        <img
+          src={photo}
+          alt=""
+          referrerPolicy="no-referrer"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'center top',
+          }}
+        />
+      ) : (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'rgba(255,255,255,0.50)',
+            fontSize: 58,
+            fontWeight: 900,
+            letterSpacing: 2,
+          }}
+        >
+          {player ? initials(player.name) : team?.shortCode?.slice(0, 2).toUpperCase() ?? '—'}
+        </div>
+      )}
 
-      {/* ── InfoMask panel ── */}
+      {/* Darken widget */}
       <div
         style={{
           position: 'absolute',
-          left: MASK_LEFT,
-          top: MASK_TOP,
-          width: MASK_W,
-          height: MASK_H,
-          overflow: 'hidden',
-          transform: `scale(${panelScale})`,
-          transformOrigin: '50% 0%',
-          opacity: panelOpacity,
-          transition: `transform ${ENTER_MS}ms cubic-bezier(0.22,1,0.36,1), opacity ${ENTER_MS * 0.7}ms ease`,
-          boxShadow: '0 12px 48px rgba(0,0,0,0.7)',
+          inset: 0,
+          background: 'linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.28) 42%, rgba(0,0,0,0.80) 100%)',
+          opacity: 0.88,
+        }}
+      />
+
+      {/* Side Position and Number labels, matching sample layout */}
+      <div
+        style={{
+          position: 'absolute',
+          left: reverse ? undefined : 0,
+          right: reverse ? 0 : undefined,
+          top: '8%',
+          width: '15%',
+          height: '40%',
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          color: LIGHT,
+          fontSize: 22,
+          fontWeight: 900,
+          writingMode: 'vertical-rl',
+          transform: reverse ? 'rotate(180deg)' : 'none',
+          letterSpacing: 1,
         }}
       >
-
-        {/* Layer z=-11: Gold accent strip (full height — visible at bottom as strip) */}
-        <div
-          style={{
-            position: 'absolute', inset: 0, zIndex: 1,
-            background: CLR_GOLD,
-          }}
-        />
-
-        {/* Layer z=-10: Dark panel (98.5% height — covers gold except bottom strip) */}
-        <div
-          style={{
-            position: 'absolute',
-            left: 0, top: 0,
-            width: '100%', height: `${DARK_H}px`,
-            background: CLR_DARK,
-            zIndex: 2,
-          }}
-        />
-
-        {/* Layer z=-9: White title block (11% height) */}
-        <div
-          style={{
-            position: 'absolute',
-            left: 0, top: 0,
-            width: '100%', height: TITLE_H,
-            background: CLR_WHITE,
-            zIndex: 3,
-          }}
-        />
-
-        {/* Layer z=-8: Header row background (from top, 16.8% height covers title + column headers) */}
-        <div
-          style={{
-            position: 'absolute',
-            left: 0, top: TITLE_H,
-            width: '100%', height: HEADER_H - TITLE_H,
-            background: CLR_DARK,
-            filter: 'brightness(90%)',
-            zIndex: 4,
-          }}
-        />
-
-        {/* Layer z=-7: Gloss overlay on title */}
-        <div
-          style={{
-            position: 'absolute',
-            left: 0, top: 0,
-            width: '100%', height: TITLE_H,
-            background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.13) 100%)',
-            zIndex: 5,
-            pointerEvents: 'none',
-          }}
-        />
-
-        {/* ── Content layer (z=10+) ── */}
-        <div style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
-
-          {/* Subtitle — "THIS SEASON" above title */}
-          <div
-            style={{
-              position: 'absolute',
-              left: `${0.025 * MASK_W}px`,
-              top: `${0.0225 * MASK_H}px`,
-              width: `${0.95 * MASK_W}px`,
-              height: `${0.025 * MASK_H}px`,
-              display: 'flex', alignItems: 'flex-end',
-              fontFamily: 'Montserrat, sans-serif',
-              fontWeight: 700, fontSize: subtitleFontSize,
-              color: CLR_DARK, lineHeight: 1,
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-            }}
-          >
-            {tournament?.name?.toUpperCase() ?? 'AUCTION STANDINGS'}
-          </div>
-
-          {/* Title — "EPL STANDINGS" style */}
-          <div
-            style={{
-              position: 'absolute',
-              left: `${0.025 * MASK_W}px`,
-              top: `${0.04 * MASK_H}px`,
-              width: `${0.69 * MASK_W}px`,
-              height: `${0.05 * MASK_H}px`,
-              display: 'flex', alignItems: 'flex-end',
-              fontFamily: 'Montserrat, sans-serif',
-              fontWeight: 700, fontSize: titleFontSize,
-              color: CLR_DARK, lineHeight: 1,
-              textTransform: 'uppercase', whiteSpace: 'nowrap',
-            }}
-          >
-            TEAM STANDINGS
-          </div>
-
-          {/* Date — right-aligned in title block */}
-          <div
-            style={{
-              position: 'absolute',
-              left: `${0.735 * MASK_W}px`,
-              top: `${0.06 * MASK_H}px`,
-              width: `${0.24 * MASK_W}px`,
-              height: `${0.03 * MASK_H}px`,
-              display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end',
-              fontFamily: 'Montserrat, sans-serif',
-              fontWeight: 700, fontSize: headerFontSize,
-              color: CLR_DARK, lineHeight: 1,
-            }}
-          >
-            {today}
-          </div>
-
-          {/* ── Column headers (inside dark header row) ── */}
-          {/* positioned relative to MASK_H */}
-          <HeaderCell label="SQD"     x={COL_SQD_L}  fontSize={headerFontSize} />
-          <HeaderCell label="BUDGET"  x={COL_BDG_L}  fontSize={headerFontSize} w={0.075} />
-          <HeaderCell label="SPEND"   x={COL_SPD_L}  fontSize={headerFontSize} w={0.075} />
-          <HeaderCell label="BAL"     x={COL_BAL_L}  fontSize={headerFontSize} />
-          <HeaderCell label="PLAYERS" x={COL_PTS_L}  fontSize={headerFontSize} w={COL_PTS_W} />
-
-          {/* ── Table rows ── */}
-          {rows.map((row, i) => (
-            <LeaderboardRow
-              key={row.team._id}
-              row={row}
-              index={i}
-              visible={!isExiting}
-              exiting={isExiting}
-              highlighted={row.team._id === teamId}
-            />
-          ))}
-
-          {/* Empty state */}
-          {rows.length === 0 && (
-            <div
-              style={{
-                position: 'absolute',
-                top: TABLE_TOP + TABLE_H / 2 - 24,
-                width: '100%',
-                textAlign: 'center',
-                fontFamily: 'Montserrat, sans-serif',
-                fontWeight: 400,
-                fontSize: headerFontSize,
-                color: 'rgba(255,255,255,0.35)',
-                letterSpacing: '0.06em',
-              }}
-            >
-              NO TEAMS YET
-            </div>
-          )}
-        </div>
+        {position.toUpperCase()}
       </div>
-    </Theme3Canvas>
+      <div
+        style={{
+          position: 'absolute',
+          left: reverse ? undefined : 0,
+          right: reverse ? 0 : undefined,
+          top: '52%',
+          width: '15%',
+          height: '40%',
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: 'center',
+          color: GOLD,
+          fontSize: 44,
+          fontWeight: 900,
+          lineHeight: 1,
+        }}
+      >
+        {number}
+      </div>
+
+      {/* First/Last name text block */}
+      <div
+        style={{
+          position: 'absolute',
+          left: reverse ? '0%' : '17.5%',
+          right: reverse ? '17.5%' : '0%',
+          top: '6.75%',
+          width: '82.5%',
+          height: '42.5%',
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: reverse ? 'flex-end' : 'flex-start',
+          color: WHITE,
+          fontSize: 25,
+          fontWeight: 500,
+          textAlign: reverse ? 'right' : 'left',
+          padding: '0 16px',
+          boxSizing: 'border-box',
+          textShadow: '0 2px 8px rgba(0,0,0,0.8)',
+        }}
+      >
+        {name.first || (player ? '' : team?.name ?? '')}
+      </div>
+      <div
+        style={{
+          position: 'absolute',
+          left: reverse ? '0%' : '17.5%',
+          right: reverse ? '17.5%' : '0%',
+          top: '46.25%',
+          width: '82.5%',
+          height: '51.5%',
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: reverse ? 'flex-end' : 'flex-start',
+          color: WHITE,
+          fontSize: 42,
+          fontWeight: 900,
+          textTransform: 'uppercase',
+          textAlign: reverse ? 'right' : 'left',
+          padding: '0 16px 20px',
+          boxSizing: 'border-box',
+          lineHeight: 0.92,
+          textShadow: '0 2px 10px rgba(0,0,0,0.9)',
+          overflow: 'hidden',
+        }}
+      >
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {name.last}
+        </span>
+      </div>
+
+      {/* Price strip adapted for auction */}
+      {player?.finalPrice && (
+        <div
+          style={{
+            position: 'absolute',
+            left: reverse ? 0 : undefined,
+            right: reverse ? undefined : 0,
+            top: 0,
+            padding: '7px 10px',
+            background: GOLD,
+            color: DARK,
+            fontSize: 13,
+            fontWeight: 900,
+            letterSpacing: 0.5,
+          }}
+        >
+          {formatMoney(player.finalPrice)}
+        </div>
+      )}
+    </div>
   );
-};
+}
+
+function CenterStrip({
+  tournament,
+  topTeam,
+  bottomTeam,
+  topTotal,
+  bottomTotal,
+  visible,
+}: {
+  tournament: Tournament | null;
+  topTeam: Team | null;
+  bottomTeam: Team | null;
+  topTotal: number;
+  bottomTotal: number;
+  visible: boolean;
+}) {
+  const top = teamLabel(topTeam);
+  const bottom = teamLabel(bottomTeam);
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        left: 0,
+        top: 458,
+        width: '100%',
+        height: 162,
+        display: 'grid',
+        gridTemplateColumns: '1fr 190px 1fr',
+        alignItems: 'center',
+        background: 'linear-gradient(90deg, rgba(185,170,98,0.92), rgba(235,235,235,0.98), rgba(185,170,98,0.92))',
+        boxShadow: '0 0 44px rgba(0,0,0,0.42)',
+        transformOrigin: '50% 50%',
+        animation: visible ? 't3LineupCenterIn 420ms 160ms cubic-bezier(0.22,1,0.36,1) both' : undefined,
+        overflow: 'hidden',
+      }}
+    >
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', top: 0, bottom: 0, width: '38%', background: 'linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.42) 50%, transparent 80%)', animation: 't3LineupShine 1.1s 0.25s cubic-bezier(0.4,0,0.6,1) forwards' }} />
+      </div>
+
+      <TeamNameBlock label={top} total={topTotal} align="right" />
+      <div style={{ textAlign: 'center', color: DARK }}>
+        <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: 4, textTransform: 'uppercase', opacity: 0.78 }}>
+          {tournament?.name ?? 'AUCTION'}
+        </div>
+        <div style={{ fontSize: 58, fontWeight: 900, lineHeight: 0.95, letterSpacing: 1 }}>VS</div>
+        <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase', opacity: 0.72 }}>TEAM IMAGERY</div>
+      </div>
+      <TeamNameBlock label={bottom} total={bottomTotal} align="left" />
+    </div>
+  );
+}
+
+function TeamNameBlock({ label, total, align }: { label: { top: string; bottom: string }; total: number; align: 'left' | 'right' }) {
+  return (
+    <div style={{ padding: align === 'right' ? '0 34px 0 0' : '0 0 0 34px', textAlign: align, color: DARK, minWidth: 0 }}>
+      <div style={{ fontSize: 30, fontWeight: 500, lineHeight: 1.05, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label.top}</div>
+      <div style={{ fontSize: 48, fontWeight: 900, lineHeight: 0.95, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label.bottom}</div>
+      <div style={{ marginTop: 8, fontSize: 13, fontWeight: 900, letterSpacing: 2, opacity: 0.70 }}>SPENT {formatMoney(total)}</div>
+    </div>
+  );
+}
 
 export default TeamWiseImageT3;
