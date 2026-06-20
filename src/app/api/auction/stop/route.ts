@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       TournamentModel.findByIdAndUpdate(
         tournamentId,
         { $set: { status: newStatus } },
-        { new: true }
+        { returnDocument: 'after' }
       ).lean(),
       AuctionStateModel.findOne({ tournamentId }).lean(),
     ]);

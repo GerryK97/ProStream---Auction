@@ -5,6 +5,25 @@ import { getPricesWithFallbacks } from '@/lib/pg/wallet-queries';
 import { AUCTION_OVERLAY_TYPE_KEYS, AuctionOverlayType, getAuctionOverlayConfig } from '@/lib/overlays/auctionOverlayTypes';
 import { DEFAULT_OVERLAY_PRICES, getOverlayPricingDefaultsByKey } from '@/lib/overlays/overlayPricing';
 
+const PRICE_CACHE_TTL_MS = 5 * 60_000;
+let priceCache: { expiresAt: number; prices: Record<AuctionOverlayType, number> } | null = null;
+
+async function getCachedOverlayPrices() {
+  const now = Date.now();
+  if (priceCache && priceCache.expiresAt > now) return priceCache.prices;
+
+  const pricesByKey = await getPricesWithFallbacks(getOverlayPricingDefaultsByKey());
+  const prices = Object.fromEntries(
+    AUCTION_OVERLAY_TYPE_KEYS.map((type) => {
+      const config = getAuctionOverlayConfig(type);
+      return [type, pricesByKey[config.pricingKey] ?? DEFAULT_OVERLAY_PRICES[type]] as const;
+    })
+  ) as Record<AuctionOverlayType, number>;
+
+  priceCache = { prices, expiresAt: now + PRICE_CACHE_TTL_MS };
+  return prices;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const user = await getUserFromRequest(request);
@@ -13,13 +32,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const pricesByKey = await getPricesWithFallbacks(getOverlayPricingDefaultsByKey());
-    const prices = Object.fromEntries(
-      AUCTION_OVERLAY_TYPE_KEYS.map((type) => {
-        const config = getAuctionOverlayConfig(type);
-        return [type, pricesByKey[config.pricingKey] ?? DEFAULT_OVERLAY_PRICES[type]] as const;
-      })
-    ) as Record<AuctionOverlayType, number>;
+    const prices = await getCachedOverlayPrices();
 
     return NextResponse.json({ prices });
   } catch (error) {

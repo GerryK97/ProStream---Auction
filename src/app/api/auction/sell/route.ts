@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
           updatedAt: new Date(),
         },
       },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
     if (!updatedPlayer) {
@@ -118,12 +118,12 @@ export async function POST(request: NextRequest) {
           $set: { currentBalance: newBalance },
           $addToSet: { playersPurchased: String(currentPlayerId) },
         },
-        { new: true }
+        { returnDocument: 'after' }
       ).lean(),
       AuctionStateModel.findOneAndUpdate(
         { tournamentId },
         { $set: { currentAuctionStatus: 'Sold' } },
-        { new: true }
+        { returnDocument: 'after' }
       ).lean(),
     ]);
 
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
           $push: { completedClasses: activeClass },
           $set: { currentAuctionClass: null },
         },
-        { new: true }
+        { returnDocument: 'after' }
       ).lean();
       triggerClassCompleted(tournamentId, {
         completedClassCode: activeClass,

@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       TournamentModel.findByIdAndUpdate(
         tournamentId,
         { $set: { status: 'Live' } },
-        { new: true }
+        { returnDocument: 'after' }
       ).lean(),
       AuctionStateModel.findOne({ tournamentId }).lean(),
     ]);

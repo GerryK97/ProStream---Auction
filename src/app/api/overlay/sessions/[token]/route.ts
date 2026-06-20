@@ -30,7 +30,7 @@ export async function DELETE(
     const session = await OverlaySessionModel.findOneAndUpdate(
       { _id: sessionToken, isActive: true },
       { $set: { isActive: false, revokedAt: new Date() } },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
     if (!session) {

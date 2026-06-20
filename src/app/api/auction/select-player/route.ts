@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
             history: [],
           },
         },
-        { new: true }
+        { returnDocument: 'after' }
       ).lean(),
       TournamentModel.findById(tournamentId).lean(),
     ]);

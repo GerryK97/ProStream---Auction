@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       PlayerModel.findOneAndUpdate(
         { _id: currentPlayerId },
         { $set: { isUnsold: true, isSold: false, updatedAt: new Date() } },
-        { new: true }
+        { returnDocument: 'after' }
       ).lean(),
       AuctionStateModel.findOneAndUpdate(
         { tournamentId },
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
             history: [],
           },
         },
-        { new: true }
+        { returnDocument: 'after' }
       ).lean(),
     ]);
 
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
             $push: { completedClasses: activeClass },
             $set: { currentAuctionClass: null },
           },
-          { new: true }
+          { returnDocument: 'after' }
         ).lean();
         try {
           triggerClassCompleted(tournamentId, {

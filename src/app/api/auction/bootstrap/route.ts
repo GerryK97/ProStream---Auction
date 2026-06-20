@@ -5,6 +5,8 @@ import { AuctionStateModel } from '@/models/AuctionState';
 import { PlayerModel } from '@/models/Player';
 import { TeamModel } from '@/models/Team';
 import { getUserFromRequest } from '@/lib/request-helpers';
+import { serializePlayer, serializeTeam, serializeTournament } from '@/lib/cloudinaryUtils';
+import { authorizeOverlayReadAccess } from '@/lib/overlay-auth';
 
 /**
  * GET /api/auction/bootstrap?tournamentId=xxx[&token=xxx]
@@ -23,9 +25,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'tournamentId is required' }, { status: 400 });
     }
 
+    const overlayType = request.nextUrl.searchParams.get('overlayType');
+    const isOverlayAuth = await authorizeOverlayReadAccess(request, { tournamentId, overlayType });
+
     // Single Neon PG round-trip for auth (cached by request-helpers in-process LRU)
     const user = await getUserFromRequest(request);
-    if (!user) {
+    if (!user && !isOverlayAuth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -46,7 +51,7 @@ export async function GET(request: NextRequest) {
             history: [],
           },
         },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: 'after' }
       ).lean(),
       PlayerModel.find({ tournamentId }).lean(),
       TeamModel.find({ tournamentId }).lean(),
@@ -56,7 +61,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ tournament, auctionState, players, teams });
+    return NextResponse.json({
+      tournament: serializeTournament(tournament as Record<string, unknown>),
+      auctionState,
+      players: players.map(p => serializePlayer(p as Record<string, unknown>)),
+      teams: teams.map(t => serializeTeam(t as Record<string, unknown>)),
+    });
   } catch (error) {
     console.error('[bootstrap] Error:', error);
     return NextResponse.json({ error: 'Failed to load bootstrap data' }, { status: 500 });

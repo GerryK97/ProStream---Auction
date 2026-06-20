@@ -402,6 +402,8 @@ export function usePusherAuction(
 
   const channelRef = useRef<Channel | null>(null);
   const pusherRef = useRef<ReturnType<typeof getPusherClient> | null>(null);
+  const bootstrapInFlightRef = useRef<Promise<void> | null>(null);
+  const lastBootstrapRef = useRef<{ key: string; at: number } | null>(null);
 
   // Build auth headers helper (handles overlay token fallback for OBS)
   const buildHeaders = useCallback(() => {
@@ -413,80 +415,83 @@ export function usePusherAuction(
     return { headers, tkQ, tk };
   }, [overlayToken, overlayType]);
 
-  // Fetch full auction data via the bootstrap endpoint (single HTTP + Neon PG round-trip)
+  // Fetch full auction data via the bootstrap endpoint (single HTTP + Neon PG round-trip).
+  // Dedupe because overlay startup can request sync from mount, token hydration, and
+  // Pusher connection recovery within the same few milliseconds.
+  const runBootstrapFetch = useCallback(async (source: string, force = false) => {
+    if (!tournamentId) return;
+
+    const { headers, tk } = buildHeaders();
+    const url = `/api/auction/bootstrap?tournamentId=${tournamentId}${tk}`;
+    const now = Date.now();
+    const last = lastBootstrapRef.current;
+
+    if (!force && bootstrapInFlightRef.current) {
+      dlog(`[usePusherAuction] Bootstrap deduped (${source}) — awaiting in-flight request`);
+      return bootstrapInFlightRef.current;
+    }
+    if (!force && last?.key === url && now - last.at < 1_000) {
+      dlog(`[usePusherAuction] Bootstrap skipped (${source}) — fetched ${now - last.at}ms ago`);
+      return;
+    }
+
+    const task = (async () => {
+      try {
+        dlog(`[usePusherAuction] Bootstrap fetch (${source}) for tournament: ${tournamentId}`);
+        const startTime = Date.now();
+        const res = await fetch(url, { headers });
+        const data = res.ok ? await res.json() : null;
+
+        lastBootstrapRef.current = { key: url, at: Date.now() };
+        dlog(`[usePusherAuction] Bootstrap fetch completed in ${Date.now() - startTime}ms (${source})`);
+
+        dispatch({
+          type: 'SET_INITIAL_DATA',
+          data: {
+            tournament: data?.tournament || null,
+            auctionState: data?.auctionState || EMPTY_AUCTION_STATE,
+            players: data?.players || [],
+            teams: data?.teams || [],
+          },
+        });
+      } finally {
+        bootstrapInFlightRef.current = null;
+      }
+    })();
+
+    bootstrapInFlightRef.current = task;
+    return task;
+  }, [tournamentId, buildHeaders]);
+
   const fetchInitialData = useCallback(async () => {
     if (!tournamentId) return;
     // Use server-bootstrapped data only when it matches the currently requested tournament.
-    // When users switch tournaments in the control panel, we must re-fetch fresh tournament
-    // config (including player classes) for the new tournamentId.
     if (initialData?.tournament?._id === tournamentId) return;
-
     try {
-      dlog(`[usePusherAuction] Fetching data for tournament: ${tournamentId}`);
-      const { headers, tk } = buildHeaders();
-      const startTime = Date.now();
-
-      // Single request → single Neon PG auth call (vs. 4× before)
-      const res = await fetch(`/api/auction/bootstrap?tournamentId=${tournamentId}${tk}`, { headers });
-      const data = res.ok ? await res.json() : null;
-
-      dlog(`[usePusherAuction] Bootstrap fetch completed in ${Date.now() - startTime}ms`);
-
-      dispatch({
-        type: 'SET_INITIAL_DATA',
-        data: {
-          tournament: data?.tournament || null,
-          auctionState: data?.auctionState || EMPTY_AUCTION_STATE,
-          players: data?.players || [],
-          teams: data?.teams || [],
-        },
-      });
+      await runBootstrapFetch('initial');
     } catch (err) {
       console.error('[usePusherAuction] Error fetching data:', err);
       dispatch({ type: 'SET_ERROR', error: 'Failed to load tournament data. Please try again.' });
     }
-  }, [tournamentId, buildHeaders, initialData?.tournament?._id]);
+  }, [tournamentId, initialData?.tournament?._id, runBootstrapFetch]);
 
   const refreshData = useCallback(async () => {
-    if (!tournamentId) return;
     try {
-      const { headers, tk } = buildHeaders();
-      // Single request → single Neon PG auth call
-      const res = await fetch(`/api/auction/bootstrap?tournamentId=${tournamentId}${tk}`, { headers });
-      const data = res.ok ? await res.json() : null;
-
-      dispatch({
-        type: 'SET_INITIAL_DATA',
-        data: {
-          tournament: data?.tournament || null,
-          auctionState: data?.auctionState || EMPTY_AUCTION_STATE,
-          players: data?.players || [],
-          teams: data?.teams || [],
-        },
-      });
+      await runBootstrapFetch('refresh', true);
     } catch (err) {
       console.error('[usePusherAuction] Error refreshing data:', err);
       dispatch({ type: 'SET_ERROR', error: 'Failed to refresh tournament data. Please try again.' });
     }
-  }, [tournamentId, buildHeaders]);
+  }, [runBootstrapFetch]);
 
-  // ─── Effect 1: Initial status check (overlay mode only) ─────────────────────
-  // Lightweight fetch to determine whether to connect immediately.
-  // Skipped in non-overlay mode — connectTournamentChannel is already true.
+  // ─── Effect 1: Overlay startup connect ──────────────────────────────────────
+  // Avoid a status-check waterfall. Bootstrap returns the full tournament state;
+  // Pusher events will disconnect the tournament channel if the auction becomes inactive.
   useEffect(() => {
     if (!isOverlayMode || !tournamentId) return;
-
-    const { headers, tkQ } = buildHeaders();
-    fetch(`/api/tournaments/${tournamentId}${tkQ}`, { headers })
-      .then(r => r.ok ? r.json() : null)
-      .then((t: Tournament | null) => {
-        if (t && isActiveStatus(t.status)) {
-          dlog(`[usePusherAuction] Tournament already active (${t.status}), connecting immediately`);
-          setConnectTournamentChannel(true);
-        }
-      })
-      .catch(() => {});
-  }, [tournamentId, isOverlayMode]); // eslint-disable-line react-hooks/exhaustive-deps
+    dlog('[usePusherAuction] Overlay mode — connecting tournament channel immediately');
+    setConnectTournamentChannel(true);
+  }, [tournamentId, isOverlayMode]);
 
   // ─── Effect 2: Wake channel subscription (overlay mode only) ────────────────
   // Always on while overlay is open. Receives wake/sleep signals from the
@@ -638,8 +643,11 @@ export function usePusherAuction(
         // state to catch any events that were missed while the WS was down.
         // This is the primary fix for "overlay shows stale data after reconnect"
         // and "hard refresh needed to see latest state".
-        if (states.current === 'connected' && states.previous === 'connecting') {
-          dlog('[usePusherAuction] WS reconnected — re-fetching auction data to sync missed events');
+        if (
+          states.current === 'connected' &&
+          (states.previous === 'unavailable' || states.previous === 'failed' || states.previous === 'disconnected')
+        ) {
+          dlog('[usePusherAuction] WS recovered — re-fetching auction data to sync missed events');
           refreshData().catch(() => {});
         }
       };

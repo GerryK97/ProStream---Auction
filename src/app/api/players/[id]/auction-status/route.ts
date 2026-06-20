@@ -85,7 +85,7 @@ export async function PATCH(
     const updatedPlayer = await PlayerModel.findByIdAndUpdate(
       id,
       { $set: playerUpdate },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
     return NextResponse.json({ message: 'Player auction status updated', player: updatedPlayer });

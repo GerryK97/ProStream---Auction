@@ -39,14 +39,23 @@ async function assertTournamentAccess(user: RequestUser, tournamentId: string) {
   return { tournament, response: null };
 }
 
+const PRICE_CACHE_TTL_MS = 5 * 60_000;
+let priceCache: { expiresAt: number; prices: Record<AuctionOverlayType, number> } | null = null;
+
 async function getOverlayPriceMap() {
+  const now = Date.now();
+  if (priceCache && priceCache.expiresAt > now) return priceCache.prices;
+
   const pricesByKey = await getPricesWithFallbacks(getOverlayPricingDefaultsByKey());
-  return Object.fromEntries(
+  const prices = Object.fromEntries(
     AUCTION_OVERLAY_TYPE_KEYS.map((type) => {
       const config = getAuctionOverlayConfig(type);
       return [type, pricesByKey[config.pricingKey] ?? DEFAULT_OVERLAY_PRICES[type]] as const;
     })
   ) as Record<AuctionOverlayType, number>;
+
+  priceCache = { prices, expiresAt: now + PRICE_CACHE_TTL_MS };
+  return prices;
 }
 
 // GET /api/overlay/sessions?tournamentId=xxx — list sessions for accessible tournaments

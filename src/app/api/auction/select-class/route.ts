@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     const updatedState = await AuctionStateModel.findOneAndUpdate(
       { tournamentId },
       { $set: { currentAuctionClass: className } },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
     // Broadcast class-selected event
@@ -141,7 +141,7 @@ export async function DELETE(request: NextRequest) {
     const updatedState = await AuctionStateModel.findOneAndUpdate(
       { tournamentId },
       { $set: { currentAuctionClass: null } },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
     // Broadcast so all clients update their player list filter immediately

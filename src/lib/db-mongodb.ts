@@ -119,7 +119,7 @@ export const tournamentDB = {
     const updated = await TournamentModel.findOneAndUpdate(
       { _id: id },
       { $set: data },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
     return updated as any;
   },
@@ -203,7 +203,7 @@ export const teamDB = {
     const updated = await TeamModel.findOneAndUpdate(
       { _id: id },
       { $set: data },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
     return updated as any;
   },
@@ -288,7 +288,7 @@ export const playerDB = {
     const updated = await PlayerModel.findOneAndUpdate(
       { _id: id },
       { $set: data },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
     return updated as any;
   },
@@ -545,7 +545,7 @@ export const overlayConfigDB = {
         $set: { ...data, updatedAt: new Date() },
         $inc: { version: 1 }
       },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
     return updated as any;
@@ -594,7 +594,7 @@ export const overlayConfigDB = {
     const updated = await OverlayConfigModel.findOneAndUpdate(
       { _id: id },
       { $set: { isLocked: locked } },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
     return updated as any;
   },
@@ -627,7 +627,7 @@ export const overlaySceneDB = {
     const updated = await OverlaySceneModel.findOneAndUpdate(
       { _id: id },
       { $set: data },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
     return updated as any;
   },

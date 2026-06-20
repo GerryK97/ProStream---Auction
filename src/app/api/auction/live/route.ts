@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
             history: [],
           },
         },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: 'after' }
       ).lean(),
     ]);
 

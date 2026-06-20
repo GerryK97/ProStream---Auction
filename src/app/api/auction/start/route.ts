@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     const updatedTournament = await TournamentModel.findByIdAndUpdate(
       tournamentId,
       { $set: { status: 'Live' } },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
     // Initialize or reset auction state
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
           history: []
         }
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     // Fetch teams and players for Pusher event — parallel (no dependency on each other)

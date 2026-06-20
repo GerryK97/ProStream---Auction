@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
           $set: { isSold: false },
           $unset: { finalPrice: '', winningTeamId: '' },
         },
-        { new: true }
+        { returnDocument: 'after' }
       ).lean();
 
       if (!restoredPlayer) {
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
           $set: { currentBalance: newBalance },
           $pull: { playersPurchased: String(playerId) },
         },
-        { new: true }
+        { returnDocument: 'after' }
       ).lean();
 
       // Get auction state
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
               history: [],
             },
           },
-          { new: true }
+          { returnDocument: 'after' }
         ).lean();
       }
 
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
       const restoredPlayer = await PlayerModel.findOneAndUpdate(
         { _id: playerId, tournamentId, isUnsold: true, isSold: false },
         { $set: { isUnsold: false } },
-        { new: true }
+        { returnDocument: 'after' }
       ).lean();
 
       if (!restoredPlayer) {

@@ -54,7 +54,7 @@ export async function PUT(
     const updatedOverlay = await OverlayLibraryModel.findByIdAndUpdate(
       id,
       body,
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
 
     if (!updatedOverlay) {
