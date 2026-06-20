@@ -72,12 +72,22 @@ Defined in [`overlayPalettes.ts`](../src/config/overlayPalettes.ts) for Theme 3 
 All animations respect `prefers-reduced-motion`.
 
 ### Where the live player bar is used
-- **Custom overlay** (`CustomT3Content`) and **Full Screen 2** (`FullScreenAltT3Content`) — lower-third bar only
+- **Custom overlay** (`CustomT3Content`) — **Small:** lower-third [`LiveAuctionPlayerBarT3`](src/components/overlays/theme3/LiveAuctionPlayerBarT3.tsx); **Large:** portrait [`PortraitPlayerCardT3`](src/components/overlays/theme3/PortraitPlayerCardT3.tsx) (440×660, photo top, footer with number/name + embedded bid). Controlled by overlay `size` (`large` | `small`) and auto-switch from Auction Controls.
 - **Main Full Screen** (`FullScreenT3Content`) — uses the full-screen player card below (not the bar)
+
+## Theme 3 Full Screen 2 (alternate full-screen route)
+
+The Full Screen 2 overlay (`/overlays/:id/fullscreen2`, [`FullScreenAltT3Content.tsx`](../src/components/overlays/theme3/FullScreenAltT3Content.tsx)) follows the **Theme 1 Full Screen 2 layout**: full-viewport **secondary player image**, a **floating bid card** positioned via overlay settings (`bidCardLeft`, `bidCardTop`), bottom ticker, sold toast, and **Waiting for Next Player** resting screen after a sale. It does **not** use the lower-third bar or the opaque full-screen player card.
+
+### Layout
+- **Background:** Player `secondaryImageURL` (fallback `photoURL`) edge-to-edge with bottom gradient fade into the canvas
+- **Bid card:** Theme 3 `CurrentBidPanelT3` in a gold-bordered floating panel (320px)
+- **Enter/exit:** Horizontal scaleY panel wipe (same timing as Theme 1 Full Screen 2)
+- **Post-sale:** Shared sold toast → `RestingTimeT3` with “Waiting for Next Player”
 
 ## Theme 3 Full-Screen Player Card (main Full Screen route)
 
-The primary Full Screen overlay (`/overlays/:id`, [`FullScreenT3Content.tsx`](../src/components/overlays/theme3/FullScreenT3Content.tsx)) renders an **opaque 1920×1080 player card** instead of the lower-third bar. Custom and Full Screen 2 routes are unchanged.
+The primary Full Screen overlay (`/overlays/:id`, [`FullScreenT3Content.tsx`](../src/components/overlays/theme3/FullScreenT3Content.tsx)) renders an **opaque 1920×1080 player card** instead of the lower-third bar. The Custom route uses **Small** (horizontal bar) or **Large** (portrait card) per overlay `size`; Full Screen 2 uses the secondary-image layout described above.
 
 ### Layout
 - **Canvas fill:** Opaque `--t3-gradient-canvas` background with ticker-aligned accent skew bands ([`PlayerBarBackgroundT3.tsx`](../src/components/overlays/theme3/PlayerBarBackgroundT3.tsx))
@@ -104,7 +114,16 @@ All animations respect `prefers-reduced-motion`.
 
 ## Theme 3 Team Summary Panel (`team-summary`)
 
-The Team Standings leaderboard ([`TeamSummaryT3.tsx`](../src/components/overlays/theme3/TeamSummaryT3.tsx)) is triggered from the overlay control **Team Summary** button (Theme 3). **Team Imagery** (`team-wise-image`) is a separate display mode that renders [`TeamWiseImageT3.tsx`](../src/components/overlays/theme3/TeamWiseImageT3.tsx) (double lineup view).
+The Team Standings leaderboard ([`TeamSummaryT3.tsx`](../src/components/overlays/theme3/TeamSummaryT3.tsx)) is triggered from the overlay control **Team Summary** button (Theme 3). **Team Imagery** (`team-wise-image`) is a separate display mode that renders [`TeamWiseImageT3.tsx`](../src/components/overlays/theme3/TeamWiseImageT3.tsx) (single-team lineup view).
+
+### Theme 3 Team Imagery (`team-wise-image`)
+
+- **Trigger:** Overlay Controls → **Team Imagery**; optional team filter locks to one franchise
+- **Layout:** One team per screen — **≤5 slots:** accent info bar + player row grouped and **centered together** on screen; **6+ slots:** top row, center bar, bottom row
+- **Center bar:** Tournament name, team logo, team name, total spent, players sold (`sold/squadSize`) — ticker-style accent rail with gradient overlay
+- **Tokens:** Same Theme 3 overlay namespace as TickerT3 — `--t3-accent`, `--t3-bg-panel`, `--t3-bg-card`, `--t3-text-primary`, `--t3-text-secondary`, `--t3-on-accent`, `--t3-player-no-*`
+- **Slots:** Sold players fill roster order; remaining squad positions show as open slots — never more than `squadSize` total
+- **Pagination:** Up to 10 slots per page; auto-advance every 8s through pages then the next team
 
 ### Visual system
 - **Trigger:** Overlay Controls → **Team Summary** (`displayMode: team-summary`); optional team filter highlights a row

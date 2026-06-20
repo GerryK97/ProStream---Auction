@@ -28,7 +28,7 @@ interface CurrentBidPanelT3Props {
   soldPrice?: number;
   soldTeam?: Team;
   reducedMotion?: boolean;
-  layout?: 'bar' | 'fullscreen';
+  layout?: 'bar' | 'fullscreen' | 'portrait-footer';
 }
 
 function BidLabelRow({
@@ -302,11 +302,12 @@ const CurrentBidT3: React.FC<CurrentBidPanelT3Props> = ({
   layout = 'bar',
 }) => {
   const isFullscreen = layout === 'fullscreen';
-  const bidFontSize = isFullscreen ? 72 : 46;
-  const soldTeamFontSize = isFullscreen ? 36 : 24;
-  const soldSubFontSize = isFullscreen ? 22 : 16;
-  const compactBaseFontSize = isFullscreen ? 24 : 18;
-  const teamRowLogoSize = isFullscreen ? 48 : 28;
+  const isPortraitFooter = layout === 'portrait-footer';
+  const bidFontSize = isFullscreen ? 72 : isPortraitFooter ? 30 : 46;
+  const soldTeamFontSize = isFullscreen ? 36 : isPortraitFooter ? 18 : 24;
+  const soldSubFontSize = isFullscreen ? 22 : isPortraitFooter ? 14 : 16;
+  const compactBaseFontSize = isFullscreen ? 24 : isPortraitFooter ? 13 : 18;
+  const teamRowLogoSize = isFullscreen ? 48 : isPortraitFooter ? 22 : 28;
   const basePrice = getClassBasePrice(tournament, currentPlayer);
   const baseFormatted = basePrice.toLocaleString('en-IN');
   const hasBid = auctionState.currentBid > 0;
@@ -448,20 +449,26 @@ const CurrentBidT3: React.FC<CurrentBidPanelT3Props> = ({
       <div
         className={isBidding && phase === 'live' ? 't3bid-glow' : ''}
         style={{
-          width: isFullscreen ? '100%' : 320,
-          height: isFullscreen ? 'auto' : '100%',
-          flexShrink: isFullscreen ? undefined : 0,
+          width: isPortraitFooter ? '100%' : isFullscreen ? '100%' : 320,
+          height: isPortraitFooter ? 'auto' : isFullscreen ? 'auto' : '100%',
+          flexShrink: isPortraitFooter || isFullscreen ? undefined : 0,
           display: 'flex',
           flexDirection: 'row',
           position: 'relative',
           zIndex: 2,
           boxSizing: 'border-box',
-          background: isFullscreen ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.25)',
-          borderLeft: isFullscreen ? 'none' : '1px solid rgba(255,255,255,0.08)',
+          background: isPortraitFooter
+            ? 'transparent'
+            : isFullscreen
+              ? 'rgba(0,0,0,0.35)'
+              : 'rgba(0,0,0,0.25)',
+          borderLeft: isPortraitFooter || isFullscreen ? 'none' : '1px solid rgba(255,255,255,0.08)',
+          borderTop: isPortraitFooter ? '1px solid rgba(255,255,255,0.1)' : 'none',
           borderRadius: isFullscreen ? 12 : 0,
           overflow: 'hidden',
         }}
       >
+        {!isPortraitFooter && (
         <div
           style={{
             width: isFullscreen ? 6 : 4,
@@ -474,13 +481,18 @@ const CurrentBidT3: React.FC<CurrentBidPanelT3Props> = ({
                   : 'var(--t3-bar-gold, var(--t3-accent))',
           }}
         />
+        )}
         <div
           style={{
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
-            padding: isFullscreen ? '28px 32px' : '0 18px',
+            padding: isPortraitFooter
+              ? '10px 0 0'
+              : isFullscreen
+                ? '28px 32px'
+                : '0 18px',
             minWidth: 0,
             overflow: 'hidden',
           }}
@@ -493,4 +505,12 @@ const CurrentBidT3: React.FC<CurrentBidPanelT3Props> = ({
 };
 
 export { CurrentBidT3 as CurrentBidPanelT3 };
+
+/** Compact bid row for portrait player card footer (Custom Theme 3 large). */
+export function CurrentBidFooterT3(
+  props: Omit<CurrentBidPanelT3Props, 'layout'>,
+) {
+  return <CurrentBidT3 {...props} layout="portrait-footer" />;
+}
+
 export default CurrentBidT3;

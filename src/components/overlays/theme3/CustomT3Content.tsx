@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import TickerT3Shared from './TickerT3Shared';
 import { Theme3Canvas } from './Theme3Canvas';
 import LiveAuctionPlayerBarT3 from './LiveAuctionPlayerBarT3';
+import PortraitPlayerCardT3 from './PortraitPlayerCardT3';
 import TeamWiseImageryT3 from './TeamWiseImageryT3';
 import SoldPlayersSummaryT3 from './SoldPlayersSummaryT3';
 import Top10SummaryT3 from './Top10SummaryT3';
@@ -68,6 +69,8 @@ const CustomT3Content: React.FC<Theme3ContentProps> = ({
     tournament?.status === 'Live' &&
     !!auctionState.currentPlayerId &&
     !!currentPlayer;
+
+  const isLargeCard = overlaySettings.size === 'large';
 
   return (
     <Theme3Canvas transparent>
@@ -188,17 +191,29 @@ const CustomT3Content: React.FC<Theme3ContentProps> = ({
         <WheelSpinT3 data={wheelSpinData} allPlayers={players} tournament={tournament} />
       )}
 
-      {/* ── Live player bar ── */}
+      {/* ── Live player card (large portrait or small bar) ── */}
       {showLiveBar && (
-        <LiveAuctionPlayerBarT3
-          key={auctionState.currentPlayerId}
-          currentPlayer={currentPlayer}
-          auctionState={auctionState}
-          teams={teams}
-          tournament={tournament}
-          visible={showLiveBar}
-          tickerVisible={showTicker}
-        />
+        isLargeCard ? (
+          <PortraitPlayerCardT3
+            key={auctionState.currentPlayerId}
+            currentPlayer={currentPlayer}
+            auctionState={auctionState}
+            teams={teams}
+            tournament={tournament}
+            visible={showLiveBar}
+            tickerVisible={showTicker}
+          />
+        ) : (
+          <LiveAuctionPlayerBarT3
+            key={auctionState.currentPlayerId}
+            currentPlayer={currentPlayer}
+            auctionState={auctionState}
+            teams={teams}
+            tournament={tournament}
+            visible={showLiveBar}
+            tickerVisible={showTicker}
+          />
+        )
       )}
 
       {/* ── Ticker ── */}

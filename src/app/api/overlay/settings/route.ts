@@ -1,9 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { connectToDatabase } from '@/lib/mongodb';
+import { TournamentModel } from '@/models/Tournament';
 import { triggerOverlaySettings } from '@/lib/pusher-server';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
+import {
+  normalizeOverlayControlSettings,
+  overlayControlSettingsFromEvent,
+} from '@/lib/overlays/overlayControlSettings';
 
-// POST /api/overlay/settings - Broadcast overlay display settings to OBS overlay via Pusher
+// GET /api/overlay/settings?tournamentId=xxx — load persisted overlay control settings
+export async function GET(request: NextRequest) {
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!canPerformAction(user.role, 'manage', 'auction')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const tournamentId = request.nextUrl.searchParams.get('tournamentId');
+    if (!tournamentId) {
+      return NextResponse.json({ error: 'Missing tournamentId' }, { status: 400 });
+    }
+
+    await connectToDatabase();
+    const tournament = await TournamentModel.findById(tournamentId)
+      .select('overlayControlSettings')
+      .lean();
+
+    if (!tournament) {
+      return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      settings: normalizeOverlayControlSettings(
+        (tournament as { overlayControlSettings?: Record<string, unknown> }).overlayControlSettings,
+      ),
+    });
+  } catch (error) {
+    console.error('Error fetching overlay settings:', error);
+    return NextResponse.json({ error: 'Failed to fetch overlay settings' }, { status: 500 });
+  }
+}
+
+// POST /api/overlay/settings — persist + broadcast overlay display settings
 export async function POST(request: NextRequest) {
   try {
     const user = await getUserFromRequest(request);
@@ -15,32 +58,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { tournamentId, size, tickerMode, displayMode, hidePremiumCard, customTickerLine1, customTickerLine2, soldMessagePosition, hideTickerCustom, hideTickerFullscreen, teamWiseTeamId, bidCardTop, bidCardLeft, hideTeamCards, teamCardSize, teamCardPosition, bidCardPosition } = await request.json();
+    const body = await request.json();
+    const { tournamentId } = body;
 
     if (!tournamentId) {
       return NextResponse.json({ error: 'Missing tournamentId' }, { status: 400 });
     }
 
-    await triggerOverlaySettings(tournamentId, {
-      size: size ?? 'large',
-      tickerMode: tickerMode ?? 'sold',
-      displayMode: displayMode ?? 'standard',
-      hidePremiumCard: hidePremiumCard ?? false,
-      customTickerLine1: customTickerLine1 ?? '',
-      customTickerLine2: customTickerLine2 ?? '',
-      soldMessagePosition: soldMessagePosition ?? 'bottom-right',
-      hideTickerCustom: hideTickerCustom ?? false,
-      hideTickerFullscreen: hideTickerFullscreen ?? false,
-      teamWiseTeamId: teamWiseTeamId ?? null,
-      bidCardTop: bidCardTop ?? 160,
-      bidCardLeft: bidCardLeft ?? 1576,
-      hideTeamCards: hideTeamCards ?? false,
-      teamCardSize: teamCardSize ?? 'large',
-      teamCardPosition: teamCardPosition ?? 'top-right',
-      bidCardPosition: bidCardPosition ?? 'top',
+    const settings = overlayControlSettingsFromEvent(body);
+
+    await connectToDatabase();
+    await TournamentModel.findByIdAndUpdate(tournamentId, {
+      $set: { overlayControlSettings: settings },
     });
 
-    return NextResponse.json({ ok: true });
+    await triggerOverlaySettings(tournamentId, settings);
+
+    return NextResponse.json({ ok: true, settings });
   } catch (error) {
     console.error('Error updating overlay settings:', error);
     return NextResponse.json({ error: 'Failed to update overlay settings' }, { status: 500 });

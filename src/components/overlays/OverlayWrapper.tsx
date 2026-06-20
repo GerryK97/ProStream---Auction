@@ -8,6 +8,9 @@ import { getPusherClient } from '@/lib/pusher-client';
 import { OVERLAY_PALETTES } from '@/config/overlayPalettes';
 import type { OverlaySettingsEvent, WheelSpinEvent } from '@/types/pusher-events';
 import type { AuctionOverlayType } from '@/lib/overlays/auctionOverlayTypes';
+import {
+  overlaySettingsFromControlSettings,
+} from '@/lib/overlays/overlayControlSettings';
 import '../../styles/animations.css';
 
 export interface OverlaySettings {
@@ -145,10 +148,22 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
 
     // Overlay settings — updated via overlay:settings Pusher event
     const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>(DEFAULT_OVERLAY_SETTINGS);
+    const hydratedSettingsTournamentRef = useRef<string | null>(null);
 
     // Wheel spin data — updated via overlay:wheel-spin Pusher event
     const [wheelSpinData, setWheelSpinData] = useState<WheelSpinEvent | null>(null);
     const wheelResetTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        if (!tournament?._id) return;
+        if (hydratedSettingsTournamentRef.current === tournament._id) return;
+        if (!tournament.overlayControlSettings) return;
+        hydratedSettingsTournamentRef.current = tournament._id;
+        setOverlaySettings(prev => ({
+            ...prev,
+            ...overlaySettingsFromControlSettings(tournament.overlayControlSettings),
+        }));
+    }, [tournament?._id, tournament?.overlayControlSettings]);
 
     useEffect(() => {
         if (!liveTournamentId) return;

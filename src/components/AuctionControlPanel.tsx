@@ -15,6 +15,7 @@ import TournamentSelector from './TournamentSelector';
 import Modal from './Modal';
 import OverlayControlsPanel from './overlay-controls/OverlayControlsPanel';
 import type { DisplayMode } from './overlay-controls/types';
+import { normalizeOverlayControlSettings } from '@/lib/overlays/overlayControlSettings';
 import AuctionWorkspaceLayout from '@/components/auction/AuctionWorkspaceLayout';
 import AuctionHeaderBar from '@/components/auction/AuctionHeaderBar';
 import { useAuctionLayoutMode, isTabLayoutMode } from '@/components/auction/useAuctionLayoutMode';
@@ -1226,14 +1227,84 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     // Detect loading state: tournamentId is set but tournament data hasn't loaded yet
     const isLoading = liveTournamentId && !liveTournament && !pusherError;
 
-    // Theme 3: Team Imagery merged into Team Summary — migrate stale control state
+    // Auto-switch: when a new player is selected, show Large then shrink to Small after N seconds.
+    const hydratedOverlaySettingsRef = useRef<string | null>(null);
     useEffect(() => {
-        if (liveTournament?.overlayTheme !== 'theme3') return;
-        if (displayMode !== 'team-wise-image') return;
-        setDisplayMode('team-summary');
-        displayModeRef.current = 'team-summary';
-        sendOverlaySettingsRef.current(overlaySize, tickerMode, 'team-summary');
-    }, [liveTournament?.overlayTheme, displayMode, overlaySize, tickerMode]);
+        if (!liveTournament?._id) return;
+        if (hydratedOverlaySettingsRef.current === liveTournament._id) return;
+
+        const hydrate = async () => {
+            let saved = liveTournament.overlayControlSettings;
+            if (!saved) {
+                try {
+                    const res = await fetch(
+                        `/api/overlay/settings?tournamentId=${encodeURIComponent(liveTournament._id)}`,
+                        { headers: getAuthHeaders() },
+                    );
+                    if (res.ok) {
+                        const data = await res.json();
+                        saved = data.settings;
+                    }
+                } catch {
+                    // Non-critical — fall back to defaults until user adjusts controls
+                }
+            }
+            if (!saved) return;
+
+            hydratedOverlaySettingsRef.current = liveTournament._id;
+            const s = normalizeOverlayControlSettings(saved);
+
+            setOverlaySize(s.size);
+            setTickerMode(s.tickerMode);
+            setDisplayMode(s.displayMode as DisplayMode);
+            setHidePremiumCard(s.hidePremiumCard);
+            setCustomTickerLine1(s.customTickerLine1);
+            setCustomTickerLine2(s.customTickerLine2);
+            setSoldMessagePosition(s.soldMessagePosition);
+            setHideTickerCustom(s.hideTickerCustom);
+            setHideTickerFullscreen(s.hideTickerFullscreen);
+            setTeamWiseTeamId(s.teamWiseTeamId);
+            setBidCardTop(s.bidCardTop);
+            setBidCardLeft(s.bidCardLeft);
+            setHideTeamCards(s.hideTeamCards);
+            setTeamCardSize(s.teamCardSize);
+            setTeamCardPosition(s.teamCardPosition);
+            setBidCardPosition(s.bidCardPosition);
+
+            displayModeRef.current = s.displayMode as DisplayMode;
+            hidePremiumCardRef.current = s.hidePremiumCard;
+            customTickerLine1Ref.current = s.customTickerLine1;
+            customTickerLine2Ref.current = s.customTickerLine2;
+            soldMessagePositionRef.current = s.soldMessagePosition;
+            hideTickerCustomRef.current = s.hideTickerCustom;
+            hideTickerFullscreenRef.current = s.hideTickerFullscreen;
+            teamWiseTeamIdRef.current = s.teamWiseTeamId;
+            bidCardTopRef.current = s.bidCardTop;
+            bidCardLeftRef.current = s.bidCardLeft;
+            hideTeamCardsRef.current = s.hideTeamCards;
+            teamCardSizeRef.current = s.teamCardSize;
+            teamCardPositionRef.current = s.teamCardPosition;
+            bidCardPositionRef.current = s.bidCardPosition;
+
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('customTickerLine1', s.customTickerLine1);
+                localStorage.setItem('customTickerLine2', s.customTickerLine2);
+                localStorage.setItem('bidCardPosition', s.bidCardPosition);
+            }
+
+            sendOverlaySettingsRef.current(
+                s.size,
+                s.tickerMode,
+                s.displayMode as DisplayMode,
+                s.hidePremiumCard,
+                s.customTickerLine1,
+                s.customTickerLine2,
+                s.soldMessagePosition,
+            );
+        };
+
+        void hydrate();
+    }, [liveTournament?._id, liveTournament?.overlayControlSettings]);
 
     // Auto-switch: when a new player is selected, show Large then shrink to Small after N seconds.
     // Only active in standard mode — other display modes hide the player card, so the timer would

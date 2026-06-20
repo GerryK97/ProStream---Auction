@@ -28,7 +28,7 @@ const MODES: ModeDef[] = [
     { value: 'sold-summary',       label: 'Player Summary',   accent: 'var(--brand-primary)' },
     { value: 'team-summary',       label: 'Team Summary',     accent: 'var(--brand-primary)' },
     { value: 'top10-summary',      label: 'Top 10 Sold',      accent: '#D97706' },
-    { value: 'team-wise-summary',  label: 'Team-wise',        accent: 'var(--brand-primary)' },
+    { value: 'team-wise-summary',  label: 'Team-wise',        accent: 'var(--brand-primary)', hideOnTheme3: true },
     { value: 'team-wise-image',   label: 'Team Imagery',     accent: '#D97706' },
     { value: 'custom-ticker',      label: 'Custom Ticker',    accent: '#0891B2' },
     { value: 'resting',            label: 'Resting Time',     accent: 'var(--accent-color)' },

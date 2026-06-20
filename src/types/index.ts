@@ -26,6 +26,35 @@ export interface BidIncrementRange {
   increment: number;   // Step size in this range, e.g. 5000.
 }
 
+/** Persisted overlay control-panel settings (per tournament). */
+export interface OverlayControlSettings {
+  size: 'large' | 'small';
+  tickerMode: 'all' | 'sold' | 'available';
+  displayMode:
+    | 'standard'
+    | 'sold-summary'
+    | 'team-summary'
+    | 'team-wise-summary'
+    | 'team-wise-image'
+    | 'resting'
+    | 'top10-summary'
+    | 'custom-ticker'
+    | 'wheel-spin';
+  hidePremiumCard: boolean;
+  customTickerLine1: string;
+  customTickerLine2: string;
+  soldMessagePosition: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+  hideTickerCustom: boolean;
+  hideTickerFullscreen: boolean;
+  teamWiseTeamId: string | null;
+  bidCardTop: number;
+  bidCardLeft: number;
+  hideTeamCards: boolean;
+  teamCardSize: 'small' | 'medium' | 'large';
+  teamCardPosition: 'top-right' | 'bottom-right';
+  bidCardPosition: 'top' | 'right' | 'left';
+}
+
 export interface Tournament {
   _id: string;
   name: string;
@@ -50,6 +79,7 @@ export interface Tournament {
   playerProfileFields?: PlayerProfileFieldsConfig; // Optional player data fields enabled for this tournament
   playerCardTemplates?: Array<{ id: string; name: string; pngUrl: string; layoutId?: string }>; // Uploaded card background templates
   auctionDate?: string; // ISO date string e.g. "2026-07-15"
+  overlayControlSettings?: OverlayControlSettings;
 }
 
 export interface Team {
