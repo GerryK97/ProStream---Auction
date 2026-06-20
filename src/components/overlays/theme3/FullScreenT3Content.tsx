@@ -6,6 +6,7 @@ import { Theme3Canvas } from './Theme3Canvas';
 import LiveAuctionPlayerBarT3 from './LiveAuctionPlayerBarT3';
 import TeamWiseImageT3 from './TeamWiseImageT3';
 import SoldPlayersSummaryT3 from './SoldPlayersSummaryT3';
+import Top10SummaryT3 from './Top10SummaryT3';
 import type { Theme3ContentProps } from './types';
 import { isTheme3TeamSummaryMode } from './types';
 import type { OverlaySettings } from '../OverlayWrapper';
@@ -73,6 +74,25 @@ const FullScreenT3Content: React.FC<Theme3ContentProps> = ({
           }}
         >
           <SoldPlayersSummaryT3
+            players={players}
+            teams={teams}
+            tournament={tournament}
+            isExiting={summaryExiting}
+          />
+        </div>
+      )}
+
+      {/* ── Top 10 Sold panel ── */}
+      {activeMode === 'top10-summary' && (
+        <div
+          style={{
+            position: 'absolute', inset: 0, zIndex: 20,
+            opacity: summaryExiting ? 0 : 1,
+            transform: summaryExiting ? 'scale(0.97)' : 'scale(1)',
+            transition: 'opacity 0.5s ease, transform 0.5s ease',
+          }}
+        >
+          <Top10SummaryT3
             players={players}
             teams={teams}
             tournament={tournament}
