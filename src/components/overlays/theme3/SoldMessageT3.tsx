@@ -34,7 +34,7 @@ export function SoldBarOverlayT3({ team, finalPrice }: SoldBarOverlayT3Props) {
           gap: 8,
           padding: '12px 36px',
           borderRadius: 4,
-          border: '3px solid var(--t3-bar-gold, #eda900)',
+          border: '3px solid var(--t3-bar-gold, var(--t3-accent))',
           background: 'rgba(0,0,0,0.72)',
           boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
         }}
@@ -56,7 +56,7 @@ export function SoldBarOverlayT3({ team, finalPrice }: SoldBarOverlayT3Props) {
             fontFamily: DISPLAY_FONT,
             fontSize: 18,
             fontWeight: 600,
-            color: 'var(--t3-bar-text, #ffffff)',
+            color: 'var(--t3-bar-text, var(--t3-text-primary))',
             textTransform: 'uppercase',
             letterSpacing: '0.04em',
           }}

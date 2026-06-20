@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import ClearAllButton from './shared/ClearAllButton';
 import { Player, Team, Tournament, AuctionState } from '@/types';
 import { usePusherAuction } from '@/hooks/usePusherAuction';
@@ -15,6 +15,17 @@ import TournamentSelector from './TournamentSelector';
 import Modal from './Modal';
 import OverlayControlsPanel from './overlay-controls/OverlayControlsPanel';
 import type { DisplayMode } from './overlay-controls/types';
+import AuctionWorkspaceLayout from '@/components/auction/AuctionWorkspaceLayout';
+import AuctionHeaderBar from '@/components/auction/AuctionHeaderBar';
+import { useAuctionLayoutMode, isTabLayoutMode } from '@/components/auction/useAuctionLayoutMode';
+import {
+    DEFAULT_SECTION_VISIBILITY,
+    AUCTION_TAB_STORAGE_KEY,
+    AUCTION_SECTIONS_STORAGE_KEY,
+    type AuctionWorkspaceTab,
+    type AuctionSectionVisibility,
+    type AuctionSectionKey,
+} from '@/components/auction/types';
 
 const formatCurrency = (amount: number) => amount.toLocaleString();
 
@@ -86,7 +97,8 @@ export const AvailablePlayersPanel: React.FC<{
     onReAuction: () => void;
     reAuctioning: boolean;
     activeClass: string | null;
-}> = ({ players, tournament, onSelectPlayer, isAuctioning, currentPlayerId, onReAuction, reAuctioning, activeClass }) => {
+    classManager?: React.ReactNode;
+}> = ({ players, tournament, onSelectPlayer, isAuctioning, currentPlayerId, onReAuction, reAuctioning, activeClass, classManager }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const unsoldCount = players.filter(p => p.isUnsold).length;
     const availablePlayers = players
@@ -100,6 +112,11 @@ export const AvailablePlayersPanel: React.FC<{
 
     return (
         <div className="rounded-lg p-4 flex flex-col h-full border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-secondary)' }}>
+            {classManager && (
+                <div className="mb-3 pb-3 border-b border-[var(--border-primary)] min-w-0">
+                    {classManager}
+                </div>
+            )}
             <div className="flex items-center justify-between mb-2">
                 <div>
                     <div className="flex items-center gap-2">
@@ -146,7 +163,7 @@ export const AvailablePlayersPanel: React.FC<{
                                         )}
                                         {player.name}
                                     </p>
-                                    <ClassBadge tournament={tournament} player={player} variant="inline" />
+                                    <ClassBadge tournament={tournament} player={player} variant="dot" />
                                 </div>
                                 <p className="text-xs text-[var(--text-tertiary)]">{player.position || 'Player'}</p>
                             </div>
@@ -211,8 +228,8 @@ const TeamBiddingPanel: React.FC<{
                 </div>
             </div>
 
-            {/* Compact team buttons — 2-column on mobile, 3-column on desktop */}
-            <div className={`grid gap-1.5 ${isMobile ? 'grid-cols-2' : 'grid-cols-3'}`}>
+            {/* Compact team buttons */}
+            <div className={`grid gap-1.5 ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3'}`}>
                 {teams.map(team => {
                     const maxBid = calcMaxBid(team);
                     const canAfford = maxBid >= nextBidAmount;
@@ -284,7 +301,8 @@ export const CurrentAuctionPanel: React.FC<{
     isSpinning: boolean;
     isMobile?: boolean;
     isInFlight?: boolean;
-}> = ({ currentPlayer, tournament, teams, players, biddingTeamId, setBiddingTeamId, auctionState, onBid, onCorrectBid, onSell, onReset, onMarkUnsold, onSpinWheel, isSpinning, isMobile, isInFlight = false }) => {
+    stickyPlayerHeader?: boolean;
+}> = ({ currentPlayer, tournament, teams, players, biddingTeamId, setBiddingTeamId, auctionState, onBid, onCorrectBid, onSell, onReset, onMarkUnsold, onSpinWheel, isSpinning, isMobile, isInFlight = false, stickyPlayerHeader = false }) => {
     const [bidAmount, setBidAmount] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -349,23 +367,23 @@ export const CurrentAuctionPanel: React.FC<{
     return (
         <div className={`rounded-lg border border-[var(--border-primary)] flex flex-col ${isMobile ? 'flex-1 min-h-0 overflow-hidden p-3 gap-2' : 'p-4 gap-3 shrink-0'}`} style={{ backgroundColor: 'var(--surface-secondary)' }}>
             {/* Player info bar */}
-            <div className="flex items-center gap-3 p-3 rounded-lg shrink-0" style={{ backgroundColor: 'var(--surface-elevated)' }}>
+            <div className={`flex flex-wrap items-center gap-3 p-3 rounded-lg shrink-0 min-w-0 ${stickyPlayerHeader ? 'sticky top-0 z-10' : ''}`} style={{ backgroundColor: 'var(--surface-elevated)' }}>
                 <img
                     src={imageOptimizers.playerCard(currentPlayer.photoURL)}
                     alt={currentPlayer.name}
                     className="w-12 h-12 rounded-lg object-cover shrink-0"
                     loading="lazy"
                 />
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 basis-48">
                     <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-bold text-[var(--brand-primary)] truncate">#{currentPlayer.playerNo || ''} {currentPlayer.name}</p>
+                        <p className="font-bold text-[var(--brand-primary)] truncate min-w-0">#{currentPlayer.playerNo || ''} {currentPlayer.name}</p>
                         <ClassBadge tournament={tournament} player={currentPlayer} variant="inline" />
                     </div>
-                    <p className="text-xs text-[var(--text-tertiary)]">{currentPlayer.position || 'Player'} · Base: {getFormattedBasePrice(tournament, currentPlayer)}</p>
+                    <p className="text-xs text-[var(--text-tertiary)] truncate">{currentPlayer.position || 'Player'} · Base: {getFormattedBasePrice(tournament, currentPlayer)}</p>
                 </div>
-                <div className="text-right shrink-0">
+                <div className="text-right shrink-0 ml-auto">
                     <p className="text-xs text-[var(--text-tertiary)]">Current Bid</p>
-                    <p className="text-3xl font-bold text-[var(--brand-secondary)]">{formatCurrency(currentBid)}</p>
+                    <p className="text-2xl xl:text-3xl font-bold text-[var(--brand-secondary)]">{formatCurrency(currentBid)}</p>
                 </div>
             </div>
 
@@ -418,7 +436,7 @@ export const CurrentAuctionPanel: React.FC<{
             ) : (
             <div className="shrink-0">
                 <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--text-tertiary)' }}>Quick Bid</p>
-                <div className={`grid gap-1.5 ${isMobile ? 'grid-cols-3' : 'grid-cols-6'}`}>
+                <div className={`grid gap-1.5 ${isMobile ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'}`}>
                     {quickBidAmounts.map(inc => (
                         <button
                             key={inc}
@@ -573,7 +591,7 @@ export const CurrentAuctionPanel: React.FC<{
                         </div>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         <button
                             onClick={onSell}
                             disabled={isSold || currentBid === 0 || !biddingTeamId}
@@ -647,7 +665,9 @@ export const TeamsAndSoldPlayersPanel: React.FC<{
     undoPending?: boolean;
     onCleanup: () => void;
     onEditSaved: (player: Player, teams: Team[]) => void;
-}> = ({ teams, soldPlayers, unsoldPlayers, tournament, winningTeamId, currentBid, onUndo, undoPending = false, onCleanup, onEditSaved }) => {
+    showTeams?: boolean;
+    showResults?: boolean;
+}> = ({ teams, soldPlayers, unsoldPlayers, tournament, winningTeamId, currentBid, onUndo, undoPending = false, onCleanup, onEditSaved, showTeams = true, showResults = true }) => {
     const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
     const [editStatus, setEditStatus] = useState<'sold' | 'unsold' | 'available'>('sold');
     const [editPrice, setEditPrice] = useState('');
@@ -713,10 +733,11 @@ export const TeamsAndSoldPlayersPanel: React.FC<{
     const allPlayers = [...soldPlayers, ...unsoldPlayers];
 
     return (
-        <div className="h-full flex flex-col gap-3">
-            <div className="rounded-lg p-4 border border-[var(--border-primary)] flex flex-col flex-1 min-h-0" style={{ backgroundColor: 'var(--surface-secondary)' }}>
+        <div className="flex flex-col gap-3">
+            {showTeams && (
+            <div className="rounded-lg p-4 border border-[var(--border-primary)] flex flex-col" style={{ backgroundColor: 'var(--surface-secondary)' }}>
                  <h3 className="font-bold text-base mb-2 shrink-0">Teams</h3>
-                 <ul className="space-y-2 overflow-y-auto pr-1 flex-1 min-h-0">
+                 <ul className="space-y-2">
                      {teams.map((team) => {
                          const maxBid = calculateMaxBid(team);
                          const playersPurchased = soldPlayers.filter(p => p.winningTeamId === team._id).length;
@@ -746,7 +767,9 @@ export const TeamsAndSoldPlayersPanel: React.FC<{
                      })}
                  </ul>
             </div>
-             <div className="rounded-lg p-4 border border-[var(--border-primary)] flex flex-col flex-1 min-h-0" style={{ backgroundColor: 'var(--surface-secondary)' }}>
+            )}
+             {showResults && (
+             <div className="rounded-lg p-4 border border-[var(--border-primary)] flex flex-col" style={{ backgroundColor: 'var(--surface-secondary)' }}>
                 <div className="flex items-center justify-between mb-2 shrink-0">
                     <div className="flex items-center gap-2">
                         <h3 className="font-bold text-base">Results</h3>
@@ -764,7 +787,7 @@ export const TeamsAndSoldPlayersPanel: React.FC<{
                         <ClearAllButton onClick={onCleanup} disabled={allPlayers.length === 0} label="Clear" size="sm" />
                     </div>
                 </div>
-                <div className="overflow-y-auto pr-1 flex-1 min-h-0">
+                <div>
                     {allPlayers.length === 0 ? (
                         <p className="text-center text-[var(--text-tertiary)] py-8 text-sm">No sold or unsold players yet</p>
                     ) : (
@@ -963,6 +986,7 @@ export const TeamsAndSoldPlayersPanel: React.FC<{
                     )}
                 </div>
              </div>
+             )}
         </div>
     );
 };
@@ -1007,6 +1031,32 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
 
     // Class-wise auction management
     const [selectingClass, setSelectingClass] = useState(false);
+    const layoutMode = useAuctionLayoutMode();
+    const tabLayout = isTabLayoutMode(layoutMode);
+
+    const [activeTab, setActiveTab] = useState<AuctionWorkspaceTab>(() => {
+        if (typeof window === 'undefined') return 'auction';
+        const saved = localStorage.getItem(AUCTION_TAB_STORAGE_KEY);
+        if (saved === 'overlay') return 'auction';
+        if (saved === 'auction' || saved === 'available' || saved === 'teams' || saved === 'results') return saved;
+        return 'auction';
+    });
+
+    const [sectionVisibility, setSectionVisibility] = useState<AuctionSectionVisibility>(() => {
+        if (typeof window === 'undefined') return DEFAULT_SECTION_VISIBILITY;
+        try {
+            const saved = localStorage.getItem(AUCTION_SECTIONS_STORAGE_KEY);
+            if (saved) return { ...DEFAULT_SECTION_VISIBILITY, ...JSON.parse(saved) };
+        } catch { /* ignore invalid stored value */ }
+        return DEFAULT_SECTION_VISIBILITY;
+    });
+
+    const toggleSection = (key: AuctionSectionKey) => {
+        setSectionVisibility(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    useEffect(() => { localStorage.setItem(AUCTION_TAB_STORAGE_KEY, activeTab); }, [activeTab]);
+    useEffect(() => { localStorage.setItem(AUCTION_SECTIONS_STORAGE_KEY, JSON.stringify(sectionVisibility)); }, [sectionVisibility]);
 
     // Overlay control panel settings
     const [overlaySize, setOverlaySize] = useState<'large' | 'small'>('large');
@@ -1105,6 +1155,21 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const sendOverlaySettingsRef = useRef(sendOverlaySettings);
     sendOverlaySettingsRef.current = sendOverlaySettings;
 
+    // Debounced wrapper — batches rapid control-panel changes into a single HTTP request
+    // (prevents flooding Neon PG when operator drags sliders or toggles settings quickly)
+    const _pendingSettingsArgs = useRef<Parameters<typeof sendOverlaySettings> | null>(null);
+    const _settingsDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const debouncedSendOverlaySettings = useCallback((...args: Parameters<typeof sendOverlaySettings>) => {
+      _pendingSettingsArgs.current = args;
+      if (_settingsDebounceTimer.current) clearTimeout(_settingsDebounceTimer.current);
+      _settingsDebounceTimer.current = setTimeout(() => {
+        if (_pendingSettingsArgs.current) {
+          sendOverlaySettingsRef.current(..._pendingSettingsArgs.current);
+          _pendingSettingsArgs.current = null;
+        }
+      }, 150);
+    }, []);
+
     // Handle tournament selection - sync liveTournamentId with selectedTournamentId from context
     // Real-time updates are handled by Pusher, no need to refresh after every action
     useEffect(() => {
@@ -1160,6 +1225,15 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
 
     // Detect loading state: tournamentId is set but tournament data hasn't loaded yet
     const isLoading = liveTournamentId && !liveTournament && !pusherError;
+
+    // Theme 3: Team Imagery merged into Team Summary — migrate stale control state
+    useEffect(() => {
+        if (liveTournament?.overlayTheme !== 'theme3') return;
+        if (displayMode !== 'team-wise-image') return;
+        setDisplayMode('team-summary');
+        displayModeRef.current = 'team-summary';
+        sendOverlaySettingsRef.current(overlaySize, tickerMode, 'team-summary');
+    }, [liveTournament?.overlayTheme, displayMode, overlaySize, tickerMode]);
 
     // Auto-switch: when a new player is selected, show Large then shrink to Small after N seconds.
     // Only active in standard mode — other display modes hide the player card, so the timer would
@@ -1342,7 +1416,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         const allSold = preAuctionStats.players > 0 && preAuctionStats.sold === preAuctionStats.players;
 
         return (
-            <div className="animate-fade-in space-y-6">
+            <div className="animate-fade-in space-y-6 min-w-0">
                 {/* Tournament Selector */}
                 <div className="mb-2">
                     <TournamentSelector label="Select Tournament" className="max-w-2xl" />
@@ -1367,12 +1441,12 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                     <div className="space-y-6">
                         {/* Tournament info + status */}
                         <div className="rounded-lg p-5 border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-secondary)' }}>
-                            <div className="flex items-center justify-between mb-3">
-                                <div>
-                                    <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{selectedTournament.name}</p>
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3 min-w-0">
+                                <div className="min-w-0">
+                                    <p className="text-xl font-bold truncate" style={{ color: 'var(--text-primary)' }}>{selectedTournament.name}</p>
                                     <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Budget: {selectedTournament.budgetPerTeam.toLocaleString()} | Squad: {selectedTournament.squadSize}</p>
                                 </div>
-                                <span className="px-3 py-1 rounded-full text-sm font-semibold" style={{ backgroundColor: 'var(--surface-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}>
+                                <span className="px-3 py-1 rounded-full text-sm font-semibold shrink-0 self-start" style={{ backgroundColor: 'var(--surface-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}>
                                     {status}
                                 </span>
                             </div>
@@ -1441,7 +1515,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                         </div>
 
                         {/* Quick nav */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <a href="/manage/teams" className="flex items-center justify-between p-4 rounded-lg transition-colors hover:opacity-80" style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)' }}>
                                 <div>
                                     <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>Manage Teams</p>
@@ -1482,6 +1556,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
 
     const handleSelectPlayer = async (playerId: string) => {
         if (!liveTournament) return;
+        if (tabLayout) setActiveTab('auction');
         try {
             const response = await fetch('/api/auction/select-player', {
                 method: 'POST',
@@ -1853,8 +1928,83 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
 
     const isAuctionStopped = liveTournament?.status === 'Stopped';
 
+    const classManagerNode = liveTournament?.usePlayerClasses && classStats.length > 0 ? (
+        <ClassManagerPanel
+            classStats={classStats}
+            onSelectClass={handleSelectClass}
+            onClearClass={handleClearClass}
+            selectingClass={selectingClass}
+        />
+    ) : null;
+
+    const overlayControlsNode = (
+        <OverlayControlsPanel
+            displayMode={displayMode}
+            setDisplayMode={setDisplayMode}
+            overlayTheme={liveTournament?.overlayTheme ?? 'standard'}
+            overlaySize={overlaySize}
+            setOverlaySize={setOverlaySize}
+            hidePremiumCard={hidePremiumCard}
+            setHidePremiumCard={setHidePremiumCard}
+            autoSwitch={autoSwitch}
+            setAutoSwitch={setAutoSwitch}
+            autoSwitchDuration={autoSwitchDuration}
+            setAutoSwitchDuration={setAutoSwitchDuration}
+            autoSwitchTimerRef={autoSwitchTimerRef}
+            hideTeamCards={hideTeamCards}
+            setHideTeamCards={setHideTeamCards}
+            hideTeamCardsRef={hideTeamCardsRef}
+            teamCardSize={teamCardSize}
+            setTeamCardSize={setTeamCardSize}
+            teamCardSizeRef={teamCardSizeRef}
+            teamCardPosition={teamCardPosition}
+            setTeamCardPosition={setTeamCardPosition}
+            teamCardPositionRef={teamCardPositionRef}
+            bidCardPosition={bidCardPosition}
+            setBidCardPosition={setBidCardPosition}
+            bidCardPositionRef={bidCardPositionRef}
+            tickerMode={tickerMode}
+            setTickerMode={setTickerMode}
+            hideTickerCustom={hideTickerCustom}
+            setHideTickerCustom={setHideTickerCustom}
+            hideTickerCustomRef={hideTickerCustomRef}
+            hideTickerFullscreen={hideTickerFullscreen}
+            setHideTickerFullscreen={setHideTickerFullscreen}
+            hideTickerFullscreenRef={hideTickerFullscreenRef}
+            customTickerLine1={customTickerLine1}
+            setCustomTickerLine1={setCustomTickerLine1}
+            customTickerLine2={customTickerLine2}
+            setCustomTickerLine2={setCustomTickerLine2}
+            teamWiseTeamId={teamWiseTeamId}
+            setTeamWiseTeamId={setTeamWiseTeamId}
+            teamWiseTeamIdRef={teamWiseTeamIdRef}
+            teams={teams}
+            soldMessagePosition={soldMessagePosition}
+            setSoldMessagePosition={setSoldMessagePosition}
+            soldMessagePositionRef={soldMessagePositionRef}
+            bidCardTop={bidCardTop}
+            setBidCardTop={setBidCardTop}
+            bidCardLeft={bidCardLeft}
+            setBidCardLeft={setBidCardLeft}
+            sendOverlaySettings={sendOverlaySettings}
+        />
+    );
+
+    const teamsPanelProps = {
+        teams,
+        soldPlayers,
+        unsoldPlayers,
+        tournament: liveTournament,
+        winningTeamId: auctionState.winningTeamId,
+        currentBid: auctionState.currentBid ?? 0,
+        onUndo: handleUndo,
+        undoPending,
+        onCleanup: handleCleanupAll,
+        onEditSaved: updatePlayerAndTeams,
+    };
+
     return (
-        <div className="animate-fade-in space-y-4">
+        <div className="animate-fade-in space-y-4 min-w-0">
             {/* Tournament Selector */}
             <div className="mb-4">
                 <TournamentSelector
@@ -1867,105 +2017,44 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                 <div className="alert alert-danger mb-4 p-3 rounded-lg border border-red-500 bg-red-900/20 text-red-400">{error}</div>
             )}
 
-            {/* Auction Header */}
-            <div className="border border-[var(--border-primary)] rounded-lg p-4" style={{ backgroundColor: 'var(--surface-secondary)' }}>
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                            {isAuctionStopped ? (
-                                <>
-                                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                                    <span className="text-yellow-400 font-semibold text-sm uppercase tracking-wide">Auction Stopped</span>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                                    <span className="text-green-400 font-semibold text-sm uppercase tracking-wide">Live Auction</span>
-                                </>
-                            )}
-                        </div>
-                        <div className="h-6 w-px" style={{ backgroundColor: 'var(--border-primary)' }}></div>
-                        <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                            <span className={`text-xs ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
-                                {isConnected ? 'Connected' : 'Disconnected'}
-                            </span>
-                        </div>
-                        <div className="h-6 w-px" style={{ backgroundColor: 'var(--border-primary)' }}></div>
-                        <div>
-                            <p className="text-xl font-bold text-[var(--brand-primary)]">{liveTournament.name}</p>
-                            <p className="text-xs text-[var(--text-tertiary)]">
-                                Budget: {liveTournament.budgetPerTeam.toLocaleString()} | Squad: {liveTournament.squadSize} | Base Price: {liveTournament.basePricePerPlayer.toLocaleString()}
-                            </p>
-                        </div>
-                        <div className="h-6 w-px" style={{ backgroundColor: 'var(--border-primary)' }}></div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold px-3 py-1 rounded-md" style={{ backgroundColor: 'var(--surface-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}>
-                                {players.filter(p => !p.isSold && !p.isUnsold).length} Available
-                            </span>
-                            <span className="text-sm font-semibold px-3 py-1 rounded-md" style={{ backgroundColor: 'var(--surface-elevated)', color: 'var(--status-success)', border: '1px solid var(--border-primary)' }}>
-                                {soldPlayers.length} Sold
-                            </span>
-                            <span className="text-sm font-semibold px-3 py-1 rounded-md" style={{ backgroundColor: 'var(--surface-elevated)', color: 'var(--status-danger)', border: '1px solid var(--border-primary)' }}>
-                                {unsoldPlayers.length} Unsold
-                            </span>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                        {!isAuctionStopped && (
-                            <button onClick={handleStopAuction} className="text-white font-bold py-2 px-4 rounded-lg transition-colors hover:opacity-80 text-sm" style={{ backgroundColor: 'var(--status-danger)' }}>
-                                ⏹ Stop
-                            </button>
-                        )}
-                        {isAuctionStopped && (
-                            <button onClick={handleRestartAuction} className="bg-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/80 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center gap-2 text-sm">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                </svg>
-                                Restart
-                            </button>
-                        )}
-                        <button onClick={() => setShowCompleteConfirm(true)} className="text-white font-bold py-2 px-4 rounded-lg transition-colors hover:opacity-80 text-sm" style={{ backgroundColor: 'var(--status-info)' }}>
-                            ✓ Complete
-                        </button>
-                    </div>
-                </div>
-                {isAuctionStopped && (
-                    <div className="mt-3 bg-yellow-900/30 border border-yellow-700/50 rounded-md p-3 text-yellow-200 text-sm">
-                        <p className="font-semibold mb-1">⚠️ Auction Paused</p>
-                        <p className="text-yellow-300/80">
-                            The auction has been stopped. You can view the current status or restart the auction to continue selling remaining players.
-                        </p>
-                    </div>
-                )}
+            <AuctionHeaderBar
+                layoutMode={layoutMode}
+                isAuctionStopped={isAuctionStopped}
+                isConnected={isConnected}
+                tournamentName={liveTournament.name}
+                budgetPerTeam={liveTournament.budgetPerTeam}
+                squadSize={liveTournament.squadSize}
+                basePricePerPlayer={liveTournament.basePricePerPlayer}
+                availableCount={players.filter(p => !p.isSold && !p.isUnsold).length}
+                soldCount={soldPlayers.length}
+                unsoldCount={unsoldPlayers.length}
+                onStop={handleStopAuction}
+                onRestart={handleRestartAuction}
+                onComplete={() => setShowCompleteConfirm(true)}
+                sectionVisibility={sectionVisibility}
+                onToggleSection={toggleSection}
+            />
 
-            </div>
-
-            {/* Auction Control Grid */}
-            <div className="grid grid-cols-1 xl:grid-cols-9 gap-3 relative" style={{ height: 'calc(100vh - 18rem)' }}>
-                <div className="xl:col-span-2 h-full flex flex-col gap-3">
-                    {liveTournament?.usePlayerClasses && classStats.length > 0 && (
-                        <ClassManagerPanel
-                            classStats={classStats}
-                            onSelectClass={handleSelectClass}
-                            onClearClass={handleClearClass}
-                            selectingClass={selectingClass}
-                        />
-                    )}
-                    <div className="flex-1 min-h-0">
-                        <AvailablePlayersPanel
-                            players={players}
-                            tournament={liveTournament}
-                            onSelectPlayer={handleSelectPlayer}
-                            isAuctioning={isAuctioning}
-                            currentPlayerId={currentPlayer?._id}
-                            onReAuction={() => setShowReAuctionConfirm(true)}
-                            reAuctioning={reAuctioning}
-                            activeClass={auctionState.currentAuctionClass ?? null}
-                        />
-                    </div>
-                </div>
-                <div className="xl:col-span-5 h-full flex flex-col gap-3">
+            <AuctionWorkspaceLayout
+                layoutMode={layoutMode}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                sectionVisibility={sectionVisibility}
+                classManager={tabLayout ? undefined : classManagerNode}
+                availablePlayers={
+                    <AvailablePlayersPanel
+                        players={players}
+                        tournament={liveTournament}
+                        onSelectPlayer={handleSelectPlayer}
+                        isAuctioning={isAuctioning}
+                        currentPlayerId={currentPlayer?._id}
+                        onReAuction={() => setShowReAuctionConfirm(true)}
+                        reAuctioning={reAuctioning}
+                        activeClass={auctionState.currentAuctionClass ?? null}
+                        classManager={tabLayout ? classManagerNode : undefined}
+                    />
+                }
+                auctionPanel={
                     <CurrentAuctionPanel
                         currentPlayer={currentPlayer}
                         tournament={liveTournament}
@@ -1982,73 +2071,32 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                         onSpinWheel={handleSpinWheel}
                         isSpinning={isSpinning}
                         isInFlight={bidInFlight}
+                        stickyPlayerHeader={tabLayout}
                     />
-                    <OverlayControlsPanel
-                        displayMode={displayMode}
-                        setDisplayMode={setDisplayMode}
-                        overlaySize={overlaySize}
-                        setOverlaySize={setOverlaySize}
-                        hidePremiumCard={hidePremiumCard}
-                        setHidePremiumCard={setHidePremiumCard}
-                        autoSwitch={autoSwitch}
-                        setAutoSwitch={setAutoSwitch}
-                        autoSwitchDuration={autoSwitchDuration}
-                        setAutoSwitchDuration={setAutoSwitchDuration}
-                        autoSwitchTimerRef={autoSwitchTimerRef}
-                        hideTeamCards={hideTeamCards}
-                        setHideTeamCards={setHideTeamCards}
-                        hideTeamCardsRef={hideTeamCardsRef}
-                        teamCardSize={teamCardSize}
-                        setTeamCardSize={setTeamCardSize}
-                        teamCardSizeRef={teamCardSizeRef}
-                        teamCardPosition={teamCardPosition}
-                        setTeamCardPosition={setTeamCardPosition}
-                        teamCardPositionRef={teamCardPositionRef}
-                        bidCardPosition={bidCardPosition}
-                        setBidCardPosition={setBidCardPosition}
-                        bidCardPositionRef={bidCardPositionRef}
-                        tickerMode={tickerMode}
-                        setTickerMode={setTickerMode}
-                        hideTickerCustom={hideTickerCustom}
-                        setHideTickerCustom={setHideTickerCustom}
-                        hideTickerCustomRef={hideTickerCustomRef}
-                        hideTickerFullscreen={hideTickerFullscreen}
-                        setHideTickerFullscreen={setHideTickerFullscreen}
-                        hideTickerFullscreenRef={hideTickerFullscreenRef}
-                        customTickerLine1={customTickerLine1}
-                        setCustomTickerLine1={setCustomTickerLine1}
-                        customTickerLine2={customTickerLine2}
-                        setCustomTickerLine2={setCustomTickerLine2}
-                        teamWiseTeamId={teamWiseTeamId}
-                        setTeamWiseTeamId={setTeamWiseTeamId}
-                        teamWiseTeamIdRef={teamWiseTeamIdRef}
-                        teams={teams}
-                        soldMessagePosition={soldMessagePosition}
-                        setSoldMessagePosition={setSoldMessagePosition}
-                        soldMessagePositionRef={soldMessagePositionRef}
-                        bidCardTop={bidCardTop}
-                        setBidCardTop={setBidCardTop}
-                        bidCardLeft={bidCardLeft}
-                        setBidCardLeft={setBidCardLeft}
-                        sendOverlaySettings={sendOverlaySettings}
-                    />
-                </div>
-                <div className="xl:col-span-2 h-full">
+                }
+                overlayPanel={overlayControlsNode}
+                teamsPanel={
                     <TeamsAndSoldPlayersPanel
-                        teams={teams}
-                        soldPlayers={soldPlayers}
-                        unsoldPlayers={unsoldPlayers}
-                        tournament={liveTournament}
-                        winningTeamId={auctionState.winningTeamId}
-                        currentBid={auctionState.currentBid ?? 0}
-                        onUndo={handleUndo}
-                        undoPending={undoPending}
-                        onCleanup={handleCleanupAll}
-                        onEditSaved={updatePlayerAndTeams}
+                        {...teamsPanelProps}
+                        showTeams
+                        showResults={false}
                     />
-                </div>
-                {error && <div className="absolute bottom-4 right-4 text-center text-red-400 bg-red-900/80 backdrop-blur-sm p-3 rounded-lg shadow-lg border border-red-700 animate-fade-in">{error}</div>}
-            </div>
+                }
+                resultsPanel={
+                    <TeamsAndSoldPlayersPanel
+                        {...teamsPanelProps}
+                        showTeams={false}
+                        showResults
+                    />
+                }
+                errorOverlay={
+                    error ? (
+                        <div className="absolute bottom-4 right-4 text-center text-red-400 bg-red-900/80 backdrop-blur-sm p-3 rounded-lg shadow-lg border border-red-700 animate-fade-in">
+                            {error}
+                        </div>
+                    ) : undefined
+                }
+            />
             {/* Complete Confirmation Modal */}
             <Modal isOpen={showCompleteConfirm} onClose={() => setShowCompleteConfirm(false)} title="Complete Tournament?" size="sm">
                 <div className="space-y-4">

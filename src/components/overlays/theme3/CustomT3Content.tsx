@@ -10,6 +10,7 @@ import Top10SummaryT3 from './Top10SummaryT3';
 import RestingTimeT3 from './RestingTimeT3';
 import TeamSummaryT3 from './TeamSummaryT3';
 import TeamWiseSummaryT3 from './TeamWiseSummaryT3';
+import WheelSpinT3 from './WheelSpinT3';
 import type { Theme3ContentProps } from './types';
 import { isTheme3TeamImageryMode } from './types';
 import type { OverlaySettings } from '../OverlayWrapper';
@@ -30,6 +31,7 @@ const CustomT3Content: React.FC<Theme3ContentProps> = ({
   tournament,
   auctionState,
   overlaySettings,
+  wheelSpinData,
 }) => {
   const [activeMode, setActiveMode] = useState<DisplayMode>(overlaySettings.displayMode);
   const [summaryExiting, setSummaryExiting] = useState(false);
@@ -40,6 +42,12 @@ const CustomT3Content: React.FC<Theme3ContentProps> = ({
     const prev = prevModeRef.current;
     prevModeRef.current = incoming;
     if (prev === incoming) return;
+
+    if (incoming === 'wheel-spin') {
+      setActiveMode('wheel-spin');
+      setSummaryExiting(false);
+      return;
+    }
 
     const prevIsSummary = SUMMARY_MODES.includes(prev);
 
@@ -53,7 +61,7 @@ const CustomT3Content: React.FC<Theme3ContentProps> = ({
     setSummaryExiting(false);
   }, [overlaySettings.displayMode]);
 
-  const showTicker = !overlaySettings.hideTickerCustom;
+  const showTicker = !overlaySettings.hideTickerCustom && activeMode !== 'wheel-spin';
   const showLiveBar =
     !overlaySettings.hidePremiumCard &&
     (activeMode === 'standard' || activeMode === 'custom-ticker') &&
@@ -173,6 +181,11 @@ const CustomT3Content: React.FC<Theme3ContentProps> = ({
             isExiting={summaryExiting}
           />
         </div>
+      )}
+
+      {/* ── Wheel spin ── */}
+      {activeMode === 'wheel-spin' && wheelSpinData && (
+        <WheelSpinT3 data={wheelSpinData} allPlayers={players} tournament={tournament} />
       )}
 
       {/* ── Live player bar ── */}

@@ -50,11 +50,15 @@ interface Theme3PaletteInput {
   shine: string;
   shadow: string;
   charts: [string, string, string, string, string, string];
-  /** Live player bar — Champion lower-third (overlays.uno) */
+  /** Live player bar — ticker-aligned accent lower-third */
   barBgDeep?: string;
   barBgDark?: string;
   barGold?: string;
   barGoldSoft?: string;
+  barHighlight?: string;
+  barRail?: string;
+  barRailBright?: string;
+  barRailSecondary?: string;
   barText?: string;
   barTextMuted?: string;
   barPattern?: string;
@@ -238,14 +242,18 @@ const theme3Palette = (palette: Theme3PaletteInput): OverlayPalette => ({
     '--t3-chart-4': palette.charts[3],
     '--t3-chart-5': palette.charts[4],
     '--t3-chart-6': palette.charts[5],
-    '--t3-bar-bg-deep': palette.barBgDeep ?? '#002145',
-    '--t3-bar-bg-dark': palette.barBgDark ?? '#1f1f1f',
-    '--t3-bar-gold': palette.barGold ?? '#eda900',
-    '--t3-bar-gold-soft': palette.barGoldSoft ?? 'rgba(237,169,0,0.18)',
-    '--t3-bar-text': palette.barText ?? '#ffffff',
-    '--t3-bar-text-muted': palette.barTextMuted ?? '#e0e0e0',
-    '--t3-bar-pattern': palette.barPattern ?? 'rgba(255,255,255,0.045)',
-    '--t3-bar-vignette': palette.barVignette ?? 'rgba(0,0,0,0.55)',
+    '--t3-bar-bg-deep': palette.barBgDeep ?? palette.accent,
+    '--t3-bar-bg-dark': palette.barBgDark ?? palette.panel,
+    '--t3-bar-gold': palette.barGold ?? palette.accent,
+    '--t3-bar-gold-soft': palette.barGoldSoft ?? palette.accentSoft,
+    '--t3-bar-highlight': palette.barHighlight ?? palette.actionHover,
+    '--t3-bar-rail-bright': palette.barRailBright ?? palette.shine,
+    '--t3-bar-rail': palette.barRail ?? palette.textPrimary,
+    '--t3-bar-rail-secondary': palette.barRailSecondary ?? 'rgba(0,0,0,0.42)',
+    '--t3-bar-text': palette.barText ?? palette.textPrimary,
+    '--t3-bar-text-muted': palette.barTextMuted ?? palette.textSecondary,
+    '--t3-bar-pattern': palette.barPattern ?? palette.accentSoft,
+    '--t3-bar-vignette': palette.barVignette ?? 'rgba(0,0,0,0.35)',
     '--t3-font-display': '"Saira Extra Condensed", sans-serif',
     '--overlay-color-primary': palette.accent,
     '--overlay-color-primary-rgb': palette.accentRgb,

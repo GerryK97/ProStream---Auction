@@ -135,5 +135,6 @@ export function serializeTournament(doc: Record<string, any>): Record<string, an
   return {
     ...doc,
     logoURL: resolveImageUrl(doc.logoURL, { width: 400, height: 400 }) ?? doc.logoURL ?? null,
+    wheelCenterImageURL: resolveImageUrl(doc.wheelCenterImageURL, { width: 400, height: 400 }) ?? doc.wheelCenterImageURL ?? null,
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTournamentContext } from '@/contexts/TournamentContext';
@@ -117,6 +117,44 @@ const THEMES = [
     available: true,
   },
   {
+    id: 'theme3' as OverlayThemeId,
+    label: 'Theme 3 Broadcast',
+    description: 'Teal-accent live player bar, ticker, team standings, and gold-trim summary panels for broadcast output.',
+    preview: (
+      <div
+        className="w-full aspect-video rounded-lg overflow-hidden flex flex-col justify-between text-xs"
+        style={{ background: 'linear-gradient(160deg,#080810 0%,#0C0C18 50%,#121220 100%)', border: '1px solid rgba(160,160,200,.25)' }}
+      >
+        <div className="flex flex-1 min-h-0 p-2 gap-2">
+          <div className="flex-1 rounded overflow-hidden flex flex-col" style={{ background: '#202020', border: '1px solid rgba(255,255,255,.10)' }}>
+            <div className="px-2 py-1 text-[8px] font-bold tracking-widest uppercase" style={{ background: '#fff', color: '#2a2f35' }}>Team Standings</div>
+            {['Team Alpha', 'Team Beta', 'Team Gamma'].map((t, i) => (
+              <div key={t} className="flex items-center gap-1.5 px-2 py-0.5 text-[8px]" style={{ color: '#F0F0F8', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
+                <span style={{ color: '#b9aa62' }}>#{i + 1}</span>
+                <span className="flex-1 truncate">{t}</span>
+                <span style={{ color: '#20c997' }}>₹{(80 - i * 12)}L</span>
+              </div>
+            ))}
+          </div>
+          <div className="w-[38%] rounded overflow-hidden flex flex-col justify-end" style={{ background: '#181824', border: '1px solid rgba(0,137,140,.35)' }}>
+            <div className="h-[55%]" style={{ background: 'linear-gradient(180deg,#3a4048,#1e2228)' }} />
+            <div className="px-1.5 py-1" style={{ background: '#00898c', color: '#0A0A10' }}>
+              <div className="text-[8px] font-bold truncate">PLAYER NAME</div>
+              <div className="flex justify-between text-[7px] font-semibold opacity-80">
+                <span>BASE 20L</span><span>BID 45L</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="px-2 py-1 text-[7px] tracking-widest flex items-center gap-1.5" style={{ background: '#0E0E18', color: '#787888', borderTop: '2px solid #00898c' }}>
+          <span style={{ background: '#00898c', color: '#0A0A10', padding: '0 5px', borderRadius: 2, fontWeight: 700 }}>LIVE</span>
+          <span>Alpha · Beta · Gamma · Delta</span>
+        </div>
+      </div>
+    ),
+    available: true,
+  },
+  {
     id: 'premium' as OverlayThemeId,
     label: 'Premium',
     description: 'Coming soon.',
@@ -140,7 +178,7 @@ const OUTPUT_LAYOUT_ORDER: AuctionOverlayType[] = ['custom', 'team_owners', 'ful
 export default function OutputPage() {
   const router = useRouter();
   const { selectedTournamentId, selectedTournament, setTournaments, tournaments, setSelectedTournamentId, refreshTournaments } = useTournamentContext();
-  const { token, user } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const isAdmin = user?.role === 'Admin';
   const [saving, setSaving] = useState(false);
 
@@ -170,14 +208,6 @@ export default function OutputPage() {
   const primarySelectedOverlayType = selectedOverlayTypes[0] ?? 'fullscreen';
   const primarySelectedOverlayConfig = getAuctionOverlayConfig(primarySelectedOverlayType);
   const selectedTotalCharge = selectedOverlayTypes.reduce((total, type) => total + (prices[type] ?? 0), 0);
-  const previewUrl = selectedTournamentId
-    ? buildAuctionOverlayUrl(getOrigin(), selectedTournamentId, primarySelectedOverlayType, undefined, {
-        theme: currentTheme,
-        palette: selectedPaletteConfig?.id || currentPalette,
-        debug: true,
-      })
-    : '';
-
   // ── Sessions data fetching ──────────────────────────────────────────────
 
   const fetchSessions = useCallback(async () => {
@@ -199,10 +229,14 @@ export default function OutputPage() {
   }, [selectedTournamentId]);
 
   useEffect(() => {
-    fetchSessions();
-    setJustCreated([]);
-    setCreateError(null);
-  }, [fetchSessions]);
+    if (!authLoading && isAuthenticated) {
+      fetchSessions();
+      setJustCreated([]);
+      setCreateError(null);
+    } else if (!authLoading && !isAuthenticated) {
+      setSessions([]);
+    }
+  }, [fetchSessions, authLoading, isAuthenticated]);
 
   useEffect(() => {
     let cancelled = false;
@@ -327,6 +361,33 @@ ${'─'.repeat(60)}`;
   const revokedSessions = sessions.filter(s => !s.isActive);
   const formatDate = (iso: string) => new Date(iso).toLocaleString();
 
+  // Preview iframe: use an active session token when available so bootstrap auth
+  // works like OBS (JWT/localStorage alone can fail inside iframes after reload).
+  const previewUrl = useMemo(() => {
+    if (!selectedTournamentId) return '';
+    const previewSession =
+      activeSessions.find(s => sessionOverlayType(s) === primarySelectedOverlayType) ??
+      activeSessions[0];
+    return buildAuctionOverlayUrl(
+      getOrigin(),
+      selectedTournamentId,
+      previewSession ? sessionOverlayType(previewSession) : primarySelectedOverlayType,
+      previewSession?._id,
+      {
+        theme: currentTheme,
+        palette: selectedPaletteConfig?.id || currentPalette,
+        debug: true,
+      }
+    );
+  }, [
+    selectedTournamentId,
+    activeSessions,
+    primarySelectedOverlayType,
+    currentTheme,
+    selectedPaletteConfig,
+    currentPalette,
+  ]);
+
   const selectOverlayType = (type: AuctionOverlayType) => {
     setSelectedOverlayTypes(prev => {
       if (FULLSCREEN_OVERLAY_TYPES.includes(type)) {
@@ -348,11 +409,15 @@ ${'─'.repeat(60)}`;
     ));
     setSaving(true);
     try {
-      await fetch(`/api/tournaments/${selectedTournamentId}`, {
+      const res = await fetch(`/api/tournaments/${selectedTournamentId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ overlayTheme: themeId, overlayPalette: 'default' }),
       });
+      if (!res.ok) {
+        console.error('Failed to update overlay theme');
+        return;
+      }
       await refreshTournaments();
     } finally {
       setSaving(false);
@@ -366,11 +431,15 @@ ${'─'.repeat(60)}`;
     ));
     setSaving(true);
     try {
-      await fetch(`/api/tournaments/${selectedTournamentId}`, {
+      const res = await fetch(`/api/tournaments/${selectedTournamentId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ overlayPalette: paletteId }),
       });
+      if (!res.ok) {
+        console.error('Failed to update overlay palette');
+        return;
+      }
       await refreshTournaments();
     } finally {
       setSaving(false);
@@ -486,7 +555,7 @@ ${'─'.repeat(60)}`;
         <h2 className="text-sm font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>
           Choose Theme
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {THEMES.map(t => {
             const isSelected = currentTheme === t.id;
             return (

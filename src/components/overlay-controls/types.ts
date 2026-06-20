@@ -1,5 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 
+export type OverlayThemeId = 'standard' | 'premium' | 'neon' | 'theme2' | 'theme3';
+
 export type OverlaySize = 'large' | 'small';
 export type TickerMode = 'all' | 'sold' | 'available';
 export type DisplayMode =
@@ -36,6 +38,7 @@ export interface OverlayControlsProps {
     // Display mode
     displayMode: DisplayMode;
     setDisplayMode: Dispatch<SetStateAction<DisplayMode>>;
+    overlayTheme?: OverlayThemeId;
 
     // Player card
     overlaySize: OverlaySize;

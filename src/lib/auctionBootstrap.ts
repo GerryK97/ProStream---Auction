@@ -6,6 +6,11 @@ import { TeamModel } from '@/models/Team';
 import { EMPTY_AUCTION_STATE } from './auctionDefaults';
 import { AuctionState, Player, Team, Tournament } from '@/types';
 import { canAccessTournament } from '@/lib/permissions';
+import {
+  serializePlayer as resolvePlayerImages,
+  serializeTeam as resolveTeamImages,
+  serializeTournament as resolveTournamentImages,
+} from '@/lib/cloudinaryUtils';
 
 export interface AuctionBootstrapPayload {
   tournament: Tournament | null;
@@ -20,10 +25,10 @@ const toNumber = (value: any): number => (typeof value === 'number' ? value : Nu
 
 const serializeTournament = (doc: any): Tournament => {
   const { createdAt: _createdAt, updatedAt: _updatedAt, __v: _version, ...rest } = doc || {};
-  return {
+  return resolveTournamentImages({
     ...rest,
     _id: toIdString(doc?._id),
-  };
+  }) as Tournament;
 };
 
 const serializeAuctionState = (doc: any, fallbackTournamentId: string): AuctionState => {
@@ -47,21 +52,21 @@ const serializeAuctionState = (doc: any, fallbackTournamentId: string): AuctionS
 
 const serializePlayer = (player: any): Player => {
   const { createdAt: _createdAt, updatedAt: _updatedAt, __v: _version, ...rest } = player || {};
-  return {
+  return resolvePlayerImages({
     ...rest,
     _id: toIdString(player._id),
     tournamentId: toIdString(player.tournamentId),
     winningTeamId: player.winningTeamId ? toIdString(player.winningTeamId) : undefined,
-  };
+  }) as Player;
 };
 
 const serializeTeam = (team: any): Team => {
   const { createdAt: _createdAt, updatedAt: _updatedAt, __v: _version, ...rest } = team || {};
-  return {
+  return resolveTeamImages({
     ...rest,
     _id: toIdString(team._id),
     tournamentId: toIdString(team.tournamentId),
-  };
+  }) as Team;
 };
 
 export async function getAuctionBootstrapData(

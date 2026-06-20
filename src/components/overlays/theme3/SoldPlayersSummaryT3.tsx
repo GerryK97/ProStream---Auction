@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { TeamWiseImageBackgroundT3 } from './TeamWiseImageBackgroundT3';
 import type { Player, Team, Tournament } from '@/types';
 
 interface Props {
@@ -21,6 +22,7 @@ const PANEL_LEFT = 192;
 const PANEL_TOP = 54;
 const PANEL_W = 1536;
 const PANEL_H = 972;
+const PATTERN_H = PANEL_H - 15; // matches Team Summary — accent strip at bottom
 const TITLE_H = 107;
 const HEADER_H = 56;
 const FOOTER_H = 62;
@@ -36,10 +38,6 @@ const CSS = `
   @keyframes t3PlayerSummaryRowIn {
     from { opacity: 0; transform: translateY(18px); }
     to   { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes t3PlayerSummaryShine {
-    from { transform: translateX(-150%) skewX(-18deg); }
-    to   { transform: translateX(290%) skewX(-18deg); }
   }
 `;
 
@@ -93,7 +91,6 @@ const SoldPlayersSummaryT3: React.FC<Props> = ({ players, teams, tournament, isE
           height: PANEL_H,
           overflow: 'hidden',
           fontFamily: 'Montserrat, sans-serif',
-          background: GOLD,
           boxShadow: '0 12px 48px rgba(0,0,0,0.70)',
           opacity: isExiting ? 0 : 1,
           transform: isExiting ? 'scale(0.97)' : 'scale(1)',
@@ -101,18 +98,14 @@ const SoldPlayersSummaryT3: React.FC<Props> = ({ players, teams, tournament, isE
           animation: isExiting ? undefined : 't3PlayerSummaryIn 420ms cubic-bezier(0.22,1,0.36,1) both',
         }}
       >
-        <div style={{ position: 'absolute', left: 0, top: 0, right: 0, height: PANEL_H - 15, background: DARK }} />
-        <div style={{ position: 'absolute', left: 0, top: 0, right: 0, height: TITLE_H, background: WHITE }} />
-        <div style={{ position: 'absolute', left: 0, top: TITLE_H, right: 0, height: HEADER_H, background: DARK, filter: 'brightness(90%)' }} />
-        <div style={{ position: 'absolute', left: 0, top: 0, right: 0, height: TITLE_H, background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.13) 100%)' }} />
+        <TeamWiseImageBackgroundT3 height={PATTERN_H} />
 
-        {/* Shine sweep */}
-        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 30 }}>
-          <div style={{ position: 'absolute', top: 0, bottom: 0, width: '36%', background: 'linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.22) 50%, transparent 80%)', animation: 't3PlayerSummaryShine 1s 0.15s cubic-bezier(0.4,0,0.6,1) forwards' }} />
-        </div>
+        <div style={{ position: 'absolute', left: 0, top: 0, right: 0, height: TITLE_H, background: WHITE, zIndex: 3 }} />
+        <div style={{ position: 'absolute', left: 0, top: TITLE_H, right: 0, height: HEADER_H, background: 'rgba(0,0,0,0.35)', zIndex: 4 }} />
+        <div style={{ position: 'absolute', left: 0, top: 0, right: 0, height: TITLE_H, background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.13) 100%)', zIndex: 5, pointerEvents: 'none' }} />
 
         {/* Title */}
-        <div style={{ position: 'absolute', left: 38, top: 22, width: 1060, color: DARK }}>
+        <div style={{ position: 'absolute', left: 38, top: 22, width: 1060, color: DARK, zIndex: 10 }}>
           <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: 4, textTransform: 'uppercase', lineHeight: 1 }}>
             {tournament.name}
           </div>
@@ -121,13 +114,13 @@ const SoldPlayersSummaryT3: React.FC<Props> = ({ players, teams, tournament, isE
           </div>
         </div>
 
-        <div style={{ position: 'absolute', right: 38, top: 28, textAlign: 'right', color: DARK }}>
+        <div style={{ position: 'absolute', right: 38, top: 28, textAlign: 'right', color: DARK, zIndex: 10 }}>
           <div style={{ fontSize: 38, fontWeight: 700, lineHeight: 1 }}>{soldPlayers.length} / {totalPlayers}</div>
           <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, letterSpacing: 3 }}>PLAYERS SOLD</div>
         </div>
 
         {/* Header */}
-        <div style={{ position: 'absolute', left: 38, top: 122, right: 38, height: 30, display: 'grid', gridTemplateColumns: '70px 390px 180px 180px 210px 140px', columnGap: 24, alignItems: 'center', color: WHITE, fontSize: 22, fontWeight: 500 }}>
+        <div style={{ position: 'absolute', left: 38, top: 122, right: 38, height: 30, display: 'grid', gridTemplateColumns: '70px 390px 180px 180px 210px 140px', columnGap: 24, alignItems: 'center', color: WHITE, fontSize: 22, fontWeight: 500, zIndex: 10 }}>
           <Header>#</Header>
           <Header>PLAYER</Header>
           <Header>CLASS</Header>
@@ -137,7 +130,7 @@ const SoldPlayersSummaryT3: React.FC<Props> = ({ players, teams, tournament, isE
         </div>
 
         {/* Rows */}
-        <div style={{ position: 'absolute', left: 0, right: 0, top: 184, bottom: FOOTER_H + 15, overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', left: 0, right: 0, top: 184, bottom: FOOTER_H + 15, overflow: 'hidden', zIndex: 10 }}>
           {pageRows.map((p, i) => {
             const globalIndex = page * ROWS_PER_PAGE + i + 1;
             const team = teams.find(t => t._id === p.winningTeamId);
@@ -181,14 +174,14 @@ const SoldPlayersSummaryT3: React.FC<Props> = ({ players, teams, tournament, isE
         </div>
 
         {/* Footer */}
-        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 15, height: FOOTER_H, background: GOLD, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', color: DARK }}>
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 15, height: FOOTER_H, background: GOLD, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', color: DARK, zIndex: 10 }}>
           <FooterStat label="SOLD" value={String(soldPlayers.length)} />
           <FooterStat label="UNSOLD" value={String(unsoldPlayers.length)} />
           <FooterStat label="REMAINING" value={String(pendingPlayers.length)} />
         </div>
 
         {totalPages > 1 && (
-          <div style={{ position: 'absolute', right: 38, bottom: FOOTER_H + 30, display: 'flex', gap: 8 }}>
+          <div style={{ position: 'absolute', right: 38, bottom: FOOTER_H + 30, display: 'flex', gap: 8, zIndex: 10 }}>
             {Array.from({ length: totalPages }).map((_, i) => (
               <div key={i} style={{ width: i === page ? 22 : 8, height: 8, borderRadius: 4, background: i === page ? GOLD : 'rgba(255,255,255,0.28)', transition: 'all 0.25s ease' }} />
             ))}

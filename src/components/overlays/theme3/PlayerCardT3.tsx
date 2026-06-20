@@ -60,8 +60,8 @@ export function PlayerPhotoSection({
         height: barHeight,
         flexShrink: 0,
         overflow: 'hidden',
-        background: 'var(--t3-bar-bg-dark, #1f1f1f)',
-        borderRight: '1px solid var(--t3-bar-gold, #eda900)',
+        background: 'var(--t3-bar-bg-dark, var(--t3-bg-panel))',
+        borderRight: '1px solid var(--t3-bar-gold, var(--t3-accent))',
         animation: soldCelebration ? 't3SoldCelebration 0.6s ease-out' : undefined,
         position: 'relative',
         zIndex: 2,
@@ -86,7 +86,7 @@ export function PlayerPhotoSection({
             fontFamily: DISPLAY_FONT,
             fontSize: 36,
             fontWeight: 700,
-            color: 'var(--t3-bar-gold, #eda900)',
+            color: 'var(--t3-bar-gold, var(--t3-accent))',
           }}
         >
           {initials || '?'}
@@ -118,7 +118,7 @@ export function PlayerIdentitySection({ player, tournament }: IdentityProps) {
               fontSize: 52,
               fontWeight: 700,
               lineHeight: 0.85,
-              color: 'var(--t3-bar-gold, #eda900)',
+              color: 'var(--t3-bar-gold, var(--t3-accent))',
               flexShrink: 0,
               textShadow: '0 2px 8px rgba(0,0,0,0.45)',
             }}
@@ -133,7 +133,7 @@ export function PlayerIdentitySection({ player, tournament }: IdentityProps) {
             fontWeight: 700,
             letterSpacing: '0.02em',
             textTransform: 'uppercase',
-            color: 'var(--t3-bar-text, #ffffff)',
+            color: 'var(--t3-bar-text, var(--t3-text-primary))',
             lineHeight: 1,
             whiteSpace: 'nowrap',
             overflow: 'hidden',
@@ -155,7 +155,7 @@ export function PlayerIdentitySection({ player, tournament }: IdentityProps) {
             fontWeight: 600,
             letterSpacing: '0.1em',
             textTransform: 'uppercase',
-            color: classConfig?.color ?? 'var(--t3-bar-text-muted, #e0e0e0)',
+            color: classConfig?.color ?? 'var(--t3-bar-text-muted, var(--t3-text-secondary))',
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',

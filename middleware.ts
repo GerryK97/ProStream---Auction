@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, getTokenFromRequest, getTokenFromCookies } from '@/lib/auth';
 import { canAccessRoute } from '@/lib/permissions';
+import { getOverlayTokenFromRequest, isOverlayReadApiRequest } from '@/lib/overlay-auth';
 
 
 // Define public routes that don't require authentication
@@ -34,6 +35,12 @@ export function middleware(request: NextRequest) {
   const token = getTokenFromRequest(request) || getTokenFromCookies(request);
 
   const isApiRoute = pathname.startsWith('/api/');
+
+  // OBS browser sources authenticate with ?token= on read-only overlay APIs (no JWT/cookies).
+  const overlayToken = getOverlayTokenFromRequest(request);
+  if (isApiRoute && isOverlayReadApiRequest(pathname, request.method, overlayToken)) {
+    return NextResponse.next();
+  }
 
   if (!token) {
     // API routes: return 401 JSON (not a redirect, browser fetch can't redirect to login)

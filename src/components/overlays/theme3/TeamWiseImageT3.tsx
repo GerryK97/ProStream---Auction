@@ -1,564 +1,831 @@
 'use client';
 
-/**
- * TeamWiseImageT3 / TeamWiseImageryT3
- *
- * Redesign based on the provided saved overlays.uno sample:
- * "Double Starting Lineup - Bold".
- *
- * Sample structure extracted from Singular DOM:
- * - Team 1 Formation: top 0.1%, height 42.4%, transform-origin bottom
- * - Team 2 Formation: top 57.4%, height 42.4%, transform-origin top
- * - Middle band with team names and VS
- * - 5 player cards per team
- * - Each player card contains: background logo, darken overlay, headshot,
- *   side position/number, first name, last name
- */
-
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Player, Team, Tournament } from '@/types';
-
-interface Props {
-  players: Player[];
-  teams: Team[];
-  tournament: Tournament | null;
-  teamId: string;
-  isExiting?: boolean;
-}
+import { TICKER_T3_HEIGHT } from './TickerT3Shared';
 
 const CANVAS_W = 1920;
 const CANVAS_H = 1080;
+/** Keep bottom row names above the fixed ticker rail. */
+const TICKER_CLEARANCE = TICKER_T3_HEIGHT + 12;
+const TOP_PAD = 14;
+const CENTER_H = 148;
+const FORMATION_LABEL_H = 26;
+const CARD_W = 276;
+const CARD_H = 368;
+const FORMATION_H = FORMATION_LABEL_H + CARD_H + 10;
+const PLAYERS_PER_FORMATION = 5;
+const PAGE_MS = 8000;
+const EXIT_MS = 420;
+const ENTER_MS = 560;
+const CLR_GOLD = '#D4AF37';
+const CLR_GOLD_LIGHT = '#F5E6A8';
+const CLR_DARK = '#1A1A1A';
+const CLR_CARD = '#2A2F35';
+const CLR_MUTED = 'rgba(255,255,255,0.45)';
 
-const FORMATION_H = 458; // 42.4% of 1080
-const TOP_FORMATION_Y = 1;
-const BOTTOM_FORMATION_Y = 620; // 57.4% of 1080
-const CARD_W = 300;
-const CARD_H = 400;
-const CARD_GAP = 18;
-const CARD_TOP = 28;
-const LEFT_PAD = 156;
-
-const DARK = '#101214';
-const PANEL = '#1b1f24';
-const GOLD = '#b9aa62';
-const WHITE = '#ffffff';
-const LIGHT = '#ebebeb';
-const MUTED = 'rgba(255,255,255,0.68)';
+type AnimPhase = 'entering' | 'visible' | 'exiting';
 
 const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap');
-
-  @keyframes t3LineupFormationTopIn {
-    from { opacity: 0; transform: translateY(-34px) scaleY(0.94); }
-    to   { opacity: 1; transform: translateY(0) scaleY(1); }
+  @keyframes t3TwiBandInTop {
+    from { opacity: 0; transform: translateY(-32px) scale(0.96); filter: blur(5px); }
+    to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
   }
-  @keyframes t3LineupFormationBottomIn {
-    from { opacity: 0; transform: translateY(34px) scaleY(0.94); }
-    to   { opacity: 1; transform: translateY(0) scaleY(1); }
+  @keyframes t3TwiBandOutTop {
+    from { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+    to   { opacity: 0; transform: translateY(-22px) scale(0.97); filter: blur(4px); }
   }
-  @keyframes t3LineupCardIn {
-    from { opacity: 0; transform: translateY(28px) scale(0.96); }
+  @keyframes t3TwiBandInBottom {
+    from { opacity: 0; transform: translateY(32px) scale(0.96); filter: blur(5px); }
+    to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  }
+  @keyframes t3TwiBandOutBottom {
+    from { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+    to   { opacity: 0; transform: translateY(22px) scale(0.97); filter: blur(4px); }
+  }
+  @keyframes t3TwiCardIn {
+    from { opacity: 0; transform: translateY(28px) scale(0.9); }
     to   { opacity: 1; transform: translateY(0) scale(1); }
   }
-  @keyframes t3LineupCenterIn {
+  @keyframes t3TwiCardOut {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to   { opacity: 0; transform: translateY(-16px) scale(0.92); }
+  }
+  @keyframes t3TwiCenterIn {
     from { opacity: 0; transform: scaleX(0.88); }
     to   { opacity: 1; transform: scaleX(1); }
   }
-  @keyframes t3LineupShine {
-    from { transform: translateX(-160%) skewX(-18deg); }
-    to   { transform: translateX(310%) skewX(-18deg); }
+  @keyframes t3TwiCenterOut {
+    from { opacity: 1; transform: scaleX(1); }
+    to   { opacity: 0; transform: scaleX(0.92); }
+  }
+  @keyframes t3TwiRootIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .t3-twi-anim { animation: none !important; transition: none !important; }
   }
 `;
 
-function splitName(name: string): { first: string; last: string } {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length <= 1) return { first: '', last: parts[0] ?? '' };
-  return { first: parts.slice(0, -1).join(' '), last: parts[parts.length - 1] };
+function formatCurrency(n?: number | null): string {
+    if (n == null) return '—';
+    return n.toLocaleString('en-IN');
 }
 
-function imageForPlayer(player: Player): string {
-  return player.photoURL?.trim() || player.secondaryImageURL?.trim() || '';
-}
-
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map(part => part[0])
-    .join('')
-    .toUpperCase() || '?';
-}
-
-function formatMoney(n?: number | null): string {
-  if (!n) return '—';
-  return n.toLocaleString('en-IN');
+interface TeamWiseImageT3Props {
+    teams: Team[];
+    players: Player[];
+    tournament: Tournament | null;
+    teamId?: string;
+    isExiting?: boolean;
 }
 
 interface TeamBlock {
-  team: Team;
-  players: Player[];
-  total: number;
+    team: Team;
+    players: Player[];
+    total: number;
 }
 
-function buildTeamBlocks(teams: Team[], players: Player[], teamId: string): [TeamBlock | null, TeamBlock | null] {
-  const blocks = teams
-    .map(team => {
-      const sold = players
-        .filter(p => p.isSold && p.winningTeamId === team._id)
-        .sort((a, b) => (b.finalPrice ?? 0) - (a.finalPrice ?? 0) || a.name.localeCompare(b.name));
-      return {
-        team,
-        players: sold.slice(0, 5),
-        total: sold.reduce((sum, p) => sum + (p.finalPrice ?? 0), 0),
-      };
-    })
-    .filter(block => block.players.length > 0)
-    .sort((a, b) => b.total - a.total || b.players.length - a.players.length);
+function buildAllTeamBlocks(teams: Team[], players: Player[], teamId?: string): TeamBlock[] {
+    const blocks = teams
+        .map(team => {
+            const sold = players
+                .filter(p => p.isSold && p.winningTeamId === team._id)
+                .sort((a, b) => (b.finalPrice ?? 0) - (a.finalPrice ?? 0) || a.name.localeCompare(b.name));
+            return {
+                team,
+                players: sold,
+                total: sold.reduce((sum, p) => sum + (p.finalPrice ?? 0), 0),
+            };
+        })
+        .filter(block => block.players.length > 0)
+        .sort((a, b) => b.total - a.total || b.players.length - a.players.length);
 
-  if (blocks.length === 0) {
-    const fallback = teams.slice(0, 2).map(team => ({ team, players: [], total: 0 }));
-    return [fallback[0] ?? null, fallback[1] ?? null];
-  }
-
-  const selected = teamId ? blocks.find(block => block.team._id === teamId) : null;
-  const first = selected ?? blocks[0] ?? null;
-  const second = blocks.find(block => block.team._id !== first?.team._id) ?? blocks[1] ?? null;
-  return [first, second];
-}
-
-function teamLabel(team: Team | null): { top: string; bottom: string } {
-  if (!team) return { top: 'TEAM', bottom: '—' };
-  const parts = team.name.trim().split(/\s+/);
-  if (parts.length <= 1) return { top: team.shortCode || 'TEAM', bottom: team.name.toUpperCase() };
-  return {
-    top: parts.slice(0, -1).join(' '),
-    bottom: parts[parts.length - 1].toUpperCase(),
-  };
-}
-
-const TeamWiseImageT3: React.FC<Props> = ({ players, teams, tournament, teamId, isExiting = false }) => {
-  const [entered, setEntered] = useState(false);
-  const [topBlock, bottomBlock] = useMemo(
-    () => buildTeamBlocks(teams, players, teamId),
-    [teams, players, teamId],
-  );
-
-  useEffect(() => {
-    if (isExiting) {
-      setEntered(false);
-      return;
+    if (teamId) {
+        const match = blocks.find(b => b.team._id === teamId);
+        return match ? [match] : blocks;
     }
-    const raf = requestAnimationFrame(() => requestAnimationFrame(() => setEntered(true)));
-    return () => cancelAnimationFrame(raf);
-  }, [isExiting, topBlock?.team._id, bottomBlock?.team._id]);
+    return blocks;
+}
 
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        width: CANVAS_W,
-        height: CANVAS_H,
-        overflow: 'hidden',
-        fontFamily: 'Roboto, Helvetica, sans-serif',
-        opacity: entered ? 1 : 0,
-        transition: 'opacity 280ms ease',
-      }}
-    >
-      <style>{CSS}</style>
+function buildPairs(blocks: TeamBlock[]): [TeamBlock | null, TeamBlock | null][] {
+    if (blocks.length === 0) return [[null, null]];
+    const pairs: [TeamBlock | null, TeamBlock | null][] = [];
+    for (let i = 0; i < blocks.length; i += 2) {
+        pairs.push([blocks[i] ?? null, blocks[i + 1] ?? null]);
+    }
+    return pairs;
+}
 
-      {/* Transparent OBS-safe background with subtle dark focus vignette */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'radial-gradient(circle at 50% 50%, rgba(0,0,0,0.24), rgba(0,0,0,0.02) 58%, rgba(0,0,0,0) 78%)',
-        }}
-      />
+function playerPages(count: number): number {
+    return Math.max(1, Math.ceil(count / PLAYERS_PER_FORMATION));
+}
 
-      <FormationBand
-        block={topBlock}
-        side="top"
-        y={TOP_FORMATION_Y}
-        visible={entered}
-        delay={0}
-      />
+function pagePlayers(players: Player[], page: number, rowOffset = 0): (Player | null)[] {
+    const start = page * PLAYERS_PER_FORMATION + rowOffset;
+    const slice = players.slice(start, start + PLAYERS_PER_FORMATION);
+    return Array.from({ length: PLAYERS_PER_FORMATION }, (_, i) => slice[i] ?? null);
+}
 
-      <CenterStrip
-        tournament={tournament}
-        topTeam={topBlock?.team ?? null}
-        bottomTeam={bottomBlock?.team ?? null}
-        topTotal={topBlock?.total ?? 0}
-        bottomTotal={bottomBlock?.total ?? 0}
-        visible={entered}
-      />
+/** One team on screen: top row 1–5, bottom row 6–10 per page. */
+function pagePlayersDualRow(players: Player[], page: number, row: 'top' | 'bottom'): (Player | null)[] {
+    const rowOffset = row === 'top' ? 0 : PLAYERS_PER_FORMATION;
+    const start = page * PLAYERS_PER_FORMATION * 2 + rowOffset;
+    const slice = players.slice(start, start + PLAYERS_PER_FORMATION);
+    return Array.from({ length: PLAYERS_PER_FORMATION }, (_, i) => slice[i] ?? null);
+}
 
-      <FormationBand
-        block={bottomBlock}
-        side="bottom"
-        y={BOTTOM_FORMATION_Y}
-        visible={entered}
-        delay={120}
-      />
-    </div>
-  );
-};
+function isDualRowMode(top: TeamBlock | null, bottom: TeamBlock | null): boolean {
+    return Boolean(top && !bottom);
+}
 
-function FormationBand({
-  block,
-  side,
-  y,
-  visible,
-  delay,
-}: {
-  block: TeamBlock | null;
-  side: 'top' | 'bottom';
-  y: number;
-  visible: boolean;
-  delay: number;
-}) {
-  const team = block?.team ?? null;
-  const lineup = Array.from({ length: 5 }, (_, i) => block?.players[i] ?? null);
-  const reverse = side === 'bottom';
+function formationCards(
+    topBlock: TeamBlock | null,
+    bottomBlock: TeamBlock | null,
+    row: 'top' | 'bottom',
+    playerPage: number,
+): (Player | null)[] {
+    if (isDualRowMode(topBlock, bottomBlock) && topBlock) {
+        return pagePlayersDualRow(topBlock.players, playerPage, row);
+    }
+    const block = row === 'top' ? topBlock : bottomBlock;
+    return block ? pagePlayers(block.players, playerPage) : Array(PLAYERS_PER_FORMATION).fill(null);
+}
 
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        left: 0,
-        top: y,
-        width: '100%',
-        height: FORMATION_H,
-        overflow: 'hidden',
-        opacity: visible ? 1 : 0,
-        transformOrigin: side === 'top' ? '50% 100%' : '50% 0%',
-        animation: visible
-          ? `${side === 'top' ? 't3LineupFormationTopIn' : 't3LineupFormationBottomIn'} 520ms ${delay}ms cubic-bezier(0.22,1,0.36,1) both`
-          : undefined,
-      }}
-    >
-      <div
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          top: 0,
-          bottom: 0,
-          background: `linear-gradient(${side === 'top' ? '180deg' : '0deg'}, rgba(16,18,20,0.98), rgba(16,18,20,0.76))`,
-          borderTop: side === 'bottom' ? `2px solid ${GOLD}` : undefined,
-          borderBottom: side === 'top' ? `2px solid ${GOLD}` : undefined,
-        }}
-      />
+function formationStartIndex(
+    topBlock: TeamBlock | null,
+    bottomBlock: TeamBlock | null,
+    row: 'top' | 'bottom',
+    playerPage: number,
+): number {
+    if (isDualRowMode(topBlock, bottomBlock)) {
+        const rowOffset = row === 'top' ? 0 : PLAYERS_PER_FORMATION;
+        return playerPage * PLAYERS_PER_FORMATION * 2 + rowOffset;
+    }
+    const block = row === 'top' ? topBlock : bottomBlock;
+    return playerPage * PLAYERS_PER_FORMATION;
+}
 
-      {/* Oversized team logo watermark, matching sample Logo widget (-15%, 130%, opacity) */}
-      {team?.logoURL && (
+function maxPlayerPages(top: TeamBlock | null, bottom: TeamBlock | null): number {
+    if (isDualRowMode(top, bottom) && top) {
+        return Math.max(1, Math.ceil(top.players.length / (PLAYERS_PER_FORMATION * 2)));
+    }
+    return Math.max(
+        top ? playerPages(top.players.length) : 1,
+        bottom ? playerPages(bottom.players.length) : 1,
+    );
+}
+
+function bandAnimation(align: 'top' | 'bottom', phase: AnimPhase): React.CSSProperties {
+    if (phase === 'entering') {
+        return {
+            animation: `${align === 'top' ? 't3TwiBandInTop' : 't3TwiBandInBottom'} ${ENTER_MS}ms cubic-bezier(0.22, 1, 0.36, 1) both`,
+        };
+    }
+    if (phase === 'exiting') {
+        return {
+            animation: `${align === 'top' ? 't3TwiBandOutTop' : 't3TwiBandOutBottom'} ${EXIT_MS}ms cubic-bezier(0.4, 0, 0.2, 1) both`,
+        };
+    }
+    return {};
+}
+
+function cardAnimation(phase: AnimPhase, cardIndex: number): React.CSSProperties {
+    const stagger = cardIndex * 70;
+    if (phase === 'entering') {
+        return {
+            animation: `t3TwiCardIn ${ENTER_MS}ms cubic-bezier(0.22, 1, 0.36, 1) ${stagger}ms both`,
+        };
+    }
+    if (phase === 'exiting') {
+        const reverse = (PLAYERS_PER_FORMATION - 1 - cardIndex) * 50;
+        return {
+            animation: `t3TwiCardOut ${EXIT_MS}ms cubic-bezier(0.4, 0, 0.2, 1) ${reverse}ms both`,
+        };
+    }
+    return {};
+}
+
+function centerAnimation(phase: AnimPhase): React.CSSProperties {
+    if (phase === 'entering') {
+        return { animation: `t3TwiCenterIn ${ENTER_MS}ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both` };
+    }
+    if (phase === 'exiting') {
+        return { animation: `t3TwiCenterOut ${EXIT_MS}ms cubic-bezier(0.4, 0, 0.2, 1) both` };
+    }
+    return {};
+}
+
+function TeamLogo({ team, size = 56 }: { team: Team | null; size?: number }) {
+    if (!team?.logoURL) {
+        const initials = (team?.name ?? '?').slice(0, 2).toUpperCase();
+        return (
+            <div
+                style={{
+                    width: size,
+                    height: size,
+                    borderRadius: 8,
+                    background: 'rgba(0,0,0,0.35)',
+                    border: `2px solid ${CLR_GOLD}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: size * 0.32,
+                    fontWeight: 900,
+                    color: CLR_GOLD_LIGHT,
+                    flexShrink: 0,
+                }}
+            >
+                {initials}
+            </div>
+        );
+    }
+    return (
         <img
-          src={team.logoURL}
-          alt=""
-          style={{
-            position: 'absolute',
-            right: side === 'top' ? -170 : undefined,
-            left: side === 'bottom' ? -170 : undefined,
-            top: -80,
-            width: 560,
-            height: 560,
-            objectFit: 'contain',
-            opacity: 0.16,
-            filter: 'grayscale(1) contrast(1.2)',
-          }}
+            src={team.logoURL}
+            alt=""
+            style={{
+                width: size,
+                height: size,
+                objectFit: 'contain',
+                flexShrink: 0,
+                filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.45))',
+            }}
         />
-      )}
-
-      <div
-        style={{
-          position: 'absolute',
-          left: LEFT_PAD,
-          top: CARD_TOP,
-          display: 'flex',
-          flexDirection: reverse ? 'row-reverse' : 'row',
-          gap: CARD_GAP,
-        }}
-      >
-        {lineup.map((player, index) => (
-          <PlayerCard
-            key={player?._id ?? `${side}-empty-${index}`}
-            player={player}
-            team={team}
-            index={index}
-            reverse={reverse}
-          />
-        ))}
-      </div>
-    </div>
-  );
+    );
 }
 
 function PlayerCard({
-  player,
-  team,
-  index,
-  reverse,
+    player,
+    index,
+    animPhase,
+    cardIndex,
 }: {
-  player: Player | null;
-  team: Team | null;
-  index: number;
-  reverse: boolean;
+    player: Player | null;
+    index: number;
+    animPhase: AnimPhase;
+    cardIndex: number;
 }) {
-  const name = splitName(player?.name ?? 'AVAILABLE SLOT');
-  const photo = player ? imageForPlayer(player) : '';
-  const number = player?.playerNo?.trim() || String(index + 1);
-  const position = player?.position?.trim() || player?.playerClass?.trim() || '—';
+    const animStyle = cardAnimation(animPhase, cardIndex);
 
-  return (
-    <div
-      style={{
-        position: 'relative',
-        width: CARD_W,
-        height: CARD_H,
-        overflow: 'hidden',
-        background: PANEL,
-        boxShadow: '0 16px 36px rgba(0,0,0,0.46)',
-        animation: `t3LineupCardIn 430ms ${0.18 + index * 0.07}s cubic-bezier(0.22,1,0.36,1) both`,
-      }}
-    >
-      {/* Logo widget behind headshot */}
-      {team?.logoURL && (
-        <img
-          src={team.logoURL}
-          alt=""
-          style={{
-            position: 'absolute',
-            left: '-15%',
-            top: '-15%',
-            width: '130%',
-            height: '130%',
-            objectFit: 'contain',
-            opacity: player ? 0.32 : 0.46,
-            filter: 'grayscale(1)',
-          }}
-        />
-      )}
+    if (!player) {
+        return (
+            <div
+                className="t3-twi-anim"
+                style={{
+                    width: CARD_W,
+                    height: CARD_H,
+                    background: 'rgba(42,47,53,0.55)',
+                    border: '2px dashed rgba(212,175,55,0.35)',
+                    borderRadius: 4,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    ...animStyle,
+                }}
+            >
+                <div style={{ fontSize: 28, fontWeight: 900, color: 'rgba(212,175,55,0.5)' }}>—</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: CLR_MUTED, letterSpacing: '0.12em' }}>
+                    OPEN SLOT
+                </div>
+            </div>
+        );
+    }
 
-      {/* Headshot widget */}
-      {photo ? (
-        <img
-          src={photo}
-          alt=""
-          referrerPolicy="no-referrer"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            objectPosition: 'center top',
-          }}
-        />
-      ) : (
+    const photoSrc = player.photoURL?.trim() || player.secondaryImageURL?.trim() || '';
+
+    return (
         <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'rgba(255,255,255,0.50)',
-            fontSize: 58,
-            fontWeight: 900,
-            letterSpacing: 2,
-          }}
+            className="t3-twi-anim"
+            style={{
+                width: CARD_W,
+                height: CARD_H,
+                background: CLR_CARD,
+                border: `3px solid ${CLR_GOLD}`,
+                borderRadius: 4,
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+                ...animStyle,
+            }}
         >
-          {player ? initials(player.name) : team?.shortCode?.slice(0, 2).toUpperCase() ?? '—'}
+            <div
+                style={{
+                    flex: 1,
+                    position: 'relative',
+                    background: 'linear-gradient(180deg, #3a4048 0%, #1e2228 100%)',
+                }}
+            >
+                {photoSrc ? (
+                    <img
+                        src={photoSrc}
+                        alt=""
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }}
+                    />
+                ) : (
+                    <div
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 72,
+                            fontWeight: 900,
+                            color: 'rgba(255,255,255,0.12)',
+                        }}
+                    >
+                        {player.name.charAt(0)}
+                    </div>
+                )}
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: 10,
+                        left: 10,
+                        background: CLR_GOLD,
+                        color: CLR_DARK,
+                        fontSize: 18,
+                        fontWeight: 900,
+                        padding: '4px 10px',
+                        borderRadius: 2,
+                    }}
+                >
+                    #{index + 1}
+                </div>
+            </div>
+            <div style={{ padding: '12px 14px', background: CLR_DARK, flexShrink: 0 }}>
+                <div
+                    style={{
+                        fontSize: 20,
+                        fontWeight: 900,
+                        color: '#fff',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                    }}
+                >
+                    {player.name}
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: CLR_GOLD, marginTop: 3 }}>
+                    {formatCurrency(player.finalPrice ?? 0)}
+                </div>
+            </div>
         </div>
-      )}
+    );
+}
 
-      {/* Darken widget */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.28) 42%, rgba(0,0,0,0.80) 100%)',
-          opacity: 0.88,
-        }}
-      />
-
-      {/* Side Position and Number labels, matching sample layout */}
-      <div
-        style={{
-          position: 'absolute',
-          left: reverse ? undefined : 0,
-          right: reverse ? 0 : undefined,
-          top: '8%',
-          width: '15%',
-          height: '40%',
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'center',
-          color: LIGHT,
-          fontSize: 22,
-          fontWeight: 900,
-          writingMode: 'vertical-rl',
-          transform: reverse ? 'rotate(180deg)' : 'none',
-          letterSpacing: 1,
-        }}
-      >
-        {position.toUpperCase()}
-      </div>
-      <div
-        style={{
-          position: 'absolute',
-          left: reverse ? undefined : 0,
-          right: reverse ? 0 : undefined,
-          top: '52%',
-          width: '15%',
-          height: '40%',
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'center',
-          color: GOLD,
-          fontSize: 44,
-          fontWeight: 900,
-          lineHeight: 1,
-        }}
-      >
-        {number}
-      </div>
-
-      {/* First/Last name text block */}
-      <div
-        style={{
-          position: 'absolute',
-          left: reverse ? '0%' : '17.5%',
-          right: reverse ? '17.5%' : '0%',
-          top: '6.75%',
-          width: '82.5%',
-          height: '42.5%',
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: reverse ? 'flex-end' : 'flex-start',
-          color: WHITE,
-          fontSize: 25,
-          fontWeight: 500,
-          textAlign: reverse ? 'right' : 'left',
-          padding: '0 16px',
-          boxSizing: 'border-box',
-          textShadow: '0 2px 8px rgba(0,0,0,0.8)',
-        }}
-      >
-        {name.first || (player ? '' : team?.name ?? '')}
-      </div>
-      <div
-        style={{
-          position: 'absolute',
-          left: reverse ? '0%' : '17.5%',
-          right: reverse ? '17.5%' : '0%',
-          top: '46.25%',
-          width: '82.5%',
-          height: '51.5%',
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: reverse ? 'flex-end' : 'flex-start',
-          color: WHITE,
-          fontSize: 42,
-          fontWeight: 900,
-          textTransform: 'uppercase',
-          textAlign: reverse ? 'right' : 'left',
-          padding: '0 16px 20px',
-          boxSizing: 'border-box',
-          lineHeight: 0.92,
-          textShadow: '0 2px 10px rgba(0,0,0,0.9)',
-          overflow: 'hidden',
-        }}
-      >
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {name.last}
-        </span>
-      </div>
-
-      {/* Price strip adapted for auction */}
-      {player?.finalPrice && (
+function FormationBand({
+    block,
+    cards,
+    startIdx,
+    align,
+    playerPage,
+    totalPages,
+    animPhase,
+}: {
+    block: TeamBlock | null;
+    cards: (Player | null)[];
+    startIdx: number;
+    align: 'top' | 'bottom';
+    playerPage: number;
+    totalPages: number;
+    animPhase: AnimPhase;
+}) {
+    return (
         <div
-          style={{
-            position: 'absolute',
-            left: reverse ? 0 : undefined,
-            right: reverse ? undefined : 0,
-            top: 0,
-            padding: '7px 10px',
-            background: GOLD,
-            color: DARK,
-            fontSize: 13,
-            fontWeight: 900,
-            letterSpacing: 0.5,
-          }}
+            className="t3-twi-anim"
+            style={{
+                height: FORMATION_H,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: 8,
+                flexShrink: 0,
+                ...bandAnimation(align, animPhase),
+            }}
         >
-          {formatMoney(player.finalPrice)}
+            {block && (
+                <div
+                    style={{
+                        height: FORMATION_LABEL_H,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: CLR_MUTED,
+                        letterSpacing: '0.14em',
+                        textTransform: 'uppercase',
+                    }}
+                >
+                    <span style={{ color: CLR_GOLD_LIGHT }}>
+                        {block.players.length} PLAYER{block.players.length !== 1 ? 'S' : ''}
+                    </span>
+                    {totalPages > 1 && (
+                        <>
+                            <span>·</span>
+                            <span>
+                                PAGE {playerPage + 1}/{totalPages}
+                            </span>
+                        </>
+                    )}
+                </div>
+            )}
+            <div style={{ display: 'flex', gap: 20, alignItems: 'flex-end' }}>
+                {cards.map((player, i) => (
+                    <PlayerCard
+                        key={player?._id ?? `empty-${align}-${playerPage}-${i}`}
+                        player={player}
+                        index={startIdx + i}
+                        animPhase={animPhase}
+                        cardIndex={i}
+                    />
+                ))}
+            </div>
         </div>
-      )}
-    </div>
-  );
+    );
+}
+
+function TeamCenterBlock({
+    block,
+    align,
+    dualRowContinuation,
+}: {
+    block: TeamBlock | null;
+    align: 'left' | 'right';
+    dualRowContinuation?: boolean;
+}) {
+    if (dualRowContinuation && block) {
+        return (
+            <div style={{ textAlign: 'right' }}>
+                <div
+                    style={{
+                        fontSize: 28,
+                        fontWeight: 900,
+                        color: CLR_DARK,
+                        letterSpacing: '0.06em',
+                        textTransform: 'uppercase',
+                    }}
+                >
+                    Players 6–10
+                </div>
+                <div
+                    style={{
+                        marginTop: 6,
+                        fontSize: 15,
+                        fontWeight: 800,
+                        color: 'rgba(26,26,26,0.72)',
+                        letterSpacing: '0.08em',
+                    }}
+                >
+                    {block.team.name}
+                </div>
+            </div>
+        );
+    }
+
+    if (!block) {
+        return (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: align === 'right' ? 'flex-end' : 'flex-start', opacity: 0.35 }}>
+                <span style={{ fontSize: 22, fontWeight: 800, color: CLR_MUTED, letterSpacing: '0.1em' }}>—</span>
+            </div>
+        );
+    }
+
+    const { team, total, players } = block;
+
+    return (
+        <div
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 16,
+                flexDirection: align === 'right' ? 'row-reverse' : 'row',
+                textAlign: align === 'right' ? 'right' : 'left',
+                maxWidth: '100%',
+            }}
+        >
+            <TeamLogo team={team} size={64} />
+            <div style={{ minWidth: 0 }}>
+                <div
+                    style={{
+                        fontSize: 34,
+                        fontWeight: 900,
+                        color: CLR_DARK,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.03em',
+                        lineHeight: 1.05,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                    }}
+                >
+                    {team.name}
+                </div>
+                <div
+                    style={{
+                        marginTop: 6,
+                        fontSize: 16,
+                        fontWeight: 800,
+                        color: 'rgba(26,26,26,0.72)',
+                        letterSpacing: '0.08em',
+                    }}
+                >
+                    SPENT {formatCurrency(total)} · {players.length} SOLD
+                </div>
+            </div>
+        </div>
+    );
 }
 
 function CenterStrip({
-  tournament,
-  topTeam,
-  bottomTeam,
-  topTotal,
-  bottomTotal,
-  visible,
+    topBlock,
+    bottomBlock,
+    tournamentName,
+    pairIndex,
+    pairCount,
+    playerPage,
+    maxPages,
+    dualRowMode,
+    animPhase,
 }: {
-  tournament: Tournament | null;
-  topTeam: Team | null;
-  bottomTeam: Team | null;
-  topTotal: number;
-  bottomTotal: number;
-  visible: boolean;
+    topBlock: TeamBlock | null;
+    bottomBlock: TeamBlock | null;
+    tournamentName: string;
+    pairIndex: number;
+    pairCount: number;
+    playerPage: number;
+    maxPages: number;
+    dualRowMode?: boolean;
+    animPhase: AnimPhase;
 }) {
-  const top = teamLabel(topTeam);
-  const bottom = teamLabel(bottomTeam);
+    return (
+        <div
+            className="t3-twi-anim"
+            style={{
+                height: CENTER_H,
+                flexShrink: 0,
+                background: `linear-gradient(90deg, ${CLR_GOLD} 0%, ${CLR_GOLD_LIGHT} 50%, ${CLR_GOLD} 100%)`,
+                display: 'grid',
+                gridTemplateColumns: '1fr auto 1fr',
+                alignItems: 'center',
+                padding: '0 40px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.35)',
+                position: 'relative',
+                ...centerAnimation(animPhase),
+            }}
+        >
+            <TeamCenterBlock block={topBlock} align="left" />
 
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        left: 0,
-        top: 458,
-        width: '100%',
-        height: 162,
-        display: 'grid',
-        gridTemplateColumns: '1fr 190px 1fr',
-        alignItems: 'center',
-        background: 'linear-gradient(90deg, rgba(185,170,98,0.92), rgba(235,235,235,0.98), rgba(185,170,98,0.92))',
-        boxShadow: '0 0 44px rgba(0,0,0,0.42)',
-        transformOrigin: '50% 50%',
-        animation: visible ? 't3LineupCenterIn 420ms 160ms cubic-bezier(0.22,1,0.36,1) both' : undefined,
-        overflow: 'hidden',
-      }}
-    >
-      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-        <div style={{ position: 'absolute', top: 0, bottom: 0, width: '38%', background: 'linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.42) 50%, transparent 80%)', animation: 't3LineupShine 1.1s 0.25s cubic-bezier(0.4,0,0.6,1) forwards' }} />
-      </div>
+            <div style={{ textAlign: 'center', padding: '0 24px' }}>
+                <div
+                    style={{
+                        fontSize: 52,
+                        fontWeight: 900,
+                        color: CLR_DARK,
+                        letterSpacing: '0.08em',
+                        lineHeight: 1,
+                        textShadow: '0 1px 0 rgba(255,255,255,0.35)',
+                    }}
+                >
+                    {dualRowMode ? 'LINEUP' : 'VS'}
+                </div>
+                <div
+                    style={{
+                        marginTop: 6,
+                        fontSize: 13,
+                        fontWeight: 800,
+                        color: 'rgba(26,26,26,0.65)',
+                        letterSpacing: '0.16em',
+                        textTransform: 'uppercase',
+                        maxWidth: 280,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                    }}
+                >
+                    {tournamentName}
+                </div>
+                {(pairCount > 1 || maxPages > 1) && (
+                    <div
+                        style={{
+                            marginTop: 8,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 8,
+                        }}
+                    >
+                        {pairCount > 1 &&
+                            Array.from({ length: pairCount }).map((_, i) => (
+                                <div
+                                    key={`pair-${i}`}
+                                    style={{
+                                        width: i === pairIndex ? 18 : 8,
+                                        height: 8,
+                                        borderRadius: 4,
+                                        background: i === pairIndex ? CLR_DARK : 'rgba(26,26,26,0.35)',
+                                        transition: 'width 0.3s ease, background 0.3s ease',
+                                    }}
+                                />
+                            ))}
+                        {pairCount > 1 && maxPages > 1 && (
+                            <span style={{ color: 'rgba(26,26,26,0.4)', fontSize: 10 }}>|</span>
+                        )}
+                        {maxPages > 1 &&
+                            Array.from({ length: maxPages }).map((_, i) => (
+                                <div
+                                    key={`page-${i}`}
+                                    style={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: '50%',
+                                        background: i === playerPage ? CLR_DARK : 'rgba(26,26,26,0.35)',
+                                        transition: 'background 0.3s ease',
+                                    }}
+                                />
+                            ))}
+                    </div>
+                )}
+            </div>
 
-      <TeamNameBlock label={top} total={topTotal} align="right" />
-      <div style={{ textAlign: 'center', color: DARK }}>
-        <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: 4, textTransform: 'uppercase', opacity: 0.78 }}>
-          {tournament?.name ?? 'AUCTION'}
+            <TeamCenterBlock block={bottomBlock} align="right" dualRowContinuation={dualRowMode} />
         </div>
-        <div style={{ fontSize: 58, fontWeight: 900, lineHeight: 0.95, letterSpacing: 1 }}>VS</div>
-        <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase', opacity: 0.72 }}>TEAM IMAGERY</div>
-      </div>
-      <TeamNameBlock label={bottom} total={bottomTotal} align="left" />
-    </div>
-  );
+    );
 }
 
-function TeamNameBlock({ label, total, align }: { label: { top: string; bottom: string }; total: number; align: 'left' | 'right' }) {
-  return (
-    <div style={{ padding: align === 'right' ? '0 34px 0 0' : '0 0 0 34px', textAlign: align, color: DARK, minWidth: 0 }}>
-      <div style={{ fontSize: 30, fontWeight: 500, lineHeight: 1.05, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label.top}</div>
-      <div style={{ fontSize: 48, fontWeight: 900, lineHeight: 0.95, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label.bottom}</div>
-      <div style={{ marginTop: 8, fontSize: 13, fontWeight: 900, letterSpacing: 2, opacity: 0.70 }}>SPENT {formatMoney(total)}</div>
-    </div>
-  );
-}
+export default function TeamWiseImageT3({ teams, players, tournament, teamId, isExiting }: TeamWiseImageT3Props) {
+    const blocks = useMemo(() => buildAllTeamBlocks(teams, players, teamId), [teams, players, teamId]);
+    const pairs = useMemo(() => buildPairs(blocks), [blocks]);
 
-export default TeamWiseImageT3;
+    const [pairIndex, setPairIndex] = useState(0);
+    const [playerPage, setPlayerPage] = useState(0);
+    const [animPhase, setAnimPhase] = useState<AnimPhase>('entering');
+
+    const safePairIndex = pairs.length > 0 ? pairIndex % pairs.length : 0;
+    const [topBlock, bottomBlock] = pairs[safePairIndex] ?? [null, null];
+    const maxPages = maxPlayerPages(topBlock, bottomBlock);
+
+    useEffect(() => {
+        setPairIndex(0);
+        setPlayerPage(0);
+        setAnimPhase('entering');
+        const t = window.setTimeout(() => setAnimPhase('visible'), ENTER_MS + 350);
+        return () => window.clearTimeout(t);
+    }, [teamId, blocks.length]);
+
+    useEffect(() => {
+        if (isExiting) setAnimPhase('exiting');
+    }, [isExiting]);
+
+    const paginationRef = useRef({ pairCount: pairs.length, maxPages, isExiting: Boolean(isExiting) });
+    paginationRef.current = { pairCount: pairs.length, maxPages, isExiting: Boolean(isExiting) };
+
+    useEffect(() => {
+        if (pairs.length === 0) return;
+
+        let cancelled = false;
+        let timeoutId: number | undefined;
+
+        const advanceSlide = () => {
+            if (cancelled || paginationRef.current.isExiting) return;
+            setAnimPhase('exiting');
+            window.setTimeout(() => {
+                if (cancelled || paginationRef.current.isExiting) return;
+                setPlayerPage(prev => {
+                    const { maxPages: pages, pairCount } = paginationRef.current;
+                    if (prev + 1 < pages) return prev + 1;
+                    if (pairCount > 1) {
+                        setPairIndex(pi => (pi + 1) % pairCount);
+                    }
+                    return 0;
+                });
+                setAnimPhase('entering');
+                window.setTimeout(() => {
+                    if (cancelled) return;
+                    setAnimPhase('visible');
+                    scheduleNext();
+                }, ENTER_MS + 350);
+            }, EXIT_MS);
+        };
+
+        const scheduleNext = () => {
+            if (cancelled || paginationRef.current.isExiting) return;
+            const { pairCount, maxPages: pages } = paginationRef.current;
+            if (pairCount <= 1 && pages <= 1) return;
+
+            timeoutId = window.setTimeout(advanceSlide, PAGE_MS);
+        };
+
+        const startDelay = window.setTimeout(() => {
+            if (!cancelled && !paginationRef.current.isExiting) scheduleNext();
+        }, ENTER_MS + 350);
+
+        return () => {
+            cancelled = true;
+            window.clearTimeout(startDelay);
+            if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+        };
+    }, [teamId, blocks.length, isExiting]);
+
+    if (blocks.length === 0) {
+        return (
+            <div
+                style={{
+                    width: CANVAS_W,
+                    height: CANVAS_H,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'transparent',
+                    color: CLR_MUTED,
+                    fontSize: 28,
+                    fontWeight: 700,
+                    letterSpacing: '0.12em',
+                }}
+            >
+                NO SOLD PLAYERS YET
+            </div>
+        );
+    }
+
+    const topPages = isDualRowMode(topBlock, bottomBlock) && topBlock
+        ? maxPages
+        : topBlock ? playerPages(topBlock.players.length) : 1;
+    const bottomPages = isDualRowMode(topBlock, bottomBlock) && topBlock
+        ? maxPages
+        : bottomBlock ? playerPages(bottomBlock.players.length) : 1;
+
+    const topCards = formationCards(topBlock, bottomBlock, 'top', playerPage);
+    const bottomCards = formationCards(topBlock, bottomBlock, 'bottom', playerPage);
+    const topStartIdx = formationStartIndex(topBlock, bottomBlock, 'top', playerPage);
+    const bottomStartIdx = formationStartIndex(topBlock, bottomBlock, 'bottom', playerPage);
+    const bottomDisplayBlock = isDualRowMode(topBlock, bottomBlock) ? topBlock : bottomBlock;
+    const dualRowMode = isDualRowMode(topBlock, bottomBlock);
+
+    return (
+        <>
+            <style>{CSS}</style>
+            <div
+                className="t3-twi-anim"
+                style={{
+                    width: CANVAS_W,
+                    height: CANVAS_H,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    boxSizing: 'border-box',
+                    paddingTop: TOP_PAD,
+                    paddingBottom: TICKER_CLEARANCE,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 100%)',
+                    fontFamily: 'system-ui, -apple-system, sans-serif',
+                    animation: animPhase === 'entering' ? `t3TwiRootIn ${ENTER_MS}ms ease both` : undefined,
+                }}
+            >
+            <FormationBand
+                block={topBlock}
+                cards={topCards}
+                startIdx={topStartIdx}
+                align="top"
+                playerPage={playerPage}
+                totalPages={topPages}
+                animPhase={animPhase}
+            />
+
+            <CenterStrip
+                topBlock={topBlock}
+                bottomBlock={dualRowMode ? topBlock : bottomBlock}
+                tournamentName={tournament?.name ?? 'AUCTION'}
+                pairIndex={safePairIndex}
+                pairCount={pairs.length}
+                playerPage={playerPage}
+                maxPages={maxPages}
+                dualRowMode={dualRowMode}
+                animPhase={animPhase}
+            />
+
+            <FormationBand
+                block={bottomDisplayBlock}
+                cards={bottomCards}
+                startIdx={bottomStartIdx}
+                align="bottom"
+                playerPage={playerPage}
+                totalPages={bottomPages}
+                animPhase={animPhase}
+            />
+            </div>
+        </>
+    );
+}

@@ -22,7 +22,7 @@ export default function AuctionPageClient({ initialData }: AuctionPageClientProp
 
   return (
     <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
-      <div className="px-6 pt-4 pb-2">
+      <div className="pt-2 pb-2 min-w-0">
         <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Auction</h1>
       </div>
       <AuctionControlPanel initialData={initialData || undefined} stats={{ totalTeams, totalPlayers, soldPlayers }} />

@@ -417,17 +417,17 @@ const TickerT3Shared: React.FC<Props> = ({
           />
         </div>
 
-        {/* Section 4: scrolling content */}
+        {/* Section 4: scrolling content (or centered custom message) */}
         <div
           className="t3-ticker-content-zone"
           style={{
             position: 'absolute',
-            left: TITLE_PANEL_WIDTH,
+            left: customMode ? 0 : TITLE_PANEL_WIDTH,
             top: 0,
             right: 0,
             height: TICKER_T3_HEIGHT,
             overflow: 'hidden',
-            zIndex: 2,
+            zIndex: customMode ? 4 : 2,
             willChange: 'transform, opacity',
           }}
         >
@@ -436,6 +436,7 @@ const TickerT3Shared: React.FC<Props> = ({
               style={{
                 display: 'flex',
                 flexDirection: 'column',
+                width: '100%',
                 height: TICKER_T3_HEIGHT * 2,
                 transform: sliding ? `translateY(-${TICKER_T3_HEIGHT}px)` : 'translateY(0)',
                 transition: sliding ? 'transform 0.45s cubic-bezier(0.4,0,0.2,1)' : 'none',
@@ -445,12 +446,19 @@ const TickerT3Shared: React.FC<Props> = ({
                 <div
                   key={offset}
                   style={{
+                    width: '100%',
                     height: TICKER_T3_HEIGHT,
                     display: 'flex',
                     alignItems: 'center',
-                    paddingLeft: CONTENT_PADDING_LEFT,
+                    justifyContent: 'center',
+                    padding: `0 calc(${TITLE_PANEL_WIDTH} + 20px)`,
+                    boxSizing: 'border-box',
                     ...tickerTextStyle,
+                    fontWeight: 600,
+                    textAlign: 'center',
                     whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
                   }}
                 >
                   {lines[(lineIndex + offset) % (lines.length || 1)] ?? ''}

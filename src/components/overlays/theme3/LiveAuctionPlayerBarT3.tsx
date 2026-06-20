@@ -2,14 +2,13 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { AuctionState, Player, Team, Tournament } from '@/types';
-import { getClassConfig } from '@/lib/playerClassUtils';
-import { PLAYER_BAR_T3_HEIGHT, PLAYER_BAR_T3_WIDTH, getPlayerBarBottom } from './theme3Layout';
+import { PLAYER_BAR_T3_HEIGHT, PLAYER_BAR_T3_WIDTH, PLAYER_BAR_T3_TOP_RAIL_HEIGHT, getPlayerBarBottom } from './theme3Layout';
+import { buildPlayerCardLoopItems, PlayerCardLoopSection } from './playerCardLoopItems';
 import { PlayerPhotoSection, PlayerIdentitySection } from './PlayerCardT3';
 import CurrentBidPanelT3, { type BidPanelPhase } from './CurrentBidT3';
-import { SoldBarOverlayT3, UnsoldBarOverlayT3 } from './SoldMessageT3';
+import { UnsoldBarOverlayT3 } from './SoldMessageT3';
+import { SoldDetailsSectionT3 } from './SoldDetailsSectionT3';
 import { PlayerBarBackgroundT3 } from './PlayerBarBackgroundT3';
-
-const DISPLAY_FONT = 'var(--t3-font-display, "Saira Extra Condensed", sans-serif)';
 
 type BarPhase =
   | 'entering'
@@ -18,11 +17,6 @@ type BarPhase =
   | 'soldReveal'
   | 'unsoldReveal'
   | 'exiting';
-
-interface LoopItem {
-  label: string;
-  color?: string;
-}
 
 interface LiveAuctionPlayerBarT3Props {
   currentPlayer: Player;
@@ -35,108 +29,8 @@ interface LiveAuctionPlayerBarT3Props {
 
 const ENTER_MS = 480;
 const EXIT_MS = 400;
-const SOLD_HOLD_MS = 2800;
+const SOLD_HOLD_MS = 5000;
 const UNSOLD_HOLD_MS = 2500;
-const LOOP_INTERVAL_MS = 4000;
-const LOOP_FADE_MS = 300;
-
-function buildLoopItems(player: Player, tournament: Tournament | null): LoopItem[] {
-  const items: LoopItem[] = [];
-
-  if (player.playerClass) {
-    const cfg = getClassConfig(tournament, player.playerClass);
-    items.push({
-      label: `CLASS · ${player.playerClass.toUpperCase()}`,
-      color: cfg?.color,
-    });
-  }
-  if (player.position) {
-    items.push({ label: `POSITION · ${player.position.toUpperCase()}` });
-  }
-
-  const statFields = tournament?.playerProfileFields?.statFields ?? [];
-  for (const sf of statFields.slice(0, 2)) {
-    const val = player.stats?.[sf.key];
-    if (val != null && String(val).trim() !== '') {
-      items.push({ label: `${sf.label.toUpperCase()} · ${String(val).toUpperCase()}` });
-    }
-  }
-
-  if (items.length === 0) {
-    items.push({
-      label: tournament?.name?.toUpperCase() ?? 'LIVE AUCTION',
-    });
-  }
-
-  return items;
-}
-
-function DetailsLoopSection({
-  items,
-  active,
-  reducedMotion,
-}: {
-  items: LoopItem[];
-  active: boolean;
-  reducedMotion: boolean;
-}) {
-  const [index, setIndex] = useState(0);
-  const [fading, setFading] = useState(false);
-
-  useEffect(() => {
-    setIndex(0);
-  }, [items]);
-
-  useEffect(() => {
-    if (!active || items.length <= 1 || reducedMotion) return;
-
-    const interval = setInterval(() => {
-      setFading(true);
-      setTimeout(() => {
-        setIndex(i => (i + 1) % items.length);
-        setFading(false);
-      }, LOOP_FADE_MS);
-    }, LOOP_INTERVAL_MS);
-
-    return () => clearInterval(interval);
-  }, [active, items.length, reducedMotion]);
-
-  const item = items[index] ?? items[0];
-
-  return (
-    <div
-      style={{
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '0 24px',
-        minWidth: 0,
-        overflow: 'hidden',
-      }}
-    >
-      <span
-        style={{
-          fontFamily: DISPLAY_FONT,
-          fontSize: 20,
-          fontWeight: 700,
-          letterSpacing: '0.1em',
-          textTransform: 'uppercase',
-          color: item.color ?? 'var(--t3-bar-text-muted, #e0e0e0)',
-          opacity: fading ? 0 : 1,
-          transition: reducedMotion ? 'none' : `opacity ${LOOP_FADE_MS}ms ease`,
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          maxWidth: '100%',
-          textAlign: 'center',
-        }}
-      >
-        {item.label}
-      </span>
-    </div>
-  );
-}
 
 export function LiveAuctionPlayerBarT3({
   currentPlayer,
@@ -162,7 +56,7 @@ export function LiveAuctionPlayerBarT3({
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const loopItems = useMemo(
-    () => buildLoopItems(currentPlayer, tournament),
+    () => buildPlayerCardLoopItems(currentPlayer, tournament),
     [currentPlayer, tournament],
   );
 
@@ -349,8 +243,8 @@ export function LiveAuctionPlayerBarT3({
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Saira+Extra+Condensed:wght@600;700&display=swap');
         @keyframes t3BidGlow {
-          0%, 100% { box-shadow: inset 0 0 0 1px rgba(237,169,0,0.35), 0 0 8px rgba(237,169,0,0.15); }
-          50%       { box-shadow: inset 0 0 0 2px var(--t3-bar-gold, #eda900), 0 0 22px rgba(237,169,0,0.45); }
+          0%, 100% { box-shadow: inset 0 0 0 1px rgba(var(--t3-accent-rgb, 0,137,140), 0.35), 0 0 8px rgba(var(--t3-accent-rgb, 0,137,140), 0.15); }
+          50%       { box-shadow: inset 0 0 0 2px var(--t3-bar-gold, var(--t3-accent)), 0 0 22px rgba(var(--t3-accent-rgb, 0,137,140), 0.45); }
         }
         @keyframes t3BidPop {
           0%   { transform: scale(1); }
@@ -366,7 +260,7 @@ export function LiveAuctionPlayerBarT3({
           100% { opacity: 0; transform: translateY(-16px); }
         }
         @keyframes t3SoldFlash {
-          0%   { background-color: rgba(237,169,0,0.22); }
+          0%   { background-color: rgba(var(--t3-accent-rgb, 0,137,140), 0.22); }
           100% { background-color: transparent; }
         }
         @keyframes t3SoldCelebration {
@@ -427,6 +321,7 @@ export function LiveAuctionPlayerBarT3({
         }}
       >
         <div
+          className={showSoldOverlay && !reducedMotion ? 't3-sold-flash-bg' : undefined}
           style={{
             position: 'relative',
             display: 'flex',
@@ -439,18 +334,21 @@ export function LiveAuctionPlayerBarT3({
             overflow: 'hidden',
           }}
         >
-          <PlayerBarBackgroundT3 />
+          <PlayerBarBackgroundT3
+            animateSkew={isBidding && loopActive}
+            reducedMotion={reducedMotion}
+          />
 
-          {/* Bid ripple sweep — gold */}
+          {/* Bid ripple sweep — accent */}
           {ripple && !reducedMotion && (
             <div
               style={{
                 position: 'absolute',
-                top: 4,
+                top: PLAYER_BAR_T3_TOP_RAIL_HEIGHT,
                 left: 0,
                 right: 0,
                 height: 2,
-                background: 'var(--t3-bar-gold, #eda900)',
+                background: 'var(--t3-bar-gold, var(--t3-accent))',
                 animation: 't3BarRipple 0.4s ease-out forwards',
                 zIndex: 6,
                 pointerEvents: 'none',
@@ -467,7 +365,7 @@ export function LiveAuctionPlayerBarT3({
               flexShrink: 0,
               height: '100%',
               position: 'relative',
-              zIndex: 2,
+              zIndex: showSoldOverlay ? 1 : 2,
             }}
           >
             <PlayerPhotoSection
@@ -486,23 +384,56 @@ export function LiveAuctionPlayerBarT3({
               padding: '0 16px',
               flexShrink: 0,
               position: 'relative',
-              zIndex: 2,
+              zIndex: showSoldOverlay ? 1 : 2,
             }}
           >
             <PlayerIdentitySection player={currentPlayer} tournament={tournament} />
           </div>
 
           {/* Details loop */}
-          <div style={{ position: 'relative', zIndex: 2, flex: 1, minWidth: 0, display: 'flex' }}>
-            <DetailsLoopSection
-              items={loopItems}
-              active={loopActive}
-              reducedMotion={reducedMotion}
-            />
+          <div
+            style={{
+              position: 'relative',
+              zIndex: showSoldOverlay ? 1 : 2,
+              flex: 1,
+              minWidth: 0,
+              height: '100%',
+              display: 'flex',
+            }}
+          >
+            {!showSoldOverlay && (
+              <div
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 24px',
+                  minWidth: 0,
+                  overflow: 'hidden',
+                }}
+              >
+                <PlayerCardLoopSection
+                  items={loopItems}
+                  active={loopActive}
+                  reducedMotion={reducedMotion}
+                />
+              </div>
+            )}
           </div>
 
+          {showSoldOverlay && (
+            <SoldDetailsSectionT3
+              reducedMotion={reducedMotion}
+              barHeight={PLAYER_BAR_T3_HEIGHT}
+            />
+          )}
+
           {/* Bid panel */}
-          <div className={isEntering && !reducedMotion ? 't3-bid-enter' : ''} style={{ position: 'relative', zIndex: 2 }}>
+          <div
+            className={isEntering && !reducedMotion ? 't3-bid-enter' : ''}
+            style={{ position: 'relative', zIndex: showSoldOverlay ? 8 : 2 }}
+          >
             <CurrentBidPanelT3
               auctionState={auctionState}
               teams={teams}
@@ -514,16 +445,9 @@ export function LiveAuctionPlayerBarT3({
               phase={bidPanelPhase}
               soldPrice={soldPrice}
               soldTeam={soldTeam}
+              reducedMotion={reducedMotion}
             />
           </div>
-
-          {showSoldOverlay && soldTeam && (
-            <SoldBarOverlayT3
-              player={currentPlayer}
-              team={soldTeam}
-              finalPrice={soldPrice}
-            />
-          )}
 
           {showUnsoldOverlay && <UnsoldBarOverlayT3 />}
         </div>
