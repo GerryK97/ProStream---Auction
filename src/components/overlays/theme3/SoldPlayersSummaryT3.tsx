@@ -161,9 +161,12 @@ const SoldPlayersSummaryT3: React.FC<Props> = ({ players, teams, tournament, isE
                 }}
               >
                 <div style={{ color: MUTED, fontSize: 28, fontWeight: 400 }}>{globalIndex}</div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 27, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'capitalize' }}>{p.name}</div>
-                  {meta && <div style={{ marginTop: 4, color: 'rgba(255,255,255,0.62)', fontSize: 13, fontWeight: 500, letterSpacing: 1, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta}</div>}
+                <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <PlayerThumb player={p} />
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: 27, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'capitalize' }}>{p.name}</div>
+                    {meta && <div style={{ marginTop: 4, color: 'rgba(255,255,255,0.62)', fontSize: 13, fontWeight: 500, letterSpacing: 1, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta}</div>}
+                  </div>
                 </div>
                 <div style={{ color: p.playerClass ? GOLD : MUTED, fontSize: 22, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.playerClass || '—'}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
@@ -195,6 +198,44 @@ const SoldPlayersSummaryT3: React.FC<Props> = ({ players, teams, tournament, isE
     </>
   );
 };
+
+function PlayerThumb({ player }: { player: Player }) {
+  const src = player.photoURL?.trim() || player.secondaryImageURL?.trim() || '';
+  const initials = player.name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map(part => part[0])
+    .join('')
+    .toUpperCase();
+
+  return (
+    <div
+      style={{
+        width: 48,
+        height: 48,
+        borderRadius: 8,
+        flexShrink: 0,
+        border: `2px solid ${GOLD}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        backgroundColor: 'rgba(255,255,255,0.08)',
+      }}
+    >
+      {src ? (
+        <img
+          src={src}
+          alt=""
+          referrerPolicy="no-referrer"
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+      ) : (
+        <span style={{ fontSize: 13, fontWeight: 700, color: GOLD }}>{initials || '?'}</span>
+      )}
+    </div>
+  );
+}
 
 function Header({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'center' | 'right' }) {
   return <div style={{ textAlign: align, fontSize: 24, fontWeight: 500, color: WHITE }}>{children}</div>;
