@@ -7,6 +7,9 @@ import LiveAuctionPlayerBarT3 from './LiveAuctionPlayerBarT3';
 import TeamWiseImageryT3 from './TeamWiseImageryT3';
 import SoldPlayersSummaryT3 from './SoldPlayersSummaryT3';
 import Top10SummaryT3 from './Top10SummaryT3';
+import RestingTimeT3 from './RestingTimeT3';
+import TeamSummaryT3 from './TeamSummaryT3';
+import TeamWiseSummaryT3 from './TeamWiseSummaryT3';
 import type { Theme3ContentProps } from './types';
 import { isTheme3TeamImageryMode } from './types';
 import type { OverlaySettings } from '../OverlayWrapper';
@@ -98,7 +101,61 @@ const CustomT3Content: React.FC<Theme3ContentProps> = ({
         </div>
       )}
 
-      {/* ── Team Imagery standings panel ── */}
+      {/* ── Team Summary standings panel ── */}
+      {activeMode === 'team-summary' && (
+        <div
+          style={{
+            position: 'absolute', inset: 0, zIndex: 20,
+            opacity: summaryExiting ? 0 : 1,
+            transform: summaryExiting ? 'scale(0.97)' : 'scale(1)',
+            transition: 'opacity 0.5s ease, transform 0.5s ease',
+          }}
+        >
+          <TeamSummaryT3
+            teams={teams}
+            players={players}
+            tournament={tournament}
+            teamId={overlaySettings.teamWiseTeamId ?? ''}
+            isExiting={summaryExiting}
+          />
+        </div>
+      )}
+
+      {/* ── Team-wise roster panel (one team at a time) ── */}
+      {activeMode === 'team-wise-summary' && (
+        <div
+          style={{
+            position: 'absolute', inset: 0, zIndex: 20,
+            opacity: summaryExiting ? 0 : 1,
+            transform: summaryExiting ? 'scale(0.97)' : 'scale(1)',
+            transition: 'opacity 0.5s ease, transform 0.5s ease',
+          }}
+        >
+          <TeamWiseSummaryT3
+            players={players}
+            teams={teams}
+            tournament={tournament}
+            teamId={overlaySettings.teamWiseTeamId ?? ''}
+            isExiting={summaryExiting}
+          />
+        </div>
+      )}
+
+      {/* ── Resting Time lower-third ── */}
+      {activeMode === 'resting' && (
+        <div
+          style={{
+            position: 'absolute', inset: 0, zIndex: 20,
+            opacity: summaryExiting ? 0 : 1,
+            transform: summaryExiting ? 'scale(0.97)' : 'scale(1)',
+            transition: 'opacity 0.5s ease, transform 0.5s ease',
+          }}
+        >
+          <RestingTimeT3 tournament={tournament} />
+        </div>
+      )}
+
+      {/* ── Team Imagery lineup panel ── */}
       {isTheme3TeamImageryMode(activeMode) && (
         <div
           style={{
