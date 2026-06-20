@@ -413,7 +413,7 @@ export function usePusherAuction(
     return { headers, tkQ, tk };
   }, [overlayToken, overlayType]);
 
-  // Fetch full auction data (tournament + state + players + teams in parallel)
+  // Fetch full auction data via the bootstrap endpoint (single HTTP + Neon PG round-trip)
   const fetchInitialData = useCallback(async () => {
     if (!tournamentId) return;
     // Use server-bootstrapped data only when it matches the currently requested tournament.
@@ -423,32 +423,22 @@ export function usePusherAuction(
 
     try {
       dlog(`[usePusherAuction] Fetching data for tournament: ${tournamentId}`);
-      const { headers, tkQ, tk } = buildHeaders();
+      const { headers, tk } = buildHeaders();
       const startTime = Date.now();
 
-      const [tournamentRes, stateRes, playersRes, teamsRes] = await Promise.all([
-        fetch(`/api/tournaments/${tournamentId}${tkQ}`, { headers }),
-        fetch(`/api/auction/state/${tournamentId}`, { headers }),
-        fetch(`/api/players?tournamentId=${tournamentId}${tk}`, { headers }),
-        fetch(`/api/teams?tournamentId=${tournamentId}${tk}`, { headers }),
-      ]);
+      // Single request → single Neon PG auth call (vs. 4× before)
+      const res = await fetch(`/api/auction/bootstrap?tournamentId=${tournamentId}${tk}`, { headers });
+      const data = res.ok ? await res.json() : null;
 
-      const [tournamentData, stateData, playersData, teamsData] = await Promise.all([
-        tournamentRes.ok ? tournamentRes.json() : null,
-        stateRes.ok ? stateRes.json() : null,
-        playersRes.ok ? playersRes.json() : null,
-        teamsRes.ok ? teamsRes.json() : null,
-      ]);
-
-      dlog(`[usePusherAuction] Data fetch completed in ${Date.now() - startTime}ms`);
+      dlog(`[usePusherAuction] Bootstrap fetch completed in ${Date.now() - startTime}ms`);
 
       dispatch({
         type: 'SET_INITIAL_DATA',
         data: {
-          tournament: tournamentData || null,
-          auctionState: stateData || EMPTY_AUCTION_STATE,
-          players: playersData || [],
-          teams: teamsData || [],
+          tournament: data?.tournament || null,
+          auctionState: data?.auctionState || EMPTY_AUCTION_STATE,
+          players: data?.players || [],
+          teams: data?.teams || [],
         },
       });
     } catch (err) {
@@ -460,28 +450,18 @@ export function usePusherAuction(
   const refreshData = useCallback(async () => {
     if (!tournamentId) return;
     try {
-      const { headers, tkQ, tk } = buildHeaders();
-      const [tournamentRes, stateRes, playersRes, teamsRes] = await Promise.all([
-        fetch(`/api/tournaments/${tournamentId}${tkQ}`, { headers }),
-        fetch(`/api/auction/state/${tournamentId}`, { headers }),
-        fetch(`/api/players?tournamentId=${tournamentId}${tk}`, { headers }),
-        fetch(`/api/teams?tournamentId=${tournamentId}${tk}`, { headers }),
-      ]);
-
-      const [tournamentData, stateData, playersData, teamsData] = await Promise.all([
-        tournamentRes.ok ? tournamentRes.json() : null,
-        stateRes.ok ? stateRes.json() : null,
-        playersRes.ok ? playersRes.json() : null,
-        teamsRes.ok ? teamsRes.json() : null,
-      ]);
+      const { headers, tk } = buildHeaders();
+      // Single request → single Neon PG auth call
+      const res = await fetch(`/api/auction/bootstrap?tournamentId=${tournamentId}${tk}`, { headers });
+      const data = res.ok ? await res.json() : null;
 
       dispatch({
         type: 'SET_INITIAL_DATA',
         data: {
-          tournament: tournamentData || null,
-          auctionState: stateData || EMPTY_AUCTION_STATE,
-          players: playersData || [],
-          teams: teamsData || [],
+          tournament: data?.tournament || null,
+          auctionState: data?.auctionState || EMPTY_AUCTION_STATE,
+          players: data?.players || [],
+          teams: data?.teams || [],
         },
       });
     } catch (err) {
@@ -713,16 +693,25 @@ export function usePusherAuction(
   // can delay WebSocket ping/pong responses enough to cause Pusher disconnects.
   // When the tab becomes visible again, reconnect Pusher if needed and re-fetch
   // the current auction state to catch any events missed while backgrounded.
+  // Throttled to avoid flooding Neon PG on every tab-focus event — only re-fetches
+  // if Pusher was disconnected OR state is >30 s stale.
   useEffect(() => {
     if (!tournamentId || !connectTournamentChannel) return;
 
+    const lastRefreshRef = { current: Date.now() };
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        dlog('[usePusherAuction] Tab visible — checking Pusher connection + re-syncing state');
-        // Re-fetch immediately to sync any missed events regardless of WS state
-        refreshData().catch(() => {});
-        // Also reconnect Pusher if it dropped
-        if (pusherRef.current && pusherRef.current.connection.state !== 'connected') {
+        const pusherState = pusherRef.current?.connection.state;
+        const wasDisconnected = pusherState !== 'connected';
+        const stale = Date.now() - lastRefreshRef.current > 30_000;
+
+        if (wasDisconnected || stale) {
+          dlog('[usePusherAuction] Tab visible — re-syncing state (disconnected=' + wasDisconnected + ' stale=' + stale + ')');
+          lastRefreshRef.current = Date.now();
+          refreshData().catch(() => {});
+        }
+        if (wasDisconnected && pusherRef.current) {
           dlog('[usePusherAuction] Pusher disconnected — reconnecting');
           pusherRef.current.connect();
         }

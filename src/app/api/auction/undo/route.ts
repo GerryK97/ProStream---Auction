@@ -19,22 +19,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find the most recently acted-upon sold player
-    const lastSoldPlayer = await PlayerModel.findOne({
-      tournamentId,
-      isSold: true,
-    })
-      .sort({ updatedAt: -1 })
-      .lean();
-
-    // Find the most recently acted-upon unsold player
-    const lastUnsoldPlayer = await PlayerModel.findOne({
-      tournamentId,
-      isUnsold: true,
-      isSold: false,
-    })
-      .sort({ updatedAt: -1 })
-      .lean();
+    // Find the most recently acted-upon sold/unsold players — parallel (no dependency)
+    const [lastSoldPlayer, lastUnsoldPlayer] = await Promise.all([
+      PlayerModel.findOne({ tournamentId, isSold: true }).sort({ updatedAt: -1 }).lean(),
+      PlayerModel.findOne({ tournamentId, isUnsold: true, isSold: false }).sort({ updatedAt: -1 }).lean(),
+    ]);
 
     if (!lastSoldPlayer && !lastUnsoldPlayer) {
       return NextResponse.json(
@@ -89,10 +78,14 @@ export async function POST(request: NextRequest) {
 
       // Derive correct balance from source of truth — idempotent, immune to $inc drift.
       // The player is already un-sold above, so this sum excludes the refunded player.
-      const teamDoc = await TeamModel.findById(winningTeamId).lean();
-      const totalSpentAgg = await PlayerModel.aggregate([
-        { $match: { tournamentId, isSold: true, winningTeamId: String(winningTeamId) } },
-        { $group: { _id: null, total: { $sum: '$finalPrice' } } },
+      // Fetch team doc + recalculated spend + auction state all in parallel.
+      const [teamDoc, totalSpentAgg, auctionState] = await Promise.all([
+        TeamModel.findById(winningTeamId).lean(),
+        PlayerModel.aggregate([
+          { $match: { tournamentId, isSold: true, winningTeamId: String(winningTeamId) } },
+          { $group: { _id: null, total: { $sum: '$finalPrice' } } },
+        ]),
+        AuctionStateModel.findOne({ tournamentId }).lean(),
       ]);
       const totalSpent = totalSpentAgg[0]?.total ?? 0;
       const newBalance = (teamDoc as any).initialBudget - totalSpent;
@@ -108,11 +101,11 @@ export async function POST(request: NextRequest) {
       ).lean();
 
       // Get auction state
-      let auctionState = await AuctionStateModel.findOne({ tournamentId }).lean();
+      let currentAuctionState = auctionState;
 
       // If this was the current player being auctioned, reset the auction state
-      if (auctionState && (auctionState as any).currentPlayerId?.toString() === playerId.toString()) {
-        auctionState = await AuctionStateModel.findOneAndUpdate(
+      if (currentAuctionState && (currentAuctionState as any).currentPlayerId?.toString() === playerId.toString()) {
+        currentAuctionState = await AuctionStateModel.findOneAndUpdate(
           { tournamentId },
           {
             $set: {
@@ -131,7 +124,7 @@ export async function POST(request: NextRequest) {
         restoredPlayer: serializePlayer(restoredPlayer as any) as any,
         updatedTeam: updatedTeam ? serializeTeam(updatedTeam as any) as any : null,
         refundedAmount: finalPrice,
-        auctionState: auctionState as any,
+        auctionState: currentAuctionState as any,
         message: 'Last sale undone successfully',
       }).catch((err) => console.error('[undo] Pusher trigger failed:', err));
 

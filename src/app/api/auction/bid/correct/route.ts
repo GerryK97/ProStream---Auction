@@ -21,7 +21,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const auctionState = await AuctionStateModel.findOne({ tournamentId });
+    const [auctionState, tournament] = await Promise.all([
+      AuctionStateModel.findOne({ tournamentId }),
+      TournamentModel.findOne({ _id: tournamentId }).lean(),
+    ]);
     if (!auctionState) {
       return NextResponse.json(
         { error: 'Auction state not found for this tournament' },
@@ -29,7 +32,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const tournament = await TournamentModel.findOne({ _id: tournamentId }).lean();
     if (!tournament || (tournament as any).status !== 'Live') {
       return NextResponse.json({ error: 'Auction is not live' }, { status: 400 });
     }
@@ -76,14 +78,14 @@ export async function POST(request: NextRequest) {
       history: eventHistory,
     };
 
-    await triggerBidPlaced(tournamentId, {
+    triggerBidPlaced(tournamentId, {
       auctionState: eventAuctionState as any,
       currentPlayer: serializePlayer(player as any) as any,
       winningTeam: null,
       currentBid: amount,
       previousBid,
       message: `Bid corrected to: ${amount.toLocaleString()}`,
-    });
+    }).catch((err) => console.error('[bid/correct] Pusher trigger failed:', err));
 
     return NextResponse.json(updatedState);
   } catch (error) {

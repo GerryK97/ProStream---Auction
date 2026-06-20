@@ -60,25 +60,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Count total players and sold players
-    const totalPlayers = await PlayerModel.countDocuments({ tournamentId });
-    const soldPlayers = await PlayerModel.countDocuments({
-      tournamentId,
-      isSold: true
-    });
+    // Count total players and sold players — parallel (no dependency)
+    const [totalPlayers, soldPlayers] = await Promise.all([
+      PlayerModel.countDocuments({ tournamentId }),
+      PlayerModel.countDocuments({ tournamentId, isSold: true }),
+    ]);
 
     // Determine status: Completed if all sold, Stopped otherwise
     const newStatus = soldPlayers === totalPlayers ? 'Completed' : 'Stopped';
 
-    // Update tournament status
-    const updatedTournament = await TournamentModel.findByIdAndUpdate(
-      tournamentId,
-      { $set: { status: newStatus } },
-      { new: true }
-    ).lean();
-
-    // Get auction state
-    const auctionState = await AuctionStateModel.findOne({ tournamentId }).lean();
+    // Update tournament status + fetch auction state — parallel (independent)
+    const [updatedTournament, auctionState] = await Promise.all([
+      TournamentModel.findByIdAndUpdate(
+        tournamentId,
+        { $set: { status: newStatus } },
+        { new: true }
+      ).lean(),
+      AuctionStateModel.findOne({ tournamentId }).lean(),
+    ]);
 
     // Trigger Pusher event
     try {

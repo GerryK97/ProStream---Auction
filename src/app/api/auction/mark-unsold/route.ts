@@ -30,35 +30,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Mark that player as explicitly unsold and return the updated document
+    // Mark player unsold + reset auction state in parallel (independent documents)
     // Explicit updatedAt ensures reliable timestamp comparison in the undo route
-    const updatedPlayer = await PlayerModel.findOneAndUpdate(
-      { _id: currentPlayerId },
-      { $set: { isUnsold: true, isSold: false, updatedAt: new Date() } },
-      { new: true }
-    ).lean();
+    const [updatedPlayer, updatedState] = await Promise.all([
+      PlayerModel.findOneAndUpdate(
+        { _id: currentPlayerId },
+        { $set: { isUnsold: true, isSold: false, updatedAt: new Date() } },
+        { new: true }
+      ).lean(),
+      AuctionStateModel.findOneAndUpdate(
+        { tournamentId },
+        {
+          $set: {
+            currentPlayerId: null,
+            currentBid: 0,
+            winningTeamId: null,
+            currentAuctionStatus: 'Pending',
+            history: [],
+          },
+        },
+        { new: true }
+      ).lean(),
+    ]);
 
     if (!updatedPlayer) {
-      return NextResponse.json(
-        { error: 'Player not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Player not found' }, { status: 404 });
     }
-
-    // Reset the auction state
-    const updatedState = await AuctionStateModel.findOneAndUpdate(
-      { tournamentId },
-      {
-        $set: {
-          currentPlayerId: null,
-          currentBid: 0,
-          winningTeamId: null,
-          currentAuctionStatus: 'Pending',
-          history: [],
-        },
-      },
-      { new: true }
-    ).lean();
 
     // Check if the active class is now complete after marking this player unsold
     if (activeClass) {

@@ -60,21 +60,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Non-Admin users can only have one Live tournament at a time.
-    // Auto-stop their other Live tournament (if any) before restarting this one.
-    // Admin users may run multiple tournaments concurrently — do not touch others.
-    if (user.role !== 'Admin') {
-      await TournamentModel.updateMany(
-        { status: 'Live', _id: { $ne: tournamentId }, createdBy: user.userId },
-        { $set: { status: 'Stopped' } }
-      );
-    }
-
-    // Check if there are unsold players
-    const unsoldPlayers = await PlayerModel.countDocuments({
-      tournamentId,
-      isSold: false
-    });
+    // Non-Admin: auto-stop other live tournaments + count unsold players — parallel
+    const [, unsoldPlayers] = await Promise.all([
+      user.role !== 'Admin'
+        ? TournamentModel.updateMany(
+            { status: 'Live', _id: { $ne: tournamentId }, createdBy: user.userId },
+            { $set: { status: 'Stopped' } }
+          )
+        : Promise.resolve(null),
+      PlayerModel.countDocuments({ tournamentId, isSold: false }),
+    ]);
 
     if (unsoldPlayers === 0) {
       return NextResponse.json(
@@ -83,15 +78,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update tournament status to Live
-    const updatedTournament = await TournamentModel.findByIdAndUpdate(
-      tournamentId,
-      { $set: { status: 'Live' } },
-      { new: true }
-    ).lean();
-
-    // Get auction state
-    const auctionState = await AuctionStateModel.findOne({ tournamentId }).lean();
+    // Update tournament to Live + fetch auction state — parallel (independent)
+    const [updatedTournament, auctionState] = await Promise.all([
+      TournamentModel.findByIdAndUpdate(
+        tournamentId,
+        { $set: { status: 'Live' } },
+        { new: true }
+      ).lean(),
+      AuctionStateModel.findOne({ tournamentId }).lean(),
+    ]);
 
     // Trigger Pusher event
     try {

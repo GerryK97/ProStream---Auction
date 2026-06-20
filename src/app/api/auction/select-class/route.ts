@@ -30,8 +30,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate tournament exists and is Live
-    const tournament = await TournamentModel.findById(tournamentId).lean();
+    // Validate tournament exists and is Live, fetch auction state, count available players — all in parallel
+    const [tournament, auctionState, playerCount] = await Promise.all([
+      TournamentModel.findById(tournamentId).lean(),
+      AuctionStateModel.findOne({ tournamentId }),
+      PlayerModel.countDocuments({
+        tournamentId,
+        playerClass: className,
+        isSold: { $ne: true },
+        isUnsold: { $ne: true },
+      }),
+    ]);
+
     if (!tournament) {
       return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
     }
@@ -57,22 +67,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get current auction state
-    const auctionState = await AuctionStateModel.findOne({ tournamentId });
     if (!auctionState) {
       return NextResponse.json(
         { error: 'Auction state not found' },
         { status: 404 }
       );
     }
-
-    // Count available players in this class (player.playerClass stores the name)
-    const playerCount = await PlayerModel.countDocuments({
-      tournamentId,
-      playerClass: className,
-      isSold: { $ne: true },
-      isUnsold: { $ne: true },
-    });
 
     // Validate class completion using real availability.
     // If completedClasses is stale but players are available again (undo/re-auction),

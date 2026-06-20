@@ -110,11 +110,10 @@ export async function POST(request: NextRequest) {
       history: eventHistory,
     };
 
-    // ── Await Pusher for bids — overlay must receive this in real time ──
-    // Web operator already does optimistic UI locally, so the small Pusher
-    // round-trip is acceptable and prevents serverless/local requests from
-    // finishing before the event is actually delivered.
-    await triggerBidPlaced(tournamentId, {
+    // Fire-and-forget Pusher for bids. The operator panel already applies an
+    // optimistic local update, and overlays receive the WebSocket event as soon
+    // as Pusher accepts it. Do not block the bid HTTP response on Pusher REST RTT.
+    triggerBidPlaced(tournamentId, {
       auctionState: eventAuctionState as any,
       currentPlayer: serializePlayer(player as any) as any,
       // Teams are already loaded in clients; auctionState.winningTeamId and
@@ -123,7 +122,7 @@ export async function POST(request: NextRequest) {
       currentBid: amount,
       previousBid,
       message: `New bid placed: ${amount.toLocaleString()}`,
-    });
+    }).catch((err) => console.error('[bid] Pusher trigger failed:', err));
 
     return NextResponse.json(updatedState);
   } catch (error) {
