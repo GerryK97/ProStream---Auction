@@ -4,15 +4,21 @@ import OverlayWrapper from './OverlayWrapper';
 import FullScreen2T2Content from './theme2/FullScreenAltT2Content';
 import FullScreenAltT3Content from './theme3/FullScreenAltT3Content';
 import { FullScreenAltT1Content } from './theme1/FullScreenAltT1Content';
-import { resolveOverlayThemeContent } from '@/lib/overlays/resolveOverlayThemeContent';
+
+// ─── Public export ────────────────────────────────────────────────────────────
 
 export default function FullScreenOverlay2({ tournamentId }: { tournamentId: string }) {
   return (
     <div className="w-screen h-screen overflow-hidden" style={{ background: 'var(--overlay-bg-fullscreen)' }}>
       <OverlayWrapper tournamentId={tournamentId} overlayType="fullscreen2">
-        {(data) =>
-          resolveOverlayThemeContent(
-            data.tournament?.overlayTheme,
+        {(data) => {
+          if (data.tournament?.overlayTheme === 'theme3') {
+            return <FullScreenAltT3Content {...data} />;
+          }
+          if (data.tournament?.overlayTheme === 'theme2') {
+            return <FullScreen2T2Content {...data} />;
+          }
+          return (
             <FullScreenAltT1Content
               soldPlayers={data.soldPlayers}
               teams={data.teams}
@@ -22,11 +28,9 @@ export default function FullScreenOverlay2({ tournamentId }: { tournamentId: str
               auctionState={data.auctionState}
               overlaySettings={data.overlaySettings}
               wheelSpinData={data.wheelSpinData}
-            />,
-            <FullScreen2T2Content {...data} />,
-            <FullScreenAltT3Content {...data} />,
-          )
-        }
+            />
+          );
+        }}
       </OverlayWrapper>
     </div>
   );

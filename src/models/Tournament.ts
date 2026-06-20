@@ -66,6 +66,12 @@ const tournamentSchema = new Schema<Tournament>(
       ],
       default: [],
     },
+    directBidSlabEnabled: { type: Boolean, default: false },
+    directQuickBidsEnabled: { type: Boolean, default: false },
+    directQuickBids: {
+      type: [{ amount: { type: Number, required: true } }],
+      default: [],
+    },
     playerProfileFields: {
       type: {
         showAge:          { type: Boolean, default: false },
@@ -75,6 +81,18 @@ const tournamentSchema = new Schema<Tournament>(
       },
       default: () => ({ showAge: false, showBattingStyle: false, showBowlingStyle: false, statFields: [] }),
     },
+    playerCardTemplates: {
+      type: [
+        {
+          id:       { type: String, required: true },
+          name:     { type: String, required: true },
+          pngUrl:   { type: String, required: true },
+          layoutId: { type: String },
+        },
+      ],
+      default: [],
+    },
+    auctionDate: { type: String },
   },
   {
     timestamps: true,

@@ -7,7 +7,7 @@ import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { imageOptimizers } from '@/lib/imageOptimization';
 import ClassBadge from '@/components/shared/ClassBadge';
 import { getFormattedBasePrice, getClassBasePrice, getMinClassBasePrice } from '@/lib/playerClassUtils';
-import { getBidIncrement, getNextTeamBid } from '@/lib/bidIncrementUtils';
+import { getBidIncrement, getNextTeamBid, getPreviousSlabBid } from '@/lib/bidIncrementUtils';
 import { getAuthHeaders } from '@/lib/api-client';
 import { useTournamentContext } from '@/contexts/TournamentContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -177,8 +177,8 @@ const TeamBiddingPanel: React.FC<{
     onBid: (amount: number, teamId: string) => void;
     isSold: boolean;
     isMobile?: boolean;
-}> = ({ teams, players, tournament, auctionState, currentPlayer, biddingTeamId, setBiddingTeamId, onBid, isSold, isMobile }) => {
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    isInFlight?: boolean;
+}> = ({ teams, players, tournament, auctionState, currentPlayer, biddingTeamId, setBiddingTeamId, onBid, isSold, isMobile, isInFlight = false }) => {
     const { currentBid } = auctionState;
     const basePrice = getClassBasePrice(tournament, currentPlayer ?? null);
     const increments = tournament.bidIncrements ?? [];
@@ -187,7 +187,7 @@ const TeamBiddingPanel: React.FC<{
 
     // Count actual players in squad (sold + iconic) — more accurate than playersPurchased
     const calcMaxBid = (team: Team): number => {
-        if (!tournament || !team.currentBalance) return 0;
+        if (!tournament || team.currentBalance == null) return 0;
         const squadSize = tournament.squadSize;
         const minBase = getMinClassBasePrice(tournament);
         const purchased = players.filter(p => p.isSold && p.winningTeamId === team._id).length;
@@ -217,18 +217,16 @@ const TeamBiddingPanel: React.FC<{
                     const maxBid = calcMaxBid(team);
                     const canAfford = maxBid >= nextBidAmount;
                     const isLeading = biddingTeamId === team._id && currentBid > 0;
-                    const blocked = isSold || isSubmitting || !canAfford;
+                    const blocked = isSold || isInFlight || !canAfford;
 
                     return (
                         <button
                             key={team._id}
                             disabled={blocked}
-                            onClick={async () => {
+                            onClick={() => {
                                 if (blocked) return;
                                 setBiddingTeamId(team._id);
-                                setIsSubmitting(true);
-                                try { await onBid(nextBidAmount, team._id); }
-                                finally { setIsSubmitting(false); }
+                                onBid(nextBidAmount, team._id);
                             }}
                             className={`flex flex-row items-center gap-1.5 rounded-lg transition-all ${isMobile ? 'py-3 px-3' : 'py-2 px-2'}`}
                             style={{
@@ -242,7 +240,7 @@ const TeamBiddingPanel: React.FC<{
                                     : isLeading
                                     ? '2px solid var(--brand-primary)'
                                     : '1.5px solid var(--border-primary)',
-                                opacity: (isSold || isSubmitting) ? 0.55 : 1,
+                                opacity: (isSold || isInFlight) ? 0.55 : 1,
                                 cursor: blocked ? 'not-allowed' : 'pointer',
                             }}
                         >
@@ -285,7 +283,8 @@ export const CurrentAuctionPanel: React.FC<{
     onSpinWheel: () => void;
     isSpinning: boolean;
     isMobile?: boolean;
-}> = ({ currentPlayer, tournament, teams, players, biddingTeamId, setBiddingTeamId, auctionState, onBid, onCorrectBid, onSell, onReset, onMarkUnsold, onSpinWheel, isSpinning, isMobile }) => {
+    isInFlight?: boolean;
+}> = ({ currentPlayer, tournament, teams, players, biddingTeamId, setBiddingTeamId, auctionState, onBid, onCorrectBid, onSell, onReset, onMarkUnsold, onSpinWheel, isSpinning, isMobile, isInFlight = false }) => {
     const [bidAmount, setBidAmount] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -333,7 +332,16 @@ export const CurrentAuctionPanel: React.FC<{
 
     const { currentBid, currentAuctionStatus } = auctionState;
     const isSold = currentAuctionStatus === 'Sold';
-    const bidIncrements = [1000, 5000, 10000, 20000, 25000, 50000];
+    const DEFAULT_QUICK_BIDS = [1000, 5000, 10000, 20000, 25000, 50000];
+    const basePrice = getClassBasePrice(tournament, currentPlayer ?? null);
+    const slabIncrements = tournament.bidIncrements ?? [];
+    const directSlabEnabled = tournament.biddingMode === 'direct' && tournament.directBidSlabEnabled;
+    const nextSlabBid = currentBid > 0 ? currentBid + getBidIncrement(slabIncrements, currentBid) : basePrice;
+    const previousSlabBid = getPreviousSlabBid(slabIncrements, currentBid, basePrice);
+    const currentSlabIncrement = currentBid > 0 ? getBidIncrement(slabIncrements, currentBid) : basePrice;
+    const quickBidAmounts = (tournament.directQuickBidsEnabled && tournament.directQuickBids && tournament.directQuickBids.length > 0)
+        ? tournament.directQuickBids.map(b => b.amount).filter(a => a > 0)
+        : DEFAULT_QUICK_BIDS;
     const isCorrection = currentBid > 0 && bidAmount > 0 && bidAmount < currentBid;
     const statusText = currentAuctionStatus === 'Bidding' ? 'BIDDING ACTIVE' : (isSold ? 'PLAYER SOLD' : 'BIDDING PENDING');
     const statusColor = currentAuctionStatus === 'Bidding' ? 'text-yellow-400' : (isSold ? 'text-green-400' : 'text-[var(--text-tertiary)]');
@@ -374,12 +382,44 @@ export const CurrentAuctionPanel: React.FC<{
                     onBid={(amount, teamId) => { setBiddingTeamId(teamId); return onBid(amount, teamId); }}
                     isSold={isSold}
                     isMobile={isMobile}
+                    isInFlight={isInFlight}
                 />
+            ) : directSlabEnabled ? (
+            <div className="shrink-0 rounded-lg p-3 border border-[var(--border-primary)]" style={{ backgroundColor: 'var(--surface-elevated)' }}>
+                <div className="flex items-center justify-between mb-2">
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>Bid Increase Slab</p>
+                        <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Increment: +{formatCurrency(currentSlabIncrement)}</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>Next Bid</p>
+                        <p className="text-xl font-black" style={{ color: 'var(--brand-secondary)' }}>{formatCurrency(nextSlabBid)}</p>
+                    </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                    <button
+                        onClick={async () => { setIsSubmitting(true); try { await onBid(nextSlabBid); } finally { setIsSubmitting(false); } }}
+                        disabled={isSold || isSubmitting}
+                        className="rounded-md py-3 text-sm font-bold transition-colors disabled:opacity-40"
+                        style={{ backgroundColor: 'rgba(34,197,94,0.12)', color: '#4ade80', border: '1.5px solid rgba(34,197,94,0.45)' }}
+                    >
+                        Increase Bid
+                    </button>
+                    <button
+                        onClick={async () => { setIsSubmitting(true); try { await onCorrectBid(previousSlabBid); } finally { setIsSubmitting(false); } }}
+                        disabled={isSold || isSubmitting || currentBid <= basePrice}
+                        className="rounded-md py-3 text-sm font-bold transition-colors disabled:opacity-40"
+                        style={{ backgroundColor: 'rgba(251,146,60,0.12)', color: '#fb923c', border: '1.5px solid rgba(251,146,60,0.45)' }}
+                    >
+                        Decrease Bid
+                    </button>
+                </div>
+            </div>
             ) : (
             <div className="shrink-0">
                 <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--text-tertiary)' }}>Quick Bid</p>
                 <div className={`grid gap-1.5 ${isMobile ? 'grid-cols-3' : 'grid-cols-6'}`}>
-                    {bidIncrements.map(inc => (
+                    {quickBidAmounts.map(inc => (
                         <button
                             key={inc}
                             onClick={() => handleQuickBid(inc)}
@@ -604,9 +644,10 @@ export const TeamsAndSoldPlayersPanel: React.FC<{
     winningTeamId: string | null;
     currentBid: number;
     onUndo: () => void;
+    undoPending?: boolean;
     onCleanup: () => void;
     onEditSaved: (player: Player, teams: Team[]) => void;
-}> = ({ teams, soldPlayers, unsoldPlayers, tournament, winningTeamId, currentBid, onUndo, onCleanup, onEditSaved }) => {
+}> = ({ teams, soldPlayers, unsoldPlayers, tournament, winningTeamId, currentBid, onUndo, undoPending = false, onCleanup, onEditSaved }) => {
     const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
     const [editStatus, setEditStatus] = useState<'sold' | 'unsold' | 'available'>('sold');
     const [editPrice, setEditPrice] = useState('');
@@ -658,7 +699,7 @@ export const TeamsAndSoldPlayersPanel: React.FC<{
     };
 
     const calculateMaxBid = (team: Team) => {
-        if (!tournament || !team.currentBalance) return 0;
+        if (!tournament || team.currentBalance == null) return 0;
         const squadSize = tournament.squadSize;
         const basePrice = getMinClassBasePrice(tournament);
         // Count actual sold players (including iconics) rather than playersPurchased
@@ -713,12 +754,12 @@ export const TeamsAndSoldPlayersPanel: React.FC<{
                     <div className="flex gap-1.5">
                         <button
                             onClick={onUndo}
-                            disabled={allPlayers.length === 0}
+                            disabled={allPlayers.length === 0 || undoPending}
                             className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide px-3 py-1.5 rounded-md transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                             style={{ background: 'rgba(99,102,241,0.12)', color: '#a5b4fc', border: '1.5px solid rgba(99,102,241,0.35)' }}
                             onMouseEnter={e => { if (allPlayers.length > 0) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(99,102,241,0.25)'; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(99,102,241,0.12)'; }}>
-                            Undo
+                            {undoPending ? 'Undoing…' : 'Undo'}
                         </button>
                         <ClearAllButton onClick={onCleanup} disabled={allPlayers.length === 0} label="Clear" size="sm" />
                     </div>
@@ -977,6 +1018,11 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const spinTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
     const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const bidInFlightRef = useRef(false);
+    const [bidInFlight, setBidInFlight] = useState(false);
+    const bidSequenceRef = useRef(0);
+    const sellInFlightRef = useRef(false);
+    const undoInFlightRef = useRef(false);
+    const [undoPending, setUndoPending] = useState(false);
     const [hidePremiumCard, setHidePremiumCard] = useState(false);
     const [autoSwitch, setAutoSwitch] = useState(false);
     const [autoSwitchDuration, setAutoSwitchDuration] = useState(5);
@@ -1580,6 +1626,17 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         }
 
         bidInFlightRef.current = true;
+        setBidInFlight(true);
+        const bidSequence = ++bidSequenceRef.current;
+        // Prevent accidental double-clicks, but do not wait for the HTTP/Pusher
+        // response before enabling the next bid. The local optimistic state is
+        // authoritative for operator controls until the server confirms/rejects.
+        window.setTimeout(() => {
+            if (bidSequenceRef.current === bidSequence) {
+                bidInFlightRef.current = false;
+                setBidInFlight(false);
+            }
+        }, 120);
 
         // Optimistic update: snapshot the previous auctionState, apply new bid
         // immediately so the UI feels instant, then revert if the server rejects.
@@ -1600,15 +1657,17 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             });
             if (!response.ok) {
                 const data = await response.json().catch(() => ({}));
-                restoreAuctionState(snapshot);
-                setError(data.error || 'Failed to place bid');
+                if (bidSequenceRef.current === bidSequence) {
+                    restoreAuctionState(snapshot);
+                    setError(data.error || 'Failed to place bid');
+                }
             }
         } catch (error) {
-            restoreAuctionState(snapshot);
+            if (bidSequenceRef.current === bidSequence) {
+                restoreAuctionState(snapshot);
+                setError('An error occurred while placing the bid');
+            }
             console.error('Failed to place bid:', error);
-            setError('An error occurred while placing the bid');
-        } finally {
-            bidInFlightRef.current = false;
         }
     };
 
@@ -1632,6 +1691,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
 
     const handleSell = async () => {
         if (!liveTournament) return;
+        if (sellInFlightRef.current || undoInFlightRef.current) return;
         if (!biddingTeamId) {
             setError('Please select a winning team before selling');
             return;
@@ -1647,6 +1707,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         // Optimistic update: mark sold + deduct balance immediately. The
         // PLAYER_SOLD Pusher event will replace this with the authoritative
         // server state. On failure we restore from the snapshot.
+        sellInFlightRef.current = true;
         const snapshot = optimisticSell({ teamId: biddingTeamId, playerId, bid });
 
         try {
@@ -1667,6 +1728,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             restoreSell(snapshot);
             console.error('Failed to sell player:', error);
             setError('An error occurred while selling the player');
+        } finally {
+            sellInFlightRef.current = false;
         }
     };
 
@@ -1714,6 +1777,9 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
 
     const handleUndo = async () => {
         if (!liveTournament) return;
+        if (undoInFlightRef.current || sellInFlightRef.current) return;
+        undoInFlightRef.current = true;
+        setUndoPending(true);
         try {
             const response = await fetch('/api/auction/undo', {
                 method: 'POST',
@@ -1734,6 +1800,9 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         } catch (error) {
             console.error('Failed to undo sale:', error);
             setError('An error occurred while undoing the sale');
+        } finally {
+            undoInFlightRef.current = false;
+            setUndoPending(false);
         }
     };
 
@@ -1912,6 +1981,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                         onMarkUnsold={handleMarkUnsold}
                         onSpinWheel={handleSpinWheel}
                         isSpinning={isSpinning}
+                        isInFlight={bidInFlight}
                     />
                     <OverlayControlsPanel
                         displayMode={displayMode}
@@ -1972,6 +2042,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                         winningTeamId={auctionState.winningTeamId}
                         currentBid={auctionState.currentBid ?? 0}
                         onUndo={handleUndo}
+                        undoPending={undoPending}
                         onCleanup={handleCleanupAll}
                         onEditSaved={updatePlayerAndTeams}
                     />

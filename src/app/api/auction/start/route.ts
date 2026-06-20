@@ -7,6 +7,7 @@ import { AuctionStateModel } from '@/models/AuctionState';
 import { triggerAuctionStarted, triggerWake } from '@/lib/pusher-server';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
+import { serializeTeam, serializePlayer } from '@/lib/cloudinaryUtils';
 
 // POST /api/auction/start - Start auction with validation
 export async function POST(request: NextRequest) {
@@ -123,8 +124,8 @@ export async function POST(request: NextRequest) {
       await triggerWake(tournamentId);
       await triggerAuctionStarted({
         tournament: updatedTournament as any,
-        teams: teams as any,
-        players: players as any,
+        teams: teams.map(serializeTeam) as any,
+        players: players.map(serializePlayer) as any,
         auctionState: resetAuctionState as any,
         message: 'Auction started successfully',
       });

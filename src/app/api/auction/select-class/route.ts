@@ -101,13 +101,13 @@ export async function POST(request: NextRequest) {
 
     // Broadcast class-selected event
     try {
-      await triggerClassSelected(tournamentId, {
+      triggerClassSelected(tournamentId, {
         classCode: classConfig.code,
         className,
         playerCount,
         auctionState: updatedState as any,
         message: `${className} class selected for auction (${playerCount} players remaining)`,
-      });
+      }).catch((err) => console.error('[select-class] Pusher error:', err));
     } catch (pusherError) {
       console.error('[select-class] Pusher error:', pusherError);
     }
@@ -146,13 +146,13 @@ export async function DELETE(request: NextRequest) {
 
     // Broadcast so all clients update their player list filter immediately
     try {
-      await triggerClassSelected(tournamentId, {
+      triggerClassSelected(tournamentId, {
         classCode: '',
         className: '',
         playerCount: 0,
         auctionState: updatedState as any,
         message: 'Class filter cleared — showing all players',
-      });
+      }).catch((err) => console.error('[select-class DELETE] Pusher error:', err));
     } catch (pusherError) {
       console.error('[select-class DELETE] Pusher error:', pusherError);
     }

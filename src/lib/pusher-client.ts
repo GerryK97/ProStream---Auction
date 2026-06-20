@@ -41,11 +41,12 @@ export function getPusherClient(): PusherJS {
       pusherClientInstance = new PusherJS(key, {
         cluster: cluster,
         forceTLS: true,
-        // Enable stats for monitoring (optional)
         enabledTransports: ['ws', 'wss'],
-        // Reconnection settings
-        activityTimeout: 30000, // 30 seconds
-        pongTimeout: 10000, // 10 seconds
+        // Use generous timeouts — OBS Browser Source runs in a background thread
+        // that can be slow to respond to pings. 30s was causing frequent disconnects
+        // which left the overlay showing stale state (no re-fetch on reconnect events).
+        activityTimeout: 120000, // 2 minutes (Pusher default)
+        pongTimeout: 30000,      // 30 seconds (was 10s — too tight for OBS)
       });
 
       // Connection state logging

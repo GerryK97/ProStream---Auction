@@ -10,7 +10,6 @@ Overlay themes are output-facing design systems for OBS/browser-source rendering
 - Overlay URL generation is centralized in `src/lib/overlays/auctionOverlayTypes.ts`; management screens should use that helper instead of duplicating route/path logic.
 - Theme 1 components use the shared `--overlay-*` palette surface.
 - Theme 2 components use the `--t2-*` namespace and compatibility `--overlay-*` aliases where needed.
-- Theme 3 components use the `--t3-*` namespace with the same compatibility alias pattern as Theme 2.
 
 ## Artistic Flexibility
 Overlay themes may define:

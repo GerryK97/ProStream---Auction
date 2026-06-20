@@ -3,17 +3,23 @@
 import React, { useState, useCallback } from 'react';
 import Cropper from 'react-easy-crop';
 import type { Area } from 'react-easy-crop';
+import { resolveImageUrl, buildImageUrl } from '@/lib/cloudinaryUtils';
 
 interface ImageUploadProps {
   value: string;
-  onChange: (url: string) => void;
+  /**
+   * Called after a successful upload.
+   * Receives the bare Cloudinary public_id (e.g. 'prostream-auction/users/xxx').
+   * Use buildImageUrl() from '@/lib/cloudinaryUtils' to render it as an <img> src.
+   */
+  onChange: (publicId: string) => void;
   folder: 'players' | 'teams' | 'tournaments' | 'users';
   label?: string;
   placeholder?: string;
   previewClassName?: string;
   previewShape?: 'circle' | 'square';
   id?: string;
-  onUploadComplete?: (url: string) => void;
+  onUploadComplete?: (publicId: string) => void;
   /** Crop aspect ratio. Defaults to 1 (square). Use 16/9 for widescreen images. */
   cropAspect?: number;
   buttonOnly?: boolean;
@@ -147,8 +153,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
       if (response.ok) {
         const data = await response.json();
-        onChange(data.url);
-        onUploadComplete?.(data.url);
+        // Store bare publicId (not full URL) for cross-app compatibility
+        const publicId = data.publicId ?? data.public_id
+        onChange(publicId);
+        onUploadComplete?.(publicId);
       } else {
         const errorData = await response.json();
         console.error('Upload failed:', errorData);
@@ -275,7 +283,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           {/* Image Preview */}
           <div className="relative shrink-0">
             <img
-              src={value || placeholderUrl}
+              src={buildImageUrl(value, { width: 400, height: 400 }) || placeholderUrl}
               alt="Preview"
               className={`${previewClassName} ${previewShapeClass} object-cover`}
               style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}

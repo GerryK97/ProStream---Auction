@@ -1,6 +1,7 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest, verifyToken, validateEmail, validateUsername } from '@/lib/auth';
 import { getUserByEmail, getUserById, getUserByUsername, toPublicUser, updateUser } from '@/lib/pg/user-queries';
+import { normalizePublicId } from '@/lib/cloudinaryUtils';
 
 function isValidMobileNumber(mobileNumber: string): boolean {
   return /^[+\d][\d\s\-()]{6,19}$/.test(mobileNumber);
@@ -45,7 +46,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
     }
 
-    const { username, email, mobileNumber = '' } = await request.json();
+    const { username, email, mobileNumber = '', logoURL = '' } = await request.json();
 
     if (!username || !email) {
       return NextResponse.json({ error: 'Username and email are required' }, { status: 400 });
@@ -85,6 +86,7 @@ export async function PUT(request: NextRequest) {
       email: normalizedEmail,
       displayName: normalizedUsername,
       phone: normalizedMobile,
+      photoCloudinaryId: normalizePublicId(logoURL) ?? undefined,
     });
 
     if (!updatedUser) {

@@ -3,7 +3,7 @@ import type { AuctionOverlayType } from '@/lib/overlays/auctionOverlayTypes';
 
 export type OverlayPaymentStatus = 'free' | 'paid' | 'refunded' | 'payment_failed';
 
-export interface IOverlaySession extends Document {
+export interface IOverlaySession extends Omit<Document, '_id'> {
   _id: string;          // the session token (UUID v4)
   tournamentId: string;
   label: string;        // admin-given name e.g. "OBS Main"

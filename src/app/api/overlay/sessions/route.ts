@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { OverlaySessionModel } from '@/models/OverlaySession';
 import { TournamentModel } from '@/models/Tournament';
-import { canAccessTournament, canPerformAction } from '@/lib/permissions';
+import { canAccessTournament } from '@/lib/permissions';
 import { getUserFromRequest, RequestUser } from '@/lib/request-helpers';
 import {
   creditWalletBalance,
@@ -22,8 +22,10 @@ import { DEFAULT_OVERLAY_PRICES, getOverlayPricingDefaultsByKey } from '@/lib/ov
 
 import { randomUUID } from 'crypto';
 
-function canGenerateOverlays(user: RequestUser) {
-  return canPerformAction(user.role, 'create', 'overlayConfig');
+function canGenerateOverlays(_user: RequestUser) {
+  // Tournament-specific access is enforced after reading tournamentId.
+  // Assigned users may generate overlay outputs for tournaments they can access.
+  return true;
 }
 
 async function assertTournamentAccess(user: RequestUser, tournamentId: string) {
@@ -54,7 +56,6 @@ export async function GET(request: NextRequest) {
 
     const user = await getUserFromRequest(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (!canGenerateOverlays(user)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const tournamentId = request.nextUrl.searchParams.get('tournamentId');
     let query: Record<string, unknown> = {};

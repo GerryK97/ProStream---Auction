@@ -6,7 +6,7 @@ import { useTournamentContext } from '@/contexts/TournamentContext';
 import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { imageOptimizers } from '@/lib/imageOptimization';
 import { getClassBasePrice, getFormattedBasePrice, getMinClassBasePrice } from '@/lib/playerClassUtils';
-import { getBidIncrement, getNextTeamBid } from '@/lib/bidIncrementUtils';
+import { getBidIncrement, getNextTeamBid, getPreviousSlabBid } from '@/lib/bidIncrementUtils';
 import ClassBadge from '@/components/shared/ClassBadge';
 import Modal from '@/components/Modal';
 import type { AuctionState, Player, Team, Tournament } from '@/types';
@@ -53,6 +53,9 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
     const [selectingClass, setSelectingClass] = useState(false);
     const [classCompletionAlert, setClassCompletionAlert] = useState<string | null>(null);
     const [playerSearch, setPlayerSearch] = useState('');
+    const undoInFlightRef = useRef(false);
+    const sellInFlightRef = useRef(false);
+    const [undoPending, setUndoPending] = useState(false);
     const prevCompletedClassesRef = useRef<string[]>([]);
 
     const initialTournamentId = initialData?.tournament?._id ?? null;
@@ -194,9 +197,19 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
         await post('/api/auction/restart', { tournamentId: liveTournament!._id });
     });
 
-    const handleUndo = handle(async () => {
-        await post('/api/auction/undo', { tournamentId: liveTournament!._id });
-    });
+    const handleUndo = async () => {
+        if (!liveTournament || undoInFlightRef.current || sellInFlightRef.current) return;
+        undoInFlightRef.current = true;
+        setUndoPending(true);
+        try {
+            await post('/api/auction/undo', { tournamentId: liveTournament._id });
+        } catch (e: any) {
+            setError(e.message);
+        } finally {
+            undoInFlightRef.current = false;
+            setUndoPending(false);
+        }
+    };
 
     const handleCleanupAll = handle(async () => {
         await post('/api/auction/cleanup-all', { tournamentId: liveTournament!._id });
@@ -258,8 +271,14 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
     };
 
     const handleSell = handle(async () => {
+        if (sellInFlightRef.current || undoInFlightRef.current) return;
         if (!biddingTeamId) throw new Error('Select a winning team first');
-        await post('/api/auction/sell', { tournamentId: liveTournament!._id, teamId: biddingTeamId });
+        sellInFlightRef.current = true;
+        try {
+            await post('/api/auction/sell', { tournamentId: liveTournament!._id, teamId: biddingTeamId });
+        } finally {
+            sellInFlightRef.current = false;
+        }
     });
 
     const handleReset = handle(async () => {
@@ -329,7 +348,7 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
 
     // Team bid panel helpers
     const calcMaxBid = (team: Team): number => {
-        if (!liveTournament || !team.currentBalance) return 0;
+        if (!liveTournament || team.currentBalance == null) return 0;
         const purchased = players.filter(p => p.isSold && p.winningTeamId === team._id).length;
         const remaining = liveTournament.squadSize - purchased;
         if (remaining <= 1) return team.currentBalance;
@@ -346,7 +365,16 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
         ? getNextTeamBid(liveTournament.bidIncrements ?? [], currentBid, getClassBasePrice(liveTournament, currentPlayer ?? null))
         : 0;
 
-    const quickBidIncrements = [1000, 5000, 10000, 25000, 50000, 100000];
+    const DEFAULT_QUICK_BIDS_MOBILE = [1000, 5000, 10000, 25000, 50000, 100000];
+    const quickBidIncrements = (liveTournament.directQuickBidsEnabled && liveTournament.directQuickBids && liveTournament.directQuickBids.length > 0)
+        ? liveTournament.directQuickBids.map(b => b.amount).filter(a => a > 0)
+        : DEFAULT_QUICK_BIDS_MOBILE;
+    const basePrice = getClassBasePrice(liveTournament, currentPlayer ?? null);
+    const slabIncrements = liveTournament.bidIncrements ?? [];
+    const directSlabEnabled = liveTournament.biddingMode === 'direct' && liveTournament.directBidSlabEnabled;
+    const nextSlabBid = currentBid > 0 ? currentBid + getBidIncrement(slabIncrements, currentBid) : basePrice;
+    const previousSlabBid = getPreviousSlabBid(slabIncrements, currentBid, basePrice);
+    const currentSlabIncrement = currentBid > 0 ? getBidIncrement(slabIncrements, currentBid) : basePrice;
     const filteredPlayers = availablePlayers.filter(p =>
         !playerSearch || p.name.toLowerCase().includes(playerSearch.toLowerCase()) ||
         String(p.playerNo || '').includes(playerSearch)
@@ -586,7 +614,39 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
                                 )}
 
                                 {/* ── Quick Bid (direct mode) ──────────────── */}
-                                {liveTournament.biddingMode !== 'team' && (
+                                {liveTournament.biddingMode !== 'team' && directSlabEnabled && (
+                                    <div className="rounded-xl border border-[var(--border-primary)] p-3"
+                                        style={{ backgroundColor: 'var(--surface-secondary)' }}>
+                                        <div className="flex items-center justify-between mb-2.5">
+                                            <div>
+                                                <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Bid Increase Slab</p>
+                                                <p className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>Increment: +{formatCurrency(currentSlabIncrement)}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>Next Bid</p>
+                                                <p className="text-xl font-black" style={{ color: 'var(--brand-secondary)' }}>{formatCurrency(nextSlabBid)}</p>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <button
+                                                onClick={() => handleBid(nextSlabBid)}
+                                                disabled={isSold || isSubmitting}
+                                                className="py-4 rounded-xl text-base font-bold transition-all active:scale-95 disabled:opacity-40"
+                                                style={{ backgroundColor: 'rgba(34,197,94,0.12)', color: '#4ade80', border: '1.5px solid rgba(34,197,94,0.45)' }}>
+                                                Increase Bid
+                                            </button>
+                                            <button
+                                                onClick={() => handleCorrectBid(previousSlabBid)}
+                                                disabled={isSold || isSubmitting || currentBid <= basePrice}
+                                                className="py-4 rounded-xl text-base font-bold transition-all active:scale-95 disabled:opacity-40"
+                                                style={{ backgroundColor: 'rgba(251,146,60,0.12)', color: '#fb923c', border: '1.5px solid rgba(251,146,60,0.45)' }}>
+                                                Decrease Bid
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {liveTournament.biddingMode !== 'team' && !directSlabEnabled && (
                                     <div className="rounded-xl border border-[var(--border-primary)] p-3"
                                         style={{ backgroundColor: 'var(--surface-secondary)' }}>
                                         <p className="text-xs font-semibold uppercase tracking-widest mb-2.5"
@@ -688,7 +748,7 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
                                     {/* Sell — full width primary action */}
                                     <button
                                         onClick={handleSell}
-                                        disabled={isSold || currentBid === 0 || !biddingTeamId}
+                                        disabled={isSold || currentBid === 0 || !biddingTeamId || isSubmitting || undoPending}
                                         className="w-full py-4 rounded-xl text-base font-black tracking-widest uppercase transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
                                         style={{
                                             background: isSold || currentBid === 0 || !biddingTeamId
@@ -877,10 +937,10 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
                                 <div className="flex gap-2">
                                     <button
                                         onClick={handleUndo}
-                                        disabled={soldPlayers.length + unsoldPlayers.length === 0}
+                                        disabled={soldPlayers.length + unsoldPlayers.length === 0 || undoPending || isSubmitting}
                                         className="px-3 py-1.5 rounded-lg text-xs font-bold disabled:opacity-40"
                                         style={{ background: 'rgba(99,102,241,0.12)', color: '#a5b4fc', border: '1.5px solid rgba(99,102,241,0.35)' }}>
-                                        Undo
+                                        {undoPending ? 'Undoing…' : 'Undo'}
                                     </button>
                                     <button
                                         onClick={handleCleanupAll}

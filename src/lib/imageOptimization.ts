@@ -3,6 +3,8 @@
  * Generates optimized image URLs with dynamic transformations based on usage context
  */
 
+import { buildImageUrl } from './cloudinaryUtils';
+
 export type ImageSize =
   | 'thumbnail' // 64x64 - Small avatars, icons
   | 'small'     // 150x150 - List items, small cards
@@ -15,8 +17,6 @@ interface TransformOptions {
   width?: number;
   height?: number;
   crop?: 'fill' | 'fit' | 'scale' | 'limit';
-  /** Cloudinary gravity for fill crops — use 'face' for player portraits, 'auto' for mixed content */
-  gravity?: 'face' | 'auto' | 'center' | 'north' | 'south' | 'east' | 'west';
   quality?: 'auto' | number;
   format?: 'auto' | 'webp' | 'jpg' | 'png';
 }
@@ -51,6 +51,14 @@ export function optimizeImage(
     return 'https://placehold.co/100x100/374151/F3F4F6/png?text=No+Image';
   }
 
+  // If it's a bare public_id (no http/https), build via buildImageUrl
+  if (!url.startsWith('http') && !url.startsWith('data:')) {
+    const options: TransformOptions = typeof size === 'string' && size !== 'original'
+      ? SIZE_PRESETS[size as Exclude<ImageSize, 'original'>]
+      : typeof size === 'string' ? {} : size;
+    return buildImageUrl(url, { width: options.width ?? 200, height: options.height ?? 200 })
+  }
+
   // Return original URL if not a Cloudinary URL
   if (!isCloudinaryUrl(url)) {
     return url;
@@ -74,7 +82,6 @@ export function optimizeImage(
   if (options.width) transformations.push(`w_${options.width}`);
   if (options.height) transformations.push(`h_${options.height}`);
   if (options.crop) transformations.push(`c_${options.crop}`);
-  if (options.gravity) transformations.push(`g_${options.gravity}`);
   if (options.quality) transformations.push(`q_${options.quality}`);
   if (options.format) transformations.push(`f_${options.format}`);
 

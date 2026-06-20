@@ -3,6 +3,7 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { PlayerModel } from '@/models/Player';
 import { triggerAuctionUndo } from '@/lib/pusher-server';
+import { serializePlayer } from '@/lib/cloudinaryUtils';
 
 // POST /api/auction/re-auction - Reset all unsold players back to available for re-auction
 export async function POST(request: NextRequest) {
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
     for (const player of updatedPlayers) {
       try {
         await triggerAuctionUndo(tournamentId, {
-          restoredPlayer: player as any,
+          restoredPlayer: serializePlayer(player as any) as any,
           updatedTeam: null,
           refundedAmount: 0,
           auctionState: auctionState as any,

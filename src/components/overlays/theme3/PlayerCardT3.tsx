@@ -21,7 +21,6 @@ function resolvePlayerPhotoSrc(
     width: PLAYER_BAR_T3_PHOTO_WIDTH * 2,
     height: PLAYER_BAR_T3_HEIGHT * 2,
     crop: 'fill',
-    gravity: 'face',
     quality: 'auto',
     format: 'auto',
   });

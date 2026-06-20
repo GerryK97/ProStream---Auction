@@ -1,5 +1,8 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { eq } from 'drizzle-orm';
 import { verifyToken, getTokenFromRequest } from '@/lib/auth';
+import { pgDb } from '@/lib/pg/db';
+import { devicePushTokens } from '@/lib/pg/users-schema';
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,10 +12,34 @@ export async function POST(request: NextRequest) {
     const payload = verifyToken(token);
     if (!payload) return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
 
-    return NextResponse.json(
-      { error: 'Push notification registration is unavailable after the Postgres user-store cutover.' },
-      { status: 410 }
-    );
+    const body = await request.json();
+    const { expoPushToken, platform = 'android', deviceId } = body;
+
+    if (!expoPushToken || typeof expoPushToken !== 'string') {
+      return NextResponse.json({ error: 'expoPushToken is required' }, { status: 400 });
+    }
+
+    // Upsert: if same token exists update userId + updatedAt, else insert
+    await pgDb
+      .insert(devicePushTokens)
+      .values({
+        userId:        payload.userId,
+        expoPushToken,
+        platform,
+        deviceId:      deviceId ?? null,
+        updatedAt:     new Date(),
+      })
+      .onConflictDoUpdate({
+        target: devicePushTokens.expoPushToken,
+        set: {
+          userId:    payload.userId,
+          platform,
+          deviceId:  deviceId ?? null,
+          updatedAt: new Date(),
+        },
+      });
+
+    return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('[push/register]', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

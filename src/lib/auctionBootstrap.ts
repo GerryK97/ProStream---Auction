@@ -33,8 +33,8 @@ const serializeAuctionState = (doc: any, fallbackTournamentId: string): AuctionS
   return {
     ...rest,
     tournamentId: toIdString(rest.tournamentId),
-    currentPlayerId: rest.currentPlayerId != null ? toIdString(rest.currentPlayerId) : null,
-    winningTeamId: rest.winningTeamId != null ? toIdString(rest.winningTeamId) : null,
+    currentPlayerId: rest.currentPlayerId ?? null,
+    winningTeamId: rest.winningTeamId ?? null,
     history: Array.isArray(rest.history)
       ? rest.history.map((bid: any) => ({
           teamId: toIdString(bid.teamId),

@@ -3,6 +3,7 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { PlayerModel } from '@/models/Player';
 import { triggerPlayerMarkedUnsold, triggerClassCompleted } from '@/lib/pusher-server';
+import { serializePlayer } from '@/lib/cloudinaryUtils';
 
 // POST /api/auction/mark-unsold - Mark the current player as explicitly unsold and reset auction state
 export async function POST(request: NextRequest) {
@@ -77,12 +78,12 @@ export async function POST(request: NextRequest) {
           { new: true }
         ).lean();
         try {
-          await triggerClassCompleted(tournamentId, {
+          triggerClassCompleted(tournamentId, {
             completedClassCode: activeClass,
             completedClasses: (finalState as any)?.completedClasses ?? [activeClass],
             auctionState: finalState as any,
             message: `${activeClass} class auction completed`,
-          });
+          }).catch((err) => console.error('[mark-unsold] classCompleted Pusher failed:', err));
         } catch (pusherError) {
           console.error('[mark-unsold] triggerClassCompleted failed:', pusherError);
         }
@@ -92,11 +93,11 @@ export async function POST(request: NextRequest) {
     // Broadcast a targeted event — just the updated player + auction state
     // (avoids full-state payload that can exceed Pusher's message size limit)
     try {
-      await triggerPlayerMarkedUnsold(tournamentId, {
-        unsoldPlayer: updatedPlayer as any,
+      triggerPlayerMarkedUnsold(tournamentId, {
+        unsoldPlayer: serializePlayer(updatedPlayer as any) as any,
         auctionState: updatedState as any,
         message: 'Player marked as unsold',
-      });
+      }).catch((err) => console.error('[mark-unsold] Pusher trigger failed:', err));
     } catch (pusherError) {
       console.error('Failed to trigger Pusher event:', pusherError);
     }

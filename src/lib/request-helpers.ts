@@ -15,7 +15,7 @@ export interface RequestUser {
 
 /**
  * Extract authenticated user from request JWT token
- * Fetches additional user data for legacy tokens only.
+ * Fetches current role/access data from Postgres so JWT access claims cannot go stale.
  */
 export async function getUserFromRequest(request: NextRequest): Promise<RequestUser | null> {
   try {
@@ -25,17 +25,14 @@ export async function getUserFromRequest(request: NextRequest): Promise<RequestU
     const payload = verifyToken(token);
     if (!payload) return null;
 
-    if (payload.assignedTournaments !== undefined && payload.plan) {
-      return {
-        userId: payload.userId,
-        role: payload.role as UserRole,
-        assignedTournaments: payload.assignedTournaments || [],
-        plan: payload.plan || 'Free',
-      };
-    }
-
+    // Always load the latest role/plan/tournament assignments from Postgres.
+    // JWTs live for 7 days and include assignedTournaments for bootstrapping,
+    // so relying on the token makes newly-created/granted tournaments invisible
+    // until the user logs out/in. This keeps access changes immediately visible
+    // on web and Expo without forcing a fresh login.
     const user = await getUserById(payload.userId);
     if (!user) return null;
+
     return {
       userId: payload.userId,
       role: user.role as UserRole,

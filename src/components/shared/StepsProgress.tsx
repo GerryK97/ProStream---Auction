@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
 
 interface Step {
   label: string;
@@ -11,17 +10,17 @@ interface Step {
 }
 
 interface StepsProgressProps {
-  currentStep: number;        // 1-6 (1-indexed)
+  currentStep: number;        // 1-5 (1-indexed)
   steps?: Step[];             // Optional, uses DEFAULT_STEPS if not provided
   className?: string;         // Optional CSS class
 }
 
 const DEFAULT_STEPS: Step[] = [
-  { label: 'Setup Tournament', href: '/manage/tournaments' },
-  { label: 'Teams', href: '/manage/teams' },
-  { label: 'Players', href: '/manage/players' },
-  { label: 'Add Overlays to OBS', href: '/output', adminOnly: true },
-  { label: 'Auction', href: '/auction' },
+  { label: 'Tournament Setup', href: '/manage/tournaments' },
+  { label: 'Teams Setup', href: '/manage/teams' },
+  { label: 'Players Setup', href: '/manage/players' },
+  { label: 'Overlay / Output', href: '/output' },
+  { label: 'Auction Control', href: '/auction' },
 ];
 
 const getStepStatus = (index: number, currentIndex: number) => {
@@ -31,8 +30,7 @@ const getStepStatus = (index: number, currentIndex: number) => {
 };
 
 export default function StepsProgress({ currentStep, steps = DEFAULT_STEPS, className = '' }: StepsProgressProps) {
-  const { user } = useAuth();
-  const visibleSteps = steps.filter(s => !s.adminOnly || user?.role === 'Admin');
+  const visibleSteps = steps;
 
   // Convert 1-indexed to 0-indexed (clamp to visible range)
   const currentStepIndex = Math.min(currentStep - 1, visibleSteps.length - 1);

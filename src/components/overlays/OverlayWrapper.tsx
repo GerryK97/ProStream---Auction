@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, ReactNode } from 'react';
+import React, { useState, useEffect, ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { Tournament, AuctionState, Player, Team } from '@/types';
@@ -57,6 +57,7 @@ interface OverlayWrapperProps {
         players: Player[];
         teams: Team[];
         isConnected: boolean;
+        lastEvent: string | null;
         currentPlayer: Player | undefined;
         soldPlayers: Player[];
         overlaySettings: OverlaySettings;
@@ -129,24 +130,14 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
     const {
         tournament,
         auctionState,
-        activeAuctionPlayer,
         players,
         teams,
         isConnected,
         isRevoked,
+        lastEvent,
     } = usePusherAuction(liveTournamentId, undefined, urlToken ?? undefined, overlayType);
 
-    const currentPlayer = useMemo(() => {
-        const id = auctionState.currentPlayerId;
-        if (!id) return undefined;
-        const normalizedId = String(id);
-        const fromList = players.find((p) => String(p._id) === normalizedId);
-        if (fromList) return fromList;
-        if (activeAuctionPlayer && String(activeAuctionPlayer._id) === normalizedId) {
-            return activeAuctionPlayer;
-        }
-        return undefined;
-    }, [players, auctionState.currentPlayerId, activeAuctionPlayer]);
+    const currentPlayer = players.find(p => p._id === auctionState.currentPlayerId);
     const soldPlayers = players.filter(p => p.isSold);
 
     // Overlay settings — updated via overlay:settings Pusher event
@@ -158,10 +149,11 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
 
     useEffect(() => {
         if (!liveTournamentId) return;
-        // Only subscribe when the tournament channel is active (Live/Paused/Stopped)
-        const status = tournament?.status;
-        if (!status || !['Live', 'Paused', 'Stopped'].includes(status)) return;
-
+        // Bind overlay:settings and overlay:wheel-spin on the tournament channel.
+        // We subscribe here (same as usePusherAuction) — Pusher returns the same
+        // channel object if already subscribed, so this is safe and adds no extra
+        // connection. We explicitly NOT unsubscribe in cleanup because
+        // usePusherAuction owns the subscription lifecycle.
         const pusher = getPusherClient();
         const channel = pusher.subscribe(`tournament-${liveTournamentId}`);
         channel.bind('overlay:settings', (data: OverlaySettingsEvent) => {
@@ -199,7 +191,7 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
             if (wheelResetTimerRef.current) clearTimeout(wheelResetTimerRef.current);
             // Don't unsubscribe the channel here — usePusherAuction owns it
         };
-    }, [liveTournamentId, tournament?.status]);
+    }, [liveTournamentId]); // dep: liveTournamentId only — don't re-bind on every status change
 
     // Revoked state — shown when admin revokes this session
     if (isRevoked) {
@@ -278,6 +270,7 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
                         <div>Tournament: {effectiveTournament?._id ? `✓ ${effectiveTournament.name}` : '✗ None'}</div>
                         <div>Theme: {theme} / {activePalette.id ?? paletteId}</div>
                         <div>Connected: {isConnected ? '✓ Yes' : '✗ No'}</div>
+                        <div>Last Event: {lastEvent || 'None yet'}</div>
                         <div>Current Player: {currentPlayer?.name || 'None'}</div>
                         <div>URL Token: {urlToken ? '✓ Present' : '✗ Missing'}</div>
                         <div>Teams: {teams.length}</div>
@@ -294,6 +287,7 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
                 players,
                 teams,
                 isConnected,
+                lastEvent,
                 currentPlayer,
                 soldPlayers,
                 overlaySettings,

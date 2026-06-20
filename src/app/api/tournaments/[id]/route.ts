@@ -8,6 +8,7 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { PlayerModel } from '@/models/Player';
 import { TeamModel } from '@/models/Team';
 import { AuctionStateModel } from '@/models/AuctionState';
+import { serializeTournament } from '@/lib/cloudinaryUtils';
 
 /**
  * Validate player class codes
@@ -148,7 +149,7 @@ export async function GET(
 
     // Overlay access: return tournament directly — the ID is already scoped in the URL
     if (!user && isOverlayAuth) {
-      return NextResponse.json(tournament);
+      return NextResponse.json(serializeTournament(tournament as any));
     }
 
     // Check if user has permission to read tournaments
@@ -161,7 +162,7 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    return NextResponse.json(tournament);
+    return NextResponse.json(serializeTournament(tournament as any));
   } catch (error) {
     return NextResponse.json(
       { error: 'Failed to fetch tournament' },
@@ -234,7 +235,7 @@ export async function PUT(
       await syncTeamBudgets(id, newBudget);
     }
 
-    return NextResponse.json(updatedTournament);
+    return NextResponse.json(serializeTournament(updatedTournament as any));
   } catch (error) {
     return NextResponse.json(
       { error: 'Failed to update tournament' },

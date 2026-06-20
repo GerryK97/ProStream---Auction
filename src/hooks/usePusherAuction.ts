@@ -56,12 +56,11 @@ export interface OptimisticSellSnapshot {
 interface UsePusherAuctionReturn {
   tournament: Tournament | null;
   auctionState: AuctionState;
-  /** Latest player payload from PLAYER_SELECTED / BID_PLACED — fallback when roster list is stale. */
-  activeAuctionPlayer: Player | null;
   players: Player[];
   teams: Team[];
   isConnected: boolean;
   isRevoked: boolean;
+  lastEvent: string | null;
   error: string | null;
   setPlayerUnsold: (playerId: string) => void;
   setPlayerAvailable: (playerId: string) => void;
@@ -81,18 +80,9 @@ interface UsePusherAuctionReturn {
 interface AuctionStateType {
   tournament: Tournament | null;
   auctionState: AuctionState;
-  activeAuctionPlayer: Player | null;
   players: Player[];
   teams: Team[];
   error: string | null;
-}
-
-function resolveActiveAuctionPlayer(
-  players: Player[],
-  currentPlayerId: string | null | undefined,
-): Player | null {
-  if (!currentPlayerId) return null;
-  return players.find((p) => String(p._id) === String(currentPlayerId)) ?? null;
 }
 
 type AuctionAction =
@@ -127,10 +117,6 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         ...state,
         tournament: action.data.tournament,
         auctionState: action.data.auctionState,
-        activeAuctionPlayer: resolveActiveAuctionPlayer(
-          action.data.players,
-          action.data.auctionState.currentPlayerId,
-        ),
         players: action.data.players,
         teams: action.data.teams,
         error: null,
@@ -141,10 +127,6 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         ...state,
         tournament: action.data.tournament,
         auctionState: action.data.auctionState || EMPTY_AUCTION_STATE,
-        activeAuctionPlayer: resolveActiveAuctionPlayer(
-          action.data.players,
-          (action.data.auctionState || EMPTY_AUCTION_STATE).currentPlayerId,
-        ),
         teams: action.data.teams,
         players: action.data.players,
         error: null,
@@ -166,48 +148,32 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         error: null,
       };
 
-    case 'PLAYER_SELECTED': {
-      const incoming = action.data.currentPlayer;
-      const players = state.players.some((p) => String(p._id) === String(incoming._id))
-        ? state.players.map((p) =>
-            String(p._id) === String(incoming._id) ? { ...p, ...incoming } : p,
-          )
-        : [...state.players, incoming];
+    case 'PLAYER_SELECTED':
       return {
         ...state,
         auctionState: action.data.auctionState,
-        activeAuctionPlayer: incoming,
-        players,
         error: null,
       };
-    }
 
     case 'BID_PLACED': {
       // Only rebuild teams[] if a winningTeam is supplied AND it actually
       // exists in our list. Re-using the same reference when nothing
       // structurally changed lets memoised consumers (TeamRow, SoldPlayerRow)
       // skip reconciliation on every bid.
+      // Merge (not replace) so that a partial incomingTeam never strips
+      // currentBalance / playersPurchased from the local state.
       let updatedTeams = state.teams;
       const incomingTeam = action.data.winningTeam;
       if (incomingTeam && state.teams.some((t) => t._id === incomingTeam._id)) {
         updatedTeams = state.teams.map((team) =>
-          team._id === incomingTeam._id ? incomingTeam : team
+          team._id === incomingTeam._id ? { ...team, ...incomingTeam } : team
         );
       }
-
-      const incomingPlayer = action.data.currentPlayer;
-      const updatedPlayers = state.players.some((p) => String(p._id) === String(incomingPlayer._id))
-        ? state.players.map((p) =>
-            String(p._id) === String(incomingPlayer._id) ? { ...p, ...incomingPlayer } : p,
-          )
-        : [...state.players, incomingPlayer];
 
       return {
         ...state,
         auctionState: action.data.auctionState,
-        activeAuctionPlayer: incomingPlayer,
         teams: updatedTeams,
-        players: updatedPlayers,
         error: null,
       };
     }
@@ -226,20 +192,16 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         players: updatedPlayers,
         teams: updatedTeams,
         auctionState: action.data.auctionState || EMPTY_AUCTION_STATE,
-        activeAuctionPlayer: action.data.soldPlayer,
         error: null,
       };
     }
 
-    case 'AUCTION_RESET': {
-      const nextState = action.data.auctionState || EMPTY_AUCTION_STATE;
+    case 'AUCTION_RESET':
       return {
         ...state,
-        auctionState: nextState,
-        activeAuctionPlayer: nextState.currentPlayerId ? state.activeAuctionPlayer : null,
+        auctionState: action.data.auctionState || EMPTY_AUCTION_STATE,
         error: null,
       };
-    }
 
     case 'AUCTION_UNDO': {
       const updatedPlayers = state.players.map((player) =>
@@ -262,22 +224,11 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         });
       }
 
-      const nextState = action.data.auctionState || EMPTY_AUCTION_STATE;
-      const restoredPlayer = action.data.restoredPlayer;
-      const activeAuctionPlayer =
-        nextState.currentPlayerId &&
-        String(nextState.currentPlayerId) === String(restoredPlayer._id)
-          ? restoredPlayer
-          : nextState.currentPlayerId
-            ? state.activeAuctionPlayer
-            : null;
-
       return {
         ...state,
         players: updatedPlayers,
         teams: updatedTeams,
-        auctionState: nextState,
-        activeAuctionPlayer,
+        auctionState: action.data.auctionState || EMPTY_AUCTION_STATE,
         error: null,
       };
     }
@@ -286,28 +237,23 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
       const updatedPlayers = state.players.map((player) =>
         player._id === action.data.unsoldPlayer._id ? action.data.unsoldPlayer : player
       );
-      const nextState = action.data.auctionState || EMPTY_AUCTION_STATE;
       return {
         ...state,
         players: updatedPlayers,
-        auctionState: nextState,
-        activeAuctionPlayer: null,
+        auctionState: action.data.auctionState || EMPTY_AUCTION_STATE,
         error: null,
       };
     }
 
-    case 'STATE_UPDATE': {
-      const nextState = action.data.auctionState || state.auctionState;
+    case 'STATE_UPDATE':
       return {
         ...state,
         tournament: action.data.tournament,
-        auctionState: nextState,
-        activeAuctionPlayer: resolveActiveAuctionPlayer(action.data.players, nextState.currentPlayerId),
+        auctionState: action.data.auctionState || state.auctionState,
         players: action.data.players,
         teams: action.data.teams,
         error: null,
       };
-    }
 
     case 'CLASS_SELECTED':
       return {
@@ -436,21 +382,19 @@ export function usePusherAuction(
 ): UsePusherAuctionReturn {
   // Overlay mode = OBS browser source with a token in the URL.
   // In overlay mode we use the wake channel strategy (lazy connect).
-  // Without a token (control panel, auction page) we connect immediately — old behaviour.
+  // Without a token (control panel, auction page, legacy public overlays),
+  // connect immediately.
   const isOverlayMode = !!overlayToken;
 
   const [isConnected, setIsConnected] = useState(false);
   const [isRevoked, setIsRevoked] = useState(false);
+  const [lastEvent, setLastEvent] = useState<string | null>(null);
   // In non-overlay mode start as true so Effect 4 fires immediately on mount.
   const [connectTournamentChannel, setConnectTournamentChannel] = useState(!isOverlayMode);
 
   const [state, dispatch] = useReducer(auctionReducer, {
     tournament: initialData?.tournament || null,
     auctionState: initialData?.auctionState || EMPTY_AUCTION_STATE,
-    activeAuctionPlayer: resolveActiveAuctionPlayer(
-      initialData?.players ?? [],
-      initialData?.auctionState?.currentPlayerId,
-    ),
     players: initialData?.players || [],
     teams: initialData?.teams || [],
     error: null,
@@ -659,14 +603,17 @@ export function usePusherAuction(
       });
 
       channel.bind('auction:player-selected', (data: PlayerSelectedEvent) => {
+        setLastEvent(`auction:player-selected ${new Date().toLocaleTimeString()}`);
         dispatch({ type: 'PLAYER_SELECTED', data });
       });
 
       channel.bind('auction:bid-placed', (data: BidPlacedEvent) => {
+        setLastEvent(`auction:bid-placed bid=${data.currentBid} ${new Date().toLocaleTimeString()}`);
         dispatch({ type: 'BID_PLACED', data });
       });
 
       channel.bind('auction:player-sold', (data: PlayerSoldEvent) => {
+        setLastEvent(`auction:player-sold ${new Date().toLocaleTimeString()}`);
         dispatch({ type: 'PLAYER_SOLD', data });
       });
 
@@ -702,10 +649,18 @@ export function usePusherAuction(
         }
       });
 
-      const handleConnectionStateChange = (states: { current: string }) => {
+      const handleConnectionStateChange = (states: { current: string; previous: string }) => {
         setIsConnected(states.current === 'connected');
         if (states.current === 'connected' || states.current === 'unavailable' || states.current === 'failed') {
           dispatch({ type: 'CLEAR_ERROR' });
+        }
+        // When the connection recovers from a disconnect, re-fetch full auction
+        // state to catch any events that were missed while the WS was down.
+        // This is the primary fix for "overlay shows stale data after reconnect"
+        // and "hard refresh needed to see latest state".
+        if (states.current === 'connected' && states.previous === 'connecting') {
+          dlog('[usePusherAuction] WS reconnected — re-fetching auction data to sync missed events');
+          refreshData().catch(() => {});
         }
       };
 
@@ -742,7 +697,7 @@ export function usePusherAuction(
       console.error('[Pusher] Error setting up connection:', err);
       setIsConnected(false);
     }
-  }, [tournamentId, connectTournamentChannel]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tournamentId, connectTournamentChannel, refreshData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Effect 5: Re-fetch when overlay token hydrates (mobile SSR delay) ───────
   // On mobile, useSearchParams may return null for the token on the first render.
@@ -752,6 +707,31 @@ export function usePusherAuction(
     if (!overlayToken || !tournamentId) return;
     fetchInitialData();
   }, [overlayToken, tournamentId, fetchInitialData]);
+
+  // ─── Effect 6: Page visibility recovery ──────────────────────────────────────
+  // When a browser tab is backgrounded, Chrome/Firefox throttle JS execution and
+  // can delay WebSocket ping/pong responses enough to cause Pusher disconnects.
+  // When the tab becomes visible again, reconnect Pusher if needed and re-fetch
+  // the current auction state to catch any events missed while backgrounded.
+  useEffect(() => {
+    if (!tournamentId || !connectTournamentChannel) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        dlog('[usePusherAuction] Tab visible — checking Pusher connection + re-syncing state');
+        // Re-fetch immediately to sync any missed events regardless of WS state
+        refreshData().catch(() => {});
+        // Also reconnect Pusher if it dropped
+        if (pusherRef.current && pusherRef.current.connection.state !== 'connected') {
+          dlog('[usePusherAuction] Pusher disconnected — reconnecting');
+          pusherRef.current.connect();
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [tournamentId, connectTournamentChannel, refreshData]);
 
   const setPlayerUnsold = useCallback((playerId: string) => {
     dispatch({ type: 'SET_PLAYER_UNSOLD', playerId });
@@ -804,11 +784,11 @@ export function usePusherAuction(
   return {
     tournament: state.tournament,
     auctionState: state.auctionState,
-    activeAuctionPlayer: state.activeAuctionPlayer,
     players: state.players,
     teams: state.teams,
     isConnected,
     isRevoked,
+    lastEvent,
     error: state.error,
     setPlayerUnsold,
     setPlayerAvailable,

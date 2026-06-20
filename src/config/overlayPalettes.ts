@@ -270,7 +270,6 @@ const theme3Palette = (palette: Theme3PaletteInput): OverlayPalette => ({
   } as React.CSSProperties,
 });
 
-/** Neutral starter palette — customize values in overlayPalettes.ts */
 const THEME3_SCAFFOLD: Theme3PaletteInput = {
   id: 'scaffold',
   name: 'Theme 3 - Scaffold',

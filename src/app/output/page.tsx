@@ -9,6 +9,13 @@ import { getAuthHeaders } from '@/lib/api-client';
 import StepsProgress from '@/components/shared/StepsProgress';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { OVERLAY_PALETTES } from '@/config/overlayPalettes';
+import {
+  AUCTION_OVERLAY_TYPES,
+  AuctionOverlayType,
+  buildAuctionOverlayUrl,
+  getAuctionOverlayConfig,
+} from '@/lib/overlays/auctionOverlayTypes';
+import { DEFAULT_OVERLAY_PRICES } from '@/lib/overlays/overlayPricing';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -16,29 +23,36 @@ interface OverlaySession {
   _id: string;
   tournamentId: string;
   label: string;
+  overlayType?: AuctionOverlayType;
+  paymentStatus?: 'free' | 'paid' | 'refunded' | 'payment_failed';
+  priceCharged?: number;
+  walletTransactionId?: number | null;
   isActive: boolean;
   createdAt: string;
   revokedAt?: string;
 }
 
-const OVERLAY_TYPES = [
-  { label: 'Full Screen', copyLabel: 'Full Screen', path: '' },
-  { label: 'Custom', copyLabel: 'OBS', path: '/custom' },
-  { label: 'Full Screen 2', copyLabel: 'Full Screen 2', path: '/fullscreen2' },
-  { label: 'Team Owner', copyLabel: 'Team Owner Link', path: '/team-owner' },
-] as const;
+type OverlayThemeId = keyof typeof OVERLAY_PALETTES;
+type OverlayPrices = Record<AuctionOverlayType, number>;
 
-function buildOverlayUrl(tournamentId: string, overlayPath: string, token: string): string {
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  return `${origin}/overlays/${tournamentId}${overlayPath}?token=${token}`;
+function formatAmount(amount: number) {
+  return `LKR ${amount.toLocaleString('en-LK')}`;
+}
+
+function getOrigin() {
+  return typeof window !== 'undefined' ? window.location.origin : '';
+}
+
+function sessionOverlayType(session: OverlaySession): AuctionOverlayType {
+  return session.overlayType && session.overlayType in AUCTION_OVERLAY_TYPES ? session.overlayType : 'fullscreen';
 }
 
 // ── Theme definitions ────────────────────────────────────────────────────────
 
 const THEMES = [
   {
-    id: 'standard' as const,
-    label: 'Theme 1',
+    id: 'standard' as OverlayThemeId,
+    label: 'Theme 1 Classic',
     description: 'Clean dark gradient with team leaderboard, live bidding view, and sold banner.',
     preview: (
       <div
@@ -60,8 +74,8 @@ const THEMES = [
     available: true,
   },
   {
-    id: 'theme2' as const,
-    label: 'Theme 2',
+    id: 'theme2' as OverlayThemeId,
+    label: 'Theme 2 Palette System',
     description: 'Palette-driven design — distinct color worlds, sharp typography, and smooth animations.',
     preview: (
       <div
@@ -103,28 +117,13 @@ const THEMES = [
     available: true,
   },
   {
-    id: 'theme3' as const,
-    label: 'Theme 3 Scaffold',
-    description: 'Blank theme structure — customize components, tokens, and palettes.',
-    preview: (
-      <div
-        className="w-full aspect-video rounded-lg flex flex-col items-center justify-center text-xs gap-2"
-        style={{ background: 'linear-gradient(160deg,#080810 0%,#121220 100%)', border: '2px dashed rgba(255,255,255,.15)' }}
-      >
-        <span className="opacity-50 tracking-widest uppercase text-[10px]">Theme 3 Scaffold</span>
-        <span className="opacity-30 text-[9px]">Customize in theme3/</span>
-      </div>
-    ),
-    available: true,
-  },
-  {
-    id: 'neon',
-    label: 'Neon',
-    description: 'Coming soon — cyberpunk-style glowing neon overlays.',
+    id: 'premium' as OverlayThemeId,
+    label: 'Premium',
+    description: 'Coming soon.',
     preview: (
       <div
         className="w-full aspect-video rounded-lg flex items-center justify-center text-white"
-        style={{ background: 'linear-gradient(135deg, #000 0%, #0a1a0a 100%)' }}
+        style={{ background: 'linear-gradient(135deg, #120a2a 0%, #3b0764 100%)' }}
       >
         <span className="opacity-30 tracking-widest uppercase text-[10px]">Coming Soon</span>
       </div>
@@ -133,12 +132,16 @@ const THEMES = [
   },
 ];
 
+const FULLSCREEN_OVERLAY_TYPES: AuctionOverlayType[] = ['fullscreen', 'fullscreen2'];
+const OUTPUT_LAYOUT_ORDER: AuctionOverlayType[] = ['custom', 'team_owners', 'fullscreen', 'fullscreen2'];
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function OutputPage() {
   const router = useRouter();
   const { selectedTournamentId, selectedTournament, setTournaments, tournaments, setSelectedTournamentId, refreshTournaments } = useTournamentContext();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const isAdmin = user?.role === 'Admin';
   const [saving, setSaving] = useState(false);
 
   // OBS setup instructions toggle
@@ -150,17 +153,30 @@ export default function OutputPage() {
   const [sessionsError, setSessionsError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [justCreated, setJustCreated] = useState<OverlaySession | null>(null);
+  const [justCreated, setJustCreated] = useState<OverlaySession[]>([]);
   const [confirmingRevoke, setConfirmingRevoke] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
   const [revokeError, setRevokeError] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [copiedAll, setCopiedAll] = useState<string | null>(null);
   const [showRevoked, setShowRevoked] = useState(false);
+  const [selectedOverlayTypes, setSelectedOverlayTypes] = useState<AuctionOverlayType[]>(['fullscreen']);
+  const [prices, setPrices] = useState<OverlayPrices>(DEFAULT_OVERLAY_PRICES);
 
-  const currentTheme = selectedTournament?.overlayTheme ?? 'standard';
+  const currentTheme = (selectedTournament?.overlayTheme ?? 'standard') as OverlayThemeId;
   const currentPalette = selectedTournament?.overlayPalette ?? 'default';
   const availablePalettes = OVERLAY_PALETTES[currentTheme] || [];
+  const selectedPaletteConfig = availablePalettes.find(p => p.id === currentPalette) || availablePalettes[0];
+  const primarySelectedOverlayType = selectedOverlayTypes[0] ?? 'fullscreen';
+  const primarySelectedOverlayConfig = getAuctionOverlayConfig(primarySelectedOverlayType);
+  const selectedTotalCharge = selectedOverlayTypes.reduce((total, type) => total + (prices[type] ?? 0), 0);
+  const previewUrl = selectedTournamentId
+    ? buildAuctionOverlayUrl(getOrigin(), selectedTournamentId, primarySelectedOverlayType, undefined, {
+        theme: currentTheme,
+        palette: selectedPaletteConfig?.id || currentPalette,
+        debug: true,
+      })
+    : '';
 
   // ── Sessions data fetching ──────────────────────────────────────────────
 
@@ -184,25 +200,48 @@ export default function OutputPage() {
 
   useEffect(() => {
     fetchSessions();
-    setJustCreated(null);
+    setJustCreated([]);
     setCreateError(null);
   }, [fetchSessions]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchPrices() {
+      try {
+        const res = await fetch('/api/overlay/prices', { headers: getAuthHeaders() });
+        const data = await res.json();
+        if (!cancelled && res.ok) setPrices({ ...DEFAULT_OVERLAY_PRICES, ...(data.prices ?? {}) });
+      } catch {
+        // Keep default prices if the preview endpoint is unavailable.
+      }
+    }
+    fetchPrices();
+    return () => { cancelled = true; };
+  }, []);
 
   // ── Session actions ─────────────────────────────────────────────────────
 
   const handleCreate = async () => {
-    if (!selectedTournamentId) return;
+    if (!selectedTournamentId || selectedOverlayTypes.length === 0) return;
     setCreating(true);
     setCreateError(null);
+    setJustCreated([]);
     try {
-      const res = await fetch('/api/overlay/sessions', {
-        method: 'POST',
-        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tournamentId: selectedTournamentId }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setCreateError(data.error || 'Failed to create session'); return; }
-      setJustCreated(data.session);
+      const createdSessions: OverlaySession[] = [];
+      for (const overlayType of selectedOverlayTypes) {
+        const res = await fetch('/api/overlay/sessions', {
+          method: 'POST',
+          headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tournamentId: selectedTournamentId, overlayType }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setCreateError(data.message || data.error || 'Failed to create session');
+          break;
+        }
+        createdSessions.push(data.session);
+      }
+      setJustCreated(createdSessions);
       await fetchSessions();
     } catch {
       setCreateError('An error occurred');
@@ -222,7 +261,7 @@ export default function OutputPage() {
       });
       const data = await res.json();
       if (!res.ok) { setRevokeError(data.error || 'Failed to revoke'); return; }
-      if (justCreated?._id === sessionToken) setJustCreated(null);
+      if (justCreated.some(session => session._id === sessionToken)) setJustCreated(prev => prev.filter(session => session._id !== sessionToken));
       await fetchSessions();
     } catch {
       setRevokeError('An error occurred');
@@ -241,10 +280,18 @@ export default function OutputPage() {
     }
   };
 
+  const buildSessionUrl = (session: OverlaySession) => buildAuctionOverlayUrl(
+    getOrigin(),
+    session.tournamentId,
+    sessionOverlayType(session),
+    session._id,
+    { theme: currentTheme, palette: selectedPaletteConfig?.id || currentPalette }
+  );
+
   const copyAllUrls = async (session: OverlaySession) => {
-    const urls = OVERLAY_TYPES.map(type =>
-      `${type.copyLabel} : ${buildOverlayUrl(session.tournamentId, type.path, session._id)}`
-    ).join('\n');
+    const overlayType = sessionOverlayType(session);
+    const config = getAuctionOverlayConfig(overlayType);
+    const urls = `${config.copyLabel} : ${buildSessionUrl(session)}`;
     const text = `🎙️ ProStream Overlay URLs — ${session.label}
 ${'─'.repeat(60)}
 ${urls}
@@ -262,13 +309,9 @@ ${'─'.repeat(60)}
    is set to Live status.
 
 💡 Tips:
-• Use the Full Screen or Full Screen 2 URL for a standalone
-  full-screen overlay scene.
-• Use the Custom (OBS) URL as a transparent browser source
-  layered over your game or video capture at 1920×1080.
-• Use the Team Owner Link to share with team owners —
-  it's mobile-friendly and works in any browser.
-• Append &debug=true to any URL to show a live connection
+• This session is locked to the selected layout: ${config.label}.
+• Generate a separate session if you need another output layout.
+• Append &debug=true to the URL to show a live connection
   status panel in the top-right corner.
 ${'─'.repeat(60)}`;
     try {
@@ -283,6 +326,18 @@ ${'─'.repeat(60)}`;
   const activeSessions = sessions.filter(s => s.isActive);
   const revokedSessions = sessions.filter(s => !s.isActive);
   const formatDate = (iso: string) => new Date(iso).toLocaleString();
+
+  const selectOverlayType = (type: AuctionOverlayType) => {
+    setSelectedOverlayTypes(prev => {
+      if (FULLSCREEN_OVERLAY_TYPES.includes(type)) {
+        return [...prev.filter(selectedType => !FULLSCREEN_OVERLAY_TYPES.includes(selectedType)), type];
+      }
+
+      return prev.includes(type)
+        ? prev.filter(selectedType => selectedType !== type)
+        : [...prev, type];
+    });
+  };
 
   // ── Theme / palette actions ─────────────────────────────────────────────
 
@@ -325,18 +380,22 @@ ${'─'.repeat(60)}`;
   // ── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
-    <div className="max-w-4xl mx-auto py-8 px-6">
+    <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'Player', 'Audience']}>
+    <div>
       {/* Steps Progress */}
-      <div className="mb-8">
+      <div className="px-6 pt-6 pb-2">
         <StepsProgress currentStep={4} />
       </div>
+
+      <div className="max-w-4xl mx-auto py-8 px-6">
 
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Overlay Setup</h1>
         <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          Choose a theme and manage OBS session URLs for your auction broadcast.
+          {isAdmin
+            ? 'Choose a theme and manage OBS session URLs for your auction broadcast.'
+            : 'Choose a theme and generate overlay links for your auction broadcast.'}
         </p>
       </div>
 
@@ -361,6 +420,66 @@ ${'─'.repeat(60)}`;
           </select>
         </div>
       )}
+
+      {/* Overlay layout cards */}
+      <div className="mb-8">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+              Choose Layout
+            </h2>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+              Select Custom and Team Owners independently. Choose only one Full Screen version.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="rounded-full px-3 py-1 text-xs font-bold" style={{ backgroundColor: 'rgba(79,70,229,0.12)', color: 'var(--brand-primary)', border: '1px solid var(--brand-primary)' }}>
+              Total: {formatAmount(selectedTotalCharge)}
+            </span>
+            <span className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>{selectedOverlayTypes.length} selected</span>
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {OUTPUT_LAYOUT_ORDER.map((type) => {
+            const config = getAuctionOverlayConfig(type);
+            const isSelected = selectedOverlayTypes.includes(type);
+            const isFullscreenType = FULLSCREEN_OVERLAY_TYPES.includes(type);
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => selectOverlayType(type)}
+                className="rounded-xl p-4 text-left transition-all duration-200 hover:scale-[1.01]"
+                style={{
+                  backgroundColor: isSelected ? `${config.accent}18` : 'var(--surface-elevated)',
+                  border: `2px solid ${isSelected ? config.accent : 'var(--border-primary)'}`,
+                }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{config.label}</p>
+                    <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>{config.useCase}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="rounded-full px-2 py-1 text-[10px] font-bold" style={{ backgroundColor: `${config.accent}22`, color: config.accent }}>{formatAmount(prices[type] ?? 0)}</span>
+                    <span
+                      className="rounded-full px-2 py-0.5 text-[10px] font-bold"
+                      style={{
+                        backgroundColor: isSelected ? config.accent : 'var(--surface-card)',
+                        color: isSelected ? '#fff' : 'var(--text-muted)',
+                        border: `1px solid ${isSelected ? config.accent : 'var(--border-primary)'}`,
+                      }}
+                    >
+                      {isSelected ? 'Selected' : isFullscreenType ? 'Choose One' : 'Optional'}
+                    </span>
+                  </div>
+                </div>
+                <p className="mt-3 text-[11px] font-mono" style={{ color: 'var(--text-muted)' }}>/overlays/:id{config.path || ''}</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Theme cards */}
       <div className="mb-8">
@@ -438,6 +557,94 @@ ${'─'.repeat(60)}`;
         </div>
       )}
 
+      {/* Live overlay preview */}
+      <div className="mb-8 rounded-xl border p-4" style={{ backgroundColor: 'var(--surface-elevated)', borderColor: 'var(--border-primary)' }}>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+              Live Preview
+            </h2>
+            <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+              {primarySelectedOverlayConfig.label} preview · {selectedPaletteConfig?.name || currentPalette}
+            </p>
+          </div>
+          {previewUrl && (
+            <a href={previewUrl} target="_blank" className="text-xs font-semibold underline" style={{ color: 'var(--brand-primary)' }}>
+              Open
+            </a>
+          )}
+        </div>
+        <div className="aspect-video overflow-hidden rounded-xl" style={{ backgroundColor: '#020617', border: '1px solid var(--border-primary)' }}>
+          {previewUrl ? (
+            <iframe title="Overlay preview" src={previewUrl} className="h-full w-full" />
+          ) : (
+            <div className="flex h-full items-center justify-center text-xs" style={{ color: 'var(--text-tertiary)' }}>Select a tournament to preview</div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Overlay Link Generation (Tournament users) ───────────────────── */}
+      {!isAdmin && (
+        <div className="mb-8 rounded-xl border p-5" style={{ backgroundColor: 'var(--surface-elevated)', borderColor: 'var(--border-primary)' }}>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Overlay Link Generation</h2>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                Generate a paid overlay link for the selected tournament. Active session URLs and revoke controls are shown below.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleCreate}
+              disabled={!selectedTournamentId || creating}
+              className="shrink-0 px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50"
+              style={{ backgroundColor: 'var(--brand-primary)', color: '#fff' }}
+            >
+              {creating ? 'Generating…' : 'Generate Overlay Link'}
+            </button>
+          </div>
+
+          {!selectedTournamentId && (
+            <p className="mt-4 text-sm text-center rounded-lg py-4" style={{ color: 'var(--text-muted)', border: '1px dashed var(--border-primary)' }}>
+              Select a tournament above to generate an overlay link.
+            </p>
+          )}
+
+          {createError && <p className="mt-4 text-red-400 text-sm">{createError}</p>}
+
+          {justCreated.length > 0 && (
+            <div className="mt-4 space-y-3 rounded-lg p-4" style={{ backgroundColor: 'rgba(79,70,229,0.08)', border: '1px solid var(--brand-primary)' }}>
+              <p className="text-sm font-semibold" style={{ color: 'var(--brand-primary)' }}>Overlay links generated — copy your URLs:</p>
+              {justCreated.map(session => {
+                const overlayType = sessionOverlayType(session);
+                const config = getAuctionOverlayConfig(overlayType);
+                const url = buildSessionUrl(session);
+                const copied = copiedUrl === url;
+                return (
+                  <div key={session._id} className="flex items-center gap-2">
+                    <span className="text-xs w-28 shrink-0" style={{ color: 'var(--text-tertiary)' }}>{config.shortLabel}</span>
+                    <code className="flex-1 text-xs truncate rounded px-2 py-1 font-mono" style={{ backgroundColor: 'var(--surface-card)', color: 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}>
+                      {url}
+                    </code>
+                    <button
+                      onClick={() => copyToClipboard(url)}
+                      className="shrink-0 px-3 py-1 rounded text-xs font-medium transition-colors"
+                      style={{
+                        backgroundColor: copied ? '#16a34a' : 'var(--surface-card)',
+                        color: copied ? '#fff' : 'var(--text-secondary)',
+                        border: '1px solid var(--border-primary)',
+                      }}
+                    >
+                      {copied ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── OBS Sessions ──────────────────────────────────────────────────── */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
@@ -447,7 +654,7 @@ ${'─'.repeat(60)}`;
               Each session generates a unique URL. Revoke any session to instantly disconnect that OBS source.
             </p>
           </div>
-          {selectedTournamentId && (
+          {selectedTournamentId && isAdmin && (
             <Link
               href="/manage/overlays/sessions"
               className="shrink-0 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
@@ -466,18 +673,19 @@ ${'─'.repeat(60)}`;
           <div className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--border-primary)' }}>
 
             {/* Just-created URL prompt */}
-            {justCreated && (
+            {justCreated.length > 0 && (
               <div className="p-4 space-y-3" style={{ backgroundColor: 'rgba(79,70,229,0.08)', borderBottom: '1px solid var(--brand-primary)' }}>
                 <p className="text-sm font-semibold" style={{ color: 'var(--brand-primary)' }}>
-                  Session created — copy your overlay URLs:
+                  Sessions created — copy your overlay URLs:
                 </p>
-                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{justCreated.label}</p>
-                {OVERLAY_TYPES.map(type => {
-                  const url = buildOverlayUrl(selectedTournamentId, type.path, justCreated._id);
+                {justCreated.map(session => {
+                  const overlayType = sessionOverlayType(session);
+                  const config = getAuctionOverlayConfig(overlayType);
+                  const url = buildSessionUrl(session);
                   const copied = copiedUrl === url;
                   return (
-                    <div key={type.path} className="flex items-center gap-2">
-                      <span className="text-xs w-28 shrink-0" style={{ color: 'var(--text-tertiary)' }}>{type.label}</span>
+                    <div key={session._id} className="flex items-center gap-2">
+                      <span className="text-xs w-28 shrink-0" style={{ color: 'var(--text-tertiary)' }}>{config.shortLabel}</span>
                       <code className="flex-1 text-xs truncate rounded px-2 py-1 font-mono" style={{ backgroundColor: 'var(--surface-card)', color: 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}>
                         {url}
                       </code>
@@ -495,7 +703,7 @@ ${'─'.repeat(60)}`;
                     </div>
                   );
                 })}
-                <button onClick={() => setJustCreated(null)} className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                <button onClick={() => setJustCreated([])} className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
                   Dismiss
                 </button>
               </div>
@@ -514,7 +722,7 @@ ${'─'.repeat(60)}`;
               <p className="p-4 text-red-400 text-sm">{sessionsError}</p>
             ) : activeSessions.length === 0 ? (
               <p className="p-6 text-center text-sm" style={{ color: 'var(--text-tertiary)' }}>
-                No active sessions. Open OBS Sessions to generate a paid overlay URL.
+                No active sessions. Generate an overlay link for this tournament to create one.
               </p>
             ) : (
               <ul className="divide-y" style={{ borderColor: 'var(--border-primary)' }}>
@@ -540,14 +748,15 @@ ${'─'.repeat(60)}`;
                         >
                           {copiedAll === session._id ? '✓ Copied All' : '⧉ Copy All'}
                         </button>
-                        {OVERLAY_TYPES.map(type => {
-                          const url = buildOverlayUrl(selectedTournamentId, type.path, session._id);
+                        {(() => {
+                          const overlayType = sessionOverlayType(session);
+                          const config = getAuctionOverlayConfig(overlayType);
+                          const url = buildSessionUrl(session);
                           const copied = copiedUrl === url;
                           return (
                             <button
-                              key={type.path}
                               onClick={() => copyToClipboard(url)}
-                              title={`Copy ${type.label} URL`}
+                              title={`Copy ${config.label} URL`}
                               className="px-2 py-1 rounded text-xs transition-colors"
                               style={{
                                 backgroundColor: copied ? '#16a34a' : 'var(--surface-elevated)',
@@ -555,10 +764,10 @@ ${'─'.repeat(60)}`;
                                 border: '1px solid var(--border-primary)',
                               }}
                             >
-                              {copied ? '✓' : '⧉'} {type.label}
+                              {copied ? '✓' : '⧉'} {config.shortLabel}
                             </button>
                           );
-                        })}
+                        })()}
                         {confirmingRevoke === session._id ? (
                           <div className="flex items-center gap-1">
                             <button
@@ -657,7 +866,7 @@ ${'─'.repeat(60)}`;
               </li>
               <li className="flex gap-3">
                 <span className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ backgroundColor: 'var(--brand-primary)' }}>2</span>
-                <span>Click <strong>+ Create Session</strong> above, then copy the overlay URL into OBS.</span>
+                <span>Click <strong>{isAdmin ? 'Generate Paid Overlay' : 'Generate Overlay Link'}</strong>, then copy the overlay URL into OBS.</span>
               </li>
               <li className="flex gap-3">
                 <span className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ backgroundColor: 'var(--brand-primary)' }}>3</span>
@@ -688,6 +897,7 @@ ${'─'.repeat(60)}`;
         >
           Continue to Auction →
         </button>
+      </div>
       </div>
     </div>
     </ProtectedRoute>

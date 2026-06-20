@@ -116,7 +116,11 @@ export async function PUT(
     }
 
     if (assignedTournaments !== undefined) updateDoc.assignedTournaments = assignedTournaments;
-    if (mobileNumber !== undefined) updateDoc.phone = mobileNumber || null;
+    if (mobileNumber !== undefined) {
+      updateDoc.phone = mobileNumber || null;
+      // Reset verification status whenever the phone number is changed by admin
+      updateDoc.phoneVerified = false;
+    }
 
     if (plan) {
       if (!ALLOWED_PLANS.includes(plan)) {
