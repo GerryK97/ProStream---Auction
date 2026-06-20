@@ -4,11 +4,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import TickerT3Shared from './TickerT3Shared';
 import { Theme3Canvas } from './Theme3Canvas';
 import LiveAuctionPlayerBarT3 from './LiveAuctionPlayerBarT3';
-import TeamWiseImageT3 from './TeamWiseImageT3';
+import TeamWiseImageryT3 from './TeamWiseImageryT3';
 import SoldPlayersSummaryT3 from './SoldPlayersSummaryT3';
 import Top10SummaryT3 from './Top10SummaryT3';
 import type { Theme3ContentProps } from './types';
-import { isTheme3TeamSummaryMode } from './types';
+import { isTheme3TeamImageryMode } from './types';
 import type { OverlaySettings } from '../OverlayWrapper';
 
 type DisplayMode = OverlaySettings['displayMode'];
@@ -98,8 +98,8 @@ const FullScreenAltT3Content: React.FC<Theme3ContentProps> = ({
         </div>
       )}
 
-      {/* ── Team Summary standings panel ── */}
-      {isTheme3TeamSummaryMode(activeMode) && (
+      {/* ── Team Imagery standings panel ── */}
+      {isTheme3TeamImageryMode(activeMode) && (
         <div
           style={{
             position: 'absolute', inset: 0, zIndex: 20,
@@ -108,7 +108,7 @@ const FullScreenAltT3Content: React.FC<Theme3ContentProps> = ({
             transition: 'opacity 0.5s ease, transform 0.5s ease',
           }}
         >
-          <TeamWiseImageT3
+          <TeamWiseImageryT3
             players={players}
             teams={teams}
             tournament={tournament}
