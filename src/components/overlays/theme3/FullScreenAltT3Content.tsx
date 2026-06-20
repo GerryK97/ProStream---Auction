@@ -5,7 +5,9 @@ import TickerT3Shared from './TickerT3Shared';
 import { Theme3Canvas } from './Theme3Canvas';
 import LiveAuctionPlayerBarT3 from './LiveAuctionPlayerBarT3';
 import TeamWiseImageT3 from './TeamWiseImageT3';
+import SoldPlayersSummaryT3 from './SoldPlayersSummaryT3';
 import type { Theme3ContentProps } from './types';
+import { isTheme3TeamSummaryMode } from './types';
 import type { OverlaySettings } from '../OverlayWrapper';
 
 type DisplayMode = OverlaySettings['displayMode'];
@@ -57,8 +59,27 @@ const FullScreenAltT3Content: React.FC<Theme3ContentProps> = ({
 
   return (
     <Theme3Canvas>
-      {/* ── Team Imagery leaderboard ── */}
-      {activeMode === 'team-wise-image' && (
+      {/* ── Player Summary panel ── */}
+      {activeMode === 'sold-summary' && (
+        <div
+          style={{
+            position: 'absolute', inset: 0, zIndex: 20,
+            opacity: summaryExiting ? 0 : 1,
+            transform: summaryExiting ? 'scale(0.97)' : 'scale(1)',
+            transition: 'opacity 0.5s ease, transform 0.5s ease',
+          }}
+        >
+          <SoldPlayersSummaryT3
+            players={players}
+            teams={teams}
+            tournament={tournament}
+            isExiting={summaryExiting}
+          />
+        </div>
+      )}
+
+      {/* ── Team Summary standings panel ── */}
+      {isTheme3TeamSummaryMode(activeMode) && (
         <div
           style={{
             position: 'absolute', inset: 0, zIndex: 20,
