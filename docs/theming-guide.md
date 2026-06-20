@@ -29,6 +29,9 @@ Theme 1 primarily uses shared `--overlay-*` variables and theme-specific tokens 
 ## Theme 2
 Theme 2 uses namespaced `--t2-*` tokens for its independent visual system. It may also provide `--overlay-*` aliases for compatibility with shared overlay components.
 
+## Theme 3
+Theme 3 uses namespaced `--t3-*` tokens. A blank scaffold lives in `src/components/overlays/theme3/` with placeholder components and a starter palette in `overlayPalettes.ts`. Customize palettes first, then orchestrators (`FullScreenT3Content`, `FullScreenAltT3Content`, `CustomT3Content`), then leaf components.
+
 ## Adding A Palette
 - Add the palette in `src/config/overlayPalettes.ts`.
 - Keep token names namespaced and deterministic.

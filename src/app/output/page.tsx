@@ -103,6 +103,21 @@ const THEMES = [
     available: true,
   },
   {
+    id: 'theme3' as const,
+    label: 'Theme 3 Scaffold',
+    description: 'Blank theme structure — customize components, tokens, and palettes.',
+    preview: (
+      <div
+        className="w-full aspect-video rounded-lg flex flex-col items-center justify-center text-xs gap-2"
+        style={{ background: 'linear-gradient(160deg,#080810 0%,#121220 100%)', border: '2px dashed rgba(255,255,255,.15)' }}
+      >
+        <span className="opacity-50 tracking-widest uppercase text-[10px]">Theme 3 Scaffold</span>
+        <span className="opacity-30 text-[9px]">Customize in theme3/</span>
+      </div>
+    ),
+    available: true,
+  },
+  {
     id: 'neon',
     label: 'Neon',
     description: 'Coming soon — cyberpunk-style glowing neon overlays.',
@@ -274,7 +289,7 @@ ${'─'.repeat(60)}`;
   async function selectTheme(themeId: string) {
     if (!selectedTournamentId || themeId === currentTheme) return;
     setTournaments(prev => prev.map(t =>
-      t._id === selectedTournamentId ? { ...t, overlayTheme: themeId as 'standard' | 'premium' | 'neon' | 'theme2', overlayPalette: 'default' } : t
+      t._id === selectedTournamentId ? { ...t, overlayTheme: themeId as 'standard' | 'premium' | 'neon' | 'theme2' | 'theme3', overlayPalette: 'default' } : t
     ));
     setSaving(true);
     try {

@@ -45,7 +45,7 @@ const tournamentSchema = new Schema<Tournament>(
     },
     overlayTheme: {
       type: String,
-      enum: ['standard', 'premium', 'neon', 'theme2'],
+      enum: ['standard', 'premium', 'neon', 'theme2', 'theme3'],
       default: 'standard',
     },
     overlayPalette: {

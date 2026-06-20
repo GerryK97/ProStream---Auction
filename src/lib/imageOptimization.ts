@@ -15,6 +15,8 @@ interface TransformOptions {
   width?: number;
   height?: number;
   crop?: 'fill' | 'fit' | 'scale' | 'limit';
+  /** Cloudinary gravity for fill crops — use 'face' for player portraits, 'auto' for mixed content */
+  gravity?: 'face' | 'auto' | 'center' | 'north' | 'south' | 'east' | 'west';
   quality?: 'auto' | number;
   format?: 'auto' | 'webp' | 'jpg' | 'png';
 }
@@ -72,6 +74,7 @@ export function optimizeImage(
   if (options.width) transformations.push(`w_${options.width}`);
   if (options.height) transformations.push(`h_${options.height}`);
   if (options.crop) transformations.push(`c_${options.crop}`);
+  if (options.gravity) transformations.push(`g_${options.gravity}`);
   if (options.quality) transformations.push(`q_${options.quality}`);
   if (options.format) transformations.push(`f_${options.format}`);
 

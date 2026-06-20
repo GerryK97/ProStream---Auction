@@ -2,19 +2,17 @@
 
 import OverlayWrapper from './OverlayWrapper';
 import FullScreen2T2Content from './theme2/FullScreenAltT2Content';
+import FullScreenAltT3Content from './theme3/FullScreenAltT3Content';
 import { FullScreenAltT1Content } from './theme1/FullScreenAltT1Content';
-
-// ─── Public export ────────────────────────────────────────────────────────────
+import { resolveOverlayThemeContent } from '@/lib/overlays/resolveOverlayThemeContent';
 
 export default function FullScreenOverlay2({ tournamentId }: { tournamentId: string }) {
   return (
     <div className="w-screen h-screen overflow-hidden" style={{ background: 'var(--overlay-bg-fullscreen)' }}>
       <OverlayWrapper tournamentId={tournamentId} overlayType="fullscreen2">
-        {(data) => {
-          if (data.tournament?.overlayTheme === 'theme2') {
-            return <FullScreen2T2Content {...data} />;
-          }
-          return (
+        {(data) =>
+          resolveOverlayThemeContent(
+            data.tournament?.overlayTheme,
             <FullScreenAltT1Content
               soldPlayers={data.soldPlayers}
               teams={data.teams}
@@ -24,9 +22,11 @@ export default function FullScreenOverlay2({ tournamentId }: { tournamentId: str
               auctionState={data.auctionState}
               overlaySettings={data.overlaySettings}
               wheelSpinData={data.wheelSpinData}
-            />
-          );
-        }}
+            />,
+            <FullScreen2T2Content {...data} />,
+            <FullScreenAltT3Content {...data} />,
+          )
+        }
       </OverlayWrapper>
     </div>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, ReactNode } from 'react';
+import React, { useState, useEffect, useMemo, ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { Tournament, AuctionState, Player, Team } from '@/types';
@@ -129,13 +129,24 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
     const {
         tournament,
         auctionState,
+        activeAuctionPlayer,
         players,
         teams,
         isConnected,
         isRevoked,
     } = usePusherAuction(liveTournamentId, undefined, urlToken ?? undefined, overlayType);
 
-    const currentPlayer = players.find(p => p._id === auctionState.currentPlayerId);
+    const currentPlayer = useMemo(() => {
+        const id = auctionState.currentPlayerId;
+        if (!id) return undefined;
+        const normalizedId = String(id);
+        const fromList = players.find((p) => String(p._id) === normalizedId);
+        if (fromList) return fromList;
+        if (activeAuctionPlayer && String(activeAuctionPlayer._id) === normalizedId) {
+            return activeAuctionPlayer;
+        }
+        return undefined;
+    }, [players, auctionState.currentPlayerId, activeAuctionPlayer]);
     const soldPlayers = players.filter(p => p.isSold);
 
     // Overlay settings — updated via overlay:settings Pusher event

@@ -56,6 +56,8 @@ export interface OptimisticSellSnapshot {
 interface UsePusherAuctionReturn {
   tournament: Tournament | null;
   auctionState: AuctionState;
+  /** Latest player payload from PLAYER_SELECTED / BID_PLACED — fallback when roster list is stale. */
+  activeAuctionPlayer: Player | null;
   players: Player[];
   teams: Team[];
   isConnected: boolean;
@@ -79,9 +81,18 @@ interface UsePusherAuctionReturn {
 interface AuctionStateType {
   tournament: Tournament | null;
   auctionState: AuctionState;
+  activeAuctionPlayer: Player | null;
   players: Player[];
   teams: Team[];
   error: string | null;
+}
+
+function resolveActiveAuctionPlayer(
+  players: Player[],
+  currentPlayerId: string | null | undefined,
+): Player | null {
+  if (!currentPlayerId) return null;
+  return players.find((p) => String(p._id) === String(currentPlayerId)) ?? null;
 }
 
 type AuctionAction =
@@ -116,6 +127,10 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         ...state,
         tournament: action.data.tournament,
         auctionState: action.data.auctionState,
+        activeAuctionPlayer: resolveActiveAuctionPlayer(
+          action.data.players,
+          action.data.auctionState.currentPlayerId,
+        ),
         players: action.data.players,
         teams: action.data.teams,
         error: null,
@@ -126,6 +141,10 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         ...state,
         tournament: action.data.tournament,
         auctionState: action.data.auctionState || EMPTY_AUCTION_STATE,
+        activeAuctionPlayer: resolveActiveAuctionPlayer(
+          action.data.players,
+          (action.data.auctionState || EMPTY_AUCTION_STATE).currentPlayerId,
+        ),
         teams: action.data.teams,
         players: action.data.players,
         error: null,
@@ -147,12 +166,21 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         error: null,
       };
 
-    case 'PLAYER_SELECTED':
+    case 'PLAYER_SELECTED': {
+      const incoming = action.data.currentPlayer;
+      const players = state.players.some((p) => String(p._id) === String(incoming._id))
+        ? state.players.map((p) =>
+            String(p._id) === String(incoming._id) ? { ...p, ...incoming } : p,
+          )
+        : [...state.players, incoming];
       return {
         ...state,
         auctionState: action.data.auctionState,
+        activeAuctionPlayer: incoming,
+        players,
         error: null,
       };
+    }
 
     case 'BID_PLACED': {
       // Only rebuild teams[] if a winningTeam is supplied AND it actually
@@ -167,10 +195,19 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         );
       }
 
+      const incomingPlayer = action.data.currentPlayer;
+      const updatedPlayers = state.players.some((p) => String(p._id) === String(incomingPlayer._id))
+        ? state.players.map((p) =>
+            String(p._id) === String(incomingPlayer._id) ? { ...p, ...incomingPlayer } : p,
+          )
+        : [...state.players, incomingPlayer];
+
       return {
         ...state,
         auctionState: action.data.auctionState,
+        activeAuctionPlayer: incomingPlayer,
         teams: updatedTeams,
+        players: updatedPlayers,
         error: null,
       };
     }
@@ -189,16 +226,20 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         players: updatedPlayers,
         teams: updatedTeams,
         auctionState: action.data.auctionState || EMPTY_AUCTION_STATE,
+        activeAuctionPlayer: action.data.soldPlayer,
         error: null,
       };
     }
 
-    case 'AUCTION_RESET':
+    case 'AUCTION_RESET': {
+      const nextState = action.data.auctionState || EMPTY_AUCTION_STATE;
       return {
         ...state,
-        auctionState: action.data.auctionState || EMPTY_AUCTION_STATE,
+        auctionState: nextState,
+        activeAuctionPlayer: nextState.currentPlayerId ? state.activeAuctionPlayer : null,
         error: null,
       };
+    }
 
     case 'AUCTION_UNDO': {
       const updatedPlayers = state.players.map((player) =>
@@ -221,11 +262,22 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         });
       }
 
+      const nextState = action.data.auctionState || EMPTY_AUCTION_STATE;
+      const restoredPlayer = action.data.restoredPlayer;
+      const activeAuctionPlayer =
+        nextState.currentPlayerId &&
+        String(nextState.currentPlayerId) === String(restoredPlayer._id)
+          ? restoredPlayer
+          : nextState.currentPlayerId
+            ? state.activeAuctionPlayer
+            : null;
+
       return {
         ...state,
         players: updatedPlayers,
         teams: updatedTeams,
-        auctionState: action.data.auctionState || EMPTY_AUCTION_STATE,
+        auctionState: nextState,
+        activeAuctionPlayer,
         error: null,
       };
     }
@@ -234,23 +286,28 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
       const updatedPlayers = state.players.map((player) =>
         player._id === action.data.unsoldPlayer._id ? action.data.unsoldPlayer : player
       );
+      const nextState = action.data.auctionState || EMPTY_AUCTION_STATE;
       return {
         ...state,
         players: updatedPlayers,
-        auctionState: action.data.auctionState || EMPTY_AUCTION_STATE,
+        auctionState: nextState,
+        activeAuctionPlayer: null,
         error: null,
       };
     }
 
-    case 'STATE_UPDATE':
+    case 'STATE_UPDATE': {
+      const nextState = action.data.auctionState || state.auctionState;
       return {
         ...state,
         tournament: action.data.tournament,
-        auctionState: action.data.auctionState || state.auctionState,
+        auctionState: nextState,
+        activeAuctionPlayer: resolveActiveAuctionPlayer(action.data.players, nextState.currentPlayerId),
         players: action.data.players,
         teams: action.data.teams,
         error: null,
       };
+    }
 
     case 'CLASS_SELECTED':
       return {
@@ -390,6 +447,10 @@ export function usePusherAuction(
   const [state, dispatch] = useReducer(auctionReducer, {
     tournament: initialData?.tournament || null,
     auctionState: initialData?.auctionState || EMPTY_AUCTION_STATE,
+    activeAuctionPlayer: resolveActiveAuctionPlayer(
+      initialData?.players ?? [],
+      initialData?.auctionState?.currentPlayerId,
+    ),
     players: initialData?.players || [],
     teams: initialData?.teams || [],
     error: null,
@@ -743,6 +804,7 @@ export function usePusherAuction(
   return {
     tournament: state.tournament,
     auctionState: state.auctionState,
+    activeAuctionPlayer: state.activeAuctionPlayer,
     players: state.players,
     teams: state.teams,
     isConnected,

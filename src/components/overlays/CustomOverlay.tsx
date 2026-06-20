@@ -2,19 +2,17 @@
 
 import OverlayWrapper from './OverlayWrapper';
 import CustomT2Content from './theme2/CustomT2Content';
+import CustomT3Content from './theme3/CustomT3Content';
 import { CustomT1Content } from './theme1/CustomT1Content';
-
-// ─── Public export ────────────────────────────────────────────────────────────
+import { resolveOverlayThemeContent } from '@/lib/overlays/resolveOverlayThemeContent';
 
 export default function CustomOverlay({ tournamentId }: { tournamentId: string }) {
   return (
     <div className="w-screen h-screen overflow-hidden bg-transparent">
       <OverlayWrapper tournamentId={tournamentId} overlayType="custom">
-        {(data) => {
-          if (data.tournament?.overlayTheme === 'theme2') {
-            return <CustomT2Content {...data} />;
-          }
-          return (
+        {(data) =>
+          resolveOverlayThemeContent(
+            data.tournament?.overlayTheme,
             <CustomT1Content
               soldPlayers={data.soldPlayers}
               teams={data.teams}
@@ -24,9 +22,11 @@ export default function CustomOverlay({ tournamentId }: { tournamentId: string }
               auctionState={data.auctionState}
               overlaySettings={data.overlaySettings}
               wheelSpinData={data.wheelSpinData}
-            />
-          );
-        }}
+            />,
+            <CustomT2Content {...data} />,
+            <CustomT3Content {...data} />,
+          )
+        }
       </OverlayWrapper>
     </div>
   );

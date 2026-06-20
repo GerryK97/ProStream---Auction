@@ -41,6 +41,7 @@ const DEFAULT_PRICES: OverlayPrices = {
 const THEME_OPTIONS: Array<{ id: OverlayThemeId; label: string; description: string; available: boolean }> = [
   { id: 'standard', label: 'Theme 1 Classic', description: 'Broadcast-safe classic auction layout.', available: true },
   { id: 'theme2', label: 'Theme 2 Palette System', description: 'Palette-driven overlay design with stronger visual identity.', available: true },
+  { id: 'theme3', label: 'Theme 3 Scaffold', description: 'Blank theme structure — customize components and palettes.', available: true },
   { id: 'premium', label: 'Premium', description: 'Coming soon.', available: false },
   { id: 'neon', label: 'Neon', description: 'Coming soon.', available: false },
 ];
