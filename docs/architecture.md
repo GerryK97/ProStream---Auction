@@ -1,5 +1,7 @@
 # ProStream Auction — Architecture
 
+> Ecosystem source of truth: see [`docs/prostream-ecosystem.md`](./prostream-ecosystem.md) for the current cross-repo Web + Expo + Scoreboard architecture.
+
 ## Summary
 
 ProStream Auction is a Next.js App Router application for cricket auction management, output overlays, wallet-backed paid overlay sessions, user management, and the InvoiceIT module. It integrates with the Expo app as the Auction/Auth/Wallet API backend and shares user/wallet data with Scoreboard through Neon Postgres.

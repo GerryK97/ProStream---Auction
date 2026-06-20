@@ -1,88 +1,111 @@
-# Feasibility: Direct Auction → Overlay via Pusher (like Score → Overlay)
+# Auction → Overlay Realtime Architecture
 
-**Date:** 2026-06-10  
-**Verdict:** ✅ Fully Feasible — Foundation Already Exists
+**Status:** Implemented and actively used  
+**Last updated:** 2026-06-20
 
----
+This document supersedes the older feasibility framing. Auction overlays already receive direct Pusher events from the Auction API. HTTP is used for bootstrap/recovery only, not for the live bid hot path.
 
-## How Score → Overlay Works (reference pattern)
+See also: [`docs/prostream-ecosystem.md`](./prostream-ecosystem.md).
 
-```mermaid
-graph LR
-    A[ScoreEditor\nControl Panel] -->|POST /api/pusher/trigger| B[Scoreboard API]
-    B -->|pusher.trigger\nmatch-matchId| C[Pusher]
-    C -->|WebSocket| D[Overlay Client\nuseOverlayState]
-    D -->|incremental\nstate update| E[OBS Browser Source]
-```
-
-- Channel: `match-{matchId}`
-- Overlay does **incremental in-memory updates** from Pusher payloads (no HTTP refetch per delivery/wicket)
-- Only hard events (`wicket.fell`, `innings.change`, `state.refresh`) trigger an HTTP refetch
-
----
-
-## How Auction → Overlay Currently Works
+## Current flow
 
 ```mermaid
 graph LR
-    A[AuctionControlPanel] -->|POST /api/auction/bid\nselect-player\nsell...| B[Auction API]
-    B -->|triggerAuctionEvent\ntournament-id| C[Pusher]
-    C -->|WebSocket| D[OverlayWrapper\nusePusherAuction]
-    D -->|reducer dispatch| E[OBS Browser Source]
-    B -.->|initial HTTP fetch\nplayers + teams + state| D
+  A[Web or Expo Auction Operator] -->|POST auction action| B[Next.js Auction API]
+  B -->|MongoDB update| C[(MongoDB)]
+  B -->|Pusher trigger| D[Pusher]
+  D -->|tournament-id channel| E[OBS Overlay / usePusherAuction]
+  E -->|reducer/cache patch| F[Rendered Overlay]
 ```
 
-- Channel: `tournament-{id}` — **already direct Pusher**
-- `usePusherAuction` already uses a `useReducer` to apply events directly (like Score pattern)
-- Difference: initial hydration + some recovery paths still use HTTP
+## Channels
 
----
+| Channel | Used by | Purpose |
+|---|---|---|
+| `tournament-{tournamentId}` | Auction controls, overlays, Expo | Auction state, bid, sell, undo, class, overlay settings, wheel events |
+| `prostream-control` | Overlay lifecycle | Wake/sleep/revoke signals for browser-source sessions |
 
-## Key Finding: Same Pusher App
+## Hot-path bid behavior
 
-Both apps share **identical credentials** (`APP_ID: 2072858`, `cluster: ap2`) — meaning they are on the **same Pusher account**, so a Pusher message from the Auction server is inherently receivable by the Scoreboard overlay and vice versa. No credential changes needed.
+`POST /api/auction/bid` is optimized for operator-to-overlay latency:
 
----
+1. Auth user is read via cached `getUserFromRequest`.
+2. Auction state and tournament are fetched in parallel.
+3. Player lookup and atomic state update run in parallel.
+4. State update uses `currentBid: { $lt: amount }` to reject superseded bids with `409`.
+5. Pusher bid event is triggered fire-and-forget.
+6. HTTP response returns without waiting for the Pusher REST roundtrip.
+7. Overlay receives `auction:bid-placed` and patches in-memory state.
 
-## What's Already Done vs. What's Missing
+## Bootstrap and recovery
 
-| Feature | Score→Overlay | Auction→Overlay Today | Gap |
-|---|---|---|---|
-| Pusher direct channel | ✅ `match-{id}` | ✅ `tournament-{id}` | None |
-| Incremental state updates | ✅ full in-memory | ✅ reducer dispatch | None |
-| HTTP-free hot path | ✅ (most events) | ⚠️ initial fetch + recovery fetches remain | Minor |
-| Shared Pusher account | ✅ | ✅ same credentials | None |
-| Overlay auth / token | Basic session | ✅ token-based for OBS | None |
-| `overlay:settings` control | ✅ `display.toggle` | ✅ `overlay:settings` | None |
-| Wake/sleep lifecycle | ❌ not needed | ✅ 2-tier channel strategy | None |
+Initial overlay load uses:
 
----
+```text
+GET /api/auction/bootstrap?tournamentId=...
+```
 
-## The Only Real Gap
+This returns tournament, auction state, players, and teams in one request. It replaced the previous four-request startup pattern.
 
-`OverlayWrapper` **double-subscribes** to `tournament-{id}` — once inside `usePusherAuction` (for auction events) and once in a separate `useEffect` (for `overlay:settings` / `overlay:wheel-spin`). Minor code smell, not a blocker.
+`usePusherAuction` now dedupes bootstrap calls during mount/token hydration/reconnect so a single overlay tab does not spam repeated bootstrap requests.
 
----
+Recovery refreshes are only used when needed:
 
-## Implementation Plan (when ready)
+- WebSocket recovers from a failed/unavailable/disconnected state
+- tab visibility returns after the cached state is stale
+- explicit user refresh
 
-### Step 1 — Move bindings into `usePusherAuction`
-- Move `overlay:settings` and `overlay:wheel-spin` event bindings from `OverlayWrapper`'s standalone `useEffect` into Effect 4 inside `usePusherAuction` (alongside all other auction event handlers)
-- Remove the duplicate `pusher.subscribe(tournament-{id})` call in `OverlayWrapper`
+## Event handling
 
-### Step 2 — Expose from hook
-- Add `overlaySettings: OverlaySettings` and `wheelSpinData: WheelSpinEvent | null` to `UsePusherAuctionReturn`
-- Move `DEFAULT_OVERLAY_SETTINGS` into `usePusherAuction` or a shared constants file
+Main events include:
 
-### Step 3 — Update `OverlayWrapper`
-- Consume `overlaySettings` and `wheelSpinData` directly from the hook return instead of local state
-- Remove the now-redundant local `useState` and `useEffect` for those two values
+- `auction:started`
+- `auction:stopped`
+- `auction:restarted`
+- `auction:player-selected`
+- `auction:bid-placed`
+- `auction:player-sold`
+- `auction:player-unsold`
+- `auction:undo`
+- `auction:reset`
+- `auction:state-update`
+- `auction:class-selected`
+- `auction:class-completed`
+- `overlay:settings`
+- `overlay:wheel-spin`
+- `overlay:revoke`
 
-### Files to touch
-| File | Change |
-|---|---|
-| `src/hooks/usePusherAuction.ts` | Add overlay:settings + overlay:wheel-spin bindings in Effect 4; expose from return |
-| `src/components/overlays/OverlayWrapper.tsx` | Remove duplicate subscribe useEffect; read from hook |
-| `src/lib/overlays/auctionOverlayTypes.ts` | No change needed |
+## Payload rules
 
-**Estimated effort:** ~1–2 hours, low risk.
+Do:
+
+- Send only changed/current entities where possible.
+- Keep teams/players cached client-side.
+- Use IDs for already-loaded related records.
+- Trim large histories before Pusher trigger.
+
+Do not:
+
+- Broadcast the full player/team list for every bid.
+- Await Pusher REST calls on the bid hot path.
+- Add extra MongoDB team reads to bid events if `winningTeamId` is enough.
+
+## Expo app behavior
+
+`ProStream-Expo-App/hooks/usePusherAuction.ts` patches TanStack Query cache from Pusher events.
+
+- `auction:bid-placed` patches auction state directly.
+- `auction:player-selected` patches current player state.
+- sell/undo/re-auction lifecycle events invalidate/refetch because roster/team balances may change.
+
+## Remaining acceptable HTTP usage
+
+HTTP fetches still exist for:
+
+- initial bootstrap
+- session/token validation
+- reconnect recovery
+- explicit pull-to-refresh
+- management pages that are not live overlay hot path
+
+This is intentional. The live bidding path is Pusher-first.

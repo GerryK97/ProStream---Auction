@@ -1,5 +1,7 @@
 # Overlay Theme System
 
+> Ecosystem context: see [`docs/prostream-ecosystem.md`](./prostream-ecosystem.md) for overlay sessions, Theme3, Expo mobile controls, and backend integration.
+
 ## Summary
 Overlay themes are output-facing design systems for OBS/browser-source rendering. They may be visually expressive and independent from the System UI Design System.
 
