@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import cloudinary from '@/lib/cloudinary';
 
+// Increase Vercel body limit to 10 MB (default is 4.5 MB — too small for photos).
+// Also extend max duration so Cloudinary has time to process the upload.
+export const config = {
+  api: { bodyParser: false },
+};
+export const maxDuration = 30;
+
 // POST /api/upload - Upload image to Cloudinary
 export async function POST(request: NextRequest) {
   try {
@@ -28,20 +35,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('Uploading file:', file.name, 'Size:', file.size, 'Type:', file.type);
+    console.log('Uploading file:', file.name, 'Size:', file.size, 'Type:', file.type, 'Folder:', folder);
 
     // Convert file to buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
     // Upload to Cloudinary using upload_stream
-    // No transformations at upload time - we'll apply them dynamically when fetching
+    // No transformations at upload time — apply dynamically on fetch
     const uploadResult = await new Promise<any>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder,
           resource_type: 'auto',
-          // Store original resolution, transform on-the-fly when displaying
         },
         (error, result) => {
           if (error) reject(error);
@@ -60,18 +66,12 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Upload error:', error);
 
-    // Return detailed error message
     const errorMessage = error?.message || error?.error?.message || 'Failed to upload image';
-    const errorDetails = {
-      error: errorMessage,
-      details: error?.http_code ? `HTTP ${error.http_code}` : undefined,
-      cloudinaryError: error?.error || undefined
-    };
-
-    console.error('Full error details:', errorDetails);
-
     return NextResponse.json(
-      errorDetails,
+      {
+        error: errorMessage,
+        details: error?.http_code ? `HTTP ${error.http_code}` : undefined,
+      },
       { status: 500 }
     );
   }
