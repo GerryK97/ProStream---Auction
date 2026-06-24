@@ -60,18 +60,19 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Upload error:', error);
 
-    // Return detailed error message
+    // Security: Do not expose detailed Cloudinary error responses to the client.
+    // Instead, log the full error server-side and return a generic safe message.
     const errorMessage = error?.message || error?.error?.message || 'Failed to upload image';
-    const errorDetails = {
+    const fullErrorDetails = {
       error: errorMessage,
       details: error?.http_code ? `HTTP ${error.http_code}` : undefined,
       cloudinaryError: error?.error || undefined
     };
 
-    console.error('Full error details:', errorDetails);
+    console.error('Full error details:', fullErrorDetails);
 
     return NextResponse.json(
-      errorDetails,
+      { error: 'Failed to upload image' },
       { status: 500 }
     );
   }
