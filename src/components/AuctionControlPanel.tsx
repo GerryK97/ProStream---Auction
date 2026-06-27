@@ -21,11 +21,14 @@ import AuctionHeaderBar from '@/components/auction/AuctionHeaderBar';
 import { useAuctionLayoutMode, isTabLayoutMode } from '@/components/auction/useAuctionLayoutMode';
 import {
     DEFAULT_SECTION_VISIBILITY,
+    DEFAULT_LAYOUT_PREFERENCE,
     AUCTION_TAB_STORAGE_KEY,
     AUCTION_SECTIONS_STORAGE_KEY,
+    AUCTION_LAYOUT_PREF_STORAGE_KEY,
     type AuctionWorkspaceTab,
     type AuctionSectionVisibility,
     type AuctionSectionKey,
+    type AuctionWorkspaceLayoutPreference,
 } from '@/components/auction/types';
 
 const formatCurrency = (amount: number) => amount.toLocaleString();
@@ -1033,7 +1036,12 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     // Class-wise auction management
     const [selectingClass, setSelectingClass] = useState(false);
     const layoutMode = useAuctionLayoutMode();
-    const tabLayout = isTabLayoutMode(layoutMode);
+    const [layoutPreference, setLayoutPreference] = useState<AuctionWorkspaceLayoutPreference>(() => {
+        if (typeof window === 'undefined') return DEFAULT_LAYOUT_PREFERENCE;
+        const saved = localStorage.getItem(AUCTION_LAYOUT_PREF_STORAGE_KEY);
+        return saved === 'tabs' || saved === 'panels' ? saved : DEFAULT_LAYOUT_PREFERENCE;
+    });
+    const useTabs = isTabLayoutMode(layoutMode) && layoutPreference === 'tabs';
 
     const [activeTab, setActiveTab] = useState<AuctionWorkspaceTab>(() => {
         if (typeof window === 'undefined') return 'auction';
@@ -1058,6 +1066,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
 
     useEffect(() => { localStorage.setItem(AUCTION_TAB_STORAGE_KEY, activeTab); }, [activeTab]);
     useEffect(() => { localStorage.setItem(AUCTION_SECTIONS_STORAGE_KEY, JSON.stringify(sectionVisibility)); }, [sectionVisibility]);
+    useEffect(() => { localStorage.setItem(AUCTION_LAYOUT_PREF_STORAGE_KEY, layoutPreference); }, [layoutPreference]);
 
     // Overlay control panel settings
     const [overlaySize, setOverlaySize] = useState<'large' | 'small'>('large');
@@ -1627,7 +1636,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
 
     const handleSelectPlayer = async (playerId: string) => {
         if (!liveTournament) return;
-        if (tabLayout) setActiveTab('auction');
+        if (useTabs) setActiveTab('auction');
         try {
             const response = await fetch('/api/auction/select-player', {
                 method: 'POST',
@@ -2104,14 +2113,17 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                 onComplete={() => setShowCompleteConfirm(true)}
                 sectionVisibility={sectionVisibility}
                 onToggleSection={toggleSection}
+                layoutPreference={layoutPreference}
+                onLayoutPreferenceChange={setLayoutPreference}
             />
 
             <AuctionWorkspaceLayout
                 layoutMode={layoutMode}
+                layoutPreference={layoutPreference}
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
                 sectionVisibility={sectionVisibility}
-                classManager={tabLayout ? undefined : classManagerNode}
+                classManager={useTabs ? undefined : classManagerNode}
                 availablePlayers={
                     <AvailablePlayersPanel
                         players={players}
@@ -2122,7 +2134,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                         onReAuction={() => setShowReAuctionConfirm(true)}
                         reAuctioning={reAuctioning}
                         activeClass={auctionState.currentAuctionClass ?? null}
-                        classManager={tabLayout ? classManagerNode : undefined}
+                        classManager={useTabs ? classManagerNode : undefined}
                     />
                 }
                 auctionPanel={
@@ -2142,7 +2154,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                         onSpinWheel={handleSpinWheel}
                         isSpinning={isSpinning}
                         isInFlight={bidInFlight}
-                        stickyPlayerHeader={tabLayout}
+                        stickyPlayerHeader={useTabs}
                     />
                 }
                 overlayPanel={overlayControlsNode}

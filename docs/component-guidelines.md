@@ -38,18 +38,28 @@ The live auction page uses a responsive workspace shell under `src/components/au
 
 | Mode | Viewport | Layout |
 |------|----------|--------|
-| **Wide** | >= 1400px | 3-column dashboard (Available \| Auction + Overlay \| Teams/Results) with optional panel toggles in the header |
-| **Compact** | 1024–1399px | Horizontal tab bar: Auction (bidding + overlay), Players, Teams, Results |
-| **Focused** | < 1024px | Same tabs; header context collapses to save vertical space |
+| **Wide** | >= 1400px | 3-column dashboard (Available \| Auction + Overlay \| Teams/Results) with panel toggles in the header |
+| **Compact** | 1024–1399px | Default **All panels** — stacked dashboard with the same panel toggles as wide; optional **Tabs** layout in the header |
+| **Focused** | < 1024px | Same as compact; header context collapses but **Panels** / **Layout** controls stay available |
 
-**Tab rules**
+**Panel toggles**
+- Available on all viewport sizes (not only wide).
+- Turn sections on/off: Available, Auction, Teams, Results.
+- In **All panels** mode, every enabled section appears on one scrollable page (stacked vertically below 1400px).
+
+**Layout preference (compact / focused)**
+- **All panels** (default): multi-section dashboard, same behavior as wide mode but stacked.
+- **Tabs**: one section at a time via `AuctionTabNav` (previous compact behavior).
+- Stored in `localStorage` as `auctionWorkspaceLayoutPref`.
+
+**Tab rules** (when Layout = Tabs)
 - Default tab is **Auction**; selecting a player from **Players** switches to **Auction**.
 - **Auction** tab includes bidding controls and overlay controls together.
 - **Results** has its own tab (sold/unsold list, undo, edit).
-- Class selector appears above the Available Players list in tab modes; in wide mode it stays in the left column above the list.
+- Class selector appears above the Available Players list in tab mode; in panel mode it stays in the left column above the list.
 
 **Persistence**
-- Last active tab and wide-mode panel visibility are stored in `localStorage` (`auctionWorkspaceTab`, `auctionSectionVisibility`).
+- Last active tab, panel visibility, and layout preference are stored in `localStorage` (`auctionWorkspaceTab`, `auctionSectionVisibility`, `auctionWorkspaceLayoutPref`).
 
 **Ownership**
 - Workspace layout components are System UI only (`--surface-*`, `--brand-*`, etc.).

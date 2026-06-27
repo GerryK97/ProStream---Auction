@@ -2,11 +2,17 @@
 
 import React from 'react';
 import AuctionTabNav from './AuctionTabNav';
-import type { AuctionLayoutMode, AuctionSectionVisibility, AuctionWorkspaceTab } from './types';
+import type {
+    AuctionLayoutMode,
+    AuctionSectionVisibility,
+    AuctionWorkspaceLayoutPreference,
+    AuctionWorkspaceTab,
+} from './types';
 import { isTabLayoutMode } from './useAuctionLayoutMode';
 
 export interface AuctionWorkspaceLayoutProps {
     layoutMode: AuctionLayoutMode;
+    layoutPreference: AuctionWorkspaceLayoutPreference;
     activeTab: AuctionWorkspaceTab;
     onTabChange: (tab: AuctionWorkspaceTab) => void;
     sectionVisibility: AuctionSectionVisibility;
@@ -19,10 +25,7 @@ export interface AuctionWorkspaceLayoutProps {
     errorOverlay?: React.ReactNode;
 }
 
-export default function AuctionWorkspaceLayout({
-    layoutMode,
-    activeTab,
-    onTabChange,
+function DashboardLayout({
     sectionVisibility,
     classManager,
     availablePlayers,
@@ -31,38 +34,17 @@ export default function AuctionWorkspaceLayout({
     teamsPanel,
     resultsPanel,
     errorOverlay,
-}: AuctionWorkspaceLayoutProps) {
-    const tabMode = isTabLayoutMode(layoutMode);
-
-    if (tabMode) {
-        return (
-            <div className="flex flex-col gap-3 min-w-0 relative">
-                <AuctionTabNav activeTab={activeTab} onTabChange={onTabChange} variant="horizontal" />
-
-                <div className="min-w-0" role="tabpanel">
-                    {activeTab === 'auction' && (
-                        <div className="flex flex-col gap-3 min-w-0">
-                            {auctionPanel}
-                            {overlayPanel}
-                        </div>
-                    )}
-                    {activeTab === 'available' && (
-                        <div className="min-w-0">{availablePlayers}</div>
-                    )}
-                    {activeTab === 'teams' && (
-                        <div className="min-w-0">{teamsPanel}</div>
-                    )}
-                    {activeTab === 'results' && (
-                        <div className="min-w-0">{resultsPanel}</div>
-                    )}
-                </div>
-
-                {errorOverlay}
-            </div>
-        );
-    }
-
-    // Wide mode: 3-column dashboard
+}: Pick<
+    AuctionWorkspaceLayoutProps,
+    | 'sectionVisibility'
+    | 'classManager'
+    | 'availablePlayers'
+    | 'auctionPanel'
+    | 'overlayPanel'
+    | 'teamsPanel'
+    | 'resultsPanel'
+    | 'errorOverlay'
+>) {
     const showLeft = sectionVisibility.availablePlayers;
     const showCenter = sectionVisibility.auctionPanel;
     const showRight = sectionVisibility.teams || sectionVisibility.results;
@@ -96,6 +78,64 @@ export default function AuctionWorkspaceLayout({
                     <p className="text-sm">All panels are hidden. Use the panel toggles in the header to show a section.</p>
                 </div>
             )}
+            {errorOverlay}
+        </div>
+    );
+}
+
+export default function AuctionWorkspaceLayout({
+    layoutMode,
+    layoutPreference,
+    activeTab,
+    onTabChange,
+    sectionVisibility,
+    classManager,
+    availablePlayers,
+    auctionPanel,
+    overlayPanel,
+    teamsPanel,
+    resultsPanel,
+    errorOverlay,
+}: AuctionWorkspaceLayoutProps) {
+    const useTabs = isTabLayoutMode(layoutMode) && layoutPreference === 'tabs';
+
+    if (!useTabs) {
+        return (
+            <DashboardLayout
+                sectionVisibility={sectionVisibility}
+                classManager={classManager}
+                availablePlayers={availablePlayers}
+                auctionPanel={auctionPanel}
+                overlayPanel={overlayPanel}
+                teamsPanel={teamsPanel}
+                resultsPanel={resultsPanel}
+                errorOverlay={errorOverlay}
+            />
+        );
+    }
+
+    return (
+        <div className="flex flex-col gap-3 min-w-0 relative">
+            <AuctionTabNav activeTab={activeTab} onTabChange={onTabChange} variant="horizontal" />
+
+            <div className="min-w-0" role="tabpanel">
+                {activeTab === 'auction' && (
+                    <div className="flex flex-col gap-3 min-w-0">
+                        {auctionPanel}
+                        {overlayPanel}
+                    </div>
+                )}
+                {activeTab === 'available' && (
+                    <div className="min-w-0">{availablePlayers}</div>
+                )}
+                {activeTab === 'teams' && (
+                    <div className="min-w-0">{teamsPanel}</div>
+                )}
+                {activeTab === 'results' && (
+                    <div className="min-w-0">{resultsPanel}</div>
+                )}
+            </div>
+
             {errorOverlay}
         </div>
     );

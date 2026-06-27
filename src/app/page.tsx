@@ -86,7 +86,7 @@ export default function HomePage() {
     },
     {
       name: 'Standard',
-      price: '5,000 LKR',
+      price: '6,000 LKR',
       cadence: 'per tournament',
       description: 'For full events that need polished overlays and tight roster control.',
       perks: [

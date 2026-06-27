@@ -1,10 +1,30 @@
 'use client';
 
 import React, { useState } from 'react';
-import type { AuctionLayoutMode, AuctionSectionKey, AuctionSectionVisibility } from './types';
+import type { AuctionLayoutMode, AuctionSectionKey, AuctionSectionVisibility, AuctionWorkspaceLayoutPreference } from './types';
 import { SECTION_TOGGLE_LABELS } from './types';
 
 const SectionToggleButton: React.FC<{
+    label: string;
+    active: boolean;
+    onClick: () => void;
+}> = ({ label, active, onClick }) => (
+    <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={active}
+        className="text-xs font-semibold px-2.5 py-1 rounded-md transition-all border"
+        style={{
+            backgroundColor: active ? 'color-mix(in oklab, var(--brand-primary) 18%, transparent)' : 'var(--surface-elevated)',
+            color: active ? 'var(--brand-primary)' : 'var(--text-tertiary)',
+            borderColor: active ? 'color-mix(in oklab, var(--brand-primary) 45%, transparent)' : 'var(--border-primary)',
+        }}
+    >
+        {label}
+    </button>
+);
+
+const LayoutPrefButton: React.FC<{
     label: string;
     active: boolean;
     onClick: () => void;
@@ -40,6 +60,8 @@ export interface AuctionHeaderBarProps {
     onComplete: () => void;
     sectionVisibility?: AuctionSectionVisibility;
     onToggleSection?: (key: AuctionSectionKey) => void;
+    layoutPreference?: AuctionWorkspaceLayoutPreference;
+    onLayoutPreferenceChange?: (pref: AuctionWorkspaceLayoutPreference) => void;
 }
 
 export default function AuctionHeaderBar({
@@ -58,10 +80,43 @@ export default function AuctionHeaderBar({
     onComplete,
     sectionVisibility,
     onToggleSection,
+    layoutPreference,
+    onLayoutPreferenceChange,
 }: AuctionHeaderBarProps) {
     const [contextExpanded, setContextExpanded] = useState(false);
-    const showSectionToggles = layoutMode === 'wide' && sectionVisibility && onToggleSection;
+    const showSectionToggles = Boolean(sectionVisibility && onToggleSection);
+    const showLayoutPrefToggle = layoutMode !== 'wide' && layoutPreference && onLayoutPreferenceChange;
     const collapseContext = layoutMode === 'focused';
+
+    const panelToggles = showSectionToggles ? (
+        <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Panels:</span>
+            {(Object.keys(SECTION_TOGGLE_LABELS) as AuctionSectionKey[]).map(key => (
+                <SectionToggleButton
+                    key={key}
+                    label={SECTION_TOGGLE_LABELS[key]}
+                    active={sectionVisibility![key]}
+                    onClick={() => onToggleSection!(key)}
+                />
+            ))}
+        </div>
+    ) : null;
+
+    const layoutPrefToggle = showLayoutPrefToggle ? (
+        <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Layout:</span>
+            <LayoutPrefButton
+                label="All panels"
+                active={layoutPreference === 'panels'}
+                onClick={() => onLayoutPreferenceChange!('panels')}
+            />
+            <LayoutPrefButton
+                label="Tabs"
+                active={layoutPreference === 'tabs'}
+                onClick={() => onLayoutPreferenceChange!('tabs')}
+            />
+        </div>
+    ) : null;
 
     return (
         <div className="border border-[var(--border-primary)] rounded-lg p-3 sm:p-4 min-w-0" style={{ backgroundColor: 'var(--surface-secondary)' }}>
@@ -141,6 +196,14 @@ export default function AuctionHeaderBar({
                             <p className="text-xs text-[var(--text-tertiary)]">
                                 Budget: {budgetPerTeam.toLocaleString()} | Squad: {squadSize} | Base: {basePricePerPlayer.toLocaleString()}
                             </p>
+                            {layoutPrefToggle}
+                            {panelToggles}
+                        </div>
+                    )}
+                    {!contextExpanded && (layoutPrefToggle || panelToggles) && (
+                        <div className="mt-2 space-y-2">
+                            {layoutPrefToggle}
+                            {panelToggles}
                         </div>
                     )}
                 </div>
@@ -162,19 +225,8 @@ export default function AuctionHeaderBar({
                             {unsoldCount} Unsold
                         </span>
                     </div>
-                    {showSectionToggles && (
-                        <div className="flex flex-wrap items-center gap-2 pt-1">
-                            <span className="text-xs font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>Panels:</span>
-                            {(Object.keys(SECTION_TOGGLE_LABELS) as AuctionSectionKey[]).map(key => (
-                                <SectionToggleButton
-                                    key={key}
-                                    label={SECTION_TOGGLE_LABELS[key]}
-                                    active={sectionVisibility![key]}
-                                    onClick={() => onToggleSection!(key)}
-                                />
-                            ))}
-                        </div>
-                    )}
+                    {layoutPrefToggle}
+                    {panelToggles}
                 </div>
             )}
 

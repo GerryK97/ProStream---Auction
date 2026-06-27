@@ -25,5 +25,10 @@ export const SECTION_TOGGLE_LABELS: Record<AuctionSectionKey, string> = {
     results: 'Results',
 };
 
+export type AuctionWorkspaceLayoutPreference = 'panels' | 'tabs';
+
 export const AUCTION_TAB_STORAGE_KEY = 'auctionWorkspaceTab';
 export const AUCTION_SECTIONS_STORAGE_KEY = 'auctionSectionVisibility';
+export const AUCTION_LAYOUT_PREF_STORAGE_KEY = 'auctionWorkspaceLayoutPref';
+
+export const DEFAULT_LAYOUT_PREFERENCE: AuctionWorkspaceLayoutPreference = 'panels';
