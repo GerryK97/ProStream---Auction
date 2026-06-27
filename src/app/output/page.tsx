@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useTournamentContext } from '@/contexts/TournamentContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAuthHeaders } from '@/lib/api-client';
@@ -652,67 +651,73 @@ ${'─'.repeat(60)}`;
         </div>
       </div>
 
-      {/* ── Overlay Link Generation (Tournament users) ───────────────────── */}
-      {!isAdmin && (
-        <div className="mb-8 rounded-xl border p-5" style={{ backgroundColor: 'var(--surface-elevated)', borderColor: 'var(--border-primary)' }}>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-sm font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Overlay Link Generation</h2>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                Generate a paid overlay link for the selected tournament. Active session URLs and revoke controls are shown below.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleCreate}
-              disabled={!selectedTournamentId || creating}
-              className="shrink-0 px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50"
-              style={{ backgroundColor: 'var(--brand-primary)', color: '#fff' }}
-            >
-              {creating ? 'Generating…' : 'Generate Overlay Link'}
-            </button>
-          </div>
-
-          {!selectedTournamentId && (
-            <p className="mt-4 text-sm text-center rounded-lg py-4" style={{ color: 'var(--text-muted)', border: '1px dashed var(--border-primary)' }}>
-              Select a tournament above to generate an overlay link.
+      {/* ── Overlay Link Generation ─────────────────────────────────────────── */}
+      <div className="mb-8 rounded-xl border p-5" style={{ backgroundColor: 'var(--surface-elevated)', borderColor: 'var(--border-primary)' }}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Overlay Link Generation</h2>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+              Generate paid overlay links for the selected tournament directly from this Output page. Active session URLs and revoke controls are shown below.
             </p>
-          )}
-
-          {createError && <p className="mt-4 text-red-400 text-sm">{createError}</p>}
-
-          {justCreated.length > 0 && (
-            <div className="mt-4 space-y-3 rounded-lg p-4" style={{ backgroundColor: 'rgba(79,70,229,0.08)', border: '1px solid var(--brand-primary)' }}>
-              <p className="text-sm font-semibold" style={{ color: 'var(--brand-primary)' }}>Overlay links generated — copy your URLs:</p>
-              {justCreated.map(session => {
-                const overlayType = sessionOverlayType(session);
-                const config = getAuctionOverlayConfig(overlayType);
-                const url = buildSessionUrl(session);
-                const copied = copiedUrl === url;
-                return (
-                  <div key={session._id} className="flex items-center gap-2">
-                    <span className="text-xs w-28 shrink-0" style={{ color: 'var(--text-tertiary)' }}>{config.shortLabel}</span>
-                    <code className="flex-1 text-xs truncate rounded px-2 py-1 font-mono" style={{ backgroundColor: 'var(--surface-card)', color: 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}>
-                      {url}
-                    </code>
-                    <button
-                      onClick={() => copyToClipboard(url)}
-                      className="shrink-0 px-3 py-1 rounded text-xs font-medium transition-colors"
-                      style={{
-                        backgroundColor: copied ? '#16a34a' : 'var(--surface-card)',
-                        color: copied ? '#fff' : 'var(--text-secondary)',
-                        border: '1px solid var(--border-primary)',
-                      }}
-                    >
-                      {copied ? 'Copied!' : 'Copy'}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          </div>
+          <button
+            type="button"
+            onClick={handleCreate}
+            disabled={!selectedTournamentId || creating || selectedOverlayTypes.length === 0}
+            className="shrink-0 px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50"
+            style={{ backgroundColor: 'var(--brand-primary)', color: '#fff' }}
+          >
+            {creating
+              ? 'Generating…'
+              : `Generate ${selectedOverlayTypes.length} ${selectedOverlayTypes.length === 1 ? 'Overlay Link' : 'Overlay Links'}`}
+          </button>
         </div>
-      )}
+
+        {!selectedTournamentId && (
+          <p className="mt-4 text-sm text-center rounded-lg py-4" style={{ color: 'var(--text-muted)', border: '1px dashed var(--border-primary)' }}>
+            Select a tournament above to generate an overlay link.
+          </p>
+        )}
+
+        {selectedTournamentId && selectedOverlayTypes.length === 0 && (
+          <p className="mt-4 text-sm text-center rounded-lg py-4" style={{ color: 'var(--text-muted)', border: '1px dashed var(--border-primary)' }}>
+            Select at least one layout above to generate overlay links.
+          </p>
+        )}
+
+        {createError && <p className="mt-4 text-red-400 text-sm">{createError}</p>}
+
+        {justCreated.length > 0 && (
+          <div className="mt-4 space-y-3 rounded-lg p-4" style={{ backgroundColor: 'rgba(79,70,229,0.08)', border: '1px solid var(--brand-primary)' }}>
+            <p className="text-sm font-semibold" style={{ color: 'var(--brand-primary)' }}>Overlay links generated — copy your URLs:</p>
+            {justCreated.map(session => {
+              const overlayType = sessionOverlayType(session);
+              const config = getAuctionOverlayConfig(overlayType);
+              const url = buildSessionUrl(session);
+              const copied = copiedUrl === url;
+              return (
+                <div key={session._id} className="flex items-center gap-2">
+                  <span className="text-xs w-28 shrink-0" style={{ color: 'var(--text-tertiary)' }}>{config.shortLabel}</span>
+                  <code className="flex-1 text-xs truncate rounded px-2 py-1 font-mono" style={{ backgroundColor: 'var(--surface-card)', color: 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}>
+                    {url}
+                  </code>
+                  <button
+                    onClick={() => copyToClipboard(url)}
+                    className="shrink-0 px-3 py-1 rounded text-xs font-medium transition-colors"
+                    style={{
+                      backgroundColor: copied ? '#16a34a' : 'var(--surface-card)',
+                      color: copied ? '#fff' : 'var(--text-secondary)',
+                      border: '1px solid var(--border-primary)',
+                    }}
+                  >
+                    {copied ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* ── OBS Sessions ──────────────────────────────────────────────────── */}
       <div className="mb-8">
@@ -723,14 +728,16 @@ ${'─'.repeat(60)}`;
               Each session generates a unique URL. Revoke any session to instantly disconnect that OBS source.
             </p>
           </div>
-          {selectedTournamentId && isAdmin && (
-            <Link
-              href="/manage/overlays/sessions"
-              className="shrink-0 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+          {selectedTournamentId && (
+            <button
+              type="button"
+              onClick={handleCreate}
+              disabled={creating || selectedOverlayTypes.length === 0}
+              className="shrink-0 px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50"
               style={{ backgroundColor: 'var(--brand-primary)', color: '#fff' }}
             >
-              Generate Paid Overlay
-            </Link>
+              {creating ? 'Generating…' : 'Generate Selected'}
+            </button>
           )}
         </div>
 
