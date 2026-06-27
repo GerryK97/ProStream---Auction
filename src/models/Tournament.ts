@@ -93,6 +93,7 @@ const tournamentSchema = new Schema<Tournament>(
       default: [],
     },
     auctionDate: { type: String },
+    completedAt: { type: Date },
     overlayControlSettings: {
       type: {
         size: { type: String, enum: ['large', 'small'], default: 'large' },
