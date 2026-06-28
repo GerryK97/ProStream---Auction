@@ -14,19 +14,24 @@ const ALLOWED_FOLDERS = new Set([
 ])
 
 /**
- * GET /api/upload/sign?folder=prostream-auction/teams
+ * GET /api/upload/sign?folder=prostream-auction/tournaments
  *
  * Returns a short-lived Cloudinary signed upload signature so the mobile
  * client can POST the image file directly to Cloudinary's REST API,
  * bypassing Vercel's 4.5 MB route-handler body limit entirely.
+ *
+ * Upload flow:
+ *   1. Expo calls GET /api/upload/sign?folder=prostream-auction/tournaments
+ *   2. Server returns { signature, timestamp, folder, apiKey, cloudName }
+ *   3. Expo POSTs directly to https://api.cloudinary.com/v1_1/{cloudName}/image/upload
  */
 export async function GET(request: NextRequest) {
   // 1. Auth check
   const user = await getUserFromRequest(request)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // 2. Validate Cloudinary env vars are present before doing anything else.
-  //    Missing vars cause silent upload failures — surface them early as a 500.
+  // 2. Validate Cloudinary env vars before doing anything — missing vars cause
+  //    silent upload failures on the client side.
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME
   const apiKey = process.env.CLOUDINARY_API_KEY
   const apiSecret = process.env.CLOUDINARY_API_SECRET
@@ -47,7 +52,10 @@ export async function GET(request: NextRequest) {
   const requested = (new URL(request.url).searchParams.get('folder') ?? '').trim()
   const folder = ALLOWED_FOLDERS.has(requested) ? requested : 'prostream-auction'
 
-  // 4. Generate a short-lived signature.
+  // 4. Generate a short-lived Cloudinary signature.
+  //    Only sign { folder, timestamp } — no extra params.
+  //    The XHR in Expo sends exactly these same params (plus file/api_key which
+  //    Cloudinary always excludes from signature validation).
   const timestamp = Math.round(Date.now() / 1000)
   const paramsToSign = { folder, timestamp }
 
