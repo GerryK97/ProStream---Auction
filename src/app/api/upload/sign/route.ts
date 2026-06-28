@@ -11,6 +11,7 @@ const ALLOWED_FOLDERS = new Set([
   'prostream-auction/teams',
   'prostream-auction/tournaments',
   'prostream-auction/users',
+  'prostream-auction/card-templates',
 ])
 
 /**
