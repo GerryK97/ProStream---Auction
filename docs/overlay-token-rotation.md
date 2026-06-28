@@ -1,8 +1,15 @@
 # Overlay Token Rotation Design
 
-Status: Approved plan. Implementation pending.
+Status: Future hardening design. Persistent `OverlaySession` tokens, paid session creation, revocation, and active-session enforcement are implemented today. Full short-lived rotation is not the current production model.
 
-This is the canonical design for moving overlay session tokens from
+Current implemented model is documented in [`docs/prostream-ecosystem.md`](./prostream-ecosystem.md):
+
+- `OverlaySession._id` is the persistent OBS token.
+- Sessions are created by `POST /api/overlay/sessions` and may charge wallet balance.
+- Sessions are revoked by marking `isActive=false` and broadcasting overlay revoke events.
+- Theme/palette may be passed in generated URLs as source-specific overrides.
+
+This design remains the canonical future plan for moving overlay session tokens from
 long-lived opaque DB bearers to short-lived, rotatable, scope-bound
 tokens. It is the consolidated output of an Architecture pass
 (Sonnet 4.6) and a Final QA / Review pass (Opus 4.7); the Opus pass

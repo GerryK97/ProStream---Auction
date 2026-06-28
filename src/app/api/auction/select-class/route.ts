@@ -30,8 +30,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate tournament exists and is Live
-    const tournament = await TournamentModel.findById(tournamentId).lean();
+    // Validate tournament exists and is Live, fetch auction state, count available players — all in parallel
+    const [tournament, auctionState, playerCount] = await Promise.all([
+      TournamentModel.findById(tournamentId).lean(),
+      AuctionStateModel.findOne({ tournamentId }),
+      PlayerModel.countDocuments({
+        tournamentId,
+        playerClass: className,
+        isSold: { $ne: true },
+        isUnsold: { $ne: true },
+      }),
+    ]);
+
     if (!tournament) {
       return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
     }
@@ -57,22 +67,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get current auction state
-    const auctionState = await AuctionStateModel.findOne({ tournamentId });
     if (!auctionState) {
       return NextResponse.json(
         { error: 'Auction state not found' },
         { status: 404 }
       );
     }
-
-    // Count available players in this class (player.playerClass stores the name)
-    const playerCount = await PlayerModel.countDocuments({
-      tournamentId,
-      playerClass: className,
-      isSold: { $ne: true },
-      isUnsold: { $ne: true },
-    });
 
     // Validate class completion using real availability.
     // If completedClasses is stale but players are available again (undo/re-auction),
@@ -96,18 +96,18 @@ export async function POST(request: NextRequest) {
     const updatedState = await AuctionStateModel.findOneAndUpdate(
       { tournamentId },
       { $set: { currentAuctionClass: className } },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
     // Broadcast class-selected event
     try {
-      await triggerClassSelected(tournamentId, {
+      triggerClassSelected(tournamentId, {
         classCode: classConfig.code,
         className,
         playerCount,
         auctionState: updatedState as any,
         message: `${className} class selected for auction (${playerCount} players remaining)`,
-      });
+      }).catch((err) => console.error('[select-class] Pusher error:', err));
     } catch (pusherError) {
       console.error('[select-class] Pusher error:', pusherError);
     }
@@ -141,18 +141,18 @@ export async function DELETE(request: NextRequest) {
     const updatedState = await AuctionStateModel.findOneAndUpdate(
       { tournamentId },
       { $set: { currentAuctionClass: null } },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
     // Broadcast so all clients update their player list filter immediately
     try {
-      await triggerClassSelected(tournamentId, {
+      triggerClassSelected(tournamentId, {
         classCode: '',
         className: '',
         playerCount: 0,
         auctionState: updatedState as any,
         message: 'Class filter cleared — showing all players',
-      });
+      }).catch((err) => console.error('[select-class DELETE] Pusher error:', err));
     } catch (pusherError) {
       console.error('[select-class DELETE] Pusher error:', pusherError);
     }

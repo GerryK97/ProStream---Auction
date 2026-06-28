@@ -1,6 +1,7 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest, verifyToken, validateEmail, validateUsername } from '@/lib/auth';
 import { getUserByEmail, getUserById, getUserByUsername, toPublicUser, updateUser } from '@/lib/pg/user-queries';
+import { normalizePublicId } from '@/lib/cloudinaryUtils';
 
 function isValidMobileNumber(mobileNumber: string): boolean {
   return /^[+\d][\d\s\-()]{6,19}$/.test(mobileNumber);
@@ -85,7 +86,7 @@ export async function PUT(request: NextRequest) {
       email: normalizedEmail,
       displayName: normalizedUsername,
       phone: normalizedMobile,
-      photoCloudinaryId: logoURL || null,
+      photoCloudinaryId: normalizePublicId(logoURL) ?? undefined,
     });
 
     if (!updatedUser) {

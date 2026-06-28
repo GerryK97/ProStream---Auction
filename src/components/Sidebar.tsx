@@ -61,6 +61,17 @@ const NAV_GROUPS = [
         ),
       },
       {
+        label: 'Overlays',
+        href: '/output',
+        roles: null,
+        icon: (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0">
+            <rect x="2" y="3" width="20" height="14" rx="2" />
+            <path d="M8 21h8M12 17v4" />
+          </svg>
+        ),
+      },
+      {
         label: 'Auction Results',
         href: '/manage/auction-results',
         roles: ['Admin', 'Tournament'],
@@ -106,17 +117,6 @@ const NAV_GROUPS = [
     label: null,
     items: [
       {
-        label: 'Overlays',
-        href: '/output',
-        roles: ['Admin', 'Tournament'],
-        icon: (
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0">
-            <rect x="2" y="3" width="20" height="14" rx="2" />
-            <path d="M8 21h8M12 17v4" />
-          </svg>
-        ),
-      },
-      {
         label: 'OBS Sessions',
         href: '/manage/overlays/sessions',
         roles: ['Admin'],
@@ -145,6 +145,19 @@ const NAV_GROUPS = [
         icon: (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0">
             <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+          </svg>
+        ),
+      },
+      {
+        label: 'Delete Account',
+        href: '/account-deletion',
+        roles: null,
+        icon: (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0">
+            <path d="M3 6h18" />
+            <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+            <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+            <path d="M10 11v6M14 11v6" />
           </svg>
         ),
       },

@@ -86,7 +86,7 @@ export default function HomePage() {
     },
     {
       name: 'Standard',
-      price: '5,000 LKR',
+      price: '6,000 LKR',
       cadence: 'per tournament',
       description: 'For full events that need polished overlays and tight roster control.',
       perks: [
@@ -284,6 +284,11 @@ export default function HomePage() {
       }}>
         <div className="mx-auto max-w-7xl text-center text-sm" style={{ color: 'var(--text-muted)' }}>
           <p>&copy; {new Date().getFullYear()} ProStream. All rights reserved.</p>
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs">
+            <a href="/privacy" className="hover:underline" style={{ color: 'var(--text-tertiary)' }}>Privacy Policy</a>
+            <a href="/account-deletion" className="hover:underline" style={{ color: 'var(--text-tertiary)' }}>Account Deletion</a>
+            <a href="/contact" className="hover:underline" style={{ color: 'var(--text-tertiary)' }}>Contact</a>
+          </div>
         </div>
       </footer>
     </div>

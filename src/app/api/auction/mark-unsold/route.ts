@@ -3,6 +3,7 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { PlayerModel } from '@/models/Player';
 import { triggerPlayerMarkedUnsold, triggerClassCompleted } from '@/lib/pusher-server';
+import { serializePlayer } from '@/lib/cloudinaryUtils';
 
 // POST /api/auction/mark-unsold - Mark the current player as explicitly unsold and reset auction state
 export async function POST(request: NextRequest) {
@@ -29,35 +30,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Mark that player as explicitly unsold and return the updated document
+    // Mark player unsold + reset auction state in parallel (independent documents)
     // Explicit updatedAt ensures reliable timestamp comparison in the undo route
-    const updatedPlayer = await PlayerModel.findOneAndUpdate(
-      { _id: currentPlayerId },
-      { $set: { isUnsold: true, isSold: false, updatedAt: new Date() } },
-      { new: true }
-    ).lean();
+    const [updatedPlayer, updatedState] = await Promise.all([
+      PlayerModel.findOneAndUpdate(
+        { _id: currentPlayerId },
+        { $set: { isUnsold: true, isSold: false, updatedAt: new Date() } },
+        { returnDocument: 'after' }
+      ).lean(),
+      AuctionStateModel.findOneAndUpdate(
+        { tournamentId },
+        {
+          $set: {
+            currentPlayerId: null,
+            currentBid: 0,
+            winningTeamId: null,
+            currentAuctionStatus: 'Pending',
+            history: [],
+          },
+        },
+        { returnDocument: 'after' }
+      ).lean(),
+    ]);
 
     if (!updatedPlayer) {
-      return NextResponse.json(
-        { error: 'Player not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Player not found' }, { status: 404 });
     }
-
-    // Reset the auction state
-    const updatedState = await AuctionStateModel.findOneAndUpdate(
-      { tournamentId },
-      {
-        $set: {
-          currentPlayerId: null,
-          currentBid: 0,
-          winningTeamId: null,
-          currentAuctionStatus: 'Pending',
-          history: [],
-        },
-      },
-      { new: true }
-    ).lean();
 
     // Check if the active class is now complete after marking this player unsold
     if (activeClass) {
@@ -74,15 +72,15 @@ export async function POST(request: NextRequest) {
             $push: { completedClasses: activeClass },
             $set: { currentAuctionClass: null },
           },
-          { new: true }
+          { returnDocument: 'after' }
         ).lean();
         try {
-          await triggerClassCompleted(tournamentId, {
+          triggerClassCompleted(tournamentId, {
             completedClassCode: activeClass,
             completedClasses: (finalState as any)?.completedClasses ?? [activeClass],
             auctionState: finalState as any,
             message: `${activeClass} class auction completed`,
-          });
+          }).catch((err) => console.error('[mark-unsold] classCompleted Pusher failed:', err));
         } catch (pusherError) {
           console.error('[mark-unsold] triggerClassCompleted failed:', pusherError);
         }
@@ -92,11 +90,11 @@ export async function POST(request: NextRequest) {
     // Broadcast a targeted event — just the updated player + auction state
     // (avoids full-state payload that can exceed Pusher's message size limit)
     try {
-      await triggerPlayerMarkedUnsold(tournamentId, {
-        unsoldPlayer: updatedPlayer as any,
+      triggerPlayerMarkedUnsold(tournamentId, {
+        unsoldPlayer: serializePlayer(updatedPlayer as any) as any,
         auctionState: updatedState as any,
         message: 'Player marked as unsold',
-      });
+      }).catch((err) => console.error('[mark-unsold] Pusher trigger failed:', err));
     } catch (pusherError) {
       console.error('Failed to trigger Pusher event:', pusherError);
     }

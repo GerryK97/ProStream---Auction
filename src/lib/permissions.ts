@@ -33,8 +33,8 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
   // Overlay redirect page - kept so /overlays still works for bookmarks
   { path: '/overlays', allowedRoles: ['Admin'] },
 
-  // Output page - theme selection and overlay link generation
-  { path: '/output', allowedRoles: ['Admin', 'Tournament'] },
+  // Output page - theme selection and overlay link generation for accessible tournaments
+  { path: '/output', allowedRoles: ALL_ROLES },
 
   // User management (Admin only)
   { path: '/users', allowedRoles: ['Admin'] },
@@ -169,11 +169,13 @@ export function shouldAutoApproveRole(role: UserRole): boolean {
 export function canAccessTournament(
   userId: string,
   userRole: UserRole | string,
-  tournament: { _id: string; createdBy?: string },
+  tournament: { _id: string | { toString(): string }; createdBy?: string },
   assignedTournaments: string[] = []
 ): boolean {
   if (userRole === 'Admin') return true;
-  return assignedTournaments.includes(tournament._id);
+  const tournamentId = tournament._id.toString();
+  if (tournament.createdBy === userId) return true;
+  return assignedTournaments.includes(tournamentId);
 }
 
 /**

@@ -8,12 +8,19 @@ import Link from 'next/link';
 export default function SignupPage() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [mobileNumber, setMobileNumber] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState('');
+  const [signupToken, setSignupToken] = useState<string | null>(null);
+  const [otpStep, setOtpStep] = useState<'idle' | 'sent' | 'verified'>('idle');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpMessage, setOtpMessage] = useState('');
+  const [otpError, setOtpError] = useState('');
   const { signup } = useAuth();
   const router = useRouter();
 
@@ -56,10 +63,25 @@ export default function SignupPage() {
     return newErrors.length === 0;
   };
 
+  const sendSignupOTP = async (tokenToUse: string, phone: string) => {
+    const response = await fetch('/api/auth/otp/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenToUse}`,
+      },
+      body: JSON.stringify({ phone }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'Failed to send OTP');
+    return data.message || `OTP sent to ${phone}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccessMessage('');
+    setOtpError('');
 
     if (!validateForm()) {
       return;
@@ -68,8 +90,24 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      await signup(username, email, password);
-      setSuccessMessage('Account created successfully! You can now login as a Tournament Manager.');
+      const result = await signup(username, email, password, mobileNumber);
+      const tokenToUse = result.token ?? localStorage.getItem('auth_token');
+      const cleanPhone = mobileNumber.trim();
+
+      if (cleanPhone && tokenToUse) {
+        setSignupToken(tokenToUse);
+        const message = await sendSignupOTP(tokenToUse, cleanPhone);
+        setOtpMessage(message);
+        setOtpStep('sent');
+        setSuccessMessage('Account created successfully. Enter the OTP sent to your mobile number to verify it.');
+        return;
+      }
+
+      setSuccessMessage(
+        cleanPhone
+          ? 'Account created successfully. Mobile verification can be completed later from Profile.'
+          : 'Account created successfully! You can now login as a Tournament Manager.',
+      );
       setTimeout(() => {
         router.push('/auth/login');
       }, 2000);
@@ -80,6 +118,46 @@ export default function SignupPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleVerifyOTP = async () => {
+    setOtpError('');
+    if (!signupToken) {
+      setOtpError('Signup session expired. Please login and verify from Profile.');
+      return;
+    }
+    if (otpCode.length < 6) {
+      setOtpError('Please enter the 6-digit OTP.');
+      return;
+    }
+
+    setOtpLoading(true);
+    try {
+      const response = await fetch('/api/auth/otp/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${signupToken}`,
+        },
+        body: JSON.stringify({ otp: otpCode, phone: mobileNumber.trim() }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Verification failed');
+
+      setOtpStep('verified');
+      setSuccessMessage('Mobile number verified successfully. Redirecting to login...');
+      setTimeout(() => {
+        router.push('/auth/login');
+      }, 1500);
+    } catch (err) {
+      setOtpError(err instanceof Error ? err.message : 'Verification failed.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleSkipOTP = () => {
+    router.push('/auth/login');
   };
 
   return (
@@ -156,7 +234,7 @@ export default function SignupPage() {
                 id="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
+                disabled={isLoading || otpStep === 'sent'}
                 style={{
                   backgroundColor: 'var(--surface-elevated)',
                   borderColor: 'var(--border-primary)',
@@ -166,6 +244,28 @@ export default function SignupPage() {
                 placeholder="Enter your email"
                 required
               />
+            </div>
+
+            {/* Mobile Number Input */}
+            <div>
+              <label htmlFor="mobileNumber" className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                Mobile Number <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>(optional)</span>
+              </label>
+              <input
+                type="tel"
+                id="mobileNumber"
+                value={mobileNumber}
+                onChange={(e) => setMobileNumber(e.target.value)}
+                disabled={isLoading || otpStep === 'sent'}
+                style={{
+                  backgroundColor: 'var(--surface-elevated)',
+                  borderColor: 'var(--border-primary)',
+                  color: 'var(--text-primary)',
+                }}
+                className="w-full px-4 py-2 border rounded text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+                placeholder="+94771234567 or 0771234567"
+              />
+              <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>If provided, we will send an OTP after signup to verify it.</p>
             </div>
 
             {/* Password Input */}
@@ -220,14 +320,65 @@ export default function SignupPage() {
               </p>
             </div>
 
+            {/* Signup OTP Verification */}
+            {otpStep === 'sent' && (
+              <div className="rounded-md p-4 space-y-3" style={{ backgroundColor: 'var(--surface-subtle)', border: '1px solid var(--border-primary)' }}>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Verify Mobile Number</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>{otpMessage}. Enter the 6-digit OTP below.</p>
+                </div>
+                {otpError && (
+                  <div className="p-3 rounded text-xs" style={{ color: 'var(--status-danger)', border: '1px solid color-mix(in oklab, var(--status-danger) 40%, transparent)', background: 'color-mix(in oklab, var(--status-danger) 12%, transparent)' }}>
+                    {otpError}
+                  </div>
+                )}
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  disabled={otpLoading}
+                  style={{
+                    backgroundColor: 'var(--surface-elevated)',
+                    borderColor: 'var(--border-primary)',
+                    color: 'var(--text-primary)',
+                  }}
+                  className="w-full px-4 py-2 border rounded text-center tracking-[0.35em] text-lg placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+                  placeholder="000000"
+                  maxLength={6}
+                />
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={handleVerifyOTP}
+                    disabled={otpLoading || otpCode.length < 6}
+                    className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 text-white font-medium rounded transition-colors disabled:cursor-not-allowed"
+                  >
+                    {otpLoading ? 'Verifying...' : 'Verify OTP'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSkipOTP}
+                    disabled={otpLoading}
+                    className="px-4 py-2 rounded border transition-colors disabled:opacity-50"
+                    style={{ borderColor: 'var(--border-primary)', color: 'var(--text-secondary)' }}
+                  >
+                    Skip
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isLoading || !username || !email || !password || !confirmPassword || errors.length > 0}
-              className="w-full mt-6 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-medium rounded transition-colors disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Creating Account...' : 'Sign Up'}
-            </button>
+            {otpStep !== 'sent' && (
+              <button
+                type="submit"
+                disabled={isLoading || !username || !email || !password || !confirmPassword || errors.length > 0}
+                className="w-full mt-6 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-medium rounded transition-colors disabled:cursor-not-allowed"
+              >
+                {isLoading ? 'Creating Account...' : 'Sign Up'}
+              </button>
+            )}
           </form>
 
           {/* Login Link */}

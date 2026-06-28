@@ -7,11 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "migrate:player-class-codes": "ts-node --compiler-options '{\"module\":\"commonjs\"}' src/scripts/migratePlayerClassCodes.ts"
+    "migrate:player-class-codes": "ts-node --compiler-options '{\"module\":\"commonjs\"}' src/scripts/migratePlayerClassCodes.ts",
+    "test:realtime": "node scripts/check-realtime-bid-guards.js"
   },
   "dependencies": {
     "@google/genai": "^1.28.0",
     "@neondatabase/serverless": "^1.1.0",
+    "@prostream/shared": "file:vendor/prostream-shared",
     "@react-pdf/renderer": "^4.3.1",
     "@types/pdfkit": "^0.17.4",
     "bcrypt": "^6.0.0",

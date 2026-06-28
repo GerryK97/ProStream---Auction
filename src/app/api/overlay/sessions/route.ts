@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { OverlaySessionModel } from '@/models/OverlaySession';
 import { TournamentModel } from '@/models/Tournament';
-import { canAccessTournament, canPerformAction } from '@/lib/permissions';
+import { canAccessTournament } from '@/lib/permissions';
 import { getUserFromRequest, RequestUser } from '@/lib/request-helpers';
 import {
   creditWalletBalance,
@@ -22,8 +22,10 @@ import { DEFAULT_OVERLAY_PRICES, getOverlayPricingDefaultsByKey } from '@/lib/ov
 
 import { randomUUID } from 'crypto';
 
-function canGenerateOverlays(user: RequestUser) {
-  return canPerformAction(user.role, 'create', 'overlayConfig');
+function canGenerateOverlays(_user: RequestUser) {
+  // Tournament-specific access is enforced after reading tournamentId.
+  // Assigned users may generate overlay outputs for tournaments they can access.
+  return true;
 }
 
 async function assertTournamentAccess(user: RequestUser, tournamentId: string) {
@@ -37,24 +39,32 @@ async function assertTournamentAccess(user: RequestUser, tournamentId: string) {
   return { tournament, response: null };
 }
 
+const PRICE_CACHE_TTL_MS = 5 * 60_000;
+let priceCache: { expiresAt: number; prices: Record<AuctionOverlayType, number> } | null = null;
+
 async function getOverlayPriceMap() {
+  const now = Date.now();
+  if (priceCache && priceCache.expiresAt > now) return priceCache.prices;
+
   const pricesByKey = await getPricesWithFallbacks(getOverlayPricingDefaultsByKey());
-  return Object.fromEntries(
+  const prices = Object.fromEntries(
     AUCTION_OVERLAY_TYPE_KEYS.map((type) => {
       const config = getAuctionOverlayConfig(type);
       return [type, pricesByKey[config.pricingKey] ?? DEFAULT_OVERLAY_PRICES[type]] as const;
     })
   ) as Record<AuctionOverlayType, number>;
+
+  priceCache = { prices, expiresAt: now + PRICE_CACHE_TTL_MS };
+  return prices;
 }
 
-// GET /api/overlay/sessions?tournamentId=xxx — list sessions (admin only)
+// GET /api/overlay/sessions?tournamentId=xxx — list sessions for accessible tournaments
 export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
 
     const user = await getUserFromRequest(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (user.role !== 'Admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const tournamentId = request.nextUrl.searchParams.get('tournamentId');
     let query: Record<string, unknown> = {};

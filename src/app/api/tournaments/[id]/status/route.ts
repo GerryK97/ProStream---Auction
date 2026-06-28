@@ -32,7 +32,7 @@ export async function PATCH(
     const updatedTournament = await TournamentModel.findOneAndUpdate(
       { _id: id },
       { $set: { status } },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
     if (!updatedTournament) {

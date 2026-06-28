@@ -44,15 +44,15 @@ export async function POST(request: NextRequest) {
           history: [],
         },
       },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
     // Trigger Pusher event
     try {
-      await triggerAuctionReset(tournamentId, {
+      triggerAuctionReset(tournamentId, {
         auctionState: updatedState as any,
         message: 'Auction reset successfully',
-      });
+      }).catch((err) => console.error('[reset] Pusher trigger failed:', err));
     } catch (pusherError) {
       console.error('Failed to trigger Pusher event:', pusherError);
     }

@@ -34,17 +34,16 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Reset all teams' balances and purchased players
+    // Reset all teams' balances and purchased players — single bulkWrite round-trip
     const teams = await TeamModel.find({ tournamentId }).lean();
-    for (const team of teams) {
-      await TeamModel.findOneAndUpdate(
-        { _id: team._id },
-        {
-          $set: {
-            currentBalance: team.initialBudget,
-            playersPurchased: [],
+    if (teams.length > 0) {
+      await TeamModel.bulkWrite(
+        teams.map((team) => ({
+          updateOne: {
+            filter: { _id: team._id },
+            update: { $set: { currentBalance: team.initialBudget, playersPurchased: [] } },
           },
-        }
+        }))
       );
     }
 
@@ -60,7 +59,7 @@ export async function POST(request: NextRequest) {
           history: [],
         },
       },
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     ).lean();
 
     // Trigger Pusher event so all connected clients (overlays, other browsers) update in real-time

@@ -32,5 +32,11 @@ const playerSchema = new Schema<Player>(
 playerSchema.index({ tournamentId: 1 });
 playerSchema.index({ tournamentId: 1, playerNo: 1 }, { unique: true, sparse: true });
 playerSchema.index({ createdBy: 1 });
+// ── Hot-path compound indexes (sell / undo / mark-unsold / select-class) ──────
+playerSchema.index({ tournamentId: 1, isSold: 1 });
+playerSchema.index({ tournamentId: 1, isSold: 1, winningTeamId: 1 });
+playerSchema.index({ tournamentId: 1, isSold: 1, updatedAt: -1 });
+playerSchema.index({ tournamentId: 1, isUnsold: 1, updatedAt: -1 });
+playerSchema.index({ tournamentId: 1, playerClass: 1, isSold: 1, isUnsold: 1 });
 
 export const PlayerModel = models.Player || model<Player>('Player', playerSchema);

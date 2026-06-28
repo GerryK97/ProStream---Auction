@@ -4,6 +4,67 @@ export interface OverlayPalette {
   cssVars: React.CSSProperties;
 }
 
+interface Theme3PaletteInput {
+  id: string;
+  name: string;
+  app: string;
+  canvas: string;
+  panel: string;
+  card: string;
+  raised: string;
+  modal: string;
+  sidebar: string;
+  muted: string;
+  hover: string;
+  active: string;
+  photo: string;
+  fallback: string;
+  ticker: string;
+  overlay: string;
+  borderSubtle: string;
+  borderStrong: string;
+  borderAccent: string;
+  textPrimary: string;
+  textPrimaryRgb: string;
+  textSecondary: string;
+  textMuted: string;
+  textDisabled: string;
+  textAccent: string;
+  accent: string;
+  accentRgb: string;
+  accentSoft: string;
+  onAccent: string;
+  actionHover: string;
+  actionActive: string;
+  success: string;
+  successSoft: string;
+  warning: string;
+  warningSoft: string;
+  danger: string;
+  dangerSoft: string;
+  info: string;
+  infoSoft: string;
+  focusRing: string;
+  canvasGradient: string;
+  panelGradient: string;
+  shine: string;
+  shadow: string;
+  charts: [string, string, string, string, string, string];
+  /** Live player bar — ticker-aligned accent lower-third */
+  barBgDeep?: string;
+  barBgDark?: string;
+  barGold?: string;
+  barGoldSoft?: string;
+  barHighlight?: string;
+  barRail?: string;
+  barRailBright?: string;
+  barRailSecondary?: string;
+  barText?: string;
+  barTextMuted?: string;
+  barPattern?: string;
+  barVignette?: string;
+}
+
 interface Theme2PaletteInput {
   id: string;
   name: string;
@@ -127,6 +188,143 @@ const theme2Palette = (palette: Theme2PaletteInput): OverlayPalette => ({
     '--overlay-border-accent-subtle': palette.borderSubtle,
   } as React.CSSProperties,
 });
+
+const theme3Palette = (palette: Theme3PaletteInput): OverlayPalette => ({
+  id: palette.id,
+  name: palette.name,
+  cssVars: {
+    '--t3-bg-app': palette.app,
+    '--t3-bg-canvas': palette.canvas,
+    '--t3-bg-panel': palette.panel,
+    '--t3-bg-card': palette.card,
+    '--t3-bg-card-raised': palette.raised,
+    '--t3-bg-modal': palette.modal,
+    '--t3-bg-sidebar': palette.sidebar,
+    '--t3-bg-muted': palette.muted,
+    '--t3-bg-hover': palette.hover,
+    '--t3-bg-active': palette.active,
+    '--t3-bg-photo': palette.photo,
+    '--t3-bg-photo-fallback': palette.fallback,
+    '--t3-bg-ticker': palette.ticker,
+    '--t3-bg-overlay': palette.overlay,
+    '--t3-border-subtle': palette.borderSubtle,
+    '--t3-border-strong': palette.borderStrong,
+    '--t3-border-accent': palette.borderAccent,
+    '--t3-text-primary': palette.textPrimary,
+    '--t3-text-primary-rgb': palette.textPrimaryRgb,
+    '--t3-text-secondary': palette.textSecondary,
+    '--t3-text-muted': palette.textMuted,
+    '--t3-text-disabled': palette.textDisabled,
+    '--t3-text-accent': palette.textAccent,
+    '--t3-accent': palette.accent,
+    '--t3-accent-rgb': palette.accentRgb,
+    '--t3-accent-soft': palette.accentSoft,
+    '--t3-on-accent': palette.onAccent,
+    '--t3-action-primary': palette.accent,
+    '--t3-action-primary-hover': palette.actionHover,
+    '--t3-action-primary-active': palette.actionActive,
+    '--t3-danger': palette.danger,
+    '--t3-danger-soft': palette.dangerSoft,
+    '--t3-success': palette.success,
+    '--t3-success-soft': palette.successSoft,
+    '--t3-warning': palette.warning,
+    '--t3-warning-soft': palette.warningSoft,
+    '--t3-info': palette.info,
+    '--t3-info-soft': palette.infoSoft,
+    '--t3-focus-ring': palette.focusRing,
+    '--t3-gradient-canvas': palette.canvasGradient,
+    '--t3-gradient-panel': palette.panelGradient,
+    '--t3-shine': palette.shine,
+    '--t3-shadow-color': palette.shadow,
+    '--t3-chart-1': palette.charts[0],
+    '--t3-chart-2': palette.charts[1],
+    '--t3-chart-3': palette.charts[2],
+    '--t3-chart-4': palette.charts[3],
+    '--t3-chart-5': palette.charts[4],
+    '--t3-chart-6': palette.charts[5],
+    '--t3-bar-bg-deep': palette.barBgDeep ?? palette.accent,
+    '--t3-bar-bg-dark': palette.barBgDark ?? palette.panel,
+    '--t3-bar-gold': palette.barGold ?? palette.accent,
+    '--t3-bar-gold-soft': palette.barGoldSoft ?? palette.accentSoft,
+    '--t3-bar-highlight': palette.barHighlight ?? palette.actionHover,
+    '--t3-bar-rail-bright': palette.barRailBright ?? palette.shine,
+    '--t3-bar-rail': palette.barRail ?? palette.textPrimary,
+    '--t3-bar-rail-secondary': palette.barRailSecondary ?? 'rgba(0,0,0,0.42)',
+    '--t3-bar-text': palette.barText ?? palette.textPrimary,
+    '--t3-bar-text-muted': palette.barTextMuted ?? palette.textSecondary,
+    '--t3-bar-pattern': palette.barPattern ?? palette.accentSoft,
+    '--t3-bar-vignette': palette.barVignette ?? 'rgba(0,0,0,0.35)',
+    '--t3-font-display': '"Saira Extra Condensed", sans-serif',
+    '--overlay-color-primary': palette.accent,
+    '--overlay-color-primary-rgb': palette.accentRgb,
+    '--overlay-color-secondary': palette.actionHover,
+    '--overlay-color-success': palette.success,
+    '--overlay-color-danger': palette.danger,
+    '--overlay-bg-panel': palette.panel,
+    '--overlay-bg-danger': palette.dangerSoft,
+    '--overlay-bg-logo-pill': palette.panelGradient,
+    '--overlay-bg-ticker': palette.ticker,
+    '--overlay-bg-photo': palette.photo,
+    '--overlay-bg-photo-fallback': palette.fallback,
+    '--overlay-bg-fullscreen': palette.canvasGradient,
+    '--overlay-text-bright': palette.textPrimary,
+    '--overlay-text-subtle': palette.textSecondary,
+    '--overlay-text-muted': palette.textMuted,
+    '--overlay-text-dim': palette.textDisabled,
+    '--overlay-text-dark': palette.onAccent,
+    '--overlay-border-light': palette.borderSubtle,
+    '--overlay-border-accent-strong': palette.borderAccent,
+    '--overlay-border-accent-subtle': palette.borderSubtle,
+  } as React.CSSProperties,
+});
+
+const THEME3_SCAFFOLD: Theme3PaletteInput = {
+  id: 'scaffold',
+  name: 'Theme 3 - Scaffold',
+  app: '#0A0A0F',
+  canvas: '#0C0C14',
+  panel: '#202020',
+  card: '#181824',
+  raised: '#1E1E2E',
+  modal: '#202030',
+  sidebar: '#0E0E16',
+  muted: '#14141E',
+  hover: '#222232',
+  active: '#2A2A3C',
+  photo: '#101018',
+  fallback: '#080810',
+  ticker: '#0E0E18',
+  overlay: 'rgba(4,4,8,.65)',
+  borderSubtle: 'rgba(255,255,255,.10)',
+  borderStrong: 'rgba(255,255,255,.20)',
+  borderAccent: 'rgba(160,160,200,.35)',
+  textPrimary: '#F0F0F8',
+  textPrimaryRgb: '240,240,248',
+  textSecondary: '#B8B8C8',
+  textMuted: '#787888',
+  textDisabled: '#505060',
+  textAccent: '#A0A0D0',
+  accent: '#00898c',
+  accentRgb: '0,137,140',
+  accentSoft: 'rgba(0,137,140,.14)',
+  onAccent: '#0A0A10',
+  actionHover: '#A8A8D8',
+  actionActive: '#7878A8',
+  success: '#6EC49A',
+  successSoft: 'rgba(110,196,154,.14)',
+  warning: '#D4B05E',
+  warningSoft: 'rgba(212,176,94,.15)',
+  danger: '#D87070',
+  dangerSoft: 'rgba(216,112,112,.14)',
+  info: '#70A8D8',
+  infoSoft: 'rgba(112,168,216,.13)',
+  focusRing: 'rgba(144,144,192,.36)',
+  canvasGradient: 'linear-gradient(160deg,#080810 0%,#0C0C18 50%,#121220 100%)',
+  panelGradient: 'linear-gradient(180deg,#1A1A28 0%,#14141E 100%)',
+  shine: 'rgba(255,255,255,.12)',
+  shadow: 'rgba(0,0,0,.50)',
+  charts: ['#9090C0', '#70A8D8', '#6EC49A', '#D4B05E', '#B890D0', '#D87070'],
+};
 
 const OBSIDIAN_LEDGER: Theme2PaletteInput = {
   id: 'obsidian-ledger',
@@ -374,5 +572,8 @@ export const OVERLAY_PALETTES: Record<string, OverlayPalette[]> = {
     theme2Palette(OBSIDIAN_LEDGER),
     theme2Palette(PORCELAIN_GRAPHITE),
     theme2Palette(ALPINE_SIGNAL),
+  ],
+  theme3: [
+    theme3Palette({ ...THEME3_SCAFFOLD, id: 'default', name: 'Theme 3 - Scaffold' }),
   ],
 };

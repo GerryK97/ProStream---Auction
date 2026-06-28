@@ -66,3 +66,40 @@ export function getOverlayTokenFromRequest(request: Request): string | null {
         return null;
     }
 }
+
+/** True when the token is an OBS overlay credential (not a user JWT). */
+export function isOverlayBrowserToken(token: string | null | undefined): boolean {
+  return Boolean(token && !token.startsWith('eyJ'));
+}
+
+/**
+ * GET API routes overlays call from OBS with ?token= session credentials.
+ * Middleware must allow these through so route handlers can validate the token.
+ */
+export function isOverlayReadApiRequest(pathname: string, method: string, token: string | null): boolean {
+  if (method !== 'GET' || !isOverlayBrowserToken(token)) return false;
+  if (pathname === '/api/auction/bootstrap') return true;
+  if (pathname === '/api/tournaments/active') return true;
+  const tournamentMatch = pathname.match(/^\/api\/tournaments\/([^/]+)$/);
+  if (tournamentMatch && tournamentMatch[1] !== 'active') return true;
+  return false;
+}
+
+/**
+ * Authorize read-only overlay API access via session token or legacy OVERLAY_SECRET_TOKEN.
+ */
+export async function authorizeOverlayReadAccess(
+  request: Request,
+  options: { tournamentId?: string | null; overlayType?: string | null } = {},
+): Promise<boolean> {
+  const overlayToken = getOverlayTokenFromRequest(request);
+  if (!overlayToken || overlayToken.startsWith('eyJ')) return false;
+
+  if (validateOverlayToken(overlayToken)) return true;
+
+  return validateOverlaySessionToken(
+    overlayToken,
+    options.overlayType ?? null,
+    options.tournamentId ?? null,
+  );
+}

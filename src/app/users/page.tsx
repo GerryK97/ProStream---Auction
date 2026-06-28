@@ -46,6 +46,7 @@ export default function UsersPage() {
     username: '',
     email: '',
     password: '',
+    mobileNumber: '',
     role: 'Tournament',
     status: 'Active',
     plan: 'Free' as 'Free' | 'Standard' | 'Offer',
@@ -126,6 +127,7 @@ export default function UsersPage() {
         username: '',
         email: '',
         password: '',
+        mobileNumber: '',
         role: 'Tournament',
         status: 'Active',
         plan: 'Free',
@@ -521,6 +523,23 @@ export default function UsersPage() {
                         className="w-full px-4 py-2 border rounded focus:outline-none focus:border-blue-500"
                         required
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Mobile Number</label>
+                      <input
+                        type="tel"
+                        value={formData.mobileNumber}
+                        onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value })}
+                        style={{
+                          backgroundColor: 'var(--surface-elevated)',
+                          borderColor: 'var(--border-primary)',
+                          color: 'var(--text-primary)'
+                        }}
+                        className="w-full px-4 py-2 border rounded focus:outline-none focus:border-blue-500"
+                        placeholder="+94771234567 or 0771234567"
+                      />
+                      <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Phone will be unverified. User can verify from Profile.</p>
                     </div>
 
                     <div>

@@ -45,7 +45,7 @@ const tournamentSchema = new Schema<Tournament>(
     },
     overlayTheme: {
       type: String,
-      enum: ['standard', 'premium', 'neon', 'theme2'],
+      enum: ['standard', 'premium', 'neon', 'theme2', 'theme3'],
       default: 'standard',
     },
     overlayPalette: {
@@ -80,6 +80,44 @@ const tournamentSchema = new Schema<Tournament>(
         statFields:       { type: [{ key: String, label: String }], default: [] },
       },
       default: () => ({ showAge: false, showBattingStyle: false, showBowlingStyle: false, statFields: [] }),
+    },
+    playerCardTemplates: {
+      type: [
+        {
+          id:       { type: String, required: true },
+          name:     { type: String, required: true },
+          pngUrl:   { type: String, required: true },
+          layoutId: { type: String },
+        },
+      ],
+      default: [],
+    },
+    auctionDate: { type: String },
+    completedAt: { type: Date },
+    overlayControlSettings: {
+      type: {
+        size: { type: String, enum: ['large', 'small'], default: 'large' },
+        tickerMode: { type: String, enum: ['all', 'sold', 'available'], default: 'sold' },
+        displayMode: { type: String, default: 'standard' },
+        hidePremiumCard: { type: Boolean, default: false },
+        customTickerLine1: { type: String, default: '' },
+        customTickerLine2: { type: String, default: '' },
+        soldMessagePosition: {
+          type: String,
+          enum: ['bottom-right', 'bottom-left', 'top-right', 'top-left'],
+          default: 'bottom-right',
+        },
+        hideTickerCustom: { type: Boolean, default: false },
+        hideTickerFullscreen: { type: Boolean, default: false },
+        teamWiseTeamId: { type: String, default: null },
+        bidCardTop: { type: Number, default: 160 },
+        bidCardLeft: { type: Number, default: 1576 },
+        hideTeamCards: { type: Boolean, default: false },
+        teamCardSize: { type: String, enum: ['small', 'medium', 'large'], default: 'large' },
+        teamCardPosition: { type: String, enum: ['top-right', 'bottom-right'], default: 'top-right' },
+        bidCardPosition: { type: String, enum: ['top', 'right', 'left'], default: 'top' },
+      },
+      default: undefined,
     },
   },
   {

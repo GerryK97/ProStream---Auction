@@ -60,6 +60,7 @@ interface UsePusherAuctionReturn {
   teams: Team[];
   isConnected: boolean;
   isRevoked: boolean;
+  lastEvent: string | null;
   error: string | null;
   setPlayerUnsold: (playerId: string) => void;
   setPlayerAvailable: (playerId: string) => void;
@@ -159,11 +160,13 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
       // exists in our list. Re-using the same reference when nothing
       // structurally changed lets memoised consumers (TeamRow, SoldPlayerRow)
       // skip reconciliation on every bid.
+      // Merge (not replace) so that a partial incomingTeam never strips
+      // currentBalance / playersPurchased from the local state.
       let updatedTeams = state.teams;
       const incomingTeam = action.data.winningTeam;
       if (incomingTeam && state.teams.some((t) => t._id === incomingTeam._id)) {
         updatedTeams = state.teams.map((team) =>
-          team._id === incomingTeam._id ? incomingTeam : team
+          team._id === incomingTeam._id ? { ...team, ...incomingTeam } : team
         );
       }
 
@@ -379,11 +382,13 @@ export function usePusherAuction(
 ): UsePusherAuctionReturn {
   // Overlay mode = OBS browser source with a token in the URL.
   // In overlay mode we use the wake channel strategy (lazy connect).
-  // Without a token (control panel, auction page) we connect immediately — old behaviour.
+  // Without a token (control panel, auction page, legacy public overlays),
+  // connect immediately.
   const isOverlayMode = !!overlayToken;
 
   const [isConnected, setIsConnected] = useState(false);
   const [isRevoked, setIsRevoked] = useState(false);
+  const [lastEvent, setLastEvent] = useState<string | null>(null);
   // In non-overlay mode start as true so Effect 4 fires immediately on mount.
   const [connectTournamentChannel, setConnectTournamentChannel] = useState(!isOverlayMode);
 
@@ -397,6 +402,8 @@ export function usePusherAuction(
 
   const channelRef = useRef<Channel | null>(null);
   const pusherRef = useRef<ReturnType<typeof getPusherClient> | null>(null);
+  const bootstrapInFlightRef = useRef<Promise<void> | null>(null);
+  const lastBootstrapRef = useRef<{ key: string; at: number } | null>(null);
 
   // Build auth headers helper (handles overlay token fallback for OBS)
   const buildHeaders = useCallback(() => {
@@ -408,100 +415,83 @@ export function usePusherAuction(
     return { headers, tkQ, tk };
   }, [overlayToken, overlayType]);
 
-  // Fetch full auction data (tournament + state + players + teams in parallel)
+  // Fetch full auction data via the bootstrap endpoint (single HTTP + Neon PG round-trip).
+  // Dedupe because overlay startup can request sync from mount, token hydration, and
+  // Pusher connection recovery within the same few milliseconds.
+  const runBootstrapFetch = useCallback(async (source: string, force = false) => {
+    if (!tournamentId) return;
+
+    const { headers, tk } = buildHeaders();
+    const url = `/api/auction/bootstrap?tournamentId=${tournamentId}${tk}`;
+    const now = Date.now();
+    const last = lastBootstrapRef.current;
+
+    if (!force && bootstrapInFlightRef.current) {
+      dlog(`[usePusherAuction] Bootstrap deduped (${source}) — awaiting in-flight request`);
+      return bootstrapInFlightRef.current;
+    }
+    if (!force && last?.key === url && now - last.at < 1_000) {
+      dlog(`[usePusherAuction] Bootstrap skipped (${source}) — fetched ${now - last.at}ms ago`);
+      return;
+    }
+
+    const task = (async () => {
+      try {
+        dlog(`[usePusherAuction] Bootstrap fetch (${source}) for tournament: ${tournamentId}`);
+        const startTime = Date.now();
+        const res = await fetch(url, { headers });
+        const data = res.ok ? await res.json() : null;
+
+        lastBootstrapRef.current = { key: url, at: Date.now() };
+        dlog(`[usePusherAuction] Bootstrap fetch completed in ${Date.now() - startTime}ms (${source})`);
+
+        dispatch({
+          type: 'SET_INITIAL_DATA',
+          data: {
+            tournament: data?.tournament || null,
+            auctionState: data?.auctionState || EMPTY_AUCTION_STATE,
+            players: data?.players || [],
+            teams: data?.teams || [],
+          },
+        });
+      } finally {
+        bootstrapInFlightRef.current = null;
+      }
+    })();
+
+    bootstrapInFlightRef.current = task;
+    return task;
+  }, [tournamentId, buildHeaders]);
+
   const fetchInitialData = useCallback(async () => {
     if (!tournamentId) return;
     // Use server-bootstrapped data only when it matches the currently requested tournament.
-    // When users switch tournaments in the control panel, we must re-fetch fresh tournament
-    // config (including player classes) for the new tournamentId.
     if (initialData?.tournament?._id === tournamentId) return;
-
     try {
-      dlog(`[usePusherAuction] Fetching data for tournament: ${tournamentId}`);
-      const { headers, tkQ, tk } = buildHeaders();
-      const startTime = Date.now();
-
-      const [tournamentRes, stateRes, playersRes, teamsRes] = await Promise.all([
-        fetch(`/api/tournaments/${tournamentId}${tkQ}`, { headers }),
-        fetch(`/api/auction/state/${tournamentId}`, { headers }),
-        fetch(`/api/players?tournamentId=${tournamentId}${tk}`, { headers }),
-        fetch(`/api/teams?tournamentId=${tournamentId}${tk}`, { headers }),
-      ]);
-
-      const [tournamentData, stateData, playersData, teamsData] = await Promise.all([
-        tournamentRes.ok ? tournamentRes.json() : null,
-        stateRes.ok ? stateRes.json() : null,
-        playersRes.ok ? playersRes.json() : null,
-        teamsRes.ok ? teamsRes.json() : null,
-      ]);
-
-      dlog(`[usePusherAuction] Data fetch completed in ${Date.now() - startTime}ms`);
-
-      dispatch({
-        type: 'SET_INITIAL_DATA',
-        data: {
-          tournament: tournamentData || null,
-          auctionState: stateData || EMPTY_AUCTION_STATE,
-          players: playersData || [],
-          teams: teamsData || [],
-        },
-      });
+      await runBootstrapFetch('initial');
     } catch (err) {
       console.error('[usePusherAuction] Error fetching data:', err);
       dispatch({ type: 'SET_ERROR', error: 'Failed to load tournament data. Please try again.' });
     }
-  }, [tournamentId, buildHeaders, initialData?.tournament?._id]);
+  }, [tournamentId, initialData?.tournament?._id, runBootstrapFetch]);
 
   const refreshData = useCallback(async () => {
-    if (!tournamentId) return;
     try {
-      const { headers, tkQ, tk } = buildHeaders();
-      const [tournamentRes, stateRes, playersRes, teamsRes] = await Promise.all([
-        fetch(`/api/tournaments/${tournamentId}${tkQ}`, { headers }),
-        fetch(`/api/auction/state/${tournamentId}`, { headers }),
-        fetch(`/api/players?tournamentId=${tournamentId}${tk}`, { headers }),
-        fetch(`/api/teams?tournamentId=${tournamentId}${tk}`, { headers }),
-      ]);
-
-      const [tournamentData, stateData, playersData, teamsData] = await Promise.all([
-        tournamentRes.ok ? tournamentRes.json() : null,
-        stateRes.ok ? stateRes.json() : null,
-        playersRes.ok ? playersRes.json() : null,
-        teamsRes.ok ? teamsRes.json() : null,
-      ]);
-
-      dispatch({
-        type: 'SET_INITIAL_DATA',
-        data: {
-          tournament: tournamentData || null,
-          auctionState: stateData || EMPTY_AUCTION_STATE,
-          players: playersData || [],
-          teams: teamsData || [],
-        },
-      });
+      await runBootstrapFetch('refresh', true);
     } catch (err) {
       console.error('[usePusherAuction] Error refreshing data:', err);
       dispatch({ type: 'SET_ERROR', error: 'Failed to refresh tournament data. Please try again.' });
     }
-  }, [tournamentId, buildHeaders]);
+  }, [runBootstrapFetch]);
 
-  // ─── Effect 1: Initial status check (overlay mode only) ─────────────────────
-  // Lightweight fetch to determine whether to connect immediately.
-  // Skipped in non-overlay mode — connectTournamentChannel is already true.
+  // ─── Effect 1: Overlay startup connect ──────────────────────────────────────
+  // Avoid a status-check waterfall. Bootstrap returns the full tournament state;
+  // Pusher events will disconnect the tournament channel if the auction becomes inactive.
   useEffect(() => {
     if (!isOverlayMode || !tournamentId) return;
-
-    const { headers, tkQ } = buildHeaders();
-    fetch(`/api/tournaments/${tournamentId}${tkQ}`, { headers })
-      .then(r => r.ok ? r.json() : null)
-      .then((t: Tournament | null) => {
-        if (t && isActiveStatus(t.status)) {
-          dlog(`[usePusherAuction] Tournament already active (${t.status}), connecting immediately`);
-          setConnectTournamentChannel(true);
-        }
-      })
-      .catch(() => {});
-  }, [tournamentId, isOverlayMode]); // eslint-disable-line react-hooks/exhaustive-deps
+    dlog('[usePusherAuction] Overlay mode — connecting tournament channel immediately');
+    setConnectTournamentChannel(true);
+  }, [tournamentId, isOverlayMode]);
 
   // ─── Effect 2: Wake channel subscription (overlay mode only) ────────────────
   // Always on while overlay is open. Receives wake/sleep signals from the
@@ -598,14 +588,17 @@ export function usePusherAuction(
       });
 
       channel.bind('auction:player-selected', (data: PlayerSelectedEvent) => {
+        setLastEvent(`auction:player-selected ${new Date().toLocaleTimeString()}`);
         dispatch({ type: 'PLAYER_SELECTED', data });
       });
 
       channel.bind('auction:bid-placed', (data: BidPlacedEvent) => {
+        setLastEvent(`auction:bid-placed bid=${data.currentBid} ${new Date().toLocaleTimeString()}`);
         dispatch({ type: 'BID_PLACED', data });
       });
 
       channel.bind('auction:player-sold', (data: PlayerSoldEvent) => {
+        setLastEvent(`auction:player-sold ${new Date().toLocaleTimeString()}`);
         dispatch({ type: 'PLAYER_SOLD', data });
       });
 
@@ -641,10 +634,21 @@ export function usePusherAuction(
         }
       });
 
-      const handleConnectionStateChange = (states: { current: string }) => {
+      const handleConnectionStateChange = (states: { current: string; previous: string }) => {
         setIsConnected(states.current === 'connected');
         if (states.current === 'connected' || states.current === 'unavailable' || states.current === 'failed') {
           dispatch({ type: 'CLEAR_ERROR' });
+        }
+        // When the connection recovers from a disconnect, re-fetch full auction
+        // state to catch any events that were missed while the WS was down.
+        // This is the primary fix for "overlay shows stale data after reconnect"
+        // and "hard refresh needed to see latest state".
+        if (
+          states.current === 'connected' &&
+          (states.previous === 'unavailable' || states.previous === 'failed' || states.previous === 'disconnected')
+        ) {
+          dlog('[usePusherAuction] WS recovered — re-fetching auction data to sync missed events');
+          refreshData().catch(() => {});
         }
       };
 
@@ -681,7 +685,7 @@ export function usePusherAuction(
       console.error('[Pusher] Error setting up connection:', err);
       setIsConnected(false);
     }
-  }, [tournamentId, connectTournamentChannel]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tournamentId, connectTournamentChannel, refreshData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Effect 5: Re-fetch when overlay token hydrates (mobile SSR delay) ───────
   // On mobile, useSearchParams may return null for the token on the first render.
@@ -691,6 +695,40 @@ export function usePusherAuction(
     if (!overlayToken || !tournamentId) return;
     fetchInitialData();
   }, [overlayToken, tournamentId, fetchInitialData]);
+
+  // ─── Effect 6: Page visibility recovery ──────────────────────────────────────
+  // When a browser tab is backgrounded, Chrome/Firefox throttle JS execution and
+  // can delay WebSocket ping/pong responses enough to cause Pusher disconnects.
+  // When the tab becomes visible again, reconnect Pusher if needed and re-fetch
+  // the current auction state to catch any events missed while backgrounded.
+  // Throttled to avoid flooding Neon PG on every tab-focus event — only re-fetches
+  // if Pusher was disconnected OR state is >30 s stale.
+  useEffect(() => {
+    if (!tournamentId || !connectTournamentChannel) return;
+
+    const lastRefreshRef = { current: Date.now() };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        const pusherState = pusherRef.current?.connection.state;
+        const wasDisconnected = pusherState !== 'connected';
+        const stale = Date.now() - lastRefreshRef.current > 30_000;
+
+        if (wasDisconnected || stale) {
+          dlog('[usePusherAuction] Tab visible — re-syncing state (disconnected=' + wasDisconnected + ' stale=' + stale + ')');
+          lastRefreshRef.current = Date.now();
+          refreshData().catch(() => {});
+        }
+        if (wasDisconnected && pusherRef.current) {
+          dlog('[usePusherAuction] Pusher disconnected — reconnecting');
+          pusherRef.current.connect();
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [tournamentId, connectTournamentChannel, refreshData]);
 
   const setPlayerUnsold = useCallback((playerId: string) => {
     dispatch({ type: 'SET_PLAYER_UNSOLD', playerId });
@@ -747,6 +785,7 @@ export function usePusherAuction(
     teams: state.teams,
     isConnected,
     isRevoked,
+    lastEvent,
     error: state.error,
     setPlayerUnsold,
     setPlayerAvailable,

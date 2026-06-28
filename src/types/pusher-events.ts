@@ -177,7 +177,7 @@ export interface ClassCompletedEvent extends BasePusherEvent {
 export interface OverlaySettingsEvent extends BasePusherEvent {
   size: 'large' | 'small';
   tickerMode: 'all' | 'sold' | 'available';
-  displayMode: 'standard' | 'sold-summary' | 'team-summary' | 'resting' | 'top10-summary' | 'custom-ticker' | 'wheel-spin';
+  displayMode: 'standard' | 'sold-summary' | 'team-summary' | 'team-wise-summary' | 'team-wise-image' | 'resting' | 'top10-summary' | 'custom-ticker' | 'wheel-spin';
   hidePremiumCard?: boolean;
   customTickerLine1?: string;
   customTickerLine2?: string;

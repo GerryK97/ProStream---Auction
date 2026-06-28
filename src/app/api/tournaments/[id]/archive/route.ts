@@ -56,7 +56,7 @@ export async function POST(
     const updatedTournament = await TournamentModel.findByIdAndUpdate(
       id,
       { $set: { status: 'Archived' } },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
     return NextResponse.json({

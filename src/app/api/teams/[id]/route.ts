@@ -3,6 +3,7 @@ import { teamDB } from '@/lib/db-mongodb';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction, canAccessTeam, canModifyResource } from '@/lib/permissions';
 import { tournamentDB } from '@/lib/db-mongodb';
+import { serializeTeam } from '@/lib/cloudinaryUtils';
 
 // GET /api/teams/[id] - Get team by ID
 export async function GET(
@@ -53,7 +54,7 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    return NextResponse.json(team);
+    return NextResponse.json(serializeTeam(team as any));
   } catch (error) {
     return NextResponse.json(
       { error: 'Failed to fetch team' },
@@ -101,7 +102,7 @@ export async function PUT(
         { status: 404 }
       );
     }
-    return NextResponse.json(updatedTeam);
+    return NextResponse.json(serializeTeam(updatedTeam as any));
   } catch (error) {
     return NextResponse.json(
       { error: 'Failed to update team' },

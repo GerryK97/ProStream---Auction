@@ -38,6 +38,7 @@ export async function POST(
 
     // Update status to Completed
     tournament.status = 'Completed';
+    (tournament as any).completedAt = new Date();
     await tournament.save();
 
     return NextResponse.json({

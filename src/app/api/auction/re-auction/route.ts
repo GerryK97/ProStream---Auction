@@ -3,6 +3,7 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { PlayerModel } from '@/models/Player';
 import { triggerAuctionUndo } from '@/lib/pusher-server';
+import { serializePlayer } from '@/lib/cloudinaryUtils';
 
 // POST /api/auction/re-auction - Reset all unsold players back to available for re-auction
 export async function POST(request: NextRequest) {
@@ -40,20 +41,20 @@ export async function POST(request: NextRequest) {
       AuctionStateModel.findOne({ tournamentId }).lean(),
     ]);
 
-    // Fire one small auction:undo event per player so overlays update without a refresh
-    for (const player of updatedPlayers) {
-      try {
-        await triggerAuctionUndo(tournamentId, {
-          restoredPlayer: player as any,
+    // Fire one auction:undo event per player — all in parallel (no dependency between them)
+    await Promise.all(
+      updatedPlayers.map((player) =>
+        triggerAuctionUndo(tournamentId, {
+          restoredPlayer: serializePlayer(player as any) as any,
           updatedTeam: null,
           refundedAmount: 0,
           auctionState: auctionState as any,
           message: 'Player moved back to available for re-auction',
-        });
-      } catch (pusherError) {
-        console.error('Failed to trigger Pusher event for player:', (player as any)._id, pusherError);
-      }
-    }
+        }).catch((pusherError) =>
+          console.error('[re-auction] Pusher event failed for player:', (player as any)._id, pusherError)
+        )
+      )
+    );
 
     return NextResponse.json({
       success: true,

@@ -7,6 +7,7 @@ import { AuctionStateModel } from '@/models/AuctionState';
 import { triggerAuctionStarted, triggerWake } from '@/lib/pusher-server';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
+import { serializeTeam, serializePlayer } from '@/lib/cloudinaryUtils';
 
 // POST /api/auction/start - Start auction with validation
 export async function POST(request: NextRequest) {
@@ -72,17 +73,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate: At least 2 teams
-    const teamsCount = await TeamModel.countDocuments({ tournamentId });
+    // Validate: At least 2 teams + at least 1 player — parallel counts
+    const [teamsCount, playersCount] = await Promise.all([
+      TeamModel.countDocuments({ tournamentId }),
+      PlayerModel.countDocuments({ tournamentId }),
+    ]);
     if (teamsCount < 2) {
       return NextResponse.json(
         { error: 'At least 2 teams are required to start the auction' },
         { status: 400 }
       );
     }
-
-    // Validate: At least 1 player
-    const playersCount = await PlayerModel.countDocuments({ tournamentId });
     if (playersCount < 1) {
       return NextResponse.json(
         { error: 'At least 1 player is required to start the auction' },
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
     const updatedTournament = await TournamentModel.findByIdAndUpdate(
       tournamentId,
       { $set: { status: 'Live' } },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
     // Initialize or reset auction state
@@ -110,24 +111,27 @@ export async function POST(request: NextRequest) {
           history: []
         }
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
-    // Fetch teams and players for Pusher event
-    const teams = await TeamModel.find({ tournamentId }).lean();
-    const players = await PlayerModel.find({ tournamentId }).lean();
+    // Fetch teams and players for Pusher event — parallel (no dependency on each other)
+    const [teams, players] = await Promise.all([
+      TeamModel.find({ tournamentId }).lean(),
+      PlayerModel.find({ tournamentId }).lean(),
+    ]);
 
-    // Trigger Pusher events
+    // Trigger Pusher events — wake + started in parallel
     try {
-      // Wake overlays first so they connect before the full event arrives
-      await triggerWake(tournamentId);
-      await triggerAuctionStarted({
-        tournament: updatedTournament as any,
-        teams: teams as any,
-        players: players as any,
-        auctionState: resetAuctionState as any,
-        message: 'Auction started successfully',
-      });
+      await Promise.all([
+        triggerWake(tournamentId),
+        triggerAuctionStarted({
+          tournament: updatedTournament as any,
+          teams: teams.map(serializeTeam) as any,
+          players: players.map(serializePlayer) as any,
+          auctionState: resetAuctionState as any,
+          message: 'Auction started successfully',
+        }),
+      ]);
     } catch (pusherError) {
       console.error('Failed to trigger Pusher event:', pusherError);
       // Don't fail the request if Pusher fails

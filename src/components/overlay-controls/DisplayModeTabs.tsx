@@ -1,9 +1,10 @@
 import React from 'react';
-import type { DisplayMode, SendOverlaySettings, TickerMode, OverlaySize, TeamOption } from './types';
+import type { DisplayMode, OverlayThemeId, SendOverlaySettings, TickerMode, OverlaySize, TeamOption } from './types';
 
 interface DisplayModeTabsProps {
     displayMode: DisplayMode;
     setDisplayMode: (mode: DisplayMode) => void;
+    overlayTheme?: OverlayThemeId;
     overlaySize: OverlaySize;
     tickerMode: TickerMode;
     sendOverlaySettings: SendOverlaySettings;
@@ -18,6 +19,8 @@ type ModeDef = {
     value: Exclude<DisplayMode, 'wheel-spin'>;
     label: string;
     accent: string;
+    /** Hidden when overlay theme is theme3 (Team Summary uses the standings panel instead). */
+    hideOnTheme3?: boolean;
 };
 
 const MODES: ModeDef[] = [
@@ -25,15 +28,30 @@ const MODES: ModeDef[] = [
     { value: 'sold-summary',       label: 'Player Summary',   accent: 'var(--brand-primary)' },
     { value: 'team-summary',       label: 'Team Summary',     accent: 'var(--brand-primary)' },
     { value: 'top10-summary',      label: 'Top 10 Sold',      accent: '#D97706' },
-    { value: 'team-wise-summary',  label: 'Team-wise',        accent: 'var(--brand-primary)' },
+    { value: 'team-wise-summary',  label: 'Team-wise',        accent: 'var(--brand-primary)', hideOnTheme3: true },
     { value: 'team-wise-image',   label: 'Team Imagery',     accent: '#D97706' },
     { value: 'custom-ticker',      label: 'Custom Ticker',    accent: '#0891B2' },
     { value: 'resting',            label: 'Resting Time',     accent: 'var(--accent-color)' },
 ];
 
+function visibleModes(theme?: OverlayThemeId): ModeDef[] {
+    if (theme === 'theme3') {
+        return MODES.filter(m => !m.hideOnTheme3);
+    }
+    return MODES;
+}
+
+function showTeamFilter(displayMode: DisplayMode, theme?: OverlayThemeId): boolean {
+    if (displayMode === 'team-wise-summary' || displayMode === 'team-wise-image') {
+        return true;
+    }
+    return theme === 'theme3' && displayMode === 'team-summary';
+}
+
 export default function DisplayModeTabs({
     displayMode,
     setDisplayMode,
+    overlayTheme,
     overlaySize,
     tickerMode,
     sendOverlaySettings,
@@ -48,13 +66,15 @@ export default function DisplayModeTabs({
         sendOverlaySettings(overlaySize, tickerMode, mode);
     };
 
+    const modes = visibleModes(overlayTheme);
+
     return (
         <div className="mb-4">
             <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] mb-2" style={{ color: 'var(--text-tertiary)' }}>
                 Display Mode
             </h3>
-            <div className="flex flex-wrap gap-2">
-                {MODES.map(({ value, label, accent }) => {
+            <div className="flex flex-wrap gap-2 max-w-full">
+                {modes.map(({ value, label, accent }) => {
                     const active = displayMode === value;
                     return (
                         <button
@@ -75,7 +95,7 @@ export default function DisplayModeTabs({
             </div>
 
             {/* Mode context row — mode-specific sub-controls */}
-            {(displayMode === 'team-wise-summary' || displayMode === 'team-wise-image') && (
+            {showTeamFilter(displayMode, overlayTheme) && (
                 <div
                     className="mt-3 flex items-center gap-3 rounded-md px-3 py-2 flex-wrap"
                     style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}
@@ -89,7 +109,7 @@ export default function DisplayModeTabs({
                             const val = e.target.value || null;
                             setTeamWiseTeamId(val);
                             teamWiseTeamIdRef.current = val;
-                            sendOverlaySettings(overlaySize, tickerMode, 'team-wise-summary');
+                            sendOverlaySettings(overlaySize, tickerMode, displayMode);
                         }}
                         className="text-sm rounded-md px-2 py-1.5 font-semibold"
                         style={{
@@ -107,7 +127,9 @@ export default function DisplayModeTabs({
                     </select>
                     {!teamWiseTeamId && (
                         <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                            Showing aggregate summary across all teams
+                            {overlayTheme === 'theme3'
+                                ? 'Standings for all teams; pick a team to highlight a row'
+                                : 'Showing aggregate summary across all teams'}
                         </span>
                     )}
                 </div>

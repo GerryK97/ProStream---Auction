@@ -72,6 +72,7 @@ export default function StatusStrip({
         displayMode === 'team-summary' ||
         displayMode === 'top10-summary' ||
         displayMode === 'team-wise-summary' ||
+        displayMode === 'team-wise-image' ||
         displayMode === 'resting';
 
     return (

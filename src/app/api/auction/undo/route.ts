@@ -4,6 +4,7 @@ import { AuctionStateModel } from '@/models/AuctionState';
 import { PlayerModel } from '@/models/Player';
 import { TeamModel } from '@/models/Team';
 import { triggerAuctionUndo } from '@/lib/pusher-server';
+import { serializeTeam, serializePlayer } from '@/lib/cloudinaryUtils';
 
 // POST /api/auction/undo - Undo the last player sale or unsold marking
 export async function POST(request: NextRequest) {
@@ -18,22 +19,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find the most recently acted-upon sold player
-    const lastSoldPlayer = await PlayerModel.findOne({
-      tournamentId,
-      isSold: true,
-    })
-      .sort({ updatedAt: -1 })
-      .lean();
-
-    // Find the most recently acted-upon unsold player
-    const lastUnsoldPlayer = await PlayerModel.findOne({
-      tournamentId,
-      isUnsold: true,
-      isSold: false,
-    })
-      .sort({ updatedAt: -1 })
-      .lean();
+    // Find the most recently acted-upon sold/unsold players — parallel (no dependency)
+    const [lastSoldPlayer, lastUnsoldPlayer] = await Promise.all([
+      PlayerModel.findOne({ tournamentId, isSold: true }).sort({ updatedAt: -1 }).lean(),
+      PlayerModel.findOne({ tournamentId, isUnsold: true, isSold: false }).sort({ updatedAt: -1 }).lean(),
+    ]);
 
     if (!lastSoldPlayer && !lastUnsoldPlayer) {
       return NextResponse.json(
@@ -71,20 +61,31 @@ export async function POST(request: NextRequest) {
 
       // Unsell the player first — must happen before balance recalculation
       const restoredPlayer = await PlayerModel.findOneAndUpdate(
-        { _id: playerId },
+        { _id: playerId, tournamentId, isSold: true },
         {
           $set: { isSold: false },
           $unset: { finalPrice: '', winningTeamId: '' },
         },
-        { new: true }
+        { returnDocument: 'after' }
       ).lean();
+
+      if (!restoredPlayer) {
+        return NextResponse.json(
+          { error: 'Last sale was already undone. Refreshing latest results.' },
+          { status: 409 }
+        );
+      }
 
       // Derive correct balance from source of truth — idempotent, immune to $inc drift.
       // The player is already un-sold above, so this sum excludes the refunded player.
-      const teamDoc = await TeamModel.findById(winningTeamId).lean();
-      const totalSpentAgg = await PlayerModel.aggregate([
-        { $match: { tournamentId, isSold: true, winningTeamId: String(winningTeamId) } },
-        { $group: { _id: null, total: { $sum: '$finalPrice' } } },
+      // Fetch team doc + recalculated spend + auction state all in parallel.
+      const [teamDoc, totalSpentAgg, auctionState] = await Promise.all([
+        TeamModel.findById(winningTeamId).lean(),
+        PlayerModel.aggregate([
+          { $match: { tournamentId, isSold: true, winningTeamId: String(winningTeamId) } },
+          { $group: { _id: null, total: { $sum: '$finalPrice' } } },
+        ]),
+        AuctionStateModel.findOne({ tournamentId }).lean(),
       ]);
       const totalSpent = totalSpentAgg[0]?.total ?? 0;
       const newBalance = (teamDoc as any).initialBudget - totalSpent;
@@ -96,15 +97,15 @@ export async function POST(request: NextRequest) {
           $set: { currentBalance: newBalance },
           $pull: { playersPurchased: String(playerId) },
         },
-        { new: true }
+        { returnDocument: 'after' }
       ).lean();
 
       // Get auction state
-      let auctionState = await AuctionStateModel.findOne({ tournamentId }).lean();
+      let currentAuctionState = auctionState;
 
       // If this was the current player being auctioned, reset the auction state
-      if (auctionState && (auctionState as any).currentPlayerId?.toString() === playerId.toString()) {
-        auctionState = await AuctionStateModel.findOneAndUpdate(
+      if (currentAuctionState && (currentAuctionState as any).currentPlayerId?.toString() === playerId.toString()) {
+        currentAuctionState = await AuctionStateModel.findOneAndUpdate(
           { tournamentId },
           {
             $set: {
@@ -114,17 +115,18 @@ export async function POST(request: NextRequest) {
               history: [],
             },
           },
-          { new: true }
+          { returnDocument: 'after' }
         ).lean();
       }
 
-      await triggerAuctionUndo(tournamentId, {
-        restoredPlayer: restoredPlayer as any,
-        updatedTeam: updatedTeam as any,
+      // Fire Pusher without awaiting — overlay gets event asynchronously.
+      triggerAuctionUndo(tournamentId, {
+        restoredPlayer: serializePlayer(restoredPlayer as any) as any,
+        updatedTeam: updatedTeam ? serializeTeam(updatedTeam as any) as any : null,
         refundedAmount: finalPrice,
-        auctionState: auctionState as any,
+        auctionState: currentAuctionState as any,
         message: 'Last sale undone successfully',
-      });
+      }).catch((err) => console.error('[undo] Pusher trigger failed:', err));
 
       return NextResponse.json({
         message: 'Last sale undone successfully',
@@ -138,20 +140,27 @@ export async function POST(request: NextRequest) {
 
       // Restore player to available
       const restoredPlayer = await PlayerModel.findOneAndUpdate(
-        { _id: playerId },
+        { _id: playerId, tournamentId, isUnsold: true, isSold: false },
         { $set: { isUnsold: false } },
-        { new: true }
+        { returnDocument: 'after' }
       ).lean();
+
+      if (!restoredPlayer) {
+        return NextResponse.json(
+          { error: 'Last unsold marking was already undone. Refreshing latest results.' },
+          { status: 409 }
+        );
+      }
 
       const auctionState = await AuctionStateModel.findOne({ tournamentId }).lean();
 
-      await triggerAuctionUndo(tournamentId, {
-        restoredPlayer: restoredPlayer as any,
+      triggerAuctionUndo(tournamentId, {
+        restoredPlayer: serializePlayer(restoredPlayer as any) as any,
         updatedTeam: null,
         refundedAmount: 0,
         auctionState: auctionState as any,
         message: 'Unsold marking reversed',
-      });
+      }).catch((err) => console.error('[undo-unsold] Pusher trigger failed:', err));
 
       return NextResponse.json({
         message: 'Unsold marking reversed successfully',

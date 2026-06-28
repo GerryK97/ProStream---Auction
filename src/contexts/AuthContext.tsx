@@ -20,7 +20,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<void>;
-  signup: (username: string, email: string, password: string) => Promise<void>;
+  signup: (username: string, email: string, password: string, mobileNumber?: string) => Promise<{ user?: User; token?: string | null }>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
   error: string | null;
@@ -114,7 +114,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     username: string,
     email: string,
     password: string,
-  ) => {
+    mobileNumber?: string,
+  ): Promise<{ user?: User; token?: string | null }> => {
     try {
       setError(null);
       setIsLoading(true);
@@ -124,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, email, password }),
+        body: JSON.stringify({ username, email, password, mobileNumber: mobileNumber?.trim() || undefined }),
       });
 
       const data = await response.json();
@@ -139,6 +140,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(data.token);
         setUser(data.user);
       }
+
+      return { user: data.user, token: data.token ?? null };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred during signup';
       setError(errorMessage);

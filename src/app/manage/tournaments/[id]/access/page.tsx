@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
@@ -60,7 +60,7 @@ function TournamentAccessPage() {
       if (usersRes.ok) {
         const usersData = await usersRes.json();
         const list: AllUser[] = usersData.data ?? usersData ?? [];
-        // Exclude admin users â€” they always have access
+        // Exclude admin users - they always have access
         setAllUsers(list.filter((u) => u.role !== 'Admin'));
       }
     } catch (err: any) {
@@ -115,7 +115,7 @@ function TournamentAccessPage() {
     }
   };
 
-  // Users that don't already have access â€” available to grant
+  // Users that don't already have access - available to grant
   const accessUserIds = new Set(accessUsers.map((u) => u._id));
   const availableUsers = allUsers.filter(
     (u) =>
@@ -143,7 +143,7 @@ function TournamentAccessPage() {
   if (currentUser?.role !== 'Admin') {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <p className="text-red-400">Access denied â€” Admin only</p>
+        <p className="text-red-400">Access denied - Admin only</p>
       </div>
     );
   }
@@ -157,7 +157,7 @@ function TournamentAccessPage() {
             onClick={() => router.push('/manage/tournaments')}
             className="text-gray-400 hover:text-white text-sm"
           >
-            â† Tournaments
+            Back to Tournaments
           </button>
           <span className="text-gray-600">/</span>
           <span className="text-gray-300 text-sm truncate">{tournamentName || tournamentId}</span>
@@ -166,8 +166,7 @@ function TournamentAccessPage() {
         </div>
 
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <span>ðŸ”’</span>
+          <h1 className="text-2xl font-bold text-white">
             Tournament Access
           </h1>
           <p className="text-gray-400 text-sm mt-1">

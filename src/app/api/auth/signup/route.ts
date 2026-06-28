@@ -11,7 +11,7 @@ import { createUser, getUserByEmail, getUserByUsername, toAuctionUser, toPublicU
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, email, password } = await request.json();
+    const { username, email, password, mobileNumber = '' } = await request.json();
 
     if (!username || !email || !password) {
       return NextResponse.json(
@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
       plan: 'Free',
       status,
       assignedTournaments: [],
+      phone: mobileNumber ? String(mobileNumber).trim() : null,
     });
 
     let token = null;

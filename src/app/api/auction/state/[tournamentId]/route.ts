@@ -11,19 +11,21 @@ export async function GET(
     await connectToDatabase();
     const { tournamentId } = await params;
 
-    let auctionState = await AuctionStateModel.findOne({ tournamentId }).lean();
-
-    // If no auction state exists, create a default one
-    if (!auctionState) {
-      auctionState = await AuctionStateModel.create({
-        tournamentId,
-        currentPlayerId: null,
-        currentBid: 0,
-        winningTeamId: null,
-        currentAuctionStatus: 'Pending',
-        history: [],
-      });
-    }
+    // findOneAndUpdate with upsert avoids the two-round-trip findOne + create pattern
+    const auctionState = await AuctionStateModel.findOneAndUpdate(
+      { tournamentId },
+      {
+        $setOnInsert: {
+          tournamentId,
+          currentPlayerId: null,
+          currentBid: 0,
+          winningTeamId: null,
+          currentAuctionStatus: 'Pending',
+          history: [],
+        },
+      },
+      { upsert: true, returnDocument: 'after' }
+    ).lean();
 
     return NextResponse.json(auctionState);
   } catch (error) {

@@ -2,6 +2,7 @@
 
 import OverlayWrapper from './OverlayWrapper';
 import FullScreenT2Content from './theme2/FullScreenT2Content';
+import FullScreenT3Content from './theme3/FullScreenT3Content';
 import { FullScreenT1Content } from './theme1/FullScreenT1Content';
 
 // ─── Public export ────────────────────────────────────────────────────────────
@@ -11,6 +12,9 @@ export default function FullScreenOverlay({ tournamentId }: { tournamentId: stri
     <div className="w-screen h-screen overflow-hidden" style={{ background: 'var(--overlay-bg-fullscreen)' }}>
       <OverlayWrapper tournamentId={tournamentId} overlayType="fullscreen">
         {(data) => {
+          if (data.tournament?.overlayTheme === 'theme3') {
+            return <FullScreenT3Content {...data} />;
+          }
           if (data.tournament?.overlayTheme === 'theme2') {
             return <FullScreenT2Content {...data} />;
           }

@@ -5,10 +5,10 @@ import {
 } from '@/lib/overlays/auctionOverlayTypes';
 
 export const DEFAULT_OVERLAY_PRICES: Record<AuctionOverlayType, number> = {
-  custom: 500,
-  fullscreen: 1000,
-  fullscreen2: 1000,
-  team_owners: 300,
+  custom:      2000,
+  fullscreen:  2000,
+  fullscreen2: 2000,
+  team_owners: 2000,
 };
 
 export function getOverlayPricingDefaultsByKey(): Record<string, number> {

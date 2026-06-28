@@ -6,6 +6,7 @@ import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
 import { triggerPlayerSold, triggerClassCompleted } from '@/lib/pusher-server';
 import { getMinClassBasePrice } from '@/lib/playerClassUtils';
+import { serializeTeam, serializePlayer } from '@/lib/cloudinaryUtils';
 
 // POST /api/auction/sell - Sell the current player to the winning team
 export async function POST(request: NextRequest) {
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
           updatedAt: new Date(),
         },
       },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
     if (!updatedPlayer) {
@@ -117,12 +118,12 @@ export async function POST(request: NextRequest) {
           $set: { currentBalance: newBalance },
           $addToSet: { playersPurchased: String(currentPlayerId) },
         },
-        { new: true }
+        { returnDocument: 'after' }
       ).lean(),
       AuctionStateModel.findOneAndUpdate(
         { tournamentId },
         { $set: { currentAuctionStatus: 'Sold' } },
-        { new: true }
+        { returnDocument: 'after' }
       ).lean(),
     ]);
 
@@ -150,26 +151,29 @@ export async function POST(request: NextRequest) {
           $push: { completedClasses: activeClass },
           $set: { currentAuctionClass: null },
         },
-        { new: true }
+        { returnDocument: 'after' }
       ).lean();
-      await triggerClassCompleted(tournamentId, {
+      triggerClassCompleted(tournamentId, {
         completedClassCode: activeClass,
         completedClasses: (finalState as any)?.completedClasses ?? [activeClass],
         auctionState: finalState as any,
         message: `${activeClass} class auction completed`,
-      });
+      }).catch((err) => console.error('[sell] classCompleted Pusher failed:', err));
     }
 
+    // Await Pusher for sold events — overlays must receive sold-player and team
+    // balance changes in real time. Fire-and-forget promises can be dropped when
+    // a serverless function returns, which leaves OBS overlays stale until a hard
+    // refresh fetches the updated Mongo state.
     await triggerPlayerSold(tournamentId, {
-      soldPlayer: updatedPlayer as any,
-      winningTeam: updatedTeam as any,
+      soldPlayer: serializePlayer(updatedPlayer as any) as any,
+      winningTeam: serializeTeam(updatedTeam as any) as any,
       finalPrice: currentBid,
       remainingPlayers,
       remainingBudget: (updatedTeam as any).currentBalance,
       auctionState: updatedState as any,
       message: `${(updatedPlayer as any).name} sold to ${(updatedTeam as any).name} for ${currentBid.toLocaleString()}`,
     });
-
     return NextResponse.json({
       auctionState: updatedState,
       player: updatedPlayer,

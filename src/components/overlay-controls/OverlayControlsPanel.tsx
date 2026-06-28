@@ -35,13 +35,14 @@ export default function OverlayControlsPanel(props: OverlayControlsProps) {
         bidCardTop, setBidCardTop,
         bidCardLeft, setBidCardLeft,
         sendOverlaySettings,
+        overlayTheme,
     } = props;
 
     const isStandard = displayMode === 'standard';
 
     return (
         <div
-            className="rounded-lg p-5 border flex-1 min-h-0"
+            className="rounded-lg p-4 sm:p-5 border flex-1 min-h-0 min-w-0 overflow-hidden"
             style={{
                 backgroundColor: 'var(--surface-secondary)',
                 borderColor: 'var(--border-primary)',
@@ -54,6 +55,7 @@ export default function OverlayControlsPanel(props: OverlayControlsProps) {
             <DisplayModeTabs
                 displayMode={displayMode}
                 setDisplayMode={setDisplayMode}
+                overlayTheme={overlayTheme}
                 overlaySize={overlaySize}
                 tickerMode={tickerMode}
                 sendOverlaySettings={sendOverlaySettings}

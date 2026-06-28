@@ -3,8 +3,8 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { TournamentModel } from '@/models/Tournament';
 import { PlayerModel } from '@/models/Player';
-import { TeamModel } from '@/models/Team';
 import { triggerBidPlaced } from '@/lib/pusher-server';
+import { serializePlayer } from '@/lib/cloudinaryUtils';
 
 // POST /api/auction/bid/correct
 // Corrects the current bid to any positive amount — bypasses the "must be higher" rule.
@@ -21,7 +21,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const auctionState = await AuctionStateModel.findOne({ tournamentId });
+    const [auctionState, tournament] = await Promise.all([
+      AuctionStateModel.findOne({ tournamentId }),
+      TournamentModel.findOne({ _id: tournamentId }).lean(),
+    ]);
     if (!auctionState) {
       return NextResponse.json(
         { error: 'Auction state not found for this tournament' },
@@ -29,7 +32,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const tournament = await TournamentModel.findOne({ _id: tournamentId }).lean();
     if (!tournament || (tournament as any).status !== 'Live') {
       return NextResponse.json({ error: 'Auction is not live' }, { status: 400 });
     }
@@ -51,33 +53,39 @@ export async function POST(request: NextRequest) {
     }
 
     const previousBid = auctionState.currentBid;
+    const now = Date.now();
+    const previousLeaderId = (auctionState as any).winningTeamId ?? null;
+    const eventHistory = [
+      ...(previousBid > 0 ? [{ teamId: previousLeaderId, amount: previousBid, timestamp: now - 1 }] : []),
+      { teamId: teamId || null, amount, timestamp: now },
+    ];
 
     const updatedState = await AuctionStateModel.findOneAndUpdate(
       { tournamentId },
       {
         $set: {
           currentBid: amount,
+          winningTeamId: teamId || null,
           currentAuctionStatus: 'Bidding',
+          history: [],
         },
-        $push: { history: { teamId: teamId || null, amount, timestamp: Date.now() } },
       },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
-    // Look up the team if provided
-    let winningTeam = null;
-    if (teamId) {
-      winningTeam = await TeamModel.findById(teamId).lean();
-    }
+    const eventAuctionState = {
+      ...(updatedState as any),
+      history: eventHistory,
+    };
 
-    await triggerBidPlaced(tournamentId, {
-      auctionState: updatedState as any,
-      currentPlayer: player as any,
-      winningTeam: winningTeam as any,
+    triggerBidPlaced(tournamentId, {
+      auctionState: eventAuctionState as any,
+      currentPlayer: serializePlayer(player as any) as any,
+      winningTeam: null,
       currentBid: amount,
       previousBid,
       message: `Bid corrected to: ${amount.toLocaleString()}`,
-    });
+    }).catch((err) => console.error('[bid/correct] Pusher trigger failed:', err));
 
     return NextResponse.json(updatedState);
   } catch (error) {

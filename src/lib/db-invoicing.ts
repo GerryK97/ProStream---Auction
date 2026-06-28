@@ -73,7 +73,7 @@ export const customerDB = {
     const customer = await CustomerModel.findByIdAndUpdate(
       customerId,
       { $set: data },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     ).lean();
 
     return customer as Customer | null;
@@ -208,7 +208,7 @@ export const invoiceDB = {
     const invoice = await InvoiceModel.findByIdAndUpdate(
       invoiceId,
       { $set: data },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     ).lean();
 
     // Update customer stats if needed
@@ -263,7 +263,7 @@ export const invoiceDB = {
           status: newStatus,
         },
       },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
     // Update customer stats
@@ -406,7 +406,7 @@ export const quotationDB = {
     const quotation = await QuotationModel.findByIdAndUpdate(
       quotationId,
       { $set: data },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     ).lean();
 
     return quotation as Quotation | null;

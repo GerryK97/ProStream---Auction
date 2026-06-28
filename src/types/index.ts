@@ -26,6 +26,35 @@ export interface BidIncrementRange {
   increment: number;   // Step size in this range, e.g. 5000.
 }
 
+/** Persisted overlay control-panel settings (per tournament). */
+export interface OverlayControlSettings {
+  size: 'large' | 'small';
+  tickerMode: 'all' | 'sold' | 'available';
+  displayMode:
+    | 'standard'
+    | 'sold-summary'
+    | 'team-summary'
+    | 'team-wise-summary'
+    | 'team-wise-image'
+    | 'resting'
+    | 'top10-summary'
+    | 'custom-ticker'
+    | 'wheel-spin';
+  hidePremiumCard: boolean;
+  customTickerLine1: string;
+  customTickerLine2: string;
+  soldMessagePosition: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+  hideTickerCustom: boolean;
+  hideTickerFullscreen: boolean;
+  teamWiseTeamId: string | null;
+  bidCardTop: number;
+  bidCardLeft: number;
+  hideTeamCards: boolean;
+  teamCardSize: 'small' | 'medium' | 'large';
+  teamCardPosition: 'top-right' | 'bottom-right';
+  bidCardPosition: 'top' | 'right' | 'left';
+}
+
 export interface Tournament {
   _id: string;
   name: string;
@@ -40,7 +69,7 @@ export interface Tournament {
   usePlayerClasses?: boolean;           // Toggle to enable/disable player classes
   playerClasses?: PlayerClassConfig[];  // Custom player classes for this tournament
   basePriceStrategy?: BasePriceStrategy; // Strategy for determining base prices (default: 'tournament-level')
-  overlayTheme?: 'standard' | 'premium' | 'neon' | 'theme2'; // Overlay theme for OBS browser source
+  overlayTheme?: 'standard' | 'premium' | 'neon' | 'theme2' | 'theme3'; // Overlay theme for OBS browser source
   overlayPalette?: string; // e.g. 'default', 'ocean', 'amethyst'
   biddingMode?: 'direct' | 'team'; // 'direct' = typed input (default), 'team' = per-team bid buttons
   bidIncrements?: BidIncrementRange[]; // Ordered list of price ranges and their increment steps
@@ -48,6 +77,10 @@ export interface Tournament {
   directQuickBidsEnabled?: boolean;
   directQuickBids?: { amount: number }[];
   playerProfileFields?: PlayerProfileFieldsConfig; // Optional player data fields enabled for this tournament
+  playerCardTemplates?: Array<{ id: string; name: string; pngUrl: string; layoutId?: string }>; // Uploaded card background templates
+  auctionDate?: string; // ISO date string e.g. "2026-07-15"
+  completedAt?: string | Date; // Set when status transitions to Completed
+  overlayControlSettings?: OverlayControlSettings;
 }
 
 export interface Team {

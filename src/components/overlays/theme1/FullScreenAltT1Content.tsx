@@ -8,6 +8,7 @@ import RestingTimeOverlay from './RestingTimeT1';
 import Top10SummaryOverlay from './Top10SummaryT1';
 import WheelSpinOverlay from '../shared/WheelSpinOverlay';
 import SoldMessageToast from '../shared/SoldMessageToast';
+import ResilientImage from '../shared/ResilientImage';
 import { AuctionState, Player, Team, Tournament } from '@/types';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
 import type { OverlaySettings } from '../OverlayWrapper';
@@ -290,7 +291,7 @@ function SecondaryImagePanel({
   if (imgSrc) {
     return (
       <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-        <img
+        <ResilientImage
           src={imgSrc}
           alt={currentPlayer!.name}
           style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }}
@@ -315,7 +316,7 @@ function SecondaryImagePanel({
       background: 'var(--overlay-bg-photo-fallback)',
     }}>
       {tournament?.logoURL ? (
-        <img
+        <ResilientImage
           src={tournament.logoURL}
           alt={tournament.name}
           style={{ width: 320, height: 320, objectFit: 'contain', opacity: 0.85 }}

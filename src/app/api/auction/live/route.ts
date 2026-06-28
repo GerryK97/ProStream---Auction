@@ -22,33 +22,38 @@ export async function GET(request: NextRequest) {
 
     await connectToDatabase();
 
-    const tournament = await TournamentModel.findById(tournamentId).lean();
+    // Fetch tournament + ensure auction state exists — parallel
+    const [tournament, auctionState] = await Promise.all([
+      TournamentModel.findById(tournamentId).lean(),
+      AuctionStateModel.findOneAndUpdate(
+        { tournamentId },
+        {
+          $setOnInsert: {
+            tournamentId,
+            currentPlayerId: null,
+            currentBid: 0,
+            winningTeamId: null,
+            currentAuctionStatus: 'Pending',
+            history: [],
+          },
+        },
+        { upsert: true, returnDocument: 'after' }
+      ).lean(),
+    ]);
+
     if (!tournament) {
       return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
     }
 
-    // Ensure or create auction state
-    let auctionState = await AuctionStateModel.findOne({ tournamentId }).lean();
-    if (!auctionState) {
-      auctionState = await AuctionStateModel.create({
-        tournamentId,
-        currentPlayerId: null,
-        currentBid: 0,
-        winningTeamId: null,
-        currentAuctionStatus: 'Pending',
-        history: [],
-      });
-    }
-
-    const [teams, totalPlayers, soldPlayers] = await Promise.all([
+    // Fetch teams, player counts, and current player — all in parallel
+    const [teams, totalPlayers, soldPlayers, currentPlayer] = await Promise.all([
       TeamModel.find({ tournamentId }).lean(),
       PlayerModel.countDocuments({ tournamentId }),
       PlayerModel.countDocuments({ tournamentId, isSold: true }),
+      (auctionState as any)?.currentPlayerId
+        ? PlayerModel.findById((auctionState as any).currentPlayerId).lean()
+        : Promise.resolve(null),
     ]);
-
-    const currentPlayer = (auctionState as any).currentPlayerId
-      ? await PlayerModel.findById((auctionState as any).currentPlayerId).lean()
-      : null;
 
     const auctionProgress = totalPlayers > 0
       ? Math.round((soldPlayers / totalPlayers) * 100)

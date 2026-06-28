@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Player, Team, Tournament } from '@/types';
+import ResilientImage from '@/components/overlays/shared/ResilientImage';
 
 interface Props {
   players: Player[];
@@ -15,6 +16,7 @@ const PLAYERS_PER_PAGE = 15;
 const PAGE_DURATION    = 6000;
 const COLS             = 5;
 const NAME_H           = 42;
+const CARD_ASPECT      = '4 / 5';
 
 const FONT_HEADING = "'Bebas Neue', cursive";
 const FONT_BODY    = "'Rajdhani', sans-serif";
@@ -68,6 +70,7 @@ const TeamWiseImageT1: React.FC<Props> = ({
 
   const pageStart      = currentPage * PLAYERS_PER_PAGE;
   const currentPlayers = allCurrentPlayers.slice(pageStart, pageStart + PLAYERS_PER_PAGE);
+  const rows           = Math.max(1, Math.ceil(currentPlayers.length / COLS));
   const balance        = currentTeam.currentBalance ?? currentTeam.initialBudget ?? 0;
   const initial        = currentTeam.initialBudget ?? 0;
   const spent          = initial - balance;
@@ -143,7 +146,7 @@ const TeamWiseImageT1: React.FC<Props> = ({
         >
           {/* Team logo / initials fallback */}
           {currentTeam.logoURL ? (
-            <img
+            <ResilientImage
               src={currentTeam.logoURL}
               alt={currentTeam.name}
               style={{
@@ -253,24 +256,29 @@ const TeamWiseImageT1: React.FC<Props> = ({
           key={`grid-${currentTeamIndex}-${currentPage}`}
           style={{
             flex: 1,
-            display: 'flex',
-            flexWrap: 'wrap',
+            display: 'grid',
+            gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`,
+            gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
             gap: 12,
             padding: '16px 24px',
             overflow: 'hidden',
-            alignContent: 'center',
-            justifyContent: 'center',
+            alignItems: 'center',
+            justifyItems: 'center',
             boxSizing: 'border-box',
+            minHeight: 0,
           }}
         >
           {currentPlayers.map((player, i) => (
             <div
               key={`${currentTeamIndex}-${currentPage}-${player._id}`}
               style={{
-                width: `calc((100% - ${(COLS - 1) * 12}px) / ${COLS})`,
                 display: 'flex',
                 flexDirection: 'column',
-                flexShrink: 0,
+                height: '100%',
+                maxWidth: '100%',
+                aspectRatio: CARD_ASPECT,
+                minWidth: 0,
+                minHeight: 0,
                 borderRadius: 8,
                 overflow: 'hidden',
                 animation: `t1ImgCardIn 0.4s ${0.08 + i * 0.05}s cubic-bezier(0.22, 1, 0.36, 1) both`,
@@ -282,10 +290,10 @@ const TeamWiseImageT1: React.FC<Props> = ({
                 position: 'relative',
                 overflow: 'hidden',
                 background: 'var(--overlay-bg-photo)',
-                minHeight: 80,
+                minHeight: 0,
               }}>
                 {player.photoURL ? (
-                  <img
+                  <ResilientImage
                     src={player.photoURL}
                     alt={player.name}
                     style={{

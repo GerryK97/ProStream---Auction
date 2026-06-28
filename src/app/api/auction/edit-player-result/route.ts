@@ -93,15 +93,15 @@ export async function PATCH(request: NextRequest) {
 
     await PlayerModel.findByIdAndUpdate(playerId, { $set: playerUpdate });
 
-    // ── Step 3: Broadcast updated state ─────────────────────────────────────
+    // Broadcast updated state — fetch all in parallel
     const [updatedPlayers, updatedTeams, auctionState] = await Promise.all([
       PlayerModel.find({ tournamentId }).lean(),
       TeamModel.find({ tournamentId }).lean(),
       AuctionStateModel.findOne({ tournamentId }).lean(),
     ]);
 
-    // Fetch just the updated player to return to the client for optimistic update
-    const updatedPlayer = await PlayerModel.findById(playerId).lean();
+    // Extract just the updated player from the already-fetched array (avoids extra round-trip)
+    const updatedPlayer = updatedPlayers.find((p) => String((p as any)._id) === playerId) ?? null;
 
     try {
       await triggerStateUpdate({

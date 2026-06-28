@@ -81,6 +81,20 @@ export function getTournamentChannel(tournamentId: string): string {
 }
 
 /**
+ * Keep Pusher AuctionState payload small while preserving the data overlays need.
+ *
+ * Full history[] can grow large during competitive bidding and approach Pusher's
+ * per-message limit. However, the leading-bid overlay needs the latest and
+ * previous bid to show the current leader and prior leader. Keep only the last
+ * two entries instead of removing history completely.
+ */
+function slimState(state: any): any {
+  if (!state) return state;
+  const history = Array.isArray(state.history) ? state.history.slice(-2) : [];
+  return { ...state, history };
+}
+
+/**
  * Trigger a Pusher event on a tournament channel
  * @param tournamentId - The tournament ID
  * @param eventName - The event name
@@ -95,9 +109,11 @@ export async function triggerAuctionEvent(
     const pusher = getPusherInstance();
     const channel = getTournamentChannel(tournamentId);
 
-    // Add metadata to the event
+    // Add metadata to the event.
+    // Slim any nested auctionState to strip history[] and keep payload small.
     const payload = {
-      ...data,
+      ...(data as any),
+      ...(('auctionState' in (data as any)) ? { auctionState: slimState((data as any).auctionState) } : {}),
       tournamentId,
       timestamp: Date.now(),
     };

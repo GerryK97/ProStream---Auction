@@ -4,6 +4,10 @@ import { PlayerClassConfig } from '@/types';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
 import { getUsersByIds } from '@/lib/pg/user-queries';
+import { serializeTournament } from '@/lib/cloudinaryUtils';
+import { connectToDatabase } from '@/lib/mongodb';
+import { TeamModel } from '@/models/Team';
+import { PlayerModel } from '@/models/Player';
 
 /**
  * Validate player class codes
@@ -57,6 +61,8 @@ export async function GET(request: NextRequest) {
       user.assignedTournaments
     );
 
+    const tournamentIds = tournaments.map(t => String(t._id));
+
     const creatorIds = Array.from(
       new Set(
         tournaments
@@ -65,14 +71,29 @@ export async function GET(request: NextRequest) {
       )
     );
 
-    const creators = creatorIds.length > 0
-      ? await getUsersByIds(creatorIds)
-      : [];
+    // Fetch creator names + team/player counts in parallel with a single
+    // $group aggregation per collection — no N×2 fan-out from the client.
+    const [creators, teamCountAgg, playerCountAgg] = await Promise.all([
+      creatorIds.length > 0 ? getUsersByIds(creatorIds) : Promise.resolve([]),
+      TeamModel.aggregate<{ _id: string; count: number }>([
+        { $match: { tournamentId: { $in: tournamentIds } } },
+        { $group: { _id: '$tournamentId', count: { $sum: 1 } } },
+      ]),
+      PlayerModel.aggregate<{ _id: string; count: number }>([
+        { $match: { tournamentId: { $in: tournamentIds } } },
+        { $group: { _id: '$tournamentId', count: { $sum: 1 } } },
+      ]),
+    ]);
+
+    const teamCountById   = new Map(teamCountAgg.map(r => [r._id, r.count]));
+    const playerCountById = new Map(playerCountAgg.map(r => [r._id, r.count]));
 
     const creatorNameById = new Map(creators.map(creator => [creator.id, creator.username || creator.id]));
     const tournamentsWithCreatorName = tournaments.map(tournament => ({
-      ...tournament,
+      ...serializeTournament(tournament as any),
       createdByUsername: tournament.createdBy ? creatorNameById.get(tournament.createdBy) : undefined,
+      teamCount:   teamCountById.get(String(tournament._id)) ?? 0,
+      playerCount: playerCountById.get(String(tournament._id)) ?? 0,
     }));
 
     return NextResponse.json(tournamentsWithCreatorName);
