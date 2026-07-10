@@ -1440,7 +1440,9 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             const res = await fetch('/api/auction/start', { method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ tournamentId: selectedTournament._id }) });
             const data = await res.json();
             if (!res.ok) { setError(data.error || 'Failed to start auction'); return; }
-            refreshTournaments();
+            // Refresh both the tournament list (context) and the Pusher hook's local state
+            // so the control panel transitions to the live view without requiring a hard refresh.
+            await Promise.all([refreshTournaments(), refreshData()]);
         } catch { setError('Failed to start auction.'); }
     };
 
