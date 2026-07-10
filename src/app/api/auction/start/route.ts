@@ -46,9 +46,12 @@ export async function POST(request: NextRequest) {
 
     // Check if user has access to this tournament
     // Admin: can manage any tournament
-    // Tournament role: can only manage tournaments they created
+    // Tournament role: creator OR explicitly assigned to this tournament
     const hasAccess = user.role === 'Admin' ||
-                     (user.role === 'Tournament' && (tournament as any).createdBy === user.userId);
+                     (user.role === 'Tournament' && (
+                       (tournament as any).createdBy === user.userId ||
+                       user.assignedTournaments.includes(tournamentId)
+                     ));
 
     if (!hasAccess) {
       return NextResponse.json({
