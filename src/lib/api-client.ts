@@ -40,7 +40,7 @@ async function fetchAPI<T>(
 
   // Handle 401 Unauthorized - token expired or invalid
   if (response.status === 401) {
-    localStorage.removeItem('token');
+    localStorage.removeItem('auth_token');
     if (typeof window !== 'undefined') {
       window.location.href = '/auth/login';
     }

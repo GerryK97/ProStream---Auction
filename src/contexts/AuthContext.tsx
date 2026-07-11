@@ -11,7 +11,28 @@ export interface User {
   role: 'Admin' | 'Tournament' | 'Player' | 'Audience';
   status: 'Active' | 'PendingApproval' | 'Suspended';
   assignedTournaments?: string[];
-   plan?: 'Free' | 'Standard' | 'Offer';
+  plan?: 'Free' | 'Standard' | 'Offer';
+}
+
+/**
+ * Decode a JWT payload client-side WITHOUT a network call.
+ * JWTs are base64url-encoded JSON — we only use this for an
+ * immediate optimistic render. The real server verification
+ * still runs in the background to pull fresh user fields.
+ * Returns null when the token is malformed OR already expired.
+ */
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const json = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
+    const payload = JSON.parse(json);
+    // Treat expired tokens as invalid
+    if (typeof payload.exp === 'number' && payload.exp * 1000 < Date.now()) return null;
+    return payload;
+  } catch {
+    return null;
+  }
 }
 
 interface AuthContextType {
@@ -35,19 +56,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize auth state from localStorage
+  // Initialize auth state from localStorage.
+  // Two-phase: decode the JWT locally for an instant optimistic user (so
+  // ProtectedRoute never shows a full-page spinner on navigation), then
+  // silently verify with the server in the background to pick up fresh user
+  // fields and confirm the token hasn't been revoked.
   useEffect(() => {
     const storedToken = localStorage.getItem('auth_token');
-    if (storedToken) {
+    if (!storedToken) {
+      setIsLoading(false);
+      return;
+    }
+
+    // Phase 1 — optimistic: decode locally, no network needed.
+    const payload = decodeJwtPayload(storedToken);
+    if (payload) {
+      // Token is structurally valid and not expired — show the user immediately.
       setToken(storedToken);
-      // Verify the token is still valid
-      verifyToken(storedToken);
+      setUser({
+        id:                   String(payload.userId ?? ''),
+        username:             String(payload.username ?? ''),
+        email:                String(payload.email ?? ''),
+        role:                 payload.role as User['role'],
+        status:               'Active',
+        plan:                 payload.plan as User['plan'] | undefined,
+        assignedTournaments:  Array.isArray(payload.assignedTournaments) ? payload.assignedTournaments : [],
+      });
+      setIsLoading(false); // unblock the UI immediately
+
+      // Phase 2 — background: verify with server to get fresh fields (logoURL,
+      // status, assignedTournaments). Only log out on a definitive 401/403,
+      // NOT on network errors or 5xx so a transient DB cold-start never logs
+      // the user out.
+      verifyToken(storedToken, { logoutOnNetworkError: false });
     } else {
+      // Token is malformed or expired — clean up and go to login.
+      localStorage.removeItem('auth_token');
       setIsLoading(false);
     }
   }, []);
 
-  const verifyToken = async (tokenToVerify: string) => {
+  const verifyToken = async (tokenToVerify: string, opts?: { logoutOnNetworkError?: boolean }) => {
+    const logoutOnNetworkError = opts?.logoutOnNetworkError ?? true;
     try {
       const response = await fetch('/api/auth/session', {
         method: 'POST',
@@ -60,19 +110,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.ok) {
         const data = await response.json();
+        // Merge fresh server fields (logoURL, status, etc.) into state
         setUser(data.user);
         setToken(tokenToVerify);
-      } else {
-        // Token is invalid, clear auth
+      } else if (response.status === 401 || response.status === 403) {
+        // Definitive rejection — token revoked or user suspended
         localStorage.removeItem('auth_token');
         setToken(null);
         setUser(null);
       }
+      // 404 / 5xx: keep the optimistic user in place; don't log out
     } catch (err) {
       console.error('Token verification error:', err);
-      localStorage.removeItem('auth_token');
-      setToken(null);
-      setUser(null);
+      if (logoutOnNetworkError) {
+        localStorage.removeItem('auth_token');
+        setToken(null);
+        setUser(null);
+      }
+      // else: network error during background check — leave user logged in
     } finally {
       setIsLoading(false);
     }
