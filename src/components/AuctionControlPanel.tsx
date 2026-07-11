@@ -13,6 +13,7 @@ import { useTournamentContext } from '@/contexts/TournamentContext';
 import { useAuth } from '@/contexts/AuthContext';
 import TournamentSelector from './TournamentSelector';
 import Modal from './Modal';
+import QuickBidEditorModal from './QuickBidEditorModal';
 import OverlayControlsPanel from './overlay-controls/OverlayControlsPanel';
 import type { DisplayMode } from './overlay-controls/types';
 import { normalizeOverlayControlSettings } from '@/lib/overlays/overlayControlSettings';
@@ -309,6 +310,8 @@ export const CurrentAuctionPanel: React.FC<{
 }> = ({ currentPlayer, tournament, teams, players, biddingTeamId, setBiddingTeamId, auctionState, onBid, onCorrectBid, onSell, onReset, onMarkUnsold, onSpinWheel, isSpinning, isMobile, isInFlight = false, stickyPlayerHeader = false }) => {
     const [bidAmount, setBidAmount] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showQuickBidEditor, setShowQuickBidEditor] = useState(false);
+    const [localQuickBidAmounts, setLocalQuickBidAmounts] = useState<number[] | null>(null);
 
     useEffect(() => {
         const base = getClassBasePrice(tournament, currentPlayer ?? null);
@@ -361,9 +364,10 @@ export const CurrentAuctionPanel: React.FC<{
     const nextSlabBid = currentBid > 0 ? currentBid + getBidIncrement(slabIncrements, currentBid) : basePrice;
     const previousSlabBid = getPreviousSlabBid(slabIncrements, currentBid, basePrice);
     const currentSlabIncrement = currentBid > 0 ? getBidIncrement(slabIncrements, currentBid) : basePrice;
-    const quickBidAmounts = (tournament.directQuickBidsEnabled && tournament.directQuickBids && tournament.directQuickBids.length > 0)
-        ? tournament.directQuickBids.map(b => b.amount).filter(a => a > 0)
-        : DEFAULT_QUICK_BIDS;
+    const quickBidAmounts = localQuickBidAmounts
+        ?? ((tournament.directQuickBidsEnabled && tournament.directQuickBids && tournament.directQuickBids.length > 0)
+            ? tournament.directQuickBids.map(b => b.amount).filter(a => a > 0)
+            : DEFAULT_QUICK_BIDS);
     const isCorrection = currentBid > 0 && bidAmount > 0 && bidAmount < currentBid;
     const statusText = currentAuctionStatus === 'Bidding' ? 'BIDDING ACTIVE' : (isSold ? 'PLAYER SOLD' : 'BIDDING PENDING');
     const statusColor = currentAuctionStatus === 'Bidding' ? 'text-yellow-400' : (isSold ? 'text-green-400' : 'text-[var(--text-tertiary)]');
@@ -439,7 +443,20 @@ export const CurrentAuctionPanel: React.FC<{
             </div>
             ) : (
             <div className="shrink-0">
-                <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--text-tertiary)' }}>Quick Bid</p>
+                <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>Quick Bid</p>
+                    <button
+                        onClick={() => setShowQuickBidEditor(true)}
+                        title="Customise quick bid amounts"
+                        className="w-6 h-6 flex items-center justify-center rounded-md transition-colors"
+                        style={{ color: 'var(--text-muted)', backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                        </svg>
+                    </button>
+                </div>
                 <div className={`grid gap-1.5 ${isMobile ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'}`}>
                     {quickBidAmounts.map(inc => (
                         <button
@@ -460,6 +477,15 @@ export const CurrentAuctionPanel: React.FC<{
                     ))}
                 </div>
             </div>
+            )}
+
+            {showQuickBidEditor && tournament && (
+                <QuickBidEditorModal
+                    tournamentId={tournament._id}
+                    currentAmounts={quickBidAmounts}
+                    onSave={(amounts) => setLocalQuickBidAmounts(amounts)}
+                    onClose={() => setShowQuickBidEditor(false)}
+                />
             )}
 
             {/* Custom bid row — accepts any amount; auto-routes to correction if lower than current */}

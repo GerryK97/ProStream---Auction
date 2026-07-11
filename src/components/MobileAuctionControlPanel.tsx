@@ -9,6 +9,7 @@ import { getClassBasePrice, getFormattedBasePrice, getMinClassBasePrice } from '
 import { getBidIncrement, getNextTeamBid, getPreviousSlabBid } from '@/lib/bidIncrementUtils';
 import ClassBadge from '@/components/shared/ClassBadge';
 import Modal from '@/components/Modal';
+import QuickBidEditorModal from '@/components/QuickBidEditorModal';
 import type { AuctionState, Player, Team, Tournament } from '@/types';
 
 const formatCurrency = (amount: number) => amount.toLocaleString();
@@ -49,6 +50,8 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
     const [activeTab, setActiveTab] = useState<'auction' | 'available' | 'teams'>('auction');
     const [isSpinning, setIsSpinning] = useState(false);
     const [showReAuctionConfirm, setShowReAuctionConfirm] = useState(false);
+    const [showQuickBidEditor, setShowQuickBidEditor] = useState(false);
+    const [localQuickBidAmounts, setLocalQuickBidAmounts] = useState<number[] | null>(null);
     const [reAuctioning, setReAuctioning] = useState(false);
     const [selectingClass, setSelectingClass] = useState(false);
     const [classCompletionAlert, setClassCompletionAlert] = useState<string | null>(null);
@@ -366,9 +369,10 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
         : 0;
 
     const DEFAULT_QUICK_BIDS_MOBILE = [1000, 5000, 10000, 25000, 50000, 100000];
-    const quickBidIncrements = (liveTournament.directQuickBidsEnabled && liveTournament.directQuickBids && liveTournament.directQuickBids.length > 0)
-        ? liveTournament.directQuickBids.map(b => b.amount).filter(a => a > 0)
-        : DEFAULT_QUICK_BIDS_MOBILE;
+    const quickBidIncrements = localQuickBidAmounts
+        ?? ((liveTournament.directQuickBidsEnabled && liveTournament.directQuickBids && liveTournament.directQuickBids.length > 0)
+            ? liveTournament.directQuickBids.map(b => b.amount).filter(a => a > 0)
+            : DEFAULT_QUICK_BIDS_MOBILE);
     const basePrice = getClassBasePrice(liveTournament, currentPlayer ?? null);
     const slabIncrements = liveTournament.bidIncrements ?? [];
     const directSlabEnabled = liveTournament.biddingMode === 'direct' && liveTournament.directBidSlabEnabled;
@@ -649,8 +653,21 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
                                 {liveTournament.biddingMode !== 'team' && !directSlabEnabled && (
                                     <div className="rounded-xl border border-[var(--border-primary)] p-3"
                                         style={{ backgroundColor: 'var(--surface-secondary)' }}>
-                                        <p className="text-xs font-semibold uppercase tracking-widest mb-2.5"
-                                            style={{ color: 'var(--text-muted)' }}>Quick Bid</p>
+                                        <div className="flex items-center justify-between mb-2.5">
+                                            <p className="text-xs font-semibold uppercase tracking-widest"
+                                                style={{ color: 'var(--text-muted)' }}>Quick Bid</p>
+                                            <button
+                                                onClick={() => setShowQuickBidEditor(true)}
+                                                title="Customise quick bid amounts"
+                                                className="w-6 h-6 flex items-center justify-center rounded-md transition-colors"
+                                                style={{ color: 'var(--text-muted)', backgroundColor: 'var(--surface-primary)', border: '1px solid var(--border-primary)' }}
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <circle cx="12" cy="12" r="3"/>
+                                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                                                </svg>
+                                            </button>
+                                        </div>
                                         <div className="grid grid-cols-3 gap-2">
                                             {quickBidIncrements.map(inc => (
                                                 <button
@@ -668,6 +685,15 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
                                             ))}
                                         </div>
                                     </div>
+                                )}
+
+                                {showQuickBidEditor && liveTournament && (
+                                    <QuickBidEditorModal
+                                        tournamentId={liveTournament._id}
+                                        currentAmounts={quickBidIncrements}
+                                        onSave={(amounts) => setLocalQuickBidAmounts(amounts)}
+                                        onClose={() => setShowQuickBidEditor(false)}
+                                    />
                                 )}
 
                                 {/* ── Custom Bid ──────────────────────────── */}
