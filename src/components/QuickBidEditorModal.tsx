@@ -160,7 +160,6 @@ export default function QuickBidEditorModal({
                                 {idx + 1}
                             </span>
                             <div className="flex items-center flex-1 rounded-lg overflow-hidden" style={{ border: '1.5px solid var(--border-primary)', backgroundColor: 'var(--surface-secondary)' }}>
-                                <span className="px-2.5 py-2 text-xs font-semibold shrink-0" style={{ color: 'var(--text-tertiary)', borderRight: '1px solid var(--border-primary)' }}>₹</span>
                                 <input
                                     type="number"
                                     min={1}
