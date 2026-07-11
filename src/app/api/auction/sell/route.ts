@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { TournamentModel } from '@/models/Tournament';
@@ -134,46 +134,56 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Count remaining players — run both countDocuments in parallel
-    const activeClass = (auctionState as any).currentAuctionClass as string | null;
-    const [remainingPlayers, remainingInClass] = await Promise.all([
-      PlayerModel.countDocuments({ tournamentId, isSold: false }),
-      activeClass
-        ? PlayerModel.countDocuments({ tournamentId, playerClass: activeClass, isSold: { $ne: true }, isUnsold: { $ne: true } })
-        : Promise.resolve(1), // sentinel — non-zero means class not complete
-    ]);
+    // Defer Pusher + class-completion work. The operator UI already applied an
+    // optimistic sell, so do not make the HTTP response wait for countDocuments
+    // or the Pusher REST round-trip.
+    const deferredPostSellWork = async () => {
+      try {
+        const activeClass = (auctionState as any).currentAuctionClass as string | null;
+        const [remainingPlayers, remainingInClass] = await Promise.all([
+          PlayerModel.countDocuments({ tournamentId, isSold: false }),
+          activeClass
+            ? PlayerModel.countDocuments({
+              tournamentId,
+              playerClass: activeClass,
+              isSold: { $ne: true },
+              isUnsold: { $ne: true },
+            })
+            : Promise.resolve(1),
+        ]);
 
-    // Check if the active class is now complete after this sale
-    if (activeClass && remainingInClass === 0) {
-      const finalState = await AuctionStateModel.findOneAndUpdate(
-        { tournamentId },
-        {
-          $push: { completedClasses: activeClass },
-          $set: { currentAuctionClass: null },
-        },
-        { returnDocument: 'after' }
-      ).lean();
-      triggerClassCompleted(tournamentId, {
-        completedClassCode: activeClass,
-        completedClasses: (finalState as any)?.completedClasses ?? [activeClass],
-        auctionState: finalState as any,
-        message: `${activeClass} class auction completed`,
-      }).catch((err) => console.error('[sell] classCompleted Pusher failed:', err));
-    }
+        await triggerPlayerSold(tournamentId, {
+          soldPlayer: serializePlayer(updatedPlayer as any) as any,
+          winningTeam: serializeTeam(updatedTeam as any) as any,
+          finalPrice: currentBid,
+          remainingPlayers,
+          remainingBudget: (updatedTeam as any).currentBalance,
+          auctionState: updatedState as any,
+          message: `${(updatedPlayer as any).name} sold to ${(updatedTeam as any).name} for ${currentBid.toLocaleString()}`,
+        });
 
-    // Await Pusher for sold events — overlays must receive sold-player and team
-    // balance changes in real time. Fire-and-forget promises can be dropped when
-    // a serverless function returns, which leaves OBS overlays stale until a hard
-    // refresh fetches the updated Mongo state.
-    await triggerPlayerSold(tournamentId, {
-      soldPlayer: serializePlayer(updatedPlayer as any) as any,
-      winningTeam: serializeTeam(updatedTeam as any) as any,
-      finalPrice: currentBid,
-      remainingPlayers,
-      remainingBudget: (updatedTeam as any).currentBalance,
-      auctionState: updatedState as any,
-      message: `${(updatedPlayer as any).name} sold to ${(updatedTeam as any).name} for ${currentBid.toLocaleString()}`,
-    });
+        if (activeClass && remainingInClass === 0) {
+          const finalState = await AuctionStateModel.findOneAndUpdate(
+            { tournamentId },
+            {
+              $push: { completedClasses: activeClass },
+              $set: { currentAuctionClass: null },
+            },
+            { returnDocument: 'after' }
+          ).lean();
+          triggerClassCompleted(tournamentId, {
+            completedClassCode: activeClass,
+            completedClasses: (finalState as any)?.completedClasses ?? [activeClass],
+            auctionState: finalState as any,
+            message: `${activeClass} class auction completed`,
+          }).catch((err) => console.error('[sell] classCompleted Pusher failed:', err));
+        }
+      } catch (err) {
+        console.error('[sell] Deferred post-sell work failed:', err);
+      }
+    };
+    after(deferredPostSellWork);
+
     return NextResponse.json({
       auctionState: updatedState,
       player: updatedPlayer,

@@ -33,6 +33,7 @@ import {
 } from '@/components/auction/types';
 
 const formatCurrency = (amount: number) => amount.toLocaleString();
+const MemoOverlayControlsPanel = React.memo(OverlayControlsPanel);
 
 export interface ClassStat {
     code: string;
@@ -92,6 +93,8 @@ export const ClassManagerPanel: React.FC<{
         </div>
     );
 };
+
+const MemoClassManagerPanel = React.memo(ClassManagerPanel);
 
 export const AvailablePlayersPanel: React.FC<{
     players: Player[];
@@ -186,6 +189,8 @@ export const AvailablePlayersPanel: React.FC<{
         </div>
     );
 };
+
+const MemoAvailablePlayersPanel = React.memo(AvailablePlayersPanel);
 
 // ─── Team Bidding Panel ──────────────────────────────────────────────────────
 const TeamBiddingPanel: React.FC<{
@@ -288,6 +293,8 @@ const TeamBiddingPanel: React.FC<{
         </div>
     );
 };
+
+const MemoTeamBiddingPanel = React.memo(TeamBiddingPanel);
 
 export const CurrentAuctionPanel: React.FC<{
     currentPlayer: Player | undefined;
@@ -397,7 +404,7 @@ export const CurrentAuctionPanel: React.FC<{
 
             {/* Quick Bid (Direct) or Team Bidding buttons */}
             {tournament.biddingMode === 'team' ? (
-                <TeamBiddingPanel
+                <MemoTeamBiddingPanel
                     teams={teams}
                     players={players}
                     tournament={tournament}
@@ -683,6 +690,8 @@ export const CurrentAuctionPanel: React.FC<{
         </div>
     );
 }
+
+const MemoCurrentAuctionPanel = React.memo(CurrentAuctionPanel);
 
 export const TeamsAndSoldPlayersPanel: React.FC<{
     teams: Team[];
@@ -1021,6 +1030,8 @@ export const TeamsAndSoldPlayersPanel: React.FC<{
     );
 };
 
+const MemoTeamsAndSoldPlayersPanel = React.memo(TeamsAndSoldPlayersPanel);
+
 
 interface AuctionControlPanelProps {
     initialData?: {
@@ -1086,9 +1097,9 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         return DEFAULT_SECTION_VISIBILITY;
     });
 
-    const toggleSection = (key: AuctionSectionKey) => {
+    const toggleSection = useCallback((key: AuctionSectionKey) => {
         setSectionVisibility(prev => ({ ...prev, [key]: !prev[key] }));
-    };
+    }, []);
 
     useEffect(() => { localStorage.setItem(AUCTION_TAB_STORAGE_KEY, activeTab); }, [activeTab]);
     useEffect(() => { localStorage.setItem(AUCTION_SECTIONS_STORAGE_KEY, JSON.stringify(sectionVisibility)); }, [sectionVisibility]);
@@ -1168,7 +1179,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     bidCardTopRef.current = bidCardTop;
     bidCardLeftRef.current = bidCardLeft;
 
-    const sendOverlaySettings = async (
+    const sendOverlaySettings = useCallback(async (
         size: 'large' | 'small',
         mode: 'all' | 'sold' | 'available',
         dm: DisplayMode = displayModeRef.current,
@@ -1177,7 +1188,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         line2: string = customTickerLine2Ref.current,
         soldMsgPos: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' = soldMessagePositionRef.current
     ) => {
-        const tournamentId = liveTournament?._id;
+        const tournamentId = liveTournamentId;
         if (!tournamentId) return;
         try {
             await fetch('/api/overlay/settings', {
@@ -1186,7 +1197,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                 body: JSON.stringify({ tournamentId, size, tickerMode: mode, displayMode: dm, hidePremiumCard: hideCard, customTickerLine1: line1, customTickerLine2: line2, soldMessagePosition: soldMsgPos, hideTickerCustom: hideTickerCustomRef.current, hideTickerFullscreen: hideTickerFullscreenRef.current, teamWiseTeamId: teamWiseTeamIdRef.current, bidCardTop: bidCardTopRef.current, bidCardLeft: bidCardLeftRef.current, hideTeamCards: hideTeamCardsRef.current, teamCardSize: teamCardSizeRef.current, teamCardPosition: teamCardPositionRef.current, bidCardPosition: bidCardPositionRef.current }),
             });
         } catch { /* non-critical */ }
-    };
+    }, [liveTournamentId]);
 
     const sendOverlaySettingsRef = useRef(sendOverlaySettings);
     sendOverlaySettingsRef.current = sendOverlaySettings;
@@ -1407,6 +1418,11 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         [players]
     );
 
+    const availableCount = useMemo(
+        () => players.length - soldPlayers.length - unsoldPlayers.length,
+        [players.length, soldPlayers.length, unsoldPlayers.length]
+    );
+
     const isAuctioning = useMemo(
         () => !!currentPlayer && auctionState.currentAuctionStatus !== 'Sold',
         [currentPlayer, auctionState.currentAuctionStatus]
@@ -1433,6 +1449,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             })
             .sort((a, b) => a.order - b.order);
     }, [liveTournament, players, auctionState.currentAuctionClass, auctionState.completedClasses]);
+
+    const openReAuctionConfirm = useCallback(() => setShowReAuctionConfirm(true), []);
 
     // Fetch stats when auction is not live (pre/post-auction state)
     useEffect(() => {
@@ -2037,7 +2055,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const isAuctionStopped = liveTournament?.status === 'Stopped';
 
     const classManagerNode = liveTournament?.usePlayerClasses && classStats.length > 0 ? (
-        <ClassManagerPanel
+        <MemoClassManagerPanel
             classStats={classStats}
             onSelectClass={handleSelectClass}
             onClearClass={handleClearClass}
@@ -2046,7 +2064,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     ) : null;
 
     const overlayControlsNode = (
-        <OverlayControlsPanel
+        <MemoOverlayControlsPanel
             displayMode={displayMode}
             setDisplayMode={setDisplayMode}
             overlayTheme={liveTournament?.overlayTheme ?? 'standard'}
@@ -2133,7 +2151,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                 budgetPerTeam={liveTournament.budgetPerTeam}
                 squadSize={liveTournament.squadSize}
                 basePricePerPlayer={liveTournament.basePricePerPlayer}
-                availableCount={players.filter(p => !p.isSold && !p.isUnsold).length}
+                availableCount={availableCount}
                 soldCount={soldPlayers.length}
                 unsoldCount={unsoldPlayers.length}
                 onStop={handleStopAuction}
@@ -2153,20 +2171,20 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                 sectionVisibility={sectionVisibility}
                 classManager={useTabs ? undefined : classManagerNode}
                 availablePlayers={
-                    <AvailablePlayersPanel
+                    <MemoAvailablePlayersPanel
                         players={players}
                         tournament={liveTournament}
                         onSelectPlayer={handleSelectPlayer}
                         isAuctioning={isAuctioning}
                         currentPlayerId={currentPlayer?._id}
-                        onReAuction={() => setShowReAuctionConfirm(true)}
+                        onReAuction={openReAuctionConfirm}
                         reAuctioning={reAuctioning}
                         activeClass={auctionState.currentAuctionClass ?? null}
                         classManager={useTabs ? classManagerNode : undefined}
                     />
                 }
                 auctionPanel={
-                    <CurrentAuctionPanel
+                    <MemoCurrentAuctionPanel
                         currentPlayer={currentPlayer}
                         tournament={liveTournament}
                         teams={teams}
@@ -2187,14 +2205,14 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                 }
                 overlayPanel={overlayControlsNode}
                 teamsPanel={
-                    <TeamsAndSoldPlayersPanel
+                    <MemoTeamsAndSoldPlayersPanel
                         {...teamsPanelProps}
                         showTeams
                         showResults={false}
                     />
                 }
                 resultsPanel={
-                    <TeamsAndSoldPlayersPanel
+                    <MemoTeamsAndSoldPlayersPanel
                         {...teamsPanelProps}
                         showTeams={false}
                         showResults

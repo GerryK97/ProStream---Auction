@@ -94,6 +94,44 @@ function slimState(state: any): any {
   return { ...state, history };
 }
 
+function pickDefined<T extends Record<string, any>>(source: T, keys: string[]): Record<string, any> {
+  const out: Record<string, any> = {};
+  for (const key of keys) {
+    if (source?.[key] !== undefined) out[key] = source[key];
+  }
+  return out;
+}
+
+function slimPlayer(player: any): any {
+  if (!player) return player;
+  return pickDefined(player, [
+    '_id', 'tournamentId', 'name', 'displayName', 'playerNo', 'position',
+    'playerClass', 'basePrice', 'photoURL', 'secondaryImageURL',
+    'isSold', 'isUnsold', 'finalPrice', 'winningTeamId',
+  ]);
+}
+
+function slimTeam(team: any): any {
+  if (!team) return team;
+  return pickDefined(team, [
+    '_id', 'tournamentId', 'name', 'shortCode', 'ownerName', 'logoURL',
+    'initialBudget', 'currentBalance', 'playersPurchased',
+  ]);
+}
+
+function slimEventData(data: any): any {
+  const next = { ...data };
+  if (Array.isArray(next.players)) next.players = next.players.map(slimPlayer);
+  if (Array.isArray(next.teams)) next.teams = next.teams.map(slimTeam);
+  if (next.currentPlayer) next.currentPlayer = slimPlayer(next.currentPlayer);
+  if (next.soldPlayer) next.soldPlayer = slimPlayer(next.soldPlayer);
+  if (next.unsoldPlayer) next.unsoldPlayer = slimPlayer(next.unsoldPlayer);
+  if (next.restoredPlayer) next.restoredPlayer = slimPlayer(next.restoredPlayer);
+  if (next.winningTeam) next.winningTeam = slimTeam(next.winningTeam);
+  if (next.updatedTeam) next.updatedTeam = slimTeam(next.updatedTeam);
+  return next;
+}
+
 /**
  * Trigger a Pusher event on a tournament channel
  * @param tournamentId - The tournament ID
@@ -111,9 +149,10 @@ export async function triggerAuctionEvent(
 
     // Add metadata to the event.
     // Slim any nested auctionState to strip history[] and keep payload small.
+    const eventData = slimEventData(data as any);
     const payload = {
-      ...(data as any),
-      ...(('auctionState' in (data as any)) ? { auctionState: slimState((data as any).auctionState) } : {}),
+      ...eventData,
+      ...(('auctionState' in eventData) ? { auctionState: slimState(eventData.auctionState) } : {}),
       tournamentId,
       timestamp: Date.now(),
     };

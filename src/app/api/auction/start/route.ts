@@ -117,10 +117,21 @@ export async function POST(request: NextRequest) {
       { upsert: true, returnDocument: 'after' }
     );
 
-    // Fetch teams and players for Pusher event — parallel (no dependency on each other)
+    const playerEventFields = {
+      tournamentId: 1, name: 1, displayName: 1, playerNo: 1, position: 1,
+      playerClass: 1, basePrice: 1, photoURL: 1, secondaryImageURL: 1,
+      isSold: 1, isUnsold: 1, finalPrice: 1, winningTeamId: 1,
+    };
+    const teamEventFields = {
+      tournamentId: 1, name: 1, shortCode: 1, ownerName: 1, logoURL: 1,
+      initialBudget: 1, currentBalance: 1, playersPurchased: 1,
+    };
+
+    // Fetch only fields needed by auction clients for the Pusher event.
+    // Full bootstrap fetch remains available for explicit refresh/reconnect.
     const [teams, players] = await Promise.all([
-      TeamModel.find({ tournamentId }).lean(),
-      PlayerModel.find({ tournamentId }).lean(),
+      TeamModel.find({ tournamentId }, teamEventFields).lean(),
+      PlayerModel.find({ tournamentId }, playerEventFields).lean(),
     ]);
 
     // Trigger Pusher events — wake + started in parallel
