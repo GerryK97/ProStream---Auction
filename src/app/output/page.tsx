@@ -169,7 +169,6 @@ const THEMES = [
   },
 ];
 
-const FULLSCREEN_OVERLAY_TYPES: AuctionOverlayType[] = ['fullscreen', 'fullscreen2'];
 const OUTPUT_LAYOUT_ORDER: AuctionOverlayType[] = ['custom', 'team_owners', 'fullscreen', 'fullscreen2'];
 
 // ── Page ─────────────────────────────────────────────────────────────────────
@@ -197,7 +196,7 @@ export default function OutputPage() {
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [copiedAll, setCopiedAll] = useState<string | null>(null);
   const [showRevoked, setShowRevoked] = useState(false);
-  const [selectedOverlayTypes, setSelectedOverlayTypes] = useState<AuctionOverlayType[]>(['fullscreen']);
+  const [selectedOverlayTypes, setSelectedOverlayTypes] = useState<AuctionOverlayType[]>([]);
   const [prices, setPrices] = useState<OverlayPrices>(DEFAULT_OVERLAY_PRICES);
 
   const currentTheme = (selectedTournament?.overlayTheme ?? 'standard') as OverlayThemeId;
@@ -389,10 +388,6 @@ ${'─'.repeat(60)}`;
 
   const selectOverlayType = (type: AuctionOverlayType) => {
     setSelectedOverlayTypes(prev => {
-      if (FULLSCREEN_OVERLAY_TYPES.includes(type)) {
-        return [...prev.filter(selectedType => !FULLSCREEN_OVERLAY_TYPES.includes(selectedType)), type];
-      }
-
       return prev.includes(type)
         ? prev.filter(selectedType => selectedType !== type)
         : [...prev, type];
@@ -497,7 +492,7 @@ ${'─'.repeat(60)}`;
               Choose Layout
             </h2>
             <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-              Select Custom and Team Owners independently. Choose only one Full Screen version.
+              Select any combination of layouts to generate overlay links.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -511,7 +506,6 @@ ${'─'.repeat(60)}`;
           {OUTPUT_LAYOUT_ORDER.map((type) => {
             const config = getAuctionOverlayConfig(type);
             const isSelected = selectedOverlayTypes.includes(type);
-            const isFullscreenType = FULLSCREEN_OVERLAY_TYPES.includes(type);
             return (
               <button
                 key={type}
@@ -538,7 +532,7 @@ ${'─'.repeat(60)}`;
                         border: `1px solid ${isSelected ? config.accent : 'var(--border-primary)'}`,
                       }}
                     >
-                      {isSelected ? 'Selected' : isFullscreenType ? 'Choose One' : 'Optional'}
+                      {isSelected ? 'Selected' : 'Optional'}
                     </span>
                   </div>
                 </div>
