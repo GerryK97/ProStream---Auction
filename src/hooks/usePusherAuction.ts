@@ -65,6 +65,10 @@ interface UsePusherAuctionReturn {
   setPlayerUnsold: (playerId: string) => void;
   setPlayerAvailable: (playerId: string) => void;
   updatePlayerAndTeams: (player: Player, teams: Team[]) => void;
+  /** Apply a selected player immediately while the Pusher echo reaches other clients. */
+  applyPlayerSelected: (data: PlayerSelectedEvent) => void;
+  /** Optimistically select a player and return the previous state for rollback. */
+  optimisticPlayerSelection: (playerId: string) => AuctionState;
   /** Optimistically apply a bid (caller is responsible for restoring on failure). */
   optimisticBid: (amount: number) => void;
   /** Restore auctionState (used to revert an optimistic bid on failure). */
@@ -104,6 +108,7 @@ type AuctionAction =
   | { type: 'SET_PLAYER_UNSOLD'; playerId: string }
   | { type: 'SET_PLAYER_AVAILABLE'; playerId: string }
   | { type: 'UPDATE_PLAYER_AND_TEAMS'; player: Player; teams: Team[] }
+  | { type: 'OPTIMISTIC_PLAYER_SELECTION'; playerId: string }
   | { type: 'OPTIMISTIC_BID'; amount: number }
   | { type: 'OPTIMISTIC_SELL'; teamId: string; playerId: string; bid: number }
   | { type: 'RESTORE_AUCTION_STATE'; auctionState: AuctionState }
@@ -152,6 +157,20 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
       return {
         ...state,
         auctionState: action.data.auctionState,
+        error: null,
+      };
+
+    case 'OPTIMISTIC_PLAYER_SELECTION':
+      return {
+        ...state,
+        auctionState: {
+          ...state.auctionState,
+          currentPlayerId: action.playerId,
+          currentBid: 0,
+          winningTeamId: null,
+          currentAuctionStatus: 'Pending',
+          history: [],
+        },
         error: null,
       };
 
@@ -742,6 +761,10 @@ export function usePusherAuction(
     dispatch({ type: 'UPDATE_PLAYER_AND_TEAMS', player, teams });
   }, []);
 
+  const applyPlayerSelected = useCallback((data: PlayerSelectedEvent) => {
+    dispatch({ type: 'PLAYER_SELECTED', data });
+  }, []);
+
   // Snapshot ref so optimistic helpers can capture the current state
   // synchronously without making the callbacks depend on it (which would
   // re-create them on every render).
@@ -750,6 +773,12 @@ export function usePusherAuction(
 
   const optimisticBid = useCallback((amount: number) => {
     dispatch({ type: 'OPTIMISTIC_BID', amount });
+  }, []);
+
+  const optimisticPlayerSelection = useCallback((playerId: string): AuctionState => {
+    const snapshot = stateRef.current.auctionState;
+    dispatch({ type: 'OPTIMISTIC_PLAYER_SELECTION', playerId });
+    return snapshot;
   }, []);
 
   const restoreAuctionState = useCallback((snapshot: AuctionState) => {
@@ -790,6 +819,8 @@ export function usePusherAuction(
     setPlayerUnsold,
     setPlayerAvailable,
     updatePlayerAndTeams,
+    applyPlayerSelected,
+    optimisticPlayerSelection,
     optimisticBid,
     restoreAuctionState,
     optimisticSell,

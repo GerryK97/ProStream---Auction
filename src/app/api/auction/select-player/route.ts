@@ -20,10 +20,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch auction state and player in parallel
+    // Keep the selection hot path small. Auction history and full tournament/player
+    // documents can be large, but this route only needs the status, player card
+    // fields, and pricing configuration.
     const [auctionState, player] = await Promise.all([
-      AuctionStateModel.findOne({ tournamentId }),
-      PlayerModel.findOne({ _id: playerId, tournamentId, isSold: false }).lean(),
+      AuctionStateModel.findOne({ tournamentId }, { currentAuctionStatus: 1 }).lean(),
+      PlayerModel.findOne(
+        { _id: playerId, tournamentId, isSold: false },
+        {
+          _id: 1,
+          tournamentId: 1,
+          name: 1,
+          displayName: 1,
+          playerNo: 1,
+          position: 1,
+          playerClass: 1,
+          basePrice: 1,
+          photoURL: 1,
+          secondaryImageURL: 1,
+          isSold: 1,
+          isUnsold: 1,
+          finalPrice: 1,
+          winningTeamId: 1,
+        }
+      ).lean(),
     ]);
 
     if (!auctionState) {
@@ -63,20 +83,47 @@ export async function POST(request: NextRequest) {
         },
         { returnDocument: 'after' }
       ).lean(),
-      TournamentModel.findById(tournamentId).lean(),
+      TournamentModel.findById(
+        tournamentId,
+        {
+          basePricePerPlayer: 1,
+          basePriceStrategy: 1,
+          usePlayerClasses: 1,
+          playerClasses: 1,
+        }
+      ).lean(),
     ]);
 
     const basePrice = getClassBasePrice(tournament as any, player as any);
+    const selectedPlayer = serializePlayer(player as any) as any;
+    const message = `Player ${(player as any).name} selected for auction`;
 
-    // Fire Pusher without awaiting — reduces operator round-trip latency.
-    triggerPlayerSelected(tournamentId, {
-      currentPlayer: serializePlayer(player as any) as any,
+    // Await the publish before ending the serverless request. Fire-and-forget
+    // promises may be suspended once the response is returned, which leaves the
+    // overlay and other auction panels waiting until their next full refresh.
+    try {
+      await triggerPlayerSelected(tournamentId, {
+        currentPlayer: selectedPlayer,
+        basePrice,
+        auctionState: updatedState as any,
+        message,
+      });
+    } catch (err) {
+      // The database update succeeded, so return the authoritative selection to
+      // the operator even if realtime delivery is temporarily unavailable.
+      console.error('[select-player] Pusher trigger failed:', err);
+    }
+
+    // Returning the same event shape lets the initiating panel apply the server
+    // result immediately instead of waiting for its own Pusher echo.
+    return NextResponse.json({
+      tournamentId,
+      timestamp: Date.now(),
+      currentPlayer: selectedPlayer,
       basePrice,
-      auctionState: updatedState as any,
-      message: `Player ${(player as any).name} selected for auction`,
-    }).catch((err) => console.error('[select-player] Pusher trigger failed:', err));
-
-    return NextResponse.json(updatedState);
+      auctionState: updatedState,
+      message,
+    });
   } catch (error) {
     console.error('Error selecting player:', error);
     return NextResponse.json(
