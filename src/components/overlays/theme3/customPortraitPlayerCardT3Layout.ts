@@ -22,3 +22,6 @@ export function portraitNameFontSize(nameLength: number): number {
   if (nameLength > 12) return 34;
   return 38;
 }
+
+/** Live bid amount in portrait card footer — must read larger than player name. */
+export const PORTRAIT_BID_FONT_SIZE = 48;

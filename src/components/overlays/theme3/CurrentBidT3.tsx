@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { AuctionState, Team, Tournament, Player } from '@/types';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
+import { PORTRAIT_BID_FONT_SIZE } from './customPortraitPlayerCardT3Layout';
 
 export type BidPanelPhase = 'live' | 'sold' | 'unsold';
 
@@ -303,7 +304,7 @@ const CurrentBidT3: React.FC<CurrentBidPanelT3Props> = ({
 }) => {
   const isFullscreen = layout === 'fullscreen';
   const isPortraitFooter = layout === 'portrait-footer';
-  const bidFontSize = isFullscreen ? 72 : isPortraitFooter ? 30 : 46;
+  const bidFontSize = isFullscreen ? 72 : isPortraitFooter ? PORTRAIT_BID_FONT_SIZE : 46;
   const soldTeamFontSize = isFullscreen ? 36 : isPortraitFooter ? 18 : 24;
   const soldSubFontSize = isFullscreen ? 22 : isPortraitFooter ? 14 : 16;
   const compactBaseFontSize = isFullscreen ? 24 : isPortraitFooter ? 13 : 18;
