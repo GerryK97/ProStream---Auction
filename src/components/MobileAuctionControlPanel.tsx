@@ -58,6 +58,7 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
     const [playerSearch, setPlayerSearch] = useState('');
     const undoInFlightRef = useRef(false);
     const sellInFlightRef = useRef(false);
+    const selectPlayerInFlightRef = useRef(false);
     const [undoPending, setUndoPending] = useState(false);
     const prevCompletedClassesRef = useRef<string[]>([]);
 
@@ -100,6 +101,10 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
         teams,
         updatePlayerAndTeams,
         setPlayerAvailable,
+        applyPlayerSelected,
+        optimisticPlayerSelection,
+        restoreAuctionState,
+        refreshData,
     } = usePusherAuction(liveTournamentId, initialData ?? undefined);
 
     const currentPlayer = useMemo(
@@ -186,10 +191,23 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
     };
 
     const handleSelectPlayer = async (playerId: string) => {
+        if (!liveTournament || selectPlayerInFlightRef.current) return;
+        selectPlayerInFlightRef.current = true;
+        setActiveTab('auction');
+        const previousState = optimisticPlayerSelection(playerId);
         try {
-            await post('/api/auction/select-player', { tournamentId: liveTournament!._id, playerId });
-            setActiveTab('auction');
-        } catch (e: any) { setError(e.message); }
+            const data = await post('/api/auction/select-player', { tournamentId: liveTournament._id, playerId });
+            applyPlayerSelected(data);
+        } catch (e: any) {
+            if (e instanceof TypeError) {
+                await refreshData();
+            } else {
+                restoreAuctionState(previousState);
+            }
+            setError(e.message);
+        } finally {
+            selectPlayerInFlightRef.current = false;
+        }
     };
 
     const handleStopAuction = handle(async () => {
@@ -262,7 +280,12 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
         }
         setIsSubmitting(true);
         try { await post('/api/auction/bid', { tournamentId: liveTournament._id, teamId, amount }); }
-        catch (e: any) { setError(e.message); }
+        catch (e: any) {
+            setError(e.message);
+            // Re-sync authoritative state so the next quick-bid uses the real
+            // current value (catches stale-state races with other clients).
+            refreshData().catch(() => {});
+        }
         finally { setIsSubmitting(false); }
     };
 

@@ -1119,6 +1119,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const bidSequenceRef = useRef(0);
     const sellInFlightRef = useRef(false);
     const undoInFlightRef = useRef(false);
+    const selectPlayerInFlightRef = useRef(false);
     const [undoPending, setUndoPending] = useState(false);
     const [hidePremiumCard, setHidePremiumCard] = useState(false);
     const [autoSwitch, setAutoSwitch] = useState(false);
@@ -1263,6 +1264,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         setPlayerUnsold,
         setPlayerAvailable,
         updatePlayerAndTeams,
+        applyPlayerSelected,
+        optimisticPlayerSelection,
         optimisticBid,
         restoreAuctionState,
         optimisticSell,
@@ -1681,22 +1684,33 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     }
 
     const handleSelectPlayer = async (playerId: string) => {
-        if (!liveTournament) return;
+        if (!liveTournament || selectPlayerInFlightRef.current) return;
+        selectPlayerInFlightRef.current = true;
         if (useTabs) setActiveTab('auction');
+        const previousState = optimisticPlayerSelection(playerId);
         try {
             const response = await fetch('/api/auction/select-player', {
                 method: 'POST',
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tournamentId: liveTournament._id, playerId }),
             });
+            const data = await response.json().catch(() => ({}));
             if (!response.ok) {
-                const data = await response.json();
+                restoreAuctionState(previousState);
                 setError(data.error || 'Failed to select player');
+                return;
             }
-            // Pusher will handle real-time updates, no need to refresh
+            // Apply the authoritative response immediately. The Pusher event is
+            // still required to update overlays and other connected panels.
+            applyPlayerSelected(data);
         } catch (error) {
             console.error('Failed to select player:', error);
             setError('An error occurred while selecting the player');
+            // The server may have committed despite a network error. Re-fetch
+            // instead of blindly rolling back to potentially stale local state.
+            await refreshData();
+        } finally {
+            selectPlayerInFlightRef.current = false;
         }
     };
 
@@ -1861,6 +1875,13 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                 if (bidSequenceRef.current === bidSequence) {
                     restoreAuctionState(snapshot);
                     setError(data.error || 'Failed to place bid');
+                    // Server rejected because our local currentBid was stale
+                    // (another client bid between our last Pusher event and now).
+                    // Re-fetch authoritative state so the next quick-bid uses
+                    // the real current value.
+                    if (response.status === 400 || response.status === 409) {
+                        refreshData().catch(() => {});
+                    }
                 }
             }
         } catch (error) {
