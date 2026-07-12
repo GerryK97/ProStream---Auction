@@ -106,6 +106,9 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
         setPlayerAvailable,
         applyPlayerSelected,
         optimisticPlayerSelection,
+        applyAuctionReset,
+        applyClassCleared,
+        applyStateUpdate,
         restoreAuctionState,
         refreshData,
     } = usePusherAuction(liveTournamentId, initialData ?? undefined);
@@ -260,7 +263,19 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tournamentId: liveTournament!._id }),
             });
-            if (!res.ok) throw new Error('Failed to clear class');
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || 'Failed to clear class');
+            if (data.auctionState) {
+                applyClassCleared({
+                    ...data,
+                    classCode: '',
+                    className: '',
+                    playerCount: 0,
+                    tournamentId: liveTournament!._id,
+                    timestamp: Date.now(),
+                    message: 'Class filter cleared',
+                });
+            }
         } catch (e: any) { setError(e.message); }
         finally { setSelectingClass(false); }
     };

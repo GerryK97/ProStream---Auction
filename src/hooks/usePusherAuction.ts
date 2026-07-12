@@ -69,6 +69,12 @@ interface UsePusherAuctionReturn {
   applyPlayerSelected: (data: PlayerSelectedEvent) => void;
   /** Optimistically select a player and return the previous state for rollback. */
   optimisticPlayerSelection: (playerId: string) => AuctionState;
+  /** Apply a reset (player removed from board) immediately. */
+  applyAuctionReset: (auctionState: AuctionState) => void;
+  /** Apply a class-cleared or class-selected event immediately. */
+  applyClassCleared: (data: ClassSelectedEvent) => void;
+  /** Apply a full state-update (reset-all) immediately. */
+  applyStateUpdate: (data: AuctionStateUpdateEvent) => void;
   /** Optimistically apply a bid (caller is responsible for restoring on failure). */
   optimisticBid: (amount: number) => void;
   /** Restore auctionState (used to revert an optimistic bid on failure). */
@@ -765,6 +771,21 @@ export function usePusherAuction(
     dispatch({ type: 'PLAYER_SELECTED', data });
   }, []);
 
+  const applyAuctionReset = useCallback((auctionState: AuctionState) => {
+    dispatch({
+      type: 'AUCTION_RESET',
+      data: { auctionState, message: '', tournamentId: '', timestamp: Date.now() },
+    });
+  }, []);
+
+  const applyClassCleared = useCallback((data: ClassSelectedEvent) => {
+    dispatch({ type: 'CLASS_SELECTED', data });
+  }, []);
+
+  const applyStateUpdate = useCallback((data: AuctionStateUpdateEvent) => {
+    dispatch({ type: 'STATE_UPDATE', data });
+  }, []);
+
   // Snapshot ref so optimistic helpers can capture the current state
   // synchronously without making the callbacks depend on it (which would
   // re-create them on every render).
@@ -821,6 +842,9 @@ export function usePusherAuction(
     updatePlayerAndTeams,
     applyPlayerSelected,
     optimisticPlayerSelection,
+    applyAuctionReset,
+    applyClassCleared,
+    applyStateUpdate,
     optimisticBid,
     restoreAuctionState,
     optimisticSell,

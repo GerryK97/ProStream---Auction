@@ -1268,6 +1268,9 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         updatePlayerAndTeams,
         applyPlayerSelected,
         optimisticPlayerSelection,
+        applyAuctionReset,
+        applyClassCleared,
+        applyStateUpdate,
         optimisticBid,
         restoreAuctionState,
         optimisticSell,
@@ -1822,9 +1825,20 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tournamentId: liveTournament._id }),
             });
+            const data = await res.json().catch(() => ({}));
             if (!res.ok) {
-                const data = await res.json();
                 setError(data.error || 'Failed to clear class');
+            } else if (data.auctionState) {
+                // Apply immediately — no need to wait for Pusher echo.
+                applyClassCleared({
+                    ...data,
+                    classCode: '',
+                    className: '',
+                    playerCount: 0,
+                    tournamentId: liveTournament._id,
+                    timestamp: Date.now(),
+                    message: 'Class filter cleared',
+                });
             }
         } catch {
             setError('Failed to clear class');
@@ -1998,12 +2012,13 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tournamentId: liveTournament._id }),
             });
+            const data = await response.json().catch(() => ({}));
             if (!response.ok) {
-                const data = await response.json();
                 setError(data.error || 'Failed to reset auction');
                 return;
             }
-            // Pusher will handle real-time updates, no need to refresh
+            // Apply immediately so the board clears without waiting for the Pusher echo.
+            if (data.auctionState) applyAuctionReset(data.auctionState);
         } catch (error) {
             console.error('Failed to reset auction:', error);
             setError('An error occurred while resetting the auction');
@@ -2074,12 +2089,15 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tournamentId: liveTournament._id }),
             });
+            const data = await response.json().catch(() => ({}));
             if (!response.ok) {
-                const data = await response.json();
                 setError(data.error || 'Failed to reset all sales');
                 return;
             }
-            // Pusher will handle real-time updates, no need to refresh
+            // Apply auction state reset immediately; player/team lists
+            // are fully refreshed via a background bootstrap fetch.
+            if (data.auctionState) applyAuctionReset(data.auctionState);
+            refreshData().catch(() => {});
         } catch (error) {
             console.error('Failed to reset all sales:', error);
             setError('An error occurred while resetting all sales');
