@@ -7,6 +7,7 @@ import { triggerWheelSpin } from '@/lib/pusher-server';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
 import { resolveImageUrl } from '@/lib/cloudinaryUtils';
+import { WHEEL_SPIN_DURATION_MS } from '@/lib/wheelSpinTiming';
 
 // POST /api/overlay/spin
 // Picks a random winner from available players, broadcasts overlay:wheel-spin
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
     const winnerIndex = Math.floor(Math.random() * availablePlayers.length);
     const winnerRaw = availablePlayers[winnerIndex] as any;
     const winnerId = winnerRaw._id.toString();
-    const spinDurationMs = 8000;
+    const spinDurationMs = WHEEL_SPIN_DURATION_MS;
 
     // Strip to _id + playerNo only — full details for winner go in a separate field
     // to stay well under Pusher's 10 KB per-event limit
@@ -89,7 +90,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Pusher error: ${msg}` }, { status: 500 });
     }
 
-    return NextResponse.json({ ok: true, winnerId, winnerIndex, playerCount: players.length });
+    return NextResponse.json({
+      ok: true,
+      winnerId,
+      winnerIndex,
+      playerCount: players.length,
+      spinDurationMs,
+    });
   } catch (error) {
     console.error('Error in /api/overlay/spin:', error);
     const msg = error instanceof Error ? error.message : String(error);

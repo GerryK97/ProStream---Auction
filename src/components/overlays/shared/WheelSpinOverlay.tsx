@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 import type { WheelSpinEvent } from '@/types/pusher-events';
+import { WHEEL_SPIN_DURATION_MS } from '@/lib/wheelSpinTiming';
 
 interface WheelSpinOverlayProps {
   data: WheelSpinEvent;
@@ -36,7 +37,7 @@ function segmentPath(startDeg: number, endDeg: number): string {
 }
 
 const WheelSpinOverlay: React.FC<WheelSpinOverlayProps> = ({ data }) => {
-  const { players, winner, winnerIndex, spinDurationMs, centerImageURL } = data;
+  const { players, winner, winnerIndex, centerImageURL } = data;
   const N = players.length;
   const segDeg = 360 / N;
 
@@ -45,7 +46,7 @@ const WheelSpinOverlay: React.FC<WheelSpinOverlayProps> = ({ data }) => {
   const alignmentRotation = (360 - winnerCenterAngle % 360 + 360) % 360;
   const finalRotation = 8 * 360 + alignmentRotation; // 8+ full spins
 
-  const spinDurationS = (spinDurationMs / 1000).toFixed(1);
+  const spinDurationS = (WHEEL_SPIN_DURATION_MS / 1000).toFixed(1);
 
   const segments = useMemo(() => players.map((player, i) => {
     const startDeg = i * segDeg - 90;   // -90 so segment 0 starts at 12 o'clock

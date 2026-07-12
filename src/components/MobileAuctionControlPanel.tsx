@@ -11,6 +11,7 @@ import ClassBadge from '@/components/shared/ClassBadge';
 import Modal from '@/components/Modal';
 import QuickBidEditorModal from '@/components/QuickBidEditorModal';
 import type { AuctionState, Player, Team, Tournament } from '@/types';
+import { WHEEL_SPIN_DURATION_MS } from '@/lib/wheelSpinTiming';
 
 const formatCurrency = (amount: number) => amount.toLocaleString();
 
@@ -59,6 +60,8 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
     const undoInFlightRef = useRef(false);
     const sellInFlightRef = useRef(false);
     const selectPlayerInFlightRef = useRef(false);
+    const spinInFlightRef = useRef(false);
+    const spinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [undoPending, setUndoPending] = useState(false);
     const prevCompletedClassesRef = useRef<string[]>([]);
 
@@ -171,6 +174,10 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
             return () => clearTimeout(t);
         }
     }, [error]);
+
+    useEffect(() => () => {
+        if (spinTimerRef.current) clearTimeout(spinTimerRef.current);
+    }, []);
 
     // ── Handlers ────────────────────────────────────────────────────────────
     const post = async (url: string, body: object) => {
@@ -320,15 +327,47 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
     });
 
     const handleSpinWheel = async () => {
-        if (isSpinning || !liveTournament) return;
+        if (spinInFlightRef.current || selectPlayerInFlightRef.current || !liveTournament) return;
+        spinInFlightRef.current = true;
+        selectPlayerInFlightRef.current = true;
         setIsSpinning(true);
         try {
             const data = await post('/api/overlay/spin', { tournamentId: liveTournament._id });
             if (data.winnerId) {
-                await post('/api/auction/select-player', { tournamentId: liveTournament._id, playerId: data.winnerId });
+                if (spinTimerRef.current) clearTimeout(spinTimerRef.current);
+                spinTimerRef.current = setTimeout(async () => {
+                    spinTimerRef.current = null;
+                    const previousState = optimisticPlayerSelection(data.winnerId);
+                    // The wheel has stopped, so release the visual busy state
+                    // immediately while the authoritative selection is saved.
+                    spinInFlightRef.current = false;
+                    setIsSpinning(false);
+                    try {
+                        const selected = await post('/api/auction/select-player', {
+                            tournamentId: liveTournament._id,
+                            playerId: data.winnerId,
+                        });
+                        applyPlayerSelected(selected);
+                    } catch (e: any) {
+                        if (e instanceof TypeError) {
+                            await refreshData().catch(() => {});
+                        } else {
+                            restoreAuctionState(previousState);
+                        }
+                        setError(e.message || 'Failed to select wheel winner');
+                    } finally {
+                        selectPlayerInFlightRef.current = false;
+                    }
+                }, WHEEL_SPIN_DURATION_MS);
+                return;
             }
-        } catch (e: any) { setError(e.message); }
-        finally { setIsSpinning(false); }
+            throw new Error('Spin did not return a winner');
+        } catch (e: any) {
+            spinInFlightRef.current = false;
+            selectPlayerInFlightRef.current = false;
+            setIsSpinning(false);
+            setError(e.message);
+        }
     };
 
     const handleQuickBid = async (increment: number) => {

@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import type { Player, Tournament } from '@/types';
 import type { WheelSpinEvent } from '@/types/pusher-events';
 import { buildImageUrl } from '@/lib/cloudinaryUtils';
+import { WHEEL_SPIN_DURATION_MS } from '@/lib/wheelSpinTiming';
 
 interface WheelSpinT3Props {
   data: WheelSpinEvent;
@@ -143,7 +144,7 @@ function winnerNameFontSize(name: string): number {
 }
 
 const WheelSpinT3: React.FC<WheelSpinT3Props> = ({ data, allPlayers = [], tournament = null }) => {
-  const { players, winner, winnerIndex, spinDurationMs, centerImageURL } = data;
+  const { players, winner, winnerIndex, centerImageURL } = data;
   const hubLogoSrc = useMemo(
     () => hubImageSrc(centerImageURL, tournament),
     [centerImageURL, tournament?.wheelCenterImageURL],
@@ -154,7 +155,7 @@ const WheelSpinT3: React.FC<WheelSpinT3Props> = ({ data, allPlayers = [], tourna
   const winnerCenterAngle = winnerIndex * segDeg + segDeg / 2;
   const alignmentRotation = (360 - winnerCenterAngle % 360 + 360) % 360;
   const finalRotation = 8 * 360 + alignmentRotation;
-  const spinDurationS = (spinDurationMs / 1000).toFixed(1);
+  const spinDurationS = (WHEEL_SPIN_DURATION_MS / 1000).toFixed(1);
 
   const nameById = useMemo(() => {
     const map = new Map<string, string>();

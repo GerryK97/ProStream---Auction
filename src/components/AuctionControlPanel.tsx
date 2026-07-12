@@ -17,6 +17,7 @@ import QuickBidEditorModal from './QuickBidEditorModal';
 import OverlayControlsPanel from './overlay-controls/OverlayControlsPanel';
 import type { DisplayMode } from './overlay-controls/types';
 import { normalizeOverlayControlSettings } from '@/lib/overlays/overlayControlSettings';
+import { WHEEL_SPIN_DURATION_MS, WHEEL_WINNER_HOLD_MS } from '@/lib/wheelSpinTiming';
 import AuctionWorkspaceLayout from '@/components/auction/AuctionWorkspaceLayout';
 import AuctionHeaderBar from '@/components/auction/AuctionHeaderBar';
 import { useAuctionLayoutMode, isTabLayoutMode } from '@/components/auction/useAuctionLayoutMode';
@@ -1112,6 +1113,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const [teamWiseTeamId, setTeamWiseTeamId] = useState<string | null>(null);
     const teamWiseTeamIdRef = useRef<string | null>(null);
     const [isSpinning, setIsSpinning] = useState(false);
+    const spinInFlightRef = useRef(false);
     const spinTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
     const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const bidInFlightRef = useRef(false);
@@ -1715,14 +1717,29 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     };
 
     const handleSpinWheel = async () => {
-        if (isSpinning || !liveTournament) return;
+        if (spinInFlightRef.current || selectPlayerInFlightRef.current || !liveTournament) return;
         const tournamentId = liveTournament._id;
+        spinInFlightRef.current = true;
+        selectPlayerInFlightRef.current = true;
         setIsSpinning(true);
         setDisplayMode('wheel-spin');
         displayModeRef.current = 'wheel-spin';
-        // Broadcast wheel-spin mode with all current settings preserved (bidCardTop/Left, hideTeamCards, etc.)
-        await sendOverlaySettings(overlaySize, tickerMode, 'wheel-spin');
+        if (spinTimerRef.current) clearTimeout(spinTimerRef.current);
+        if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+
+        const resetSpinUi = () => {
+            setDisplayMode('standard');
+            displayModeRef.current = 'standard';
+            setIsSpinning(false);
+            spinInFlightRef.current = false;
+            void sendOverlaySettings(overlaySize, tickerMode, 'standard').catch(() => {
+                setError('Player selected, but the overlay reset failed');
+            });
+        };
+
         try {
+            // Broadcast wheel-spin mode with all current settings preserved.
+            await sendOverlaySettings(overlaySize, tickerMode, 'wheel-spin');
             const res = await fetch('/api/overlay/spin', {
                 method: 'POST',
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
@@ -1730,33 +1747,51 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             });
             if (!res.ok) {
                 const { error } = await res.json().catch(() => ({}));
-                setError(error || 'Spin failed');
-                setIsSpinning(false);
-                setDisplayMode('standard');
-                displayModeRef.current = 'standard';
-                return;
+                throw new Error(error || 'Spin failed');
             }
             const { winnerId } = await res.json();
-            // Auto-select winner after spin (8s) + buffer (200ms)
+
+            // At exactly the end of the rotation, show the winner in the panel
+            // optimistically, then reconcile with the authoritative API response.
             spinTimerRef.current = setTimeout(async () => {
-                await fetch('/api/auction/select-player', {
-                    method: 'POST',
-                    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tournamentId, playerId: winnerId }),
-                }).catch(() => {});
-                // Reset overlay to standard after hold period (1s)
-                resetTimerRef.current = setTimeout(async () => {
-                    setDisplayMode('standard');
-                    displayModeRef.current = 'standard';
-                    setIsSpinning(false);
-                    await sendOverlaySettings(overlaySize, tickerMode, 'standard');
-                }, 1000);
-            }, 8200);
-        } catch {
+                spinTimerRef.current = null;
+                const previousState = optimisticPlayerSelection(winnerId);
+
+                // Keep winner reveal visible for one second, independently of
+                // network latency on the select-player request.
+                resetTimerRef.current = setTimeout(() => {
+                    resetTimerRef.current = null;
+                    resetSpinUi();
+                }, WHEEL_WINNER_HOLD_MS);
+
+                try {
+                    const selectRes = await fetch('/api/auction/select-player', {
+                        method: 'POST',
+                        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ tournamentId, playerId: winnerId }),
+                    });
+                    const selected = await selectRes.json().catch(() => ({}));
+                    if (!selectRes.ok) throw new Error(selected.error || 'Failed to select wheel winner');
+                    applyPlayerSelected(selected);
+                } catch (error) {
+                    if (error instanceof TypeError) {
+                        await refreshData().catch(() => {});
+                    } else {
+                        restoreAuctionState(previousState);
+                    }
+                    setError(error instanceof Error ? error.message : 'Failed to select wheel winner');
+                } finally {
+                    selectPlayerInFlightRef.current = false;
+                }
+            }, WHEEL_SPIN_DURATION_MS);
+        } catch (error) {
+            selectPlayerInFlightRef.current = false;
+            spinInFlightRef.current = false;
             setIsSpinning(false);
             setDisplayMode('standard');
             displayModeRef.current = 'standard';
-            setError('Spin failed');
+            setError(error instanceof Error ? error.message : 'Spin failed');
+            void sendOverlaySettings(overlaySize, tickerMode, 'standard').catch(() => {});
         }
     };
 

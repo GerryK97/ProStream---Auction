@@ -5,6 +5,11 @@ import { useSearchParams } from 'next/navigation';
 import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { Tournament, AuctionState, Player, Team } from '@/types';
 import { getPusherClient } from '@/lib/pusher-client';
+import {
+    WHEEL_DATA_CLEANUP_BUFFER_MS,
+    WHEEL_SPIN_DURATION_MS,
+    WHEEL_WINNER_HOLD_MS,
+} from '@/lib/wheelSpinTiming';
 import { OVERLAY_PALETTES } from '@/config/overlayPalettes';
 import type { OverlaySettingsEvent, WheelSpinEvent } from '@/types/pusher-events';
 import type { AuctionOverlayType } from '@/lib/overlays/auctionOverlayTypes';
@@ -153,6 +158,7 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
     // Wheel spin data — updated via overlay:wheel-spin Pusher event
     const [wheelSpinData, setWheelSpinData] = useState<WheelSpinEvent | null>(null);
     const wheelResetTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+    const wheelModeResetTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         if (!tournament?._id) return;
@@ -196,17 +202,32 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
         });
 
         channel.bind('overlay:wheel-spin', (data: WheelSpinEvent) => {
+            // The wheel event itself must activate wheel mode. This keeps spins
+            // triggered from the compact/mobile panel working even when that
+            // client does not separately publish overlay settings.
+            setOverlaySettings(prev => ({ ...prev, displayMode: 'wheel-spin' }));
             setWheelSpinData(data);
             if (wheelResetTimerRef.current) clearTimeout(wheelResetTimerRef.current);
+            if (wheelModeResetTimerRef.current) clearTimeout(wheelModeResetTimerRef.current);
+            wheelModeResetTimerRef.current = setTimeout(() => {
+                setOverlaySettings(prev => (
+                    prev.displayMode === 'wheel-spin'
+                        ? { ...prev, displayMode: 'standard' }
+                        : prev
+                ));
+                wheelModeResetTimerRef.current = null;
+            }, WHEEL_SPIN_DURATION_MS + WHEEL_WINNER_HOLD_MS);
             wheelResetTimerRef.current = setTimeout(() => {
                 setWheelSpinData(null);
-            }, (data.spinDurationMs ?? 8000) + 3500);
+                wheelResetTimerRef.current = null;
+            }, WHEEL_SPIN_DURATION_MS + WHEEL_DATA_CLEANUP_BUFFER_MS);
         });
 
         return () => {
             channel.unbind('overlay:settings');
             channel.unbind('overlay:wheel-spin');
             if (wheelResetTimerRef.current) clearTimeout(wheelResetTimerRef.current);
+            if (wheelModeResetTimerRef.current) clearTimeout(wheelModeResetTimerRef.current);
             // Don't unsubscribe the channel here — usePusherAuction owns it
         };
     }, [liveTournamentId]); // dep: liveTournamentId only — don't re-bind on every status change
