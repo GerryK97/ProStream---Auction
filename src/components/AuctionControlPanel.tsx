@@ -1741,8 +1741,9 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         };
 
         try {
-            // Broadcast wheel-spin mode with all current settings preserved.
-            await sendOverlaySettings(overlaySize, tickerMode, 'wheel-spin');
+            // Fire overlay settings update in parallel — don't block the spin call.
+            void sendOverlaySettings(overlaySize, tickerMode, 'wheel-spin').catch(() => {});
+
             const res = await fetch('/api/overlay/spin', {
                 method: 'POST',
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
@@ -1754,38 +1755,43 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             }
             const { winnerId } = await res.json();
 
-            // At exactly the end of the rotation, show the winner in the panel
-            // optimistically, then reconcile with the authoritative API response.
+            // Fire select-player immediately while the wheel is spinning so the
+            // Pusher event (auction:player-selected) reaches all overlays and
+            // connected panels before the animation finishes. Optimistically apply
+            // the winner to the local panel at the same time.
+            const previousState = optimisticPlayerSelection(winnerId);
+            const selectPromise = fetch('/api/auction/select-player', {
+                method: 'POST',
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tournamentId, playerId: winnerId }),
+            }).then(async (selectRes) => {
+                const selected = await selectRes.json().catch(() => ({}));
+                if (!selectRes.ok) throw new Error(selected.error || 'Failed to select wheel winner');
+                applyPlayerSelected(selected);
+            }).catch(async (error) => {
+                if (error instanceof TypeError) {
+                    await refreshData().catch(() => {});
+                } else {
+                    restoreAuctionState(previousState);
+                }
+                setError(error instanceof Error ? error.message : 'Failed to select wheel winner');
+            });
+
+            // After the wheel animation completes, clear the spinning UI and await
+            // any still-pending select-player request.
             spinTimerRef.current = setTimeout(async () => {
                 spinTimerRef.current = null;
-                const previousState = optimisticPlayerSelection(winnerId);
 
-                // Keep winner reveal visible for one second, independently of
-                // network latency on the select-player request.
+                // Wait for the in-flight selection to settle before resetting UI.
+                await selectPromise.catch(() => {});
+
+                // Keep winner reveal visible briefly, then reset overlay to standard.
                 resetTimerRef.current = setTimeout(() => {
                     resetTimerRef.current = null;
                     resetSpinUi();
                 }, WHEEL_WINNER_HOLD_MS);
 
-                try {
-                    const selectRes = await fetch('/api/auction/select-player', {
-                        method: 'POST',
-                        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ tournamentId, playerId: winnerId }),
-                    });
-                    const selected = await selectRes.json().catch(() => ({}));
-                    if (!selectRes.ok) throw new Error(selected.error || 'Failed to select wheel winner');
-                    applyPlayerSelected(selected);
-                } catch (error) {
-                    if (error instanceof TypeError) {
-                        await refreshData().catch(() => {});
-                    } else {
-                        restoreAuctionState(previousState);
-                    }
-                    setError(error instanceof Error ? error.message : 'Failed to select wheel winner');
-                } finally {
-                    selectPlayerInFlightRef.current = false;
-                }
+                selectPlayerInFlightRef.current = false;
             }, WHEEL_SPIN_DURATION_MS);
         } catch (error) {
             selectPlayerInFlightRef.current = false;
