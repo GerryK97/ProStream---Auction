@@ -629,7 +629,15 @@ export function FullScreenT1Content({
         setPanelExiting(false);
       }, 1500);
       return () => clearTimeout(t);
-    } else if (prev === 'sold-summary' || prev === 'team-summary' || prev === 'team-wise-summary' || prev === 'team-wise-image' || prev === 'top10-summary' || prev === 'wheel-spin' || prev === 'resting') {
+    } else if (prev === 'wheel-spin') {
+      // Fast exit from wheel-spin so the bid panel appears immediately.
+      setSummaryExiting(true);
+      const t = setTimeout(() => {
+        setActiveMode(incoming);
+        setSummaryExiting(false);
+      }, 500);
+      return () => clearTimeout(t);
+    } else if (prev === 'sold-summary' || prev === 'team-summary' || prev === 'team-wise-summary' || prev === 'team-wise-image' || prev === 'top10-summary' || prev === 'resting') {
       setSummaryExiting(true);
       const t = setTimeout(() => {
         setActiveMode(incoming);
