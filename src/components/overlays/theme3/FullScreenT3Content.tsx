@@ -112,6 +112,18 @@ const FullScreenT3Content: React.FC<Theme3ContentProps> = ({
     }
   }, [activeMode]);
 
+  // Exit wheel-spin immediately when a player is selected so the profile
+  // appears as soon as auction:player-selected arrives, not after the timer.
+  useEffect(() => {
+    if (!auctionState.currentPlayerId) return;
+    if (activeMode !== 'wheel-spin') return;
+    setActiveMode('standard');
+    setSummaryExiting(false);
+    setPanelExiting(false);
+    setWaitingForNextPlayer(false);
+    setCardVisible(true);
+  }, [auctionState.currentPlayerId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (
       isLiveMode &&

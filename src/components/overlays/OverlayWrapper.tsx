@@ -160,6 +160,22 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
     const wheelResetTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
     const wheelModeResetTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // When auction:player-selected arrives while the wheel is still showing,
+    // immediately exit wheel-spin mode so the player profile appears at once.
+    // This is the earliest possible signal — before the wheel timer fires.
+    useEffect(() => {
+        if (!auctionState.currentPlayerId) return;
+        setOverlaySettings(prev => {
+            if (prev.displayMode !== 'wheel-spin') return prev;
+            // Cancel the timer-based reset so it doesn't fire twice.
+            if (wheelModeResetTimerRef.current) {
+                clearTimeout(wheelModeResetTimerRef.current);
+                wheelModeResetTimerRef.current = null;
+            }
+            return { ...prev, displayMode: 'standard' };
+        });
+    }, [auctionState.currentPlayerId]); // eslint-disable-line react-hooks/exhaustive-deps
+
     useEffect(() => {
         if (!tournament?._id) return;
         if (hydratedSettingsTournamentRef.current === tournament._id) return;
