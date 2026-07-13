@@ -1185,6 +1185,12 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     useEffect(() => { localStorage.setItem('bidCardPosition', bidCardPosition); }, [bidCardPosition]);
     bidCardTopRef.current = bidCardTop;
     bidCardLeftRef.current = bidCardLeft;
+    bidCardPositionRef.current = bidCardPosition;
+    hideTeamCardsRef.current = hideTeamCards;
+    teamCardSizeRef.current = teamCardSize;
+    teamCardPositionRef.current = teamCardPosition;
+    hideTickerCustomRef.current = hideTickerCustom;
+    hideTickerFullscreenRef.current = hideTickerFullscreen;
 
     const sendOverlaySettings = useCallback(async (
         size: 'large' | 'small',
