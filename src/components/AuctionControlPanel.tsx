@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import ClearAllButton from './shared/ClearAllButton';
-import { Player, Team, Tournament, AuctionState } from '@/types';
+import { Player, Team, Tournament, AuctionState, OverlayControlSettings } from '@/types';
 import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { imageOptimizers } from '@/lib/imageOptimization';
 import ClassBadge from '@/components/shared/ClassBadge';
@@ -1215,6 +1215,22 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const sendOverlaySettingsRef = useRef(sendOverlaySettings);
     sendOverlaySettingsRef.current = sendOverlaySettings;
 
+    const patchOverlaySettings = useCallback(async (updates: Partial<OverlayControlSettings>) => {
+        const tournamentId = liveTournamentId;
+        if (!tournamentId) return;
+        const response = await fetch('/api/overlay/settings', {
+            method: 'PATCH',
+            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tournamentId, ...updates }),
+        });
+        if (!response.ok) {
+            throw new Error('Failed to patch overlay settings');
+        }
+    }, [liveTournamentId]);
+
+    const patchOverlaySettingsRef = useRef(patchOverlaySettings);
+    patchOverlaySettingsRef.current = patchOverlaySettings;
+
     // Debounced wrapper — batches rapid control-panel changes into a single HTTP request
     // (prevents flooding Neon PG when operator drags sliders or toggles settings quickly)
     const _pendingSettingsArgs = useRef<Parameters<typeof sendOverlaySettings> | null>(null);
@@ -1381,11 +1397,11 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         if (!autoSwitch || !auctionState.currentPlayerId || displayMode !== 'standard' || hidePremiumCard) return;
 
         setOverlaySize('large');
-        sendOverlaySettingsRef.current('large', tickerModeRef.current);
+        void patchOverlaySettingsRef.current({ size: 'large' }).catch(() => {});
 
         autoSwitchTimerRef.current = setTimeout(() => {
             setOverlaySize('small');
-            sendOverlaySettingsRef.current('small', tickerModeRef.current);
+            void patchOverlaySettingsRef.current({ size: 'small' }).catch(() => {});
             autoSwitchTimerRef.current = null;
         }, autoSwitchDurationRef.current * 1000);
     // eslint-disable-next-line react-hooks/exhaustive-deps
