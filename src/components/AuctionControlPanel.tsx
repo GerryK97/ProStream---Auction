@@ -1175,6 +1175,10 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     customTickerLine1Ref.current = customTickerLine1;
     customTickerLine2Ref.current = customTickerLine2;
     soldMessagePositionRef.current = soldMessagePosition;
+    hideTeamCardsRef.current = hideTeamCards;
+    teamCardSizeRef.current = teamCardSize;
+    teamCardPositionRef.current = teamCardPosition;
+    bidCardPositionRef.current = bidCardPosition;
 
     useEffect(() => { localStorage.setItem('customTickerLine1', customTickerLine1); }, [customTickerLine1]);
     useEffect(() => { localStorage.setItem('customTickerLine2', customTickerLine2); }, [customTickerLine2]);
