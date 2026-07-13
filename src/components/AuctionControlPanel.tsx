@@ -2200,8 +2200,10 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             soldMessagePositionRef={soldMessagePositionRef}
             bidCardTop={bidCardTop}
             setBidCardTop={setBidCardTop}
+            bidCardTopRef={bidCardTopRef}
             bidCardLeft={bidCardLeft}
             setBidCardLeft={setBidCardLeft}
+            bidCardLeftRef={bidCardLeftRef}
             sendOverlaySettings={sendOverlaySettings}
         />
     );

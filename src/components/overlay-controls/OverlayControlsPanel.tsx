@@ -32,8 +32,8 @@ export default function OverlayControlsPanel(props: OverlayControlsProps) {
         teams,
         bidCardPosition, setBidCardPosition, bidCardPositionRef,
         soldMessagePosition, setSoldMessagePosition, soldMessagePositionRef,
-        bidCardTop, setBidCardTop,
-        bidCardLeft, setBidCardLeft,
+        bidCardTop, setBidCardTop, bidCardTopRef,
+        bidCardLeft, setBidCardLeft, bidCardLeftRef,
         sendOverlaySettings,
         overlayTheme,
     } = props;
@@ -132,8 +132,10 @@ export default function OverlayControlsPanel(props: OverlayControlsProps) {
                 soldMessagePositionRef={soldMessagePositionRef}
                 bidCardTop={bidCardTop}
                 setBidCardTop={setBidCardTop}
+                bidCardTopRef={bidCardTopRef}
                 bidCardLeft={bidCardLeft}
                 setBidCardLeft={setBidCardLeft}
+                bidCardLeftRef={bidCardLeftRef}
                 overlaySize={overlaySize}
                 tickerMode={tickerMode}
                 displayMode={displayMode}

@@ -9,8 +9,10 @@ interface PositioningDisclosureProps {
     soldMessagePositionRef: React.MutableRefObject<SoldMessagePosition>;
     bidCardTop: number;
     setBidCardTop: (n: number) => void;
+    bidCardTopRef: React.MutableRefObject<number>;
     bidCardLeft: number;
     setBidCardLeft: (n: number) => void;
+    bidCardLeftRef: React.MutableRefObject<number>;
     overlaySize: OverlaySize;
     tickerMode: TickerMode;
     displayMode: DisplayMode;
@@ -35,8 +37,10 @@ export default function PositioningDisclosure({
     soldMessagePositionRef,
     bidCardTop,
     setBidCardTop,
+    bidCardTopRef,
     bidCardLeft,
     setBidCardLeft,
+    bidCardLeftRef,
     overlaySize,
     tickerMode,
     displayMode,
@@ -129,7 +133,7 @@ export default function PositioningDisclosure({
                                 <input
                                     type="number"
                                     value={bidCardTop}
-                                    onChange={e => setBidCardTop(Number(e.target.value))}
+                                    onChange={e => { const v = Number(e.target.value); setBidCardTop(v); bidCardTopRef.current = v; }}
                                     onBlur={() => sendOverlaySettings(overlaySize, tickerMode)}
                                     className="w-20 rounded-md px-2 py-1.5 text-xs"
                                     style={{
@@ -146,7 +150,7 @@ export default function PositioningDisclosure({
                                 <input
                                     type="number"
                                     value={bidCardLeft}
-                                    onChange={e => setBidCardLeft(Number(e.target.value))}
+                                    onChange={e => { const v = Number(e.target.value); setBidCardLeft(v); bidCardLeftRef.current = v; }}
                                     onBlur={() => sendOverlaySettings(overlaySize, tickerMode)}
                                     className="w-20 rounded-md px-2 py-1.5 text-xs"
                                     style={{

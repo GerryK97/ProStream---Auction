@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from 'react';
+import type { Dispatch, SetStateAction, MutableRefObject } from 'react';
 
 export type OverlayThemeId = 'standard' | 'premium' | 'neon' | 'theme2' | 'theme3';
 
@@ -49,28 +49,28 @@ export interface OverlayControlsProps {
     setAutoSwitch: Dispatch<SetStateAction<boolean>>;
     autoSwitchDuration: number;
     setAutoSwitchDuration: Dispatch<SetStateAction<number>>;
-    autoSwitchTimerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
+    autoSwitchTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
 
     // Team cards
     hideTeamCards: boolean;
     setHideTeamCards: Dispatch<SetStateAction<boolean>>;
-    hideTeamCardsRef: React.MutableRefObject<boolean>;
+    hideTeamCardsRef: MutableRefObject<boolean>;
     teamCardSize: TeamCardSize;
     setTeamCardSize: Dispatch<SetStateAction<TeamCardSize>>;
-    teamCardSizeRef: React.MutableRefObject<TeamCardSize>;
+    teamCardSizeRef: MutableRefObject<TeamCardSize>;
     teamCardPosition: TeamCardPosition;
     setTeamCardPosition: Dispatch<SetStateAction<TeamCardPosition>>;
-    teamCardPositionRef: React.MutableRefObject<TeamCardPosition>;
+    teamCardPositionRef: MutableRefObject<TeamCardPosition>;
 
     // Ticker
     tickerMode: TickerMode;
     setTickerMode: Dispatch<SetStateAction<TickerMode>>;
     hideTickerCustom: boolean;
     setHideTickerCustom: Dispatch<SetStateAction<boolean>>;
-    hideTickerCustomRef: React.MutableRefObject<boolean>;
+    hideTickerCustomRef: MutableRefObject<boolean>;
     hideTickerFullscreen: boolean;
     setHideTickerFullscreen: Dispatch<SetStateAction<boolean>>;
-    hideTickerFullscreenRef: React.MutableRefObject<boolean>;
+    hideTickerFullscreenRef: MutableRefObject<boolean>;
 
     // Custom ticker
     customTickerLine1: string;
@@ -81,22 +81,24 @@ export interface OverlayControlsProps {
     // Team-wise
     teamWiseTeamId: string | null;
     setTeamWiseTeamId: Dispatch<SetStateAction<string | null>>;
-    teamWiseTeamIdRef: React.MutableRefObject<string | null>;
+    teamWiseTeamIdRef: MutableRefObject<string | null>;
     teams: TeamOption[];
 
     // Bid card position
     bidCardPosition: BidCardPosition;
     setBidCardPosition: Dispatch<SetStateAction<BidCardPosition>>;
-    bidCardPositionRef: React.MutableRefObject<BidCardPosition>;
+    bidCardPositionRef: MutableRefObject<BidCardPosition>;
 
     // Positioning
     soldMessagePosition: SoldMessagePosition;
     setSoldMessagePosition: Dispatch<SetStateAction<SoldMessagePosition>>;
-    soldMessagePositionRef: React.MutableRefObject<SoldMessagePosition>;
+    soldMessagePositionRef: MutableRefObject<SoldMessagePosition>;
     bidCardTop: number;
     setBidCardTop: Dispatch<SetStateAction<number>>;
+    bidCardTopRef: MutableRefObject<number>;
     bidCardLeft: number;
     setBidCardLeft: Dispatch<SetStateAction<number>>;
+    bidCardLeftRef: MutableRefObject<number>;
 
     // Network sync
     sendOverlaySettings: SendOverlaySettings;
