@@ -13,6 +13,30 @@ const BOWLING_STYLES = [
   'Left-arm Chinaman', 'Leg-spin',
 ];
 
+// ─── Helper: write a list into the Lookup sheet and return the range reference ─
+// e.g. writeLookupList(lookup, 'A', ['GK', 'CB', 'ST']) → "Lookup!$A$1:$A$3"
+function writeLookupList(
+  lookup: ExcelJS.Worksheet,
+  colLetter: string,
+  values: string[],
+  headerLabel: string,
+): string {
+  lookup.getCell(`${colLetter}1`).value = headerLabel;
+  values.forEach((v, i) => { lookup.getCell(`${colLetter}${i + 2}`).value = v; });
+  return `Lookup!$${colLetter}$2:$${colLetter}$${values.length + 1}`;
+}
+
+// ─── Helper: col index → Excel letter (1=A, 2=B, …, 26=Z, 27=AA …) ───────────
+function colIndexToLetter(n: number): string {
+  let s = '';
+  while (n > 0) {
+    n--;
+    s = String.fromCharCode(65 + (n % 26)) + s;
+    n = Math.floor(n / 26);
+  }
+  return s;
+}
+
 export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
@@ -27,26 +51,56 @@ export async function GET(request: NextRequest) {
     const tournament = await TournamentModel.findById(tournamentId).lean() as Tournament | null;
     if (!tournament) return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
 
-    const sport           = (tournament as any).sport ?? 'cricket';
-    const isCricket       = sport === 'cricket';
-    const sportLabel      = SPORT_LABELS[sport as keyof typeof SPORT_LABELS] ?? sport;
-    const sportPositions  = getPositionsForSport(sport);
+    const sport          = (tournament as any).sport ?? 'cricket';
+    const isCricket      = sport === 'cricket';
+    const sportLabel     = SPORT_LABELS[sport as keyof typeof SPORT_LABELS] ?? sport;
+    const sportPositions = getPositionsForSport(sport);
 
-    const playerClasses = (tournament.usePlayerClasses && tournament.playerClasses)
+    const playerClasses      = (tournament.usePlayerClasses && tournament.playerClasses)
       ? tournament.playerClasses.map((c: any) => c.name)
+      : [];
+    // Also include short codes as alternatives in the dropdown
+    const playerClassOptions = (tournament.usePlayerClasses && tournament.playerClasses)
+      ? tournament.playerClasses.flatMap((c: any) => c.code ? [c.name, c.code] : [c.name])
       : [];
 
     const ppf              = tournament.playerProfileFields;
     const showAge          = ppf?.showAge          ?? false;
-    // Batting/Bowling style columns only make sense for cricket
-    const showBattingStyle = isCricket && (ppf?.showBattingStyle  ?? false);
-    const showBowlingStyle = isCricket && (ppf?.showBowlingStyle  ?? false);
-    const statFields       = ppf?.statFields        ?? [];
+    const showBattingStyle = isCricket && (ppf?.showBattingStyle ?? false);
+    const showBowlingStyle = isCricket && (ppf?.showBowlingStyle ?? false);
+    const statFields       = ppf?.statFields ?? [];
 
     const workbook  = new ExcelJS.Workbook();
+
+    // ── Lookup sheet (hidden — stores all dropdown lists as named ranges) ──────
+    const lookup = workbook.addWorksheet('Lookup');
+    lookup.state = 'hidden';
+
+    // We'll write lists into columns A, B, C, … of the Lookup sheet
+    let lookupCol = 1; // current column index in Lookup sheet
+    const ranges: Record<string, string> = {}; // key → Excel range like "Lookup!$A$2:$A$5"
+
+    // Yes/No — always present (inline is fine, only 2 values)
+    // Position
+    if (sportPositions.length > 0) {
+      ranges.position = writeLookupList(lookup, colIndexToLetter(lookupCol++), sportPositions, 'Position');
+    }
+    // Player Class — includes both full names and short codes
+    if (playerClassOptions.length > 0) {
+      ranges.playerClass = writeLookupList(lookup, colIndexToLetter(lookupCol++), playerClassOptions, 'Player Class');
+    }
+    // Batting Style
+    if (showBattingStyle) {
+      ranges.battingStyle = writeLookupList(lookup, colIndexToLetter(lookupCol++), BATTING_STYLES, 'Batting Style');
+    }
+    // Bowling Style
+    if (showBowlingStyle) {
+      ranges.bowlingStyle = writeLookupList(lookup, colIndexToLetter(lookupCol++), BOWLING_STYLES, 'Bowling Style');
+    }
+
+    // ── Players sheet ─────────────────────────────────────────────────────────
     const worksheet = workbook.addWorksheet('Players');
 
-    // Build ordered column list
     const colDefs: { header: string; key: string; width: number }[] = [
       { header: 'Player No',    key: 'playerNo',    width: 12 },
       { header: 'Name',         key: 'name',        width: 25 },
@@ -56,17 +110,29 @@ export async function GET(request: NextRequest) {
       ...(showBattingStyle ? [{ header: 'Batting Style', key: 'battingStyle', width: 22 }] : []),
       ...(showBowlingStyle ? [{ header: 'Bowling Style', key: 'bowlingStyle', width: 26 }] : []),
       ...statFields.map((sf: any) => ({ header: sf.label, key: sf.label, width: 18 })),
-      { header: 'Add (Yes/No)',  key: 'add',         width: 15 },
-      ...(playerClasses.length > 0 ? [{ header: 'Player Class', key: 'playerClass', width: 20 }] : []),
+      { header: 'Add (Yes/No)', key: 'add',         width: 15 },
+      ...(playerClasses.length > 0 ? [{ header: 'Player Class', key: 'playerClass', width: 22 }] : []),
     ];
     worksheet.columns = colDefs as Partial<ExcelJS.Column>[];
 
-    // Sample rows — use sport-appropriate position examples
-    const samplePos1 = sportPositions[0] ?? 'Position 1';
-    const samplePos2 = sportPositions[1] ?? sportPositions[0] ?? 'Position 2';
+    // Style header row
+    const headerRow = worksheet.getRow(1);
+    headerRow.eachCell(cell => {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3B3F8C' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+    headerRow.height = 20;
 
-    const makeSampleRow = (no: string, name: string, pos: string, club: string,
-      age: string, batting: string, bowling: string, stat1: string, add: string, cls: string) => {
+    // Sample rows
+    const samplePos1 = sportPositions[0] ?? 'Position 1';
+    const samplePos2 = sportPositions[1] ?? samplePos1;
+
+    const makeSampleRow = (
+      no: string, name: string, pos: string, club: string,
+      age: string, batting: string, bowling: string, stat1: string,
+      add: string, cls: string,
+    ) => {
       const r: any = { playerNo: no, name, position: pos, currentClub: club };
       if (showAge)          r.age          = age;
       if (showBattingStyle) r.battingStyle = batting;
@@ -77,15 +143,25 @@ export async function GET(request: NextRequest) {
       return r;
     };
 
-    worksheet.addRow(makeSampleRow('001', 'John Smith',   samplePos1, 'Team Alpha', '25', 'Right-handed', 'Right-arm Medium', '42', 'Yes', playerClasses[0] || ''));
-    worksheet.addRow(makeSampleRow('002', 'Alex Johnson', samplePos2, 'Team Beta',  '28', 'Left-handed',  'Left-arm Orthodox', '18', 'No',  playerClasses[1] || playerClasses[0] || ''));
-    for (let i = 0; i < 20; i++) {
+    const row1 = worksheet.addRow(makeSampleRow('001', 'John Smith',   samplePos1, 'Team Alpha', '25', BATTING_STYLES[0], BOWLING_STYLES[0], '42', 'Yes', playerClasses[0] || ''));
+    const row2 = worksheet.addRow(makeSampleRow('002', 'Alex Johnson', samplePos2, 'Team Beta',  '28', BATTING_STYLES[1], BOWLING_STYLES[3], '18', 'No',  playerClasses[1] || playerClasses[0] || ''));
+
+    // Style sample rows with light tint
+    [row1, row2].forEach(r => {
+      r.eachCell(cell => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8E8F0' } };
+        cell.font = { italic: true, color: { argb: 'FF555577' } };
+      });
+    });
+
+    for (let i = 0; i < 98; i++) {
       worksheet.addRow(makeSampleRow('', '', '', '', '', '', '', '', 'Yes', ''));
     }
 
-    const totalRows = 22 + 1;
+    const totalRows = 100 + 1; // header + 2 samples + 98 blank
 
-    // Add (Yes/No) dropdown
+    // ── Apply data validations using Lookup sheet ranges ──────────────────────
+
     const addColIdx = colDefs.findIndex(c => c.key === 'add') + 1;
     for (let r = 2; r <= totalRows; r++) {
       worksheet.getCell(r, addColIdx).dataValidation = {
@@ -95,88 +171,103 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // Position dropdown — only when positions list is short enough for Excel (≤ ~255 chars)
-    if (sportPositions.length > 0) {
-      const posStr = sportPositions.join(',');
-      if (posStr.length <= 255) {
-        const posColIdx = colDefs.findIndex(c => c.key === 'position') + 1;
-        for (let r = 2; r <= totalRows; r++) {
-          worksheet.getCell(r, posColIdx).dataValidation = {
-            type: 'list', allowBlank: true,
-            formulae: [`"${posStr}"`],
-            showErrorMessage: false, // allow free-text too for flexibility
-          };
-        }
+    if (ranges.position) {
+      const posColIdx = colDefs.findIndex(c => c.key === 'position') + 1;
+      for (let r = 2; r <= totalRows; r++) {
+        worksheet.getCell(r, posColIdx).dataValidation = {
+          type: 'list', allowBlank: true,
+          formulae: [ranges.position],
+          showErrorMessage: false, // soft — custom positions are also allowed
+        };
       }
     }
 
-    // Batting Style
-    if (showBattingStyle) {
+    if (ranges.playerClass) {
+      const clsColIdx = colDefs.findIndex(c => c.key === 'playerClass') + 1;
+      const classNames = playerClasses.join(', ');
+      for (let r = 2; r <= totalRows; r++) {
+        worksheet.getCell(r, clsColIdx).dataValidation = {
+          type: 'list', allowBlank: false,
+          formulae: [ranges.playerClass],
+          showErrorMessage: true,
+          error: `Select a class: ${classNames}`,
+          errorTitle: 'Invalid Player Class',
+        };
+      }
+    }
+
+    if (ranges.battingStyle) {
       const col = colDefs.findIndex(c => c.key === 'battingStyle') + 1;
       for (let r = 2; r <= totalRows; r++) {
         worksheet.getCell(r, col).dataValidation = {
-          type: 'list', allowBlank: true,
-          formulae: [`"${BATTING_STYLES.join(',')}"`],
+          type: 'list', allowBlank: true, formulae: [ranges.battingStyle],
         };
       }
     }
 
-    // Bowling Style
-    if (showBowlingStyle) {
+    if (ranges.bowlingStyle) {
       const col = colDefs.findIndex(c => c.key === 'bowlingStyle') + 1;
       for (let r = 2; r <= totalRows; r++) {
         worksheet.getCell(r, col).dataValidation = {
-          type: 'list', allowBlank: true,
-          formulae: [`"${BOWLING_STYLES.join(',')}"`],
+          type: 'list', allowBlank: true, formulae: [ranges.bowlingStyle],
         };
       }
     }
 
-    // Player Class
-    if (playerClasses.length > 0) {
-      const col = colDefs.findIndex(c => c.key === 'playerClass') + 1;
-      for (let r = 2; r <= totalRows; r++) {
-        worksheet.getCell(r, col).dataValidation = {
-          type: 'list', allowBlank: true,
-          formulae: [`"${playerClasses.join(',')}"`],
-          showErrorMessage: true,
-          error: `Select from: ${playerClasses.join(', ')}`, errorTitle: 'Invalid Player Class',
-        };
-      }
-    }
+    // Freeze header row and set column widths for readability
+    worksheet.views = [{ state: 'frozen', ySplit: 1 }];
 
-    // Instructions sheet
+    // ── Instructions sheet ────────────────────────────────────────────────────
     const instructions = workbook.addWorksheet('Instructions');
     instructions.columns = [
-      { header: 'Step',        key: 'step',        width: 12 },
-      { header: 'Instruction', key: 'instruction', width: 80 },
+      { header: 'Step',        key: 'step',        width: 10 },
+      { header: 'Instruction', key: 'instruction', width: 90 },
     ] as Partial<ExcelJS.Column>[];
 
-    const rows: { step: string | number; instruction: string }[] = [
-      { step: '',           instruction: `Sport: ${sportLabel}` },
-      { step: '',           instruction: `Tournament: ${tournament.name}` },
-      { step: '',           instruction: '' },
-      { step: 1,            instruction: 'Fill in player details in the "Players" sheet. The first two rows are examples — replace with real data.' },
-      { step: 2,            instruction: 'Required: Name, Position, Current Club, Add (Yes/No). Player No is optional.' },
-      { step: 3,            instruction: 'Set "Add (Yes/No)" to "Yes" to import a row. Rows set to "No" will be skipped.' },
+    // Style instruction header
+    const instrHeader = instructions.getRow(1);
+    instrHeader.eachCell(cell => {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A5F' } };
+    });
+
+    const instrRows: { step: string | number; instruction: string }[] = [
+      { step: '',  instruction: `🏆 Tournament: ${tournament.name}` },
+      { step: '',  instruction: `🎯 Sport: ${sportLabel}` },
+      { step: '',  instruction: '' },
+      { step: 1,   instruction: 'Go to the "Players" sheet. The first two rows (shaded) are examples — overwrite or delete them.' },
+      { step: 2,   instruction: 'Required columns: Name, Position, Current Club, Add (Yes/No).' },
+      { step: 3,   instruction: 'Set "Add (Yes/No)" to "Yes" for each player you want to import. Rows with "No" are skipped.' },
+      { step: 4,   instruction: 'Player No is optional — leave blank to auto-assign, or enter e.g. 001, 002, 003.' },
     ];
 
-    let step = 4;
+    let stepNum = 5;
+
     if (sportPositions.length > 0) {
-      rows.push({ step: step++, instruction: `Position — valid values for ${sportLabel}: ${sportPositions.join(', ')}` });
-      rows.push({ step: step++, instruction: 'You may also type a custom position if not in the list.' });
-    }
-    if (showAge)          rows.push({ step: step++, instruction: "Age: Enter the player's age as a number (optional)." });
-    if (showBattingStyle) rows.push({ step: step++, instruction: `Batting Style: Select from dropdown — ${BATTING_STYLES.join(', ')}` });
-    if (showBowlingStyle) rows.push({ step: step++, instruction: `Bowling Style: Select from dropdown — ${BOWLING_STYLES.join(', ')}` });
-    if (statFields.length > 0) rows.push({ step: step++, instruction: `Stat fields: ${statFields.map((sf: any) => sf.label).join(', ')}` });
-    if (playerClasses.length > 0) {
-      rows.push({ step: step++, instruction: `Player Class: select from — ${playerClasses.join(', ')}` });
-      const classCodes = tournament.playerClasses?.map((c: any) => `${c.code} (${c.name})`).join(', ') || '';
-      rows.push({ step: step++, instruction: `Short codes accepted: ${classCodes}` });
+      instrRows.push({ step: stepNum++, instruction: `Position dropdown shows valid ${sportLabel} positions. You may also type a custom value.` });
+      instrRows.push({ step: '',        instruction: `  Valid positions: ${sportPositions.join(' | ')}` });
     }
 
-    rows.forEach(r => instructions.addRow(r));
+    if (playerClasses.length > 0) {
+      instrRows.push({ step: stepNum++, instruction: `Player Class is REQUIRED for this tournament. Select from the dropdown or type the short code.` });
+      const classDetail = tournament.playerClasses?.map((c: any) =>
+        `  ${c.name}${c.code ? ` (short code: ${c.code})` : ''}${c.basePrice ? ` — base ₹${c.basePrice.toLocaleString()}` : ''}`
+      ).join('\n') || '';
+      tournament.playerClasses?.forEach((c: any) => {
+        instrRows.push({ step: '', instruction: `  • ${c.name}${c.code ? ` → short code: ${c.code}` : ''}${(c as any).basePrice ? ` (base ₹${(c as any).basePrice.toLocaleString()})` : ''}` });
+      });
+    }
+
+    if (showAge)          instrRows.push({ step: stepNum++, instruction: "Age: optional number." });
+    if (showBattingStyle) instrRows.push({ step: stepNum++, instruction: `Batting Style: ${BATTING_STYLES.join(' | ')}` });
+    if (showBowlingStyle) instrRows.push({ step: stepNum++, instruction: `Bowling Style: ${BOWLING_STYLES.join(' | ')}` });
+    if (statFields.length > 0) instrRows.push({ step: stepNum++, instruction: `Stat columns: ${statFields.map((sf: any) => sf.label).join(', ')}` });
+
+    instrRows.push({ step: '', instruction: '' });
+    instrRows.push({ step: '⚠️', instruction: 'Do NOT rename or delete the hidden "Lookup" sheet — it powers the dropdowns.' });
+    instrRows.push({ step: '✅', instruction: 'Save the file as .xlsx and upload it back to ProStream.' });
+
+    instrRows.forEach(r => instructions.addRow(r));
 
     const buffer = await workbook.xlsx.writeBuffer();
     return new NextResponse(buffer as unknown as BodyInit, {
