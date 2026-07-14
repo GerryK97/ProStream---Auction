@@ -6,16 +6,7 @@ import { getAuthHeaders } from '@/lib/api-client';
 import ImageUpload from './ImageUpload';
 import { PlusIcon } from './icons';
 import { getSortedClasses } from '@/lib/playerClassUtils';
-
-const PLAYER_POSITIONS = [
-    'Batsman',
-    'Bowler',
-    'All-rounder',
-    'Batting All-rounder',
-    'Bowling All-rounder',
-    'Wicket-keeper',
-    'Wicket Keeper Batsman',
-];
+import { getPositionsForSport } from '@/lib/sportPositions';
 
 const BATTING_STYLES = [
     'Right-handed',
@@ -70,6 +61,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
     const selectedTournament = tournaments.find(t => t._id === tournamentId);
     const useClasses = selectedTournament?.usePlayerClasses && selectedTournament.playerClasses?.length;
     const ppf = selectedTournament?.playerProfileFields;
+    const sportPositions = getPositionsForSport((selectedTournament as any)?.sport);
 
     const handleTournamentChange = (id: string) => {
         setTournamentId(id);
@@ -203,7 +195,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ tournaments, defaultTournamentI
                 <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Position</label>
                 <select value={position} onChange={(e) => setPosition(e.target.value)} required className="w-full rounded-md p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}>
                     <option value="">Select Position</option>
-                    {PLAYER_POSITIONS.map(pos => <option key={pos} value={pos}>{pos}</option>)}
+                    {sportPositions.map(pos => <option key={pos} value={pos}>{pos}</option>)}
                 </select>
             </div>
             <div>

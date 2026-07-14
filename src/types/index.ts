@@ -65,6 +65,7 @@ export interface Tournament {
   logoURL?: string;
   wheelCenterImageURL?: string;         // Image shown in the center of the Spin Wheel overlay
   createdBy?: string;                   // User ID who created the tournament
+  sport?: string;                       // e.g. 'cricket' | 'football' | 'basketball' etc.
   status: 'Draft' | 'Completed' | 'Setup' | 'Pending' | 'Live' | 'Paused' | 'Stopped' | 'Archived';
   usePlayerClasses?: boolean;           // Toggle to enable/disable player classes
   playerClasses?: PlayerClassConfig[];  // Custom player classes for this tournament

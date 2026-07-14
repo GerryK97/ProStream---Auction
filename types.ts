@@ -8,6 +8,7 @@ export interface Tournament {
   squadSize: number;
   basePricePerPlayer: number;
   logoURL?: string;
+  sport?: string; // e.g. 'cricket' | 'football' | 'basketball' etc.
   status: 'Draft' | 'Completed' | 'Setup' | 'Pending' | 'Live' | 'Paused';
   playerCardTemplates?: Array<{ id: string; name: string; pngUrl: string; layoutId?: string }>;
 }

@@ -6,6 +6,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Tournament, BidIncrementRange, StatFieldDef } from '@/types';
 import { getAuthHeaders } from '@/lib/api-client';
 import DeleteButton from '@/components/shared/DeleteButton';
+import { SPORT_LABELS } from '@/lib/sportPositions';
 import ImageUpload from '@/components/ImageUpload';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTournamentContext } from '@/contexts/TournamentContext';
@@ -41,6 +42,7 @@ const EMPTY_FORM = {
   basePricePerPlayer: 50000,
   logoURL: '',
   wheelCenterImageURL: '',
+  sport: 'cricket' as string,
   basePriceStrategy: 'tournament-level' as 'tournament-level' | 'player-class-based',
   playerClasses: [] as ClassRow[],
   biddingMode: 'direct' as 'direct' | 'team',
@@ -123,6 +125,7 @@ function TournamentsManagePage() {
       budgetPerTeam: t.budgetPerTeam,
       squadSize: t.squadSize,
       basePricePerPlayer: t.basePricePerPlayer,
+      sport: (t as any).sport ?? 'cricket',
       logoURL: t.logoURL ?? '',
       wheelCenterImageURL: t.wheelCenterImageURL ?? '',
       basePriceStrategy: t.basePriceStrategy ?? 'tournament-level',
@@ -185,6 +188,7 @@ function TournamentsManagePage() {
     const sortedIncrements = [...form.bidIncrements].sort((a, b) => a.upTo - b.upTo);
     return {
       name: form.name,
+      sport: form.sport,
       year: form.year,
       budgetPerTeam: form.budgetPerTeam,
       squadSize: form.squadSize,
@@ -445,6 +449,18 @@ function TournamentsManagePage() {
                       className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
                       placeholder="e.g. Premier Cricket League"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Sport *</label>
+                    <select
+                      value={form.sport}
+                      onChange={e => setForm(f => ({ ...f, sport: e.target.value }))}
+                      className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+                    >
+                      {Object.entries(SPORT_LABELS).map(([val, label]) => (
+                        <option key={val} value={val}>{label}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">Year *</label>

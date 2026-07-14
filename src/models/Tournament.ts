@@ -17,6 +17,7 @@ const tournamentSchema = new Schema<Tournament>(
       enum: ['Draft', 'Completed', 'Setup', 'Pending', 'Live', 'Paused', 'Stopped', 'Archived'],
       default: 'Draft',
     },
+    sport: { type: String, default: 'cricket' }, // e.g. cricket | football | basketball
     usePlayerClasses: { type: Boolean, default: false },
     playerClasses: {
       type: [
