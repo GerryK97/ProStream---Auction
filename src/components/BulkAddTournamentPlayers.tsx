@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { Tournament } from '@/types';
 import { getAuthHeaders } from '@/lib/api-client';
+import { SPORT_LABELS, getPositionsForSport } from '@/lib/sportPositions';
 
 interface ImportResult {
   success: boolean;
@@ -34,6 +35,11 @@ export default function BulkAddTournamentPlayers({
   const playerClasses = tournament.usePlayerClasses && tournament.playerClasses
     ? tournament.playerClasses.map(c => c.name)
     : [];
+
+  const sport         = (tournament as any).sport ?? 'cricket';
+  const sportLabel    = SPORT_LABELS[sport as keyof typeof SPORT_LABELS] ?? sport;
+  const sportPositions = getPositionsForSport(sport);
+  const isCricket     = sport === 'cricket';
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -155,13 +161,16 @@ export default function BulkAddTournamentPlayers({
     <div className="bg-gray-800 p-6 rounded-lg">
       <div className="mb-4">
         <h3 className="text-xl font-bold text-white mb-2">Bulk Add Players to Tournament</h3>
-        <div className="flex items-center gap-2 text-sm text-gray-300">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-300">
           <span className="font-medium">Tournament:</span>
           <span className="text-white">{tournament.name}</span>
+          <span className="text-gray-500">•</span>
+          <span className="font-medium">Sport:</span>
+          <span className="text-white">{sportLabel}</span>
           {playerClasses.length > 0 && (
             <>
-              <span className="text-gray-500 mx-2">•</span>
-              <span className="font-medium">Player Classes:</span>
+              <span className="text-gray-500">•</span>
+              <span className="font-medium">Classes:</span>
               <span className="text-white">{playerClasses.join(', ')}</span>
             </>
           )}
@@ -180,23 +189,31 @@ export default function BulkAddTournamentPlayers({
           {downloadingTemplate ? 'Downloading...' : 'Download Import Template'}
         </button>
         <p className="mt-2 text-xs text-gray-400">
-          Download the Excel template, fill in player details (Name, Position, Current Club, Player Class), set Add to &quot;Yes&quot;, then upload.
+          Download the Excel template for <strong className="text-gray-200">{sportLabel}</strong>, fill in player details, set Add to &quot;Yes&quot;, then upload.
+          Required columns: Name, Position, Current Club, Add (Yes/No).
         </p>
+
+        {/* Sport positions hint */}
+        {sportPositions.length > 0 && (
+          <div className="mt-3 p-3 bg-indigo-900/30 border border-indigo-700/50 rounded-lg">
+            <p className="text-xs font-semibold text-indigo-300 mb-1">📋 Valid Positions for {sportLabel}</p>
+            <p className="text-xs text-gray-300 leading-relaxed">
+              {sportPositions.join(' · ')}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">You may also type a custom position — the template dropdown is a guide, not a hard restriction.</p>
+          </div>
+        )}
+
         {playerClasses.length > 0 && (
           <div className="mt-3 p-3 bg-blue-900/30 border border-blue-700/50 rounded-lg">
             <p className="text-xs font-semibold text-blue-300 mb-1">💡 TIP: Use Short Codes to Reduce Typos!</p>
             <p className="text-xs text-gray-300">
-              Instead of typing full class names, use short codes: <span className="font-mono text-blue-200">P</span> (Platinum),
-              <span className="font-mono text-blue-200"> G</span> (Gold),
-              <span className="font-mono text-blue-200"> S</span> (Silver),
-              <span className="font-mono text-blue-200"> B</span> (Bronze),
-              <span className="font-mono text-blue-200"> E</span> (Elite),
-              <span className="font-mono text-blue-200"> Pr</span> (Premium),
-              <span className="font-mono text-blue-200"> St</span> (Standard)
+              Player Class short codes are accepted, e.g.{' '}
+              {tournament.playerClasses?.slice(0, 4).map(c => (
+                <span key={c.code} className="font-mono text-blue-200">{c.code} ({c.name}) </span>
+              ))}
             </p>
-            <p className="text-xs text-gray-400 mt-1">
-              Codes are case-insensitive. See the Instructions sheet in the template for full details.
-            </p>
+            <p className="text-xs text-gray-400 mt-1">Codes are case-insensitive. See the Instructions sheet in the template for full details.</p>
           </div>
         )}
       </div>

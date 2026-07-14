@@ -7,6 +7,7 @@ import { Tournament } from '@/types';
 import { connectToDatabase } from '@/lib/mongodb';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
+import { getPositionsForSport } from '@/lib/sportPositions';
 
 interface ExcelRow {
   'Player No'?: string | number;
@@ -80,6 +81,10 @@ export async function POST(request: NextRequest) {
     const tournament = await TournamentModel.findById(tournamentId).lean() as Tournament | null;
     if (!tournament) return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
 
+    const sport          = (tournament as any).sport ?? 'cricket';
+    const isCricket      = sport === 'cricket';
+    const sportPositions = getPositionsForSport(sport); // valid positions for this sport
+
     const tournamentClasses = tournament.usePlayerClasses && tournament.playerClasses
       ? tournament.playerClasses.map((c: any) => c.name)
       : [];
@@ -89,8 +94,8 @@ export async function POST(request: NextRequest) {
       : '';
 
     const ppf = tournament.playerProfileFields;
-    const showBattingStyle = ppf?.showBattingStyle ?? false;
-    const showBowlingStyle = ppf?.showBowlingStyle ?? false;
+    const showBattingStyle = isCricket && (ppf?.showBattingStyle ?? false);
+    const showBowlingStyle = isCricket && (ppf?.showBowlingStyle ?? false);
     const statFields = ppf?.statFields ?? [];
 
     const arrayBuffer = await file.arrayBuffer();
@@ -156,6 +161,18 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
+      // Soft-validate position: accept it regardless, but normalise to known value if partial match
+      let resolvedPosition = position;
+      if (sportPositions.length > 0) {
+        const exact = sportPositions.find(p => p.toLowerCase() === position.toLowerCase());
+        const partial = !exact && sportPositions.find(p =>
+          p.toLowerCase().includes(position.toLowerCase()) || position.toLowerCase().includes(p.toLowerCase().split(' ')[0])
+        );
+        if (exact) resolvedPosition = exact;
+        else if (partial) resolvedPosition = partial;
+        // else: keep what was typed — don't fail, allow free-text
+      }
+
       if (!currentClub) {
         result.errors.push({ row: rowNumber, error: 'Missing Current Club', player: playerName });
         result.failed++;
@@ -183,7 +200,7 @@ export async function POST(request: NextRequest) {
         await playerDB.create(
           {
             ...(playerNo ? { playerNo } : {}),
-            name: playerName, position, currentClub,
+            name: playerName, position: resolvedPosition, currentClub,
             ...(age !== undefined ? { age } : {}),
             ...(battingStyle ? { battingStyle } : {}),
             ...(bowlingStyle ? { bowlingStyle } : {}),
