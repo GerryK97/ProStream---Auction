@@ -75,6 +75,8 @@ function SessionsPage() {
 
   const [justCreated, setJustCreated] = useState<OverlaySession[]>([]);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+  const [copiedAll, setCopiedAll] = useState(false);
+  const [copiedTemplate, setCopiedTemplate] = useState(false);
 
   const [confirmingRevoke, setConfirmingRevoke] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
@@ -211,6 +213,28 @@ function SessionsPage() {
     } catch {
       // ignore clipboard errors
     }
+  };
+
+  const copyAllUrls = async (sessions: OverlaySession[]) => {
+    const text = sessions.map(buildSessionUrl).join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedAll(true);
+      setTimeout(() => setCopiedAll(false), 2000);
+    } catch {}
+  };
+
+  const copyAsTemplate = async (sessions: OverlaySession[]) => {
+    const lines = sessions.map(s => {
+      const config = getAuctionOverlayConfig(sessionOverlayType(s));
+      return `${config.label}: ${buildSessionUrl(s)}`;
+    });
+    const text = `=== Overlay Links ===\n${lines.join('\n')}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedTemplate(true);
+      setTimeout(() => setCopiedTemplate(false), 2000);
+    } catch {}
   };
 
   const activeSessions = sessions.filter(s => s.isActive);
@@ -413,13 +437,22 @@ function SessionsPage() {
               {justCreated.length} overlay {justCreated.length === 1 ? 'link' : 'links'} generated and copied
             </p>
             <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Theme: {selectedTheme} · Palette: {selectedPaletteConfig?.name || selectedPalette} · Charged: {formatAmount(justCreated.reduce((total, session) => total + (session.priceCharged ?? 0), 0))}</p>
-            <button
-              onClick={() => copyToClipboard(justCreated.map(buildSessionUrl).join('\n'))}
-              className="rounded px-3 py-1.5 text-xs font-semibold"
-              style={{ backgroundColor: copiedUrl === justCreated.map(buildSessionUrl).join('\n') ? '#16a34a' : 'var(--surface-card)', color: copiedUrl === justCreated.map(buildSessionUrl).join('\n') ? '#fff' : 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}
-            >
-              {copiedUrl === justCreated.map(buildSessionUrl).join('\n') ? 'Copied all!' : 'Copy all URLs'}
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => copyAllUrls(justCreated)}
+                className="rounded px-3 py-1.5 text-xs font-semibold"
+                style={{ backgroundColor: copiedAll ? '#16a34a' : 'var(--surface-card)', color: copiedAll ? '#fff' : 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}
+              >
+                {copiedAll ? '✓ Copied all!' : '⧉ Copy all URLs'}
+              </button>
+              <button
+                onClick={() => copyAsTemplate(justCreated)}
+                className="rounded px-3 py-1.5 text-xs font-semibold"
+                style={{ backgroundColor: copiedTemplate ? '#16a34a' : 'rgba(79,70,229,0.12)', color: copiedTemplate ? '#fff' : 'var(--brand-primary)', border: '1px solid var(--brand-primary)' }}
+              >
+                {copiedTemplate ? '✓ Copied template!' : '📋 Copy as template'}
+              </button>
+            </div>
             <div className="space-y-2">
               {justCreated.map(session => {
                 const url = buildSessionUrl(session);
@@ -443,7 +476,27 @@ function SessionsPage() {
             <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Active Overlay Outputs</h2>
             <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>Copy actions use the currently selected theme and palette above.</p>
           </div>
-          <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: '#16a34a22', color: '#4ade80' }}>{activeSessions.length} active</span>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            {activeSessions.length > 1 && (
+              <>
+                <button
+                  onClick={() => copyAllUrls(activeSessions)}
+                  className="px-3 py-1.5 rounded text-xs font-semibold"
+                  style={{ backgroundColor: copiedAll ? '#16a34a' : 'var(--surface-elevated)', color: copiedAll ? '#fff' : 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}
+                >
+                  {copiedAll ? '✓ Copied all!' : '⧉ Copy all URLs'}
+                </button>
+                <button
+                  onClick={() => copyAsTemplate(activeSessions)}
+                  className="px-3 py-1.5 rounded text-xs font-semibold"
+                  style={{ backgroundColor: copiedTemplate ? '#16a34a' : 'rgba(79,70,229,0.12)', color: copiedTemplate ? '#fff' : 'var(--brand-primary)', border: '1px solid var(--brand-primary)' }}
+                >
+                  {copiedTemplate ? '✓ Copied!' : '📋 Copy as template'}
+                </button>
+              </>
+            )}
+            <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: '#16a34a22', color: '#4ade80' }}>{activeSessions.length} active</span>
+          </div>
         </div>
 
         {loading ? (
