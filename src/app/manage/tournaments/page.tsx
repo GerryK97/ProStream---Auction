@@ -81,6 +81,7 @@ function TournamentsManagePage() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [pendingAccessNotice, setPendingAccessNotice] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
@@ -343,15 +344,15 @@ function TournamentsManagePage() {
           </div>
         )}
 
-        {!loading && !error && tournaments.length === 0 && (
+        {!loading && !error && tournaments.filter(t => t.status !== 'Archived').length === 0 && (
           <div className="text-center py-20 text-gray-400">
             <p className="text-lg">No tournaments yet. Click &quot;Create Tournament&quot; to get started.</p>
           </div>
         )}
 
-        {!loading && tournaments.length > 0 && (
+        {!loading && tournaments.filter(t => t.status !== 'Archived').length > 0 && (
           <div className="grid gap-4">
-            {tournaments.map((t) => (
+            {tournaments.filter(t => t.status !== 'Archived').map((t) => (
               <div
                 key={t._id}
                 className="bg-gray-800 rounded-lg p-4 flex items-center justify-between hover:bg-gray-750 transition-colors"
@@ -417,6 +418,60 @@ function TournamentsManagePage() {
             ))}
           </div>
         )}
+
+        {/* Archived section */}
+        {!loading && (() => {
+          const archived = tournaments.filter(t => t.status === 'Archived');
+          if (archived.length === 0) return null;
+          return (
+            <div className="mt-8">
+              <button
+                onClick={() => setShowArchived(v => !v)}
+                className="flex items-center gap-2 text-gray-400 hover:text-gray-200 text-sm font-medium transition-colors"
+              >
+                <span className={`transition-transform ${showArchived ? 'rotate-90' : ''}`}>▶</span>
+                {showArchived ? 'Hide' : 'Show'} Archived Tournaments ({archived.length})
+              </button>
+
+              {showArchived && (
+                <div className="grid gap-3 mt-3">
+                  {archived.map((t) => (
+                    <div
+                      key={t._id}
+                      className="bg-gray-800/50 rounded-lg p-4 flex items-center justify-between opacity-60 hover:opacity-80 transition-opacity"
+                    >
+                      <div className="flex items-center gap-4">
+                        {t.logoURL && (
+                          <img src={t.logoURL} alt={t.name} className="w-10 h-10 rounded object-cover grayscale" />
+                        )}
+                        <div>
+                          <h2 className="text-gray-300 font-semibold">{t.name}</h2>
+                          <p className="text-gray-500 text-sm">{t.year}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(t.status)}`}>
+                          {t.status}
+                        </span>
+                        <button
+                          onClick={() => openEdit(t)}
+                          className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm"
+                        >
+                          Edit
+                        </button>
+                        <DeleteButton
+                          ariaLabel={`Delete ${t.name}`}
+                          onClick={() => handleDelete(t._id, t.name)}
+                          className="shrink-0"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Create / Edit Tournament Modal */}
