@@ -43,7 +43,7 @@ When the ticker is hidden, the player bar repositions to `bottom: 0`.
 - **Palette:** `--t3-accent` teal base (`#00898c`), `--t3-bg-panel` photo column (`#202020`), `--t3-action-primary-hover` highlight rail/skew, white/secondary text
 - **Typography:** Saira Extra Condensed 700 (`--t3-font-display`)
 - **Background:** accent fill + top dark fade (matches ticker) + accent skew highlight bands via [`PlayerBarBackgroundT3.tsx`](../src/components/overlays/theme3/PlayerBarBackgroundT3.tsx)
-- **Layout:** 150px full-height photo (12.5%), condensed name + oversized player no, details loop, accent-highlighted bid stat block
+- **Layout:** 180×210 photo that stands taller than the 132px bar, condensed name + oversized player no, details loop, accent-highlighted bid stat block
 
 ### Bar-specific tokens (`--t3-bar-*`)
 Defined in [`overlayPalettes.ts`](../src/config/overlayPalettes.ts) for Theme 3 only. Defaults derive from Theme 3 accent tokens:
@@ -60,21 +60,21 @@ Defined in [`overlayPalettes.ts`](../src/config/overlayPalettes.ts) for Theme 3 
 - [`PlayerBarBackgroundT3.tsx`](../src/components/overlays/theme3/PlayerBarBackgroundT3.tsx) — ticker-matched accent layers + stacked top rails (bright / primary / accent)
 - [`PlayerCardT3.tsx`](../src/components/overlays/theme3/PlayerCardT3.tsx) — photo + identity sections
 - [`CurrentBidT3.tsx`](../src/components/overlays/theme3/CurrentBidT3.tsx) — dual-stack bid panel: base-only before bidding, then current bid (hero) + compact base row with enter transition; sold phase shows team-hero "Bought By" layout with logo, name, and sold price
-- [`SoldDetailsSectionT3.tsx`](../src/components/overlays/theme3/SoldDetailsSectionT3.tsx) — center details zone SOLD stamp during sold reveal
+- [`SoldDetailsSectionT3.tsx`](../src/components/overlays/theme3/SoldDetailsSectionT3.tsx) — sold reveal strip (SOLD badge + team + price) sized for mobile/OBS readability
 - [`SoldMessageT3.tsx`](../src/components/overlays/theme3/SoldMessageT3.tsx) — unsold full-bar overlay stamp (`UnsoldBarOverlayT3`); sold full-bar overlay deprecated in favor of zone-specific reveals
 - [`theme3Layout.ts`](../src/components/overlays/theme3/theme3Layout.ts) — shared layout constants
 
 ### Animation phases
 1. **Enter** — slide up from below ticker; photo, identity, and bid panel stagger in
 2. **Live pending / bidding** — details loop rotates; accent bid glow/pop; bid panel transitions from base-only to dual stack (current bid + base) on first bid
-3. **Sold reveal** — brief accent flash on bar shell; details zone fills with animated SOLD stamp (`SoldDetailsSectionT3`); bid panel switches to team-hero "Bought By" layout (logo, team name, sold price) with staggered enter; photo celebration; 5s hold then exit. No full-bar sold overlay.
+3. **Sold reveal** — brief accent flash; photo stays; one full-bleed **red** sold strip (`SoldDetailsSectionT3`, `--t3-danger`) with large SOLD badge + price + team (no duplicate bid panel); photo celebration; 5s hold then exit.
 4. **Unsold reveal** — desaturate, red UNSOLD stamp; 2.5s hold then exit
 5. **Exit** — slide down; bar dismisses until the next player is selected
 
 All animations respect `prefers-reduced-motion`.
 
 ### Where the live player bar is used
-- **Custom overlay** (`CustomT3Content`) — **Small:** lower-third [`LiveAuctionPlayerBarT3`](src/components/overlays/theme3/LiveAuctionPlayerBarT3.tsx); **Large:** portrait [`PortraitPlayerCardT3`](src/components/overlays/theme3/PortraitPlayerCardT3.tsx) (440×660, photo top, footer with number/name + embedded bid). Controlled by overlay `size` (`large` | `small`) and auto-switch from Auction Controls.
+- **Custom overlay** (`CustomT3Content`) — **Small:** lower-third [`LiveAuctionPlayerBarT3`](src/components/overlays/theme3/LiveAuctionPlayerBarT3.tsx); **Large:** portrait [`PortraitPlayerCardT3`](src/components/overlays/theme3/PortraitPlayerCardT3.tsx) (352×528, photo top, footer with number/name + two-column bid: max-height Current Bid + persistent Base after bidding starts). Controlled by overlay `size` (`large` | `small`). With **Auto Switch ON**, `select-player` includes `overlaySize: 'large'` (+ `sizeRev`) on `auction:player-selected` so the first paint is Large; a timer then publishes Small. Stale in-flight Small patches are ignored via `sizeRev`. With Auto OFF, size is unchanged when a player is added.
 - **Main Full Screen** (`FullScreenT3Content`) — uses the full-screen player card below (not the bar)
 
 ## Theme 3 Full Screen 2 (alternate full-screen route)
@@ -93,8 +93,8 @@ The primary Full Screen overlay (`/overlays/:id`, [`FullScreenT3Content.tsx`](..
 
 ### Layout
 - **Canvas fill:** Opaque `--t3-gradient-canvas` background with ticker-aligned accent skew bands ([`PlayerBarBackgroundT3.tsx`](../src/components/overlays/theme3/PlayerBarBackgroundT3.tsx))
-- **Left (~58%):** Full-height hero photo (`object-fit: cover`) with class badge overlay
-- **Right panel (~42%):** Dark `--t3-bg-panel` with gold rail — player number watermark, name, looping detail strip, profile stat grid, fullscreen bid panel
+- **Left (square column):** Hero photo width matches photo-area height (capped ~52% of canvas) so 1:1 player images fill without side gaps (`object-fit: contain`, Cloudinary `crop: fit`); class badge overlay
+- **Right panel (remainder):** Dark `--t3-bg-panel` with gold rail — player number watermark (background only), name, looping detail strip, profile stat grid, fullscreen bid panel
 - **Top strip:** Tournament name + LIVE pill during bidding
 - **Ticker:** Hidden in `standard` mode while the card or waiting screen is active; visible in `custom-ticker` mode with card height reduced above the ticker
 
@@ -102,12 +102,12 @@ The primary Full Screen overlay (`/overlays/:id`, [`FullScreenT3Content.tsx`](..
 - [`FullScreenPlayerCardT3.tsx`](../src/components/overlays/theme3/FullScreenPlayerCardT3.tsx) — phase machine, enter/exit, sold/unsold, bid feedback
 - [`fullScreenPlayerCardT3Layout.ts`](../src/components/overlays/theme3/fullScreenPlayerCardT3Layout.ts) — geometry and timing constants
 - [`playerCardLoopItems.tsx`](../src/components/overlays/theme3/playerCardLoopItems.tsx) — shared detail-loop builder (also used by the lower-third bar)
-- [`CurrentBidT3.tsx`](../src/components/overlays/theme3/CurrentBidT3.tsx) — `layout="fullscreen"` variant with larger bid typography
+- [`CurrentBidT3.tsx`](../src/components/overlays/theme3/CurrentBidT3.tsx) — `layout="fullscreen"` uses the same **two-column Base Price + Current Bid** layout as Custom Small; Current Bid caption **30px**, amount **120px**, panel min-height **200px** so text fills the bid area
 
 ### Animation phases
-1. **Enter** — photo slides from left; panel slides from right (stagger ~480ms)
+1. **Enter** — hero image is prefetched; then the **fully populated** card fades/rises in as one unit (no empty chrome flash)
 2. **Live pending / bidding** — profile detail loop; bid pop, delta flash, accent ripple; LIVE pill pulse
-3. **Sold reveal** — `SoldDetailsSectionT3` stamp + team-hero bid panel; 5s hold then exit
+3. **Sold reveal** — SOLD watermark + team-hero bid panel; 5s hold then exit
 4. **Unsold reveal** — desaturate + `UnsoldBarOverlayT3`; 2.5s hold then exit
 5. **Exit** — scale down + fade + upward drift
 6. **Waiting for next player** — [`RestingTimeT3.tsx`](../src/components/overlays/theme3/RestingTimeT3.tsx) with `overrideLabel="Waiting for Next Player"` until the next player is selected
@@ -156,6 +156,7 @@ Full-screen spin overlay ([`WheelSpinT3.tsx`](../src/components/overlays/theme3/
 - **Center hub:** Auctioner/streamer logo from tournament `wheelCenterImageURL` (also sent as `centerImageURL` on the spin event); gold **SPIN** text when no logo is configured
 - **Animation:** Wheel enter scale, 8+ rotation spins to pre-determined winner, pulsing gold pointer, delayed winner reveal card
 - **Orchestrators:** Wired in `FullScreenT3Content`, `CustomT3Content`, and `FullScreenAltT3Content`; ticker and live bar hidden during spin
+- **Timing:** Control panel selects the winner mid-spin so the profile is ready when the animation ends. Overlays must **not** exit `wheel-spin` on `auction:player-selected` / `currentPlayerId` — `OverlayWrapper` owns the mode reset after `WHEEL_SPIN_DURATION_MS + WHEEL_WINNER_HOLD_MS` (see `src/lib/wheelSpinTiming.ts`)
 
 ## Rendering Behavior
 - Overlay components must tolerate live auction state changes, missing player/team images, and session revocation/error states.

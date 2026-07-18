@@ -1,9 +1,15 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { AuctionState, Player, Team, Tournament } from '@/types';
-import { PLAYER_BAR_T3_HEIGHT, PLAYER_BAR_T3_WIDTH, PLAYER_BAR_T3_TOP_RAIL_HEIGHT, getPlayerBarBottom } from './theme3Layout';
-import { buildPlayerCardLoopItems, PlayerCardLoopSection } from './playerCardLoopItems';
+import {
+  PLAYER_BAR_T3_HEIGHT,
+  PLAYER_BAR_T3_MARGIN_BOTTOM,
+  PLAYER_BAR_T3_PHOTO_HEIGHT,
+  PLAYER_BAR_T3_WIDTH,
+  PLAYER_BAR_T3_TOP_RAIL_HEIGHT,
+  getPlayerBarBottom,
+} from './theme3Layout';
 import { PlayerPhotoSection, PlayerIdentitySection } from './PlayerCardT3';
 import CurrentBidPanelT3, { type BidPanelPhase } from './CurrentBidT3';
 import { UnsoldBarOverlayT3 } from './SoldMessageT3';
@@ -32,6 +38,13 @@ const EXIT_MS = 400;
 const SOLD_HOLD_MS = 5000;
 const UNSOLD_HOLD_MS = 2500;
 
+function formatSoldAmount(value: number): string {
+  const raw = Math.round(Math.abs(value)).toString();
+  if (raw.length <= 3) return value < 0 ? `-${raw}` : raw;
+  const withSpace = `${raw.slice(0, -3)} ${raw.slice(-3)}`;
+  return value < 0 ? `-${withSpace}` : withSpace;
+}
+
 export function LiveAuctionPlayerBarT3({
   currentPlayer,
   auctionState,
@@ -55,13 +68,8 @@ export function LiveAuctionPlayerBarT3({
   const prevAuctionPlayerIdRef = useRef(auctionState.currentPlayerId);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  const loopItems = useMemo(
-    () => buildPlayerCardLoopItems(currentPlayer, tournament),
-    [currentPlayer, tournament],
-  );
-
   const isBidding = auctionState.currentAuctionStatus === 'Bidding';
-  const bottom = getPlayerBarBottom(tickerVisible);
+  const bottom = getPlayerBarBottom(tickerVisible) + PLAYER_BAR_T3_MARGIN_BOTTOM;
 
   const clearTimers = () => {
     timersRef.current.forEach(t => clearTimeout(t));
@@ -312,6 +320,8 @@ export function LiveAuctionPlayerBarT3({
           pointerEvents: 'none',
           display: 'flex',
           justifyContent: 'center',
+          alignItems: 'flex-end',
+          overflow: 'visible',
           transform: barTransform,
           opacity: barOpacity,
           filter: desaturate ? 'saturate(0.4) brightness(0.85)' : undefined,
@@ -326,18 +336,28 @@ export function LiveAuctionPlayerBarT3({
             position: 'relative',
             display: 'flex',
             flexDirection: 'row',
-            alignItems: 'stretch',
+            alignItems: 'flex-end',
             width: PLAYER_BAR_T3_WIDTH,
             maxWidth: '94vw',
-            height: '100%',
+            height: PLAYER_BAR_T3_HEIGHT,
             boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-            overflow: 'hidden',
+            overflow: 'visible',
           }}
         >
-          <PlayerBarBackgroundT3
-            animateSkew={isBidding && loopActive}
-            reducedMotion={reducedMotion}
-          />
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              overflow: 'hidden',
+              zIndex: 0,
+              pointerEvents: 'none',
+            }}
+          >
+            <PlayerBarBackgroundT3
+              animateSkew={isBidding && loopActive}
+              reducedMotion={reducedMotion}
+            />
+          </div>
 
           {/* Bid ripple sweep — accent */}
           {ripple && !reducedMotion && (
@@ -356,98 +376,91 @@ export function LiveAuctionPlayerBarT3({
             />
           )}
 
-          {/* Photo — full bar height */}
+          {/* Photo — taller than bar, stands above other sections */}
           <div
             className={isEntering && !reducedMotion ? 't3-photo-enter' : ''}
             style={{
               display: 'flex',
-              alignItems: 'stretch',
+              alignItems: 'flex-end',
               flexShrink: 0,
-              height: '100%',
+              height: PLAYER_BAR_T3_PHOTO_HEIGHT,
               position: 'relative',
-              zIndex: showSoldOverlay ? 1 : 2,
+              zIndex: showSoldOverlay ? 1 : 3,
             }}
           >
             <PlayerPhotoSection
               player={currentPlayer}
               soldCelebration={showSoldOverlay}
-              barHeight={PLAYER_BAR_T3_HEIGHT}
+              photoHeight={PLAYER_BAR_T3_PHOTO_HEIGHT}
             />
           </div>
 
-          {/* Identity */}
-          <div
-            className={isEntering && !reducedMotion ? 't3-identity-enter' : ''}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '0 16px',
-              flexShrink: 0,
-              position: 'relative',
-              zIndex: showSoldOverlay ? 1 : 2,
-            }}
-          >
-            <PlayerIdentitySection player={currentPlayer} tournament={tournament} />
-          </div>
-
-          {/* Details loop */}
-          <div
-            style={{
-              position: 'relative',
-              zIndex: showSoldOverlay ? 1 : 2,
-              flex: 1,
-              minWidth: 0,
-              height: '100%',
-              display: 'flex',
-            }}
-          >
-            {!showSoldOverlay && (
-              <div
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '0 24px',
-                  minWidth: 0,
-                  overflow: 'hidden',
-                }}
-              >
-                <PlayerCardLoopSection
-                  items={loopItems}
-                  active={loopActive}
-                  reducedMotion={reducedMotion}
-                />
-              </div>
-            )}
-          </div>
-
-          {showSoldOverlay && (
-            <SoldDetailsSectionT3
-              reducedMotion={reducedMotion}
-              barHeight={PLAYER_BAR_T3_HEIGHT}
-            />
+          {/* Identity — hidden during sold so one sold strip can use full width */}
+          {!showSoldOverlay && (
+            <div
+              className={isEntering && !reducedMotion ? 't3-identity-enter' : ''}
+              style={{
+                display: 'flex',
+                alignItems: 'stretch',
+                padding: '0 16px',
+                flex: 1,
+                minWidth: 0,
+                height: '100%',
+                position: 'relative',
+                zIndex: 2,
+              }}
+            >
+              <PlayerIdentitySection
+                player={currentPlayer}
+                tournament={tournament}
+                expand
+              />
+            </div>
           )}
 
-          {/* Bid panel */}
-          <div
-            className={isEntering && !reducedMotion ? 't3-bid-enter' : ''}
-            style={{ position: 'relative', zIndex: showSoldOverlay ? 8 : 2 }}
-          >
-            <CurrentBidPanelT3
-              auctionState={auctionState}
-              teams={teams}
-              tournament={tournament}
-              currentPlayer={currentPlayer}
-              isBidding={isBidding}
-              bidPopping={bidPopping}
-              bidDelta={bidDelta}
-              phase={bidPanelPhase}
-              soldPrice={soldPrice}
-              soldTeam={soldTeam}
-              reducedMotion={reducedMotion}
-            />
-          </div>
+          {/* Sold — single full-width story (no duplicate bid panel) */}
+          {showSoldOverlay && (
+            <div
+              style={{
+                position: 'relative',
+                zIndex: 3,
+                flex: 1,
+                minWidth: 0,
+                height: '100%',
+                display: 'flex',
+              }}
+            >
+              <SoldDetailsSectionT3
+                reducedMotion={reducedMotion}
+                barHeight={PLAYER_BAR_T3_HEIGHT}
+                soldTeam={soldTeam}
+                soldAmount={formatSoldAmount(soldPrice)}
+                fullBleed
+              />
+            </div>
+          )}
+
+          {/* Bid panel — live / unsold only (sold details live in SoldDetailsSectionT3) */}
+          {!showSoldOverlay && (
+            <div
+              className={isEntering && !reducedMotion ? 't3-bid-enter' : ''}
+              style={{ position: 'relative', zIndex: 2, height: '100%' }}
+            >
+              <CurrentBidPanelT3
+                auctionState={auctionState}
+                teams={teams}
+                tournament={tournament}
+                currentPlayer={currentPlayer}
+                isBidding={isBidding}
+                bidPopping={bidPopping}
+                bidDelta={bidDelta}
+                phase={bidPanelPhase}
+                soldPrice={soldPrice}
+                soldTeam={soldTeam}
+                reducedMotion={reducedMotion}
+              />
+            </div>
+          )}
 
           {showUnsoldOverlay && <UnsoldBarOverlayT3 />}
         </div>

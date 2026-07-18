@@ -75,6 +75,10 @@ export interface PlayerSelectedEvent extends BasePusherEvent {
   basePrice: number;
   auctionState: AuctionState;
   message: string;
+  /** When set, overlays apply this card size in the same tick as the new player (auto-switch Large intro). */
+  overlaySize?: 'large' | 'small';
+  /** Monotonic revision so stale overlay:settings size patches cannot overwrite a newer intro size. */
+  sizeRev?: number;
 }
 
 /**
@@ -191,6 +195,8 @@ export interface OverlaySettingsEvent extends BasePusherEvent {
   teamCardSize?: 'small' | 'medium' | 'large';
   teamCardPosition?: 'top-right' | 'bottom-right';
   bidCardPosition?: 'top' | 'right' | 'left';
+  /** Monotonic revision for size updates; overlays ignore size when sizeRev is older. */
+  sizeRev?: number;
 }
 
 /**

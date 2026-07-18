@@ -18,7 +18,9 @@ export interface PlayerCardLoopItem {
 export function buildPlayerCardLoopItems(
   player: Player,
   tournament: Tournament | null,
+  options?: { includePosition?: boolean },
 ): PlayerCardLoopItem[] {
+  const includePosition = options?.includePosition !== false;
   const items: PlayerCardLoopItem[] = [];
 
   if (player.playerClass) {
@@ -28,7 +30,7 @@ export function buildPlayerCardLoopItems(
       color: cfg?.color,
     });
   }
-  if (player.position) {
+  if (includePosition && player.position) {
     items.push({ label: `POSITION · ${player.position.toUpperCase()}` });
   }
 

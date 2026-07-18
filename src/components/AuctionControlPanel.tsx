@@ -1127,6 +1127,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const [autoSwitch, setAutoSwitch] = useState(false);
     const [autoSwitchDuration, setAutoSwitchDuration] = useState(5);
     const autoSwitchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    /** Bumps with every size publish so overlays can ignore stale in-flight Small patches. */
+    const sizeRevRef = useRef(0);
     const [customTickerLine1, setCustomTickerLine1] = useState(() =>
         typeof window !== 'undefined' ? (localStorage.getItem('customTickerLine1') ?? '') : ''
     );
@@ -1157,7 +1159,9 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
 
     // Refs to always read latest values inside the auto-switch effect without re-triggering it
     const tickerModeRef = useRef(tickerMode);
+    const autoSwitchRef = useRef(autoSwitch);
     const autoSwitchDurationRef = useRef(autoSwitchDuration);
+    const overlaySizeRef = useRef(overlaySize);
     const displayModeRef = useRef(displayMode);
     const hidePremiumCardRef = useRef(hidePremiumCard);
     const customTickerLine1Ref = useRef(customTickerLine1);
@@ -1168,7 +1172,9 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const bidCardTopRef = useRef(bidCardTop);
     const bidCardLeftRef = useRef(bidCardLeft);
     tickerModeRef.current = tickerMode;
+    autoSwitchRef.current = autoSwitch;
     autoSwitchDurationRef.current = autoSwitchDuration;
+    overlaySizeRef.current = overlaySize;
     displayModeRef.current = displayMode;
     hidePremiumCardRef.current = hidePremiumCard;
     teamWiseTeamIdRef.current = teamWiseTeamId;
@@ -1215,7 +1221,9 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const sendOverlaySettingsRef = useRef(sendOverlaySettings);
     sendOverlaySettingsRef.current = sendOverlaySettings;
 
-    const patchOverlaySettings = useCallback(async (updates: Partial<OverlayControlSettings>) => {
+    const patchOverlaySettings = useCallback(async (
+        updates: Partial<OverlayControlSettings> & { sizeRev?: number },
+    ) => {
         const tournamentId = liveTournamentId;
         if (!tournamentId) return;
         const response = await fetch('/api/overlay/settings', {
@@ -1386,9 +1394,17 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         void hydrate();
     }, [liveTournament?._id, liveTournament?.overlayControlSettings]);
 
-    // Auto-switch: when a new player is selected, show Large then shrink to Small after N seconds.
-    // Only active in standard mode — other display modes hide the player card, so the timer would
-    // silently flip overlaySize underneath a non-visible card.
+    const publishOverlaySize = useCallback(async (size: 'large' | 'small') => {
+        const sizeRev = ++sizeRevRef.current;
+        setOverlaySize(size);
+        overlaySizeRef.current = size;
+        await patchOverlaySettingsRef.current({ size, sizeRev }).catch(() => {});
+        return sizeRev;
+    }, []);
+
+    // Auto-switch: schedule Large → Small after each new player.
+    // Intro Large is also sent on select-player (overlaySize) so the overlay's first
+    // paint is Large even if a prior Small PATCH is still in flight.
     useEffect(() => {
         if (autoSwitchTimerRef.current) {
             clearTimeout(autoSwitchTimerRef.current);
@@ -1396,12 +1412,10 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         }
         if (!autoSwitch || !auctionState.currentPlayerId || displayMode !== 'standard' || hidePremiumCard) return;
 
-        setOverlaySize('large');
-        void patchOverlaySettingsRef.current({ size: 'large' }).catch(() => {});
+        void publishOverlaySize('large');
 
         autoSwitchTimerRef.current = setTimeout(() => {
-            setOverlaySize('small');
-            void patchOverlaySettingsRef.current({ size: 'small' }).catch(() => {});
+            void publishOverlaySize('small');
             autoSwitchTimerRef.current = null;
         }, autoSwitchDurationRef.current * 1000);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1718,12 +1732,35 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         if (!liveTournament || selectPlayerInFlightRef.current) return;
         selectPlayerInFlightRef.current = true;
         if (useTabs) setActiveTab('auction');
+
+        // Auto ON: ride Large on player-selected so the overlay's first paint is Large.
+        // Also cancel any pending shrink timer whose in-flight Small PATCH could race.
+        // Auto OFF: omit overlaySize so the manually chosen size is unchanged.
+        const autoIntro =
+            autoSwitchRef.current &&
+            !hidePremiumCardRef.current &&
+            displayModeRef.current === 'standard';
+        let introSizeRev: number | undefined;
+        if (autoIntro) {
+            if (autoSwitchTimerRef.current) {
+                clearTimeout(autoSwitchTimerRef.current);
+                autoSwitchTimerRef.current = null;
+            }
+            setOverlaySize('large');
+            overlaySizeRef.current = 'large';
+            introSizeRev = ++sizeRevRef.current;
+        }
+
         const previousState = optimisticPlayerSelection(playerId);
         try {
             const response = await fetch('/api/auction/select-player', {
                 method: 'POST',
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tournamentId: liveTournament._id, playerId }),
+                body: JSON.stringify({
+                    tournamentId: liveTournament._id,
+                    playerId,
+                    ...(autoIntro ? { overlaySize: 'large' as const, sizeRev: introSizeRev } : {}),
+                }),
             });
             const data = await response.json().catch(() => ({}));
             if (!response.ok) {
@@ -1761,14 +1798,23 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             displayModeRef.current = 'standard';
             setIsSpinning(false);
             spinInFlightRef.current = false;
-            void sendOverlaySettings(overlaySize, tickerMode, 'standard').catch(() => {
+            // Auto ON: reset must not re-publish leftover Small over the Large intro.
+            const sizeForReset =
+                autoSwitchRef.current && !hidePremiumCardRef.current
+                    ? 'large'
+                    : overlaySizeRef.current;
+            if (sizeForReset === 'large') {
+                setOverlaySize('large');
+                overlaySizeRef.current = 'large';
+            }
+            void sendOverlaySettings(sizeForReset, tickerMode, 'standard').catch(() => {
                 setError('Player selected, but the overlay reset failed');
             });
         };
 
         try {
             // Fire overlay settings update in parallel — don't block the spin call.
-            void sendOverlaySettings(overlaySize, tickerMode, 'wheel-spin').catch(() => {});
+            void sendOverlaySettings(overlaySizeRef.current, tickerMode, 'wheel-spin').catch(() => {});
 
             const res = await fetch('/api/overlay/spin', {
                 method: 'POST',
@@ -1781,6 +1827,19 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             }
             const { winnerId } = await res.json();
 
+            // Auto ON: attach Large to player-selected so reveal is not Small first.
+            const autoIntro = autoSwitchRef.current && !hidePremiumCardRef.current;
+            let introSizeRev: number | undefined;
+            if (autoIntro) {
+                if (autoSwitchTimerRef.current) {
+                    clearTimeout(autoSwitchTimerRef.current);
+                    autoSwitchTimerRef.current = null;
+                }
+                setOverlaySize('large');
+                overlaySizeRef.current = 'large';
+                introSizeRev = ++sizeRevRef.current;
+            }
+
             // Fire select-player immediately while the wheel is spinning so the
             // Pusher event (auction:player-selected) reaches all overlays and
             // connected panels before the animation finishes. Optimistically apply
@@ -1789,7 +1848,11 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             const selectPromise = fetch('/api/auction/select-player', {
                 method: 'POST',
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tournamentId, playerId: winnerId }),
+                body: JSON.stringify({
+                    tournamentId,
+                    playerId: winnerId,
+                    ...(autoIntro ? { overlaySize: 'large' as const, sizeRev: introSizeRev } : {}),
+                }),
             }).then(async (selectRes) => {
                 const selected = await selectRes.json().catch(() => ({}));
                 if (!selectRes.ok) throw new Error(selected.error || 'Failed to select wheel winner');
@@ -1826,7 +1889,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             setDisplayMode('standard');
             displayModeRef.current = 'standard';
             setError(error instanceof Error ? error.message : 'Spin failed');
-            void sendOverlaySettings(overlaySize, tickerMode, 'standard').catch(() => {});
+            void sendOverlaySettings(overlaySizeRef.current, tickerMode, 'standard').catch(() => {});
         }
     };
 

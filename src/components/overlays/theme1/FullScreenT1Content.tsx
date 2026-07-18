@@ -599,16 +599,8 @@ export function FullScreenT1Content({
   const [summaryExiting, setSummaryExiting] = useState(false);
   const prevDisplayModeRef = useRef(effectiveSettings.displayMode);
 
-  // Exit wheel-spin immediately when a player is selected so the profile
-  // appears as soon as auction:player-selected arrives, not after the timer.
-  useEffect(() => {
-    if (!auctionState.currentPlayerId) return;
-    if (activeMode !== 'wheel-spin') return;
-    prevDisplayModeRef.current = 'standard';
-    setActiveMode('standard');
-    setSummaryExiting(false);
-    setPanelExiting(false);
-  }, [auctionState.currentPlayerId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Wheel-spin exit is timer-driven via overlaySettings.displayMode (OverlayWrapper).
+  // Do not bail on currentPlayerId — select-player fires mid-spin on purpose.
 
   // Sold message toast state
   const [soldToast, setSoldToast] = useState<{ player: Player; team: Team; price: number } | null>(null);

@@ -11,7 +11,7 @@ import {
     WHEEL_WINNER_HOLD_MS,
 } from '@/lib/wheelSpinTiming';
 import { OVERLAY_PALETTES } from '@/config/overlayPalettes';
-import type { OverlaySettingsEvent, WheelSpinEvent } from '@/types/pusher-events';
+import type { OverlaySettingsEvent, PlayerSelectedEvent, WheelSpinEvent } from '@/types/pusher-events';
 import type { AuctionOverlayType } from '@/lib/overlays/auctionOverlayTypes';
 import {
   overlaySettingsFromControlSettings,
@@ -140,6 +140,7 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
         auctionState,
         players,
         teams,
+        playerCardSizeHint,
         isConnected,
         isRevoked,
         lastEvent,
@@ -154,27 +155,17 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
     // Overlay settings — updated via overlay:settings Pusher event
     const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>(DEFAULT_OVERLAY_SETTINGS);
     const hydratedSettingsTournamentRef = useRef<string | null>(null);
+    /** Drop stale size patches (e.g. in-flight Small from the previous auto-switch timer). */
+    const lastSizeRevRef = useRef(0);
 
     // Wheel spin data — updated via overlay:wheel-spin Pusher event
     const [wheelSpinData, setWheelSpinData] = useState<WheelSpinEvent | null>(null);
     const wheelResetTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
     const wheelModeResetTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // When auction:player-selected arrives while the wheel is still showing,
-    // immediately exit wheel-spin mode so the player profile appears at once.
-    // This is the earliest possible signal — before the wheel timer fires.
-    useEffect(() => {
-        if (!auctionState.currentPlayerId) return;
-        setOverlaySettings(prev => {
-            if (prev.displayMode !== 'wheel-spin') return prev;
-            // Cancel the timer-based reset so it doesn't fire twice.
-            if (wheelModeResetTimerRef.current) {
-                clearTimeout(wheelModeResetTimerRef.current);
-                wheelModeResetTimerRef.current = null;
-            }
-            return { ...prev, displayMode: 'standard' };
-        });
-    }, [auctionState.currentPlayerId]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Do NOT exit wheel-spin when currentPlayerId arrives. Control panels select
+    // the winner mid-spin so the profile is ready when the animation ends; mode
+    // reset is owned by the timer started in onWheelSpin below.
 
     useEffect(() => {
         if (!tournament?._id) return;
@@ -187,6 +178,21 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
         }));
     }, [tournament?._id, tournament?.overlayControlSettings]);
 
+    // Persist the player-selected size hint into settings state (and sizeRev)
+    // after the first paint that already used settingsForRender.
+    useEffect(() => {
+        if (!playerCardSizeHint) return;
+        if (playerCardSizeHint.playerId !== auctionState.currentPlayerId) return;
+        const hintRev = playerCardSizeHint.rev;
+        if (hintRev !== undefined && hintRev < lastSizeRevRef.current) return;
+        if (hintRev !== undefined) lastSizeRevRef.current = hintRev;
+        setOverlaySettings(prev => (
+            prev.size === playerCardSizeHint.size
+                ? prev
+                : { ...prev, size: playerCardSizeHint.size }
+        ));
+    }, [playerCardSizeHint, auctionState.currentPlayerId]);
+
     useEffect(() => {
         if (!liveTournamentId) return;
         // Bind overlay:settings and overlay:wheel-spin on the tournament channel.
@@ -196,9 +202,16 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
         // usePusherAuction owns the subscription lifecycle.
         const pusher = getPusherClient();
         const channel = pusher.subscribe(`tournament-${liveTournamentId}`);
-        channel.bind('overlay:settings', (data: OverlaySettingsEvent) => {
-            setOverlaySettings({
-                size: data.size,
+
+        const onOverlaySettings = (data: OverlaySettingsEvent) => {
+            const incomingRev = typeof data.sizeRev === 'number' ? data.sizeRev : undefined;
+            const sizeIsStale =
+                incomingRev !== undefined && incomingRev < lastSizeRevRef.current;
+            if (incomingRev !== undefined && !sizeIsStale) {
+                lastSizeRevRef.current = incomingRev;
+            }
+            setOverlaySettings(prev => ({
+                size: sizeIsStale ? prev.size : data.size,
                 tickerMode: data.tickerMode ?? 'sold',
                 displayMode: data.displayMode ?? 'standard',
                 hidePremiumCard: data.hidePremiumCard ?? false,
@@ -214,10 +227,25 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
                 teamCardSize: data.teamCardSize ?? 'large',
                 teamCardPosition: data.teamCardPosition ?? 'top-right',
                 bidCardPosition: data.bidCardPosition ?? 'top',
-            });
-        });
+            }));
+        };
+        channel.bind('overlay:settings', onOverlaySettings);
 
-        channel.bind('overlay:wheel-spin', (data: WheelSpinEvent) => {
+        // Apply intro card size in the same Pusher turn as the new player so the
+        // overlay never mounts the Small bar first when auto-switch requests Large.
+        // Named handler so cleanup does not unbind usePusherAuction's listener.
+        const onPlayerSelectedSize = (data: PlayerSelectedEvent) => {
+            if (data.overlaySize !== 'large' && data.overlaySize !== 'small') return;
+            const incomingRev = typeof data.sizeRev === 'number' ? data.sizeRev : undefined;
+            if (incomingRev !== undefined && incomingRev < lastSizeRevRef.current) return;
+            if (incomingRev !== undefined) lastSizeRevRef.current = incomingRev;
+            setOverlaySettings(prev => (
+                prev.size === data.overlaySize ? prev : { ...prev, size: data.overlaySize! }
+            ));
+        };
+        channel.bind('auction:player-selected', onPlayerSelectedSize);
+
+        const onWheelSpin = (data: WheelSpinEvent) => {
             // The wheel event itself must activate wheel mode. This keeps spins
             // triggered from the compact/mobile panel working even when that
             // client does not separately publish overlay settings.
@@ -237,11 +265,13 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
                 setWheelSpinData(null);
                 wheelResetTimerRef.current = null;
             }, WHEEL_SPIN_DURATION_MS + WHEEL_DATA_CLEANUP_BUFFER_MS);
-        });
+        };
+        channel.bind('overlay:wheel-spin', onWheelSpin);
 
         return () => {
-            channel.unbind('overlay:settings');
-            channel.unbind('overlay:wheel-spin');
+            channel.unbind('overlay:settings', onOverlaySettings);
+            channel.unbind('auction:player-selected', onPlayerSelectedSize);
+            channel.unbind('overlay:wheel-spin', onWheelSpin);
             if (wheelResetTimerRef.current) clearTimeout(wheelResetTimerRef.current);
             if (wheelModeResetTimerRef.current) clearTimeout(wheelModeResetTimerRef.current);
             // Don't unsubscribe the channel here — usePusherAuction owns it
@@ -312,6 +342,20 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
         ? { ...tournament, overlayTheme: theme as Tournament['overlayTheme'], overlayPalette: activePalette.id }
         : tournament;
 
+    // Same-render intro size: when player-selected carries overlaySize, apply it
+    // here so the first paint of the new player is already Large (not Small→Large).
+    let settingsForRender = overlaySettings;
+    if (
+        playerCardSizeHint &&
+        playerCardSizeHint.playerId === auctionState.currentPlayerId
+    ) {
+        const hintRev = playerCardSizeHint.rev;
+        const hintIsFresh = hintRev === undefined || hintRev >= lastSizeRevRef.current;
+        if (hintIsFresh && overlaySettings.size !== playerCardSizeHint.size) {
+            settingsForRender = { ...overlaySettings, size: playerCardSizeHint.size };
+        }
+    }
+
     return (
         <div 
             className="w-full h-full bg-transparent text-white font-sans relative overflow-hidden"
@@ -345,7 +389,7 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
                 lastEvent,
                 currentPlayer,
                 soldPlayers,
-                overlaySettings,
+                overlaySettings: settingsForRender,
                 wheelSpinData,
             })}
         </div>

@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import type { AuctionState, Player, Team, Tournament } from '@/types';
-import { getClassConfig } from '@/lib/playerClassUtils';
 import { optimizeImage } from '@/lib/imageOptimization';
 import ResilientImage from '../shared/ResilientImage';
 import { PlayerBarBackgroundT3 } from './PlayerBarBackgroundT3';
@@ -79,11 +78,7 @@ export function PortraitPlayerCardT3({
 
   const isBidding = auctionState.currentAuctionStatus === 'Bidding';
   const bottom = getPortraitCardBottom(tickerVisible);
-  const classConfig = getClassConfig(tournament, currentPlayer.playerClass);
   const playerNo = currentPlayer.playerNo?.trim();
-  const metaParts: string[] = [];
-  if (currentPlayer.playerClass) metaParts.push(currentPlayer.playerClass.toUpperCase());
-  if (currentPlayer.position) metaParts.push(currentPlayer.position.toUpperCase());
 
   const photoSrc = resolvePortraitPhoto(currentPlayer);
   const initials = currentPlayer.name
@@ -406,7 +401,7 @@ export function PortraitPlayerCardT3({
                 <span
                   style={{
                     fontFamily: DISPLAY_FONT,
-                    fontSize: 96,
+                    fontSize: 77,
                     fontWeight: 800,
                     color: 'rgba(255,255,255,0.15)',
                   }}
@@ -436,23 +431,32 @@ export function PortraitPlayerCardT3({
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'flex-start',
-              padding: '12px 18px 10px',
+              padding: '4px 10px 6px',
               boxSizing: 'border-box',
               background: 'rgba(0,0,0,0.42)',
               borderTop: '2px solid var(--t3-bar-gold, var(--t3-accent))',
               zIndex: 3,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, minWidth: 0 }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'stretch',
+                gap: 6,
+                minWidth: 0,
+              }}
+            >
               {playerNo && (
                 <span
                   style={{
                     fontFamily: DISPLAY_FONT,
-                    fontSize: 44,
+                    fontSize: portraitNameFontSize(currentPlayer.name.length),
                     fontWeight: 700,
                     lineHeight: 0.85,
                     color: 'var(--t3-bar-gold, var(--t3-accent))',
                     flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'flex-end',
                     textShadow: '0 2px 8px rgba(0,0,0,0.45)',
                   }}
                 >
@@ -467,39 +471,22 @@ export function PortraitPlayerCardT3({
                   letterSpacing: '0.02em',
                   textTransform: 'uppercase',
                   color: 'var(--t3-bar-text, var(--t3-text-primary))',
-                  lineHeight: 1,
+                  lineHeight: 0.85,
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   textShadow: '0 2px 10px rgba(0,0,0,0.5)',
                   minWidth: 0,
                   flex: 1,
+                  display: 'flex',
+                  alignItems: 'flex-end',
                 }}
               >
                 {currentPlayer.name}
               </div>
             </div>
 
-            {metaParts.length > 0 && (
-              <div
-                style={{
-                  marginTop: 4,
-                  fontFamily: DISPLAY_FONT,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                  color: classConfig?.color ?? 'var(--t3-bar-text-muted, var(--t3-text-secondary))',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {metaParts.join(' · ')}
-              </div>
-            )}
-
-            <div style={{ marginTop: 'auto', minWidth: 0 }}>
+            <div style={{ marginTop: 'auto', flex: 1, minHeight: 0, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
               <CurrentBidFooterT3
                 auctionState={auctionState}
                 teams={teams}

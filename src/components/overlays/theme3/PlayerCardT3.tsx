@@ -4,12 +4,17 @@ import React, { useEffect, useState } from 'react';
 import type { Player, Tournament } from '@/types';
 import { getClassConfig } from '@/lib/playerClassUtils';
 import { optimizeImage } from '@/lib/imageOptimization';
-import { PLAYER_BAR_T3_HEIGHT, PLAYER_BAR_T3_PHOTO_WIDTH } from './theme3Layout';
+import {
+  PLAYER_BAR_T3_PHOTO_HEIGHT,
+  PLAYER_BAR_T3_PHOTO_WIDTH,
+} from './theme3Layout';
 
 const DISPLAY_FONT = 'var(--t3-font-display, "Saira Extra Condensed", sans-serif)';
 
 function resolvePlayerPhotoSrc(
   player: Player,
+  width: number,
+  height: number,
 ): string | null {
   const raw =
     player.photoURL?.trim() ||
@@ -18,8 +23,8 @@ function resolvePlayerPhotoSrc(
   if (!raw) return null;
   if (raw.startsWith('data:')) return raw;
   return optimizeImage(raw, {
-    width: PLAYER_BAR_T3_PHOTO_WIDTH * 2,
-    height: PLAYER_BAR_T3_HEIGHT * 2,
+    width: width * 2,
+    height: height * 2,
     crop: 'fill',
     quality: 'auto',
     format: 'auto',
@@ -29,16 +34,22 @@ function resolvePlayerPhotoSrc(
 interface PhotoProps {
   player: Player;
   soldCelebration?: boolean;
+  /** @deprecated Prefer photoHeight — kept for callers that still pass bar height. */
   barHeight?: number;
+  photoWidth?: number;
+  photoHeight?: number;
 }
 
 export function PlayerPhotoSection({
   player,
   soldCelebration,
-  barHeight = PLAYER_BAR_T3_HEIGHT,
+  barHeight,
+  photoWidth = PLAYER_BAR_T3_PHOTO_WIDTH,
+  photoHeight,
 }: PhotoProps) {
+  const height = photoHeight ?? barHeight ?? PLAYER_BAR_T3_PHOTO_HEIGHT;
   const [imageFailed, setImageFailed] = useState(false);
-  const photoSrc = resolvePlayerPhotoSrc(player);
+  const photoSrc = resolvePlayerPhotoSrc(player, photoWidth, height);
 
   useEffect(() => {
     setImageFailed(false);
@@ -56,12 +67,13 @@ export function PlayerPhotoSection({
   return (
     <div
       style={{
-        width: PLAYER_BAR_T3_PHOTO_WIDTH,
-        height: barHeight,
+        width: photoWidth,
+        height,
         flexShrink: 0,
         overflow: 'hidden',
         background: 'var(--t3-bar-bg-dark, var(--t3-bg-panel))',
         borderRight: '1px solid var(--t3-bar-gold, var(--t3-accent))',
+        boxShadow: '0 8px 28px rgba(0,0,0,0.55)',
         animation: soldCelebration ? 't3SoldCelebration 0.6s ease-out' : undefined,
         position: 'relative',
         zIndex: 2,
@@ -72,7 +84,13 @@ export function PlayerPhotoSection({
           src={photoSrc}
           alt=""
           referrerPolicy="no-referrer"
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'center top',
+            display: 'block',
+          }}
           onError={() => setImageFailed(true)}
         />
       ) : (
@@ -84,7 +102,7 @@ export function PlayerPhotoSection({
             alignItems: 'center',
             justifyContent: 'center',
             fontFamily: DISPLAY_FONT,
-            fontSize: 36,
+            fontSize: 42,
             fontWeight: 700,
             color: 'var(--t3-bar-gold, var(--t3-accent))',
           }}
@@ -99,28 +117,64 @@ export function PlayerPhotoSection({
 interface IdentityProps {
   player: Player;
   tournament: Tournament | null;
+  /** Stretch to fill available row width (small player bar). */
+  expand?: boolean;
 }
 
-export function PlayerIdentitySection({ player, tournament }: IdentityProps) {
+export function PlayerIdentitySection({ player, tournament, expand = false }: IdentityProps) {
   const classConfig = getClassConfig(tournament, player.playerClass);
   const playerNo = player.playerNo?.trim();
   const metaParts: string[] = [];
   if (player.playerClass) metaParts.push(player.playerClass.toUpperCase());
   if (player.position) metaParts.push(player.position.toUpperCase());
 
+  const noSize = expand ? 72 : 52;
+  const nameSize = expand ? 58 : 38;
+  const metaSize = expand ? 24 : 18;
+
   return (
-    <div style={{ minWidth: 0, flex: '0 1 340px', maxWidth: 340, paddingRight: 12, position: 'relative', zIndex: 2 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, minWidth: 0 }}>
+    <div
+      style={{
+        minWidth: 0,
+        flex: expand ? '1 1 auto' : '0 1 340px',
+        maxWidth: expand ? 'none' : 340,
+        width: expand ? '100%' : undefined,
+        height: expand ? '100%' : undefined,
+        paddingRight: expand ? 20 : 12,
+        paddingTop: expand ? 10 : 0,
+        paddingBottom: expand ? 8 : 0,
+        boxSizing: 'border-box',
+        position: 'relative',
+        zIndex: 2,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: expand ? 'flex-end' : undefined,
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-end',
+          gap: expand ? 14 : 12,
+          minWidth: 0,
+          width: '100%',
+          flex: expand ? 1 : undefined,
+          minHeight: expand ? 0 : undefined,
+        }}
+      >
         {playerNo && (
           <span
             style={{
               fontFamily: DISPLAY_FONT,
-              fontSize: 52,
+              fontSize: noSize,
               fontWeight: 700,
               lineHeight: 0.85,
               color: 'var(--t3-bar-gold, var(--t3-accent))',
               flexShrink: 0,
               textShadow: '0 2px 8px rgba(0,0,0,0.45)',
+              display: 'flex',
+              alignItems: 'flex-end',
+              height: expand ? '100%' : undefined,
             }}
           >
             {playerNo}
@@ -129,18 +183,21 @@ export function PlayerIdentitySection({ player, tournament }: IdentityProps) {
         <div
           style={{
             fontFamily: DISPLAY_FONT,
-            fontSize: 38,
+            fontSize: nameSize,
             fontWeight: 700,
             letterSpacing: '0.02em',
             textTransform: 'uppercase',
             color: 'var(--t3-bar-text, var(--t3-text-primary))',
-            lineHeight: 1,
+            lineHeight: 0.85,
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             textShadow: '0 2px 10px rgba(0,0,0,0.5)',
             minWidth: 0,
             flex: 1,
+            display: 'flex',
+            alignItems: 'flex-end',
+            height: expand ? '100%' : undefined,
           }}
         >
           {player.name}
@@ -149,9 +206,10 @@ export function PlayerIdentitySection({ player, tournament }: IdentityProps) {
       {metaParts.length > 0 && (
         <div
           style={{
-            marginTop: 6,
+            marginTop: expand ? 4 : 6,
+            flexShrink: 0,
             fontFamily: DISPLAY_FONT,
-            fontSize: 14,
+            fontSize: metaSize,
             fontWeight: 600,
             letterSpacing: '0.1em',
             textTransform: 'uppercase',
@@ -159,6 +217,8 @@ export function PlayerIdentitySection({ player, tournament }: IdentityProps) {
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
+            width: '100%',
+            lineHeight: 1,
           }}
         >
           {metaParts.join(' · ')}

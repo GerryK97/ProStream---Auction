@@ -53,11 +53,19 @@ export interface OptimisticSellSnapshot {
   team: Team | null;
 }
 
+export type PlayerCardSizeHint = {
+  size: 'large' | 'small';
+  rev?: number;
+  playerId: string;
+};
+
 interface UsePusherAuctionReturn {
   tournament: Tournament | null;
   auctionState: AuctionState;
   players: Player[];
   teams: Team[];
+  /** Card size requested with the latest player-selected event (same render as the new player). */
+  playerCardSizeHint: PlayerCardSizeHint | null;
   isConnected: boolean;
   isRevoked: boolean;
   lastEvent: string | null;
@@ -92,6 +100,7 @@ interface AuctionStateType {
   auctionState: AuctionState;
   players: Player[];
   teams: Team[];
+  playerCardSizeHint: PlayerCardSizeHint | null;
   error: string | null;
 }
 
@@ -159,12 +168,38 @@ const auctionReducer = (state: AuctionStateType, action: AuctionAction): Auction
         error: null,
       };
 
-    case 'PLAYER_SELECTED':
+    case 'PLAYER_SELECTED': {
+      const nextPlayerId = action.data.auctionState?.currentPlayerId
+        ?? action.data.currentPlayer?._id
+        ?? null;
+      const hint: PlayerCardSizeHint | null =
+        (action.data.overlaySize === 'large' || action.data.overlaySize === 'small') && nextPlayerId
+          ? {
+              size: action.data.overlaySize,
+              rev: action.data.sizeRev,
+              playerId: nextPlayerId,
+            }
+          : state.playerCardSizeHint;
+
+      // Merge the selected player into the roster so overlays never resolve
+      // currentPlayerId to a missing/stale row (empty fullscreen card flash).
+      let nextPlayers = state.players;
+      const selected = action.data.currentPlayer;
+      if (selected?._id) {
+        const idx = state.players.findIndex(p => p._id === selected._id);
+        nextPlayers = idx >= 0
+          ? state.players.map((p, i) => (i === idx ? { ...p, ...selected } : p))
+          : [...state.players, selected];
+      }
+
       return {
         ...state,
         auctionState: action.data.auctionState,
+        players: nextPlayers,
+        playerCardSizeHint: hint,
         error: null,
       };
+    }
 
     case 'OPTIMISTIC_PLAYER_SELECTION':
       return {
@@ -422,6 +457,7 @@ export function usePusherAuction(
     auctionState: initialData?.auctionState || EMPTY_AUCTION_STATE,
     players: initialData?.players || [],
     teams: initialData?.teams || [],
+    playerCardSizeHint: null,
     error: null,
   });
 
@@ -833,6 +869,7 @@ export function usePusherAuction(
     auctionState: state.auctionState,
     players: state.players,
     teams: state.teams,
+    playerCardSizeHint: state.playerCardSizeHint,
     isConnected,
     isRevoked,
     lastEvent,

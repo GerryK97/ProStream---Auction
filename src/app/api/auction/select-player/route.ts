@@ -11,7 +11,7 @@ import { getClassBasePrice } from '@/lib/playerClassUtils';
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
-    const { tournamentId, playerId } = await request.json();
+    const { tournamentId, playerId, overlaySize, sizeRev } = await request.json();
 
     if (!tournamentId || !playerId) {
       return NextResponse.json(
@@ -19,6 +19,11 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const resolvedOverlaySize =
+      overlaySize === 'large' || overlaySize === 'small' ? overlaySize : undefined;
+    const resolvedSizeRev =
+      typeof sizeRev === 'number' && Number.isFinite(sizeRev) ? sizeRev : undefined;
 
     // Keep the selection hot path small. Auction history and full tournament/player
     // documents can be large, but this route only needs the status, player card
@@ -98,6 +103,15 @@ export async function POST(request: NextRequest) {
     const selectedPlayer = serializePlayer(player as any) as any;
     const message = `Player ${(player as any).name} selected for auction`;
 
+    // Persist intro card size before broadcasting so refresh/reconnect stays consistent.
+    // overlaySize rides on auction:player-selected so overlays apply Large in the same
+    // tick as the new player (avoids Small flash from a prior auto-switch).
+    if (resolvedOverlaySize) {
+      await TournamentModel.findByIdAndUpdate(tournamentId, {
+        $set: { 'overlayControlSettings.size': resolvedOverlaySize },
+      });
+    }
+
     // Await the publish before ending the serverless request. Fire-and-forget
     // promises may be suspended once the response is returned, which leaves the
     // overlay and other auction panels waiting until their next full refresh.
@@ -107,6 +121,8 @@ export async function POST(request: NextRequest) {
         basePrice,
         auctionState: updatedState as any,
         message,
+        ...(resolvedOverlaySize ? { overlaySize: resolvedOverlaySize } : {}),
+        ...(resolvedSizeRev !== undefined ? { sizeRev: resolvedSizeRev } : {}),
       });
     } catch (err) {
       // The database update succeeded, so return the authoritative selection to
@@ -123,6 +139,8 @@ export async function POST(request: NextRequest) {
       basePrice,
       auctionState: updatedState,
       message,
+      ...(resolvedOverlaySize ? { overlaySize: resolvedOverlaySize } : {}),
+      ...(resolvedSizeRev !== undefined ? { sizeRev: resolvedSizeRev } : {}),
     });
   } catch (error) {
     console.error('Error selecting player:', error);

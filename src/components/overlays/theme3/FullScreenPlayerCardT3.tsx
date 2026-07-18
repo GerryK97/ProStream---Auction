@@ -16,13 +16,13 @@ import {
   FS_CARD_EXIT_MS,
   FS_CARD_GOLD_RAIL_W,
   FS_CARD_PANEL_PADDING,
-  FS_CARD_PHOTO_RATIO,
   FS_CARD_SOLD_HOLD_MS,
   FS_CARD_TOP_STRIP_H,
   FS_CARD_UNSOLD_HOLD_MS,
   fsCardNameFontSize,
   fsCardStatSlotHeight,
   getFullScreenCardHeight,
+  getFullScreenPhotoWidth,
 } from './fullScreenPlayerCardT3Layout';
 
 const DISPLAY_FONT = 'var(--t3-font-display, "Saira Extra Condensed", sans-serif)';
@@ -52,7 +52,7 @@ function resolveHeroPhoto(player: Player): string | null {
   return optimizeImage(raw, {
     width: 1400,
     height: 1080,
-    crop: 'fill',
+    crop: 'fit',
     quality: 'auto',
     format: 'auto',
   });
@@ -65,7 +65,6 @@ function buildProfileFields(player: Player, tournament: Tournament | null) {
   if (ppf?.showAge) {
     fields.push({ label: 'Age', value: player.age ?? '—' });
   }
-  fields.push({ label: 'Position', value: player.position || '—' });
   if (ppf?.showBattingStyle) {
     fields.push({ label: 'Batting', value: player.battingStyle || '—' });
   }
@@ -105,7 +104,9 @@ export function FullScreenPlayerCardT3({
   const [bidDelta, setBidDelta] = useState<number | null>(null);
   const [ripple, setRipple] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [photoEnter, setPhotoEnter] = useState(false);
+  /** Whole-card enter gate — card stays hidden until hero is ready, then animates in populated. */
+  const [enterActive, setEnterActive] = useState(false);
+  const [heroReady, setHeroReady] = useState(false);
 
   const prevStatusRef = useRef(auctionState.currentAuctionStatus);
   const prevUnsoldRef = useRef(!!currentPlayer.isUnsold);
@@ -114,13 +115,14 @@ export function FullScreenPlayerCardT3({
   const prevAuctionPlayerIdRef = useRef(auctionState.currentPlayerId);
   const dismissedNotifiedRef = useRef(false);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const enterRafRef = useRef(0);
 
   const cardHeight = getFullScreenCardHeight(tickerVisible);
-  const photoWidth = Math.round(FS_CARD_CANVAS_W * FS_CARD_PHOTO_RATIO);
+  const photoWidth = getFullScreenPhotoWidth(cardHeight);
   const panelWidth = FS_CARD_CANVAS_W - photoWidth;
   const photoSrc = resolveHeroPhoto(currentPlayer);
   const loopItems = useMemo(
-    () => buildPlayerCardLoopItems(currentPlayer, tournament),
+    () => buildPlayerCardLoopItems(currentPlayer, tournament, { includePosition: false }),
     [currentPlayer, tournament],
   );
   const profileFields = useMemo(
@@ -145,6 +147,9 @@ export function FullScreenPlayerCardT3({
     timersRef.current.push(t);
   };
 
+  const livePhaseForStatus = (): CardPhase =>
+    auctionState.currentAuctionStatus === 'Bidding' ? 'liveBidding' : 'livePending';
+
   const resetForLivePlayer = () => {
     prevPlayerIdRef.current = currentPlayer._id;
     prevAuctionPlayerIdRef.current = auctionState.currentPlayerId;
@@ -153,13 +158,10 @@ export function FullScreenPlayerCardT3({
     prevBidRef.current = auctionState.currentBid;
     dismissedNotifiedRef.current = false;
     setDismissed(false);
+    setEnterActive(false);
+    setHeroReady(!photoSrc);
     setPhase('entering');
     clearTimers();
-    schedule(() => {
-      setPhase(
-        auctionState.currentAuctionStatus === 'Bidding' ? 'liveBidding' : 'livePending',
-      );
-    }, reducedMotion ? 0 : FS_CARD_ENTER_MS);
   };
 
   useEffect(() => {
@@ -171,20 +173,60 @@ export function FullScreenPlayerCardT3({
     return () => mq.removeEventListener('change', apply);
   }, []);
 
+  // Prefetch hero so the enter animation reveals a complete profile, not an empty shell.
   useEffect(() => {
-    if (phase === 'entering' && !reducedMotion) {
-      setPhotoEnter(false);
-      const raf = requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setPhotoEnter(true);
-        });
-      });
-      return () => cancelAnimationFrame(raf);
+    if (!photoSrc) {
+      setHeroReady(true);
+      return;
     }
+    let cancelled = false;
+    setHeroReady(false);
+    const img = new Image();
+    const markReady = () => {
+      if (!cancelled) setHeroReady(true);
+    };
+    img.onload = markReady;
+    img.onerror = markReady;
+    img.src = photoSrc;
+    if (img.complete) markReady();
+    return () => {
+      cancelled = true;
+    };
+  }, [photoSrc, currentPlayer._id]);
+
+  // Start the whole-card enter only after the hero (or initials fallback) is ready.
+  useEffect(() => {
     if (phase !== 'entering') {
-      setPhotoEnter(true);
+      setEnterActive(true);
+      return;
     }
-  }, [phase, reducedMotion, currentPlayer._id]);
+    if (!heroReady) {
+      setEnterActive(false);
+      return;
+    }
+
+    clearTimers();
+    if (enterRafRef.current) cancelAnimationFrame(enterRafRef.current);
+
+    if (reducedMotion) {
+      setEnterActive(true);
+      setPhase(livePhaseForStatus());
+      return;
+    }
+
+    setEnterActive(false);
+    enterRafRef.current = requestAnimationFrame(() => {
+      enterRafRef.current = requestAnimationFrame(() => {
+        setEnterActive(true);
+        schedule(() => setPhase(livePhaseForStatus()), FS_CARD_ENTER_MS);
+      });
+    });
+
+    return () => {
+      if (enterRafRef.current) cancelAnimationFrame(enterRafRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, heroReady, reducedMotion, currentPlayer._id]);
 
   useEffect(() => {
     if (!visible) {
@@ -194,12 +236,9 @@ export function FullScreenPlayerCardT3({
     }
     setDismissed(false);
     dismissedNotifiedRef.current = false;
+    setEnterActive(false);
+    setHeroReady(!photoSrc);
     setPhase('entering');
-    schedule(() => {
-      setPhase(
-        auctionState.currentAuctionStatus === 'Bidding' ? 'liveBidding' : 'livePending',
-      );
-    }, reducedMotion ? 0 : FS_CARD_ENTER_MS);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
@@ -307,14 +346,18 @@ export function FullScreenPlayerCardT3({
   const showUnsoldOverlay = phase === 'unsoldReveal';
   const isExiting = phase === 'exiting';
   const isEntering = phase === 'entering';
+  // Stay fully transparent until hero is ready (and the enter transition has started),
+  // so viewers never see an empty chrome shell before the populated profile.
+  const hideUntilPopulated =
+    isEntering && (!heroReady || (!enterActive && !reducedMotion));
 
   const cardTransform = isExiting
     ? 'scale(0.97) translateY(-24px)'
-    : isEntering && !photoEnter && !reducedMotion
-      ? 'scale(1.02)'
+    : hideUntilPopulated
+      ? 'scale(0.985) translateY(36px)'
       : 'scale(1) translateY(0)';
 
-  const cardOpacity = isExiting ? 0 : isEntering && !photoEnter && !reducedMotion ? 0 : 1;
+  const cardOpacity = isExiting || hideUntilPopulated ? 0 : 1;
 
   const initials = currentPlayer.name
     .split(/\s+/)
@@ -327,14 +370,6 @@ export function FullScreenPlayerCardT3({
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Saira+Extra+Condensed:wght@600;700;800&display=swap');
-        @keyframes t3FsPhotoIn {
-          from { transform: translateX(-8%) scale(1.04); opacity: 0; }
-          to   { transform: translateX(0) scale(1); opacity: 1; }
-        }
-        @keyframes t3FsPanelIn {
-          from { transform: translateX(8%); opacity: 0; }
-          to   { transform: translateX(0); opacity: 1; }
-        }
         @keyframes t3FsRipple {
           0%   { transform: translateX(-100%); opacity: 0.85; }
           100% { transform: translateX(100%); opacity: 0; }
@@ -343,11 +378,9 @@ export function FullScreenPlayerCardT3({
           0%, 100% { opacity: 1; transform: scale(1); }
           50%      { opacity: 0.35; transform: scale(0.65); }
         }
-        .t3fs-photo-enter { animation: t3FsPhotoIn ${FS_CARD_ENTER_MS}ms cubic-bezier(0.22,1,0.36,1) both; }
-        .t3fs-panel-enter { animation: t3FsPanelIn ${FS_CARD_ENTER_MS}ms cubic-bezier(0.22,1,0.36,1) 80ms both; }
         .t3fs-live-dot { animation: t3FsLiveDot 1.1s ease-in-out infinite; }
         @media (prefers-reduced-motion: reduce) {
-          .t3fs-photo-enter, .t3fs-panel-enter, .t3fs-live-dot { animation: none !important; }
+          .t3fs-live-dot { animation: none !important; }
         }
       `}</style>
 
@@ -365,9 +398,12 @@ export function FullScreenPlayerCardT3({
           background: 'var(--t3-gradient-canvas, var(--overlay-bg-fullscreen))',
           opacity: cardOpacity,
           transform: cardTransform,
+          // Enter uses the longer enter curve so the populated profile rises in as one unit.
           transition: reducedMotion
             ? 'opacity 0.15s ease, transform 0.15s ease'
-            : `opacity ${FS_CARD_EXIT_MS}ms ease, transform ${FS_CARD_EXIT_MS}ms cubic-bezier(0.4,0,0.2,1)`,
+            : isEntering || hideUntilPopulated
+              ? `opacity ${FS_CARD_ENTER_MS}ms ease, transform ${FS_CARD_ENTER_MS}ms cubic-bezier(0.22,1,0.36,1)`
+              : `opacity ${FS_CARD_EXIT_MS}ms ease, transform ${FS_CARD_EXIT_MS}ms cubic-bezier(0.4,0,0.2,1)`,
           filter: showUnsoldOverlay ? 'saturate(0.45) brightness(0.88)' : undefined,
         }}
       >
@@ -411,7 +447,7 @@ export function FullScreenPlayerCardT3({
           <span
             style={{
               fontFamily: DISPLAY_FONT,
-              fontSize: 28,
+              fontSize: 34,
               fontWeight: 700,
               letterSpacing: '0.14em',
               textTransform: 'uppercase',
@@ -426,21 +462,20 @@ export function FullScreenPlayerCardT3({
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,
-                padding: '8px 18px',
+                padding: '10px 20px',
                 borderRadius: 999,
                 background: 'rgba(var(--t3-accent-rgb, 0,137,140), 0.18)',
                 border: '1px solid rgba(var(--t3-accent-rgb, 0,137,140), 0.45)',
               }}
             >
-              <span className="t3fs-live-dot" style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--t3-success, #6EC49A)' }} />
-              <span style={{ fontFamily: DISPLAY_FONT, fontSize: 16, fontWeight: 700, letterSpacing: '0.18em', color: 'var(--t3-success, #6EC49A)' }}>LIVE</span>
+              <span className="t3fs-live-dot" style={{ width: 12, height: 12, borderRadius: '50%', background: 'var(--t3-success, #6EC49A)' }} />
+              <span style={{ fontFamily: DISPLAY_FONT, fontSize: 20, fontWeight: 700, letterSpacing: '0.18em', color: 'var(--t3-success, #6EC49A)' }}>LIVE</span>
             </div>
           )}
         </div>
 
         {/* Hero photo */}
         <div
-          className={isEntering && !reducedMotion ? 't3fs-photo-enter' : undefined}
           style={{
             position: 'absolute',
             left: 0,
@@ -456,11 +491,11 @@ export function FullScreenPlayerCardT3({
             <ResilientImage
               src={photoSrc}
               alt={currentPlayer.name}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
+              style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center center', display: 'block' }}
             />
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--t3-bg-panel)' }}>
-              <span style={{ fontFamily: DISPLAY_FONT, fontSize: 120, fontWeight: 800, color: 'rgba(255,255,255,0.15)' }}>{initials}</span>
+              <span style={{ fontFamily: DISPLAY_FONT, fontSize: 140, fontWeight: 800, color: 'rgba(255,255,255,0.15)' }}>{initials}</span>
             </div>
           )}
           <div
@@ -479,10 +514,10 @@ export function FullScreenPlayerCardT3({
                 left: 32,
                 background: classColor,
                 color: '#fff',
-                padding: '10px 22px',
+                padding: '12px 26px',
                 borderRadius: 6,
                 fontFamily: DISPLAY_FONT,
-                fontSize: 20,
+                fontSize: 24,
                 fontWeight: 700,
                 letterSpacing: '0.12em',
                 textTransform: 'uppercase',
@@ -495,7 +530,6 @@ export function FullScreenPlayerCardT3({
 
         {/* Right panel */}
         <div
-          className={isEntering && !reducedMotion ? 't3fs-panel-enter' : undefined}
           style={{
             position: 'absolute',
             left: photoWidth,
@@ -518,7 +552,7 @@ export function FullScreenPlayerCardT3({
                 top: 8,
                 right: 24,
                 fontFamily: DISPLAY_FONT,
-                fontSize: Math.round(panelWidth * 0.22),
+                fontSize: Math.round(panelWidth * 0.24),
                 fontWeight: 800,
                 lineHeight: 1,
                 color: 'var(--t3-bar-gold, var(--t3-accent))',
@@ -532,12 +566,6 @@ export function FullScreenPlayerCardT3({
           )}
 
           <div style={{ padding: `${FS_CARD_PANEL_PADDING}px ${FS_CARD_PANEL_PADDING}px 0 ${FS_CARD_PANEL_PADDING + FS_CARD_GOLD_RAIL_W + 16}px`, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            {dorsalText && (
-              <div style={{ fontFamily: DISPLAY_FONT, fontSize: 42, fontWeight: 700, color: 'var(--t3-bar-gold, var(--t3-accent))', marginBottom: 8 }}>
-                {dorsalText}
-              </div>
-            )}
-
             <div
               style={{
                 fontFamily: DISPLAY_FONT,
@@ -553,13 +581,13 @@ export function FullScreenPlayerCardT3({
               {currentPlayer.name}
             </div>
 
-            <div style={{ marginBottom: 20, minHeight: 32 }}>
+            <div style={{ marginBottom: 20, minHeight: 38 }}>
               {!showSoldOverlay && (
                 <PlayerCardLoopSection
                   items={loopItems}
                   active={loopActive}
                   reducedMotion={reducedMotion}
-                  fontSize={24}
+                  fontSize={30}
                 />
               )}
             </div>
@@ -581,13 +609,13 @@ export function FullScreenPlayerCardT3({
                       padding: '8px 0',
                     }}
                   >
-                    <span style={{ fontFamily: DISPLAY_FONT, fontSize: 18, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--t3-text-muted)' }}>
+                    <span style={{ fontFamily: DISPLAY_FONT, fontSize: 30, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--t3-text-muted)' }}>
                       {field.label}
                     </span>
                     <span
                       style={{
                         fontFamily: DISPLAY_FONT,
-                        fontSize: Math.max(24, Math.round(statSlotH * 0.38)),
+                        fontSize: Math.max(38, Math.round(statSlotH * 0.5)),
                         fontWeight: 700,
                         color: field.color ?? 'var(--t3-text-primary)',
                         textAlign: 'right',
@@ -604,7 +632,6 @@ export function FullScreenPlayerCardT3({
               <SoldDetailsSectionT3
                 reducedMotion={reducedMotion}
                 barHeight={cardHeight - FS_CARD_TOP_STRIP_H - 180}
-                bidPanelWidth={panelWidth - FS_CARD_PANEL_PADDING * 2}
               />
             )}
 

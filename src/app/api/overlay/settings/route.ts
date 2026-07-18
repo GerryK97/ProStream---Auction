@@ -148,7 +148,15 @@ export async function PATCH(request: NextRequest) {
     const settings = normalizeOverlayControlSettings(
       (tournament as { overlayControlSettings?: Partial<OverlayControlSettings> }).overlayControlSettings,
     );
-    await triggerOverlaySettings(tournamentId, settings);
+    // sizeRev is ephemeral (not persisted) — used so overlays can drop stale size patches
+    // that were already in-flight when auto-switch flipped Large → Small → Large.
+    const sizeRev = typeof body.sizeRev === 'number' && Number.isFinite(body.sizeRev)
+      ? body.sizeRev
+      : undefined;
+    await triggerOverlaySettings(tournamentId, {
+      ...settings,
+      ...(sizeRev !== undefined ? { sizeRev } : {}),
+    });
 
     return NextResponse.json({ ok: true, settings });
   } catch (error) {
