@@ -3,12 +3,18 @@
  * Admin-only: credit (add) balance to any user's wallet.
  *
  * Body: { userId: string; amount: number; note?: string }
+ *
+ * After crediting, an SMS is sent to the user if they have a verified
+ * mobile number on their account. If no mobile number is set the credit
+ * succeeds silently — no SMS is attempted.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest, verifyToken } from '@/lib/auth';
 import { isAdmin } from '@/lib/permissions';
 import { creditWalletBalance } from '@/lib/pg/wallet-queries';
 import { getUserById } from '@/lib/pg/user-queries';
+import { sendSMS } from '@prostream/shared/sms';
+import { normalizeMobile, isValidE164 } from '@prostream/shared/phone';
 
 export const runtime = 'nodejs';
 
@@ -41,12 +47,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    const description = note?.trim() || `Admin credit by ${payload.username ?? payload.userId}`;
+
     const result = await creditWalletBalance({
       userId,
       amount: parsed,
-      description: note?.trim() || `Admin credit by ${payload.username ?? payload.userId}`,
+      description,
       createdBy: payload.userId,
     });
+
+    // ── SMS notification ────────────────────────────────────────────────────
+    // Only send if the user has a mobile number on their account.
+    // A missing or empty phone is silently skipped — the credit still succeeds.
+    // SMS errors are also swallowed so a gateway failure never blocks the admin.
+    const rawPhone = targetUser.mobileNumber; // empty string '' when not set
+    if (rawPhone) {
+      try {
+        const phone = normalizeMobile(rawPhone);
+        if (isValidE164(phone)) {
+          const adminNote = note?.trim() ? `\nNote: ${note.trim()}` : '';
+          await sendSMS(
+            phone,
+            `Hi ${targetUser.username}, your ProStream wallet has been credited with Rs. ${parsed}.${adminNote} New balance: Rs. ${result.wallet.balance}.`,
+          );
+        }
+      } catch (smsErr) {
+        // Non-fatal — log but do not fail the request
+        console.warn('[admin/wallet-credit] SMS send failed:', smsErr);
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -54,6 +83,7 @@ export async function POST(request: NextRequest) {
       username: targetUser.username,
       credited: parsed,
       newBalance: result.wallet.balance,
+      smsSent: !!(rawPhone),
     });
   } catch (err: any) {
     console.error('Admin wallet-credit error:', err);
