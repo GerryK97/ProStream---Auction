@@ -62,6 +62,10 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
     const selectPlayerInFlightRef = useRef(false);
     const spinInFlightRef = useRef(false);
     const spinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Monotonically increasing revision counter — used to stamp overlaySize on
+    // select-player so the overlay's stale-rev guard correctly ignores any
+    // in-flight Small PATCH from a previous auto-switch timer.
+    const sizeRevRef = useRef(0);
     const [undoPending, setUndoPending] = useState(false);
     const prevCompletedClassesRef = useRef<string[]>([]);
 
@@ -350,6 +354,10 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
             const data = await post('/api/overlay/spin', { tournamentId: liveTournament._id });
             if (data.winnerId) {
                 if (spinTimerRef.current) clearTimeout(spinTimerRef.current);
+                // Stamp a Large intro before the winner is announced so the overlay
+                // never shows Small first. Bump sizeRevRef so this revision wins over
+                // any stale Small PATCH from a prior auto-switch timer.
+                const introSizeRev = ++sizeRevRef.current;
                 spinTimerRef.current = setTimeout(async () => {
                     spinTimerRef.current = null;
                     const previousState = optimisticPlayerSelection(data.winnerId);
@@ -361,6 +369,10 @@ export default function MobileAuctionControlPanel({ initialData, stats }: Mobile
                         const selected = await post('/api/auction/select-player', {
                             tournamentId: liveTournament._id,
                             playerId: data.winnerId,
+                            // Send Large so the overlay's first paint of the new player
+                            // is always Large regardless of the previous player's timer.
+                            overlaySize: 'large' as const,
+                            sizeRev: introSizeRev,
                         });
                         applyPlayerSelected(selected);
                     } catch (e: any) {
