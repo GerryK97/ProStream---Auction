@@ -20,6 +20,10 @@ interface OverlaySession {
   tournamentId: string;
   label: string;
   overlayType?: AuctionOverlayType;
+  /** Theme locked at creation. */
+  theme?: string;
+  /** Palette — mutable, updated via PATCH. */
+  palette?: string;
   paymentStatus?: 'free' | 'paid' | 'refunded' | 'payment_failed';
   priceCharged?: number;
   walletTransactionId?: number | null;
@@ -78,6 +82,10 @@ function SessionsPage() {
   const [copiedAll, setCopiedAll] = useState(false);
   const [copiedTemplate, setCopiedTemplate] = useState(false);
 
+  // Per-session palette state (token → palette id). Seeded from fetched sessions.
+  const [sessionPalettes, setSessionPalettes] = useState<Record<string, string>>({});
+  const [patchingPalette, setPatchingPalette] = useState<string | null>(null);
+
   const [confirmingRevoke, setConfirmingRevoke] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
   const [revokeError, setRevokeError] = useState<string | null>(null);
@@ -90,7 +98,14 @@ function SessionsPage() {
       const res = await fetch('/api/overlay/sessions', { headers: getAuthHeaders() });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to fetch sessions');
-      setSessions(data.sessions ?? []);
+      const fetched: OverlaySession[] = data.sessions ?? [];
+      setSessions(fetched);
+      // Seed per-session palette map from persisted values
+      setSessionPalettes(prev => {
+        const next = { ...prev };
+        fetched.forEach(s => { if (s.palette && !next[s._id]) next[s._id] = s.palette; });
+        return next;
+      });
       setPrices({ ...DEFAULT_PRICES, ...(data.prices ?? {}) });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch sessions');
@@ -123,13 +138,38 @@ function SessionsPage() {
     }
   }, [selectedTheme, selectedPalette]);
 
-  const buildSessionUrl = (session: OverlaySession) => buildAuctionOverlayUrl(
-    getOrigin(),
-    session.tournamentId,
-    sessionOverlayType(session),
-    session._id,
-    { theme: selectedTheme, palette: selectedPaletteConfig?.id || selectedPalette }
-  );
+  /**
+   * Build the overlay URL for an existing session.
+   * Theme is read from the session (locked at creation).
+   * Palette is read from sessionPalettes (mutable), falling back to the session's stored palette.
+   */
+  const buildSessionUrl = (session: OverlaySession) => {
+    const sessionTheme = session.theme || 'standard';
+    const sessionPalette = sessionPalettes[session._id] || session.palette || 'default';
+    return buildAuctionOverlayUrl(
+      getOrigin(),
+      session.tournamentId,
+      sessionOverlayType(session),
+      session._id,
+      { theme: sessionTheme, palette: sessionPalette },
+    );
+  };
+
+  /** Persist a palette change for an active session. */
+  const handlePatchPalette = async (sessionId: string, newPalette: string) => {
+    if (patchingPalette === sessionId) return;
+    setSessionPalettes(prev => ({ ...prev, [sessionId]: newPalette }));
+    setPatchingPalette(sessionId);
+    try {
+      await fetch(`/api/overlay/sessions/${sessionId}`, {
+        method: 'PATCH',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ palette: newPalette }),
+      });
+    } catch { /* non-fatal — local state already updated */ } finally {
+      setPatchingPalette(null);
+    }
+  };
 
   const toggleSelectedType = (type: AuctionOverlayType) => {
     setSelectedTypes(prev => {
@@ -153,7 +193,13 @@ function SessionsPage() {
         const res = await fetch('/api/overlay/sessions', {
           method: 'POST',
           headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tournamentId: createTournamentId, overlayType }),
+          // Pass theme + palette so they are persisted on the session at creation.
+          body: JSON.stringify({
+            tournamentId: createTournamentId,
+            overlayType,
+            theme: selectedTheme,
+            palette: selectedPaletteConfig?.id || selectedPalette,
+          }),
         });
         const data = await res.json();
         if (!res.ok) {
@@ -474,7 +520,7 @@ function SessionsPage() {
         <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid var(--border-primary)' }}>
           <div>
             <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Active Overlay Outputs</h2>
-            <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>Copy actions use the currently selected theme and palette above.</p>
+            <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>Theme is locked per session. You can change the colour palette without generating a new link.</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
             {activeSessions.length > 1 && (
@@ -513,20 +559,32 @@ function SessionsPage() {
               const url = buildSessionUrl(session);
               const copied = copiedUrl === url;
               const tournament = tournamentMap[session.tournamentId];
+              // Theme is locked — read from session, fall back to 'standard'
+              const sessionTheme = (session.theme || 'standard') as OverlayThemeId;
+              const themeLabel = THEME_OPTIONS.find(t => t.id === sessionTheme)?.label ?? sessionTheme;
+              // Per-session palette picker
+              const themePalettes = OVERLAY_PALETTES[sessionTheme] || [];
+              const activePaletteId = sessionPalettes[session._id] || session.palette || 'default';
+              const isPatching = patchingPalette === session._id;
               return (
-                <li key={session._id} className="p-4">
+                <li key={session._id} className="p-4 space-y-3">
+                  {/* Row 1: label + type/status badges + actions */}
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{session.label}</p>
                         <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ backgroundColor: `${config.accent}22`, color: config.accent }}>{config.shortLabel}</span>
+                        {/* Locked theme badge */}
+                        <span className="rounded-full px-2 py-0.5 text-[10px] font-bold flex items-center gap-1" style={{ backgroundColor: 'var(--surface-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border-primary)' }}>
+                          🔒 {themeLabel}
+                        </span>
                         <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ backgroundColor: session.paymentStatus === 'paid' ? '#16a34a22' : 'var(--surface-elevated)', color: session.paymentStatus === 'paid' ? '#4ade80' : 'var(--text-muted)' }}>{session.paymentStatus ?? 'free'}</span>
                       </div>
                       <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>{tournament ? `${tournament.name} (${tournament.year})` : 'Unknown tournament'} · Created {formatDate(session.createdAt)} · Charged {formatAmount(session.priceCharged ?? 0)}</p>
                       <p className="text-xs mt-1 font-mono" style={{ color: 'var(--text-tertiary)' }}>Token: {session._id.slice(0, 8)}…</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                      <button onClick={() => copyToClipboard(url)} className="px-3 py-1.5 rounded text-xs font-medium transition-colors" style={{ backgroundColor: copied ? '#16a34a' : 'rgba(79,70,229,0.12)', color: copied ? '#fff' : 'var(--brand-primary)', border: '1px solid var(--brand-primary)' }}>{copied ? '✓ Copied URL' : '⧉ Copy current style URL'}</button>
+                      <button onClick={() => copyToClipboard(url)} className="px-3 py-1.5 rounded text-xs font-medium transition-colors" style={{ backgroundColor: copied ? '#16a34a' : 'rgba(79,70,229,0.12)', color: copied ? '#fff' : 'var(--brand-primary)', border: '1px solid var(--brand-primary)' }}>{copied ? '✓ Copied URL' : '⧉ Copy URL'}</button>
                       {confirmingRevoke === session._id ? (
                         <div className="flex items-center gap-1">
                           <button onClick={() => handleRevoke(session._id)} disabled={revoking === session._id} className="px-3 py-1.5 rounded text-xs font-semibold disabled:opacity-50" style={{ backgroundColor: '#991b1b', color: '#fca5a5', border: '1px solid #b91c1c' }}>{revoking === session._id ? 'Revoking…' : 'Yes, Revoke'}</button>
@@ -537,6 +595,44 @@ function SessionsPage() {
                       )}
                     </div>
                   </div>
+                  {/* Row 2: inline palette picker (palette-only, theme stays locked) */}
+                  {themePalettes.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: 'var(--text-tertiary)' }}>
+                        Colour Palette {isPatching && <span className="normal-case font-normal">· saving…</span>}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {themePalettes.map(p => {
+                          const vars = p.cssVars as Record<string, string>;
+                          const swatches = ['--overlay-color-primary', '--overlay-bg-panel', '--overlay-text-bright', '--overlay-color-success']
+                            .map(k => vars[k]).filter(Boolean);
+                          const isActive = activePaletteId === p.id;
+                          return (
+                            <button
+                              key={p.id}
+                              onClick={() => handlePatchPalette(session._id, p.id)}
+                              disabled={isPatching}
+                              title={p.name}
+                              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition disabled:opacity-60"
+                              style={{
+                                backgroundColor: isActive ? 'rgba(79,70,229,0.14)' : 'var(--surface-elevated)',
+                                border: `1.5px solid ${isActive ? 'var(--brand-primary)' : 'var(--border-primary)'}`,
+                                color: isActive ? 'var(--brand-primary)' : 'var(--text-secondary)',
+                              }}
+                            >
+                              <span className="flex gap-0.5">
+                                {swatches.slice(0, 3).map((c, i) => (
+                                  <span key={i} className="inline-block w-3 h-3 rounded-sm" style={{ background: c }} />
+                                ))}
+                              </span>
+                              {p.name}
+                              {isActive && <span className="ml-0.5">✓</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </li>
               );
             })}

@@ -47,3 +47,54 @@ export async function DELETE(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// PATCH /api/overlay/sessions/[token] — update palette only (theme is locked at creation)
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ token: string }> }
+) {
+  try {
+    await connectToDatabase();
+
+    const user = await getUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { token: sessionToken } = await params;
+    const existingSession = await OverlaySessionModel.findOne({ _id: sessionToken, isActive: true }).lean();
+
+    if (!existingSession) {
+      return NextResponse.json({ error: 'Session not found or already revoked' }, { status: 404 });
+    }
+
+    if (!canAccessTournament(user.userId, user.role, { _id: (existingSession as any).tournamentId }, user.assignedTournaments)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const body = await request.json();
+
+    // Guard: theme and overlayType are immutable after creation.
+    if ('theme' in body || 'overlayType' in body) {
+      return NextResponse.json({
+        error: 'theme_locked',
+        message: 'Theme and overlay type are locked at creation. Generate a new session to use a different theme.',
+      }, { status: 400 });
+    }
+
+    const { palette } = body;
+    if (!palette || typeof palette !== 'string' || !palette.trim()) {
+      return NextResponse.json({ error: 'palette is required' }, { status: 400 });
+    }
+
+    const updated = await OverlaySessionModel.findOneAndUpdate(
+      { _id: sessionToken, isActive: true },
+      { $set: { palette: palette.trim() } },
+      { returnDocument: 'after' }
+    ).lean();
+
+    return NextResponse.json({ session: updated });
+  } catch (error) {
+    console.error('Error updating overlay session palette:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+

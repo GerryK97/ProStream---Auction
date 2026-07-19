@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     if (!canGenerateOverlays(user)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     requestedUserId = user.userId;
 
-    const { tournamentId, overlayType = 'fullscreen' } = await request.json();
+    const { tournamentId, overlayType = 'fullscreen', theme = 'standard', palette = 'default' } = await request.json();
     if (!tournamentId) {
       return NextResponse.json({ error: 'Missing required field: tournamentId' }, { status: 400 });
     }
@@ -119,6 +119,11 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
     requestedOverlayType = overlayType;
+
+    // Validate theme — must be a non-empty string, but we store whatever the client
+    // sends and let the overlay fall back to 'standard' if unknown. Sanitise to string.
+    const resolvedTheme = typeof theme === 'string' && theme.trim() ? theme.trim() : 'standard';
+    const resolvedPalette = typeof palette === 'string' && palette.trim() ? palette.trim() : 'default';
 
     const access = await assertTournamentAccess(user, tournamentId);
     if (access.response) return access.response;
@@ -165,6 +170,8 @@ export async function POST(request: NextRequest) {
       label,
       createdBy: user.userId,
       overlayType,
+      theme: resolvedTheme,
+      palette: resolvedPalette,
       paymentStatus: overlayPrice > 0 ? 'paid' : 'free',
       walletTransactionId: deduction?.transaction.id ?? null,
       priceCharged: overlayPrice,

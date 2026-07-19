@@ -9,6 +9,10 @@ export interface IOverlaySession extends Omit<Document, '_id'> {
   label: string;        // admin-given name e.g. "OBS Main"
   createdBy: string;    // userId
   overlayType: AuctionOverlayType;
+  /** Theme locked at creation — cannot be changed. Require a new session for a different theme. */
+  theme: string;
+  /** Palette — can be updated post-creation via PATCH /api/overlay/sessions/[token]. */
+  palette: string;
   paymentStatus: OverlayPaymentStatus;
   walletTransactionId?: number;
   refundTransactionId?: number;
@@ -30,6 +34,10 @@ const OverlaySessionSchema = new Schema<IOverlaySession>(
       required: true,
       default: 'fullscreen',
     },
+    /** Locked at creation — identifies which renderer/component set to use. */
+    theme: { type: String, default: 'standard' },
+    /** Mutable — operator can change colour palette without re-purchasing. */
+    palette: { type: String, default: 'default' },
     paymentStatus: {
       type: String,
       enum: ['free', 'paid', 'refunded', 'payment_failed'],
