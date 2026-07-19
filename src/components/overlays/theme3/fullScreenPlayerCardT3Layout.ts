@@ -13,7 +13,9 @@ export {
  */
 export const FS_CARD_PHOTO_RATIO = 0.52;
 
-export const FS_CARD_PANEL_PADDING = 56;
+export const FS_CARD_PANEL_PADDING = 36;
+/** Distance from the photo/details divider to name and details text. */
+export const FS_CARD_PANEL_LEFT_INSET = 40;
 export const FS_CARD_GOLD_RAIL_W = 6;
 export const FS_CARD_TOP_STRIP_H = 72;
 

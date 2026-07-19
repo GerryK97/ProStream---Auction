@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { getMinClassBasePrice } from '@/lib/playerClassUtils';
 import { TeamWiseImageBackgroundT3 } from './TeamWiseImageBackgroundT3';
 import type { Player, Team, Tournament } from '@/types';
 
@@ -23,14 +24,20 @@ const PANEL_W = 1536;
 const PANEL_H = 972;
 const PATTERN_H = PANEL_H - 15;
 const TITLE_H = 107;
+const HEADER_H = 56;
 const FOOTER_H = 62;
-const ROWS_PER_PAGE = 10;
+const ROWS_PER_PAGE = 12;
+/** Fits 12 rows between header and footer (available ~678px). */
+const ROW_H = 56;
+/** Extra clearance above footer so the last row never overlaps page dots. */
+const ROWS_BOTTOM_PAD = 48;
 const PAGE_MS = 10000;
 
-const GRID = '70px 560px 220px 280px';
+/** # | PLAYER | SOLD PRICE */
+const COLS = '70px 1fr 260px';
 
 const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
   @keyframes t3TeamWiseIn {
     from { opacity: 0; transform: scale(0.97) translateY(18px); }
     to   { opacity: 1; transform: scale(1) translateY(0); }
@@ -78,7 +85,14 @@ const TeamWiseSummaryT3: React.FC<Props> = ({ players, teams, tournament, teamId
   const balance = currentTeam?.currentBalance ?? currentTeam?.initialBudget ?? 0;
   const initial = currentTeam?.initialBudget ?? 0;
   const spent = initial - balance;
-  const rosterTotal = soldPlayers.reduce((s, p) => s + (p.finalPrice ?? 0), 0);
+  const squadSize = tournament?.squadSize ?? 0;
+  const canBuy = Math.max(0, squadSize - soldPlayers.length);
+  const maxBid = (() => {
+    if (!tournament || canBuy <= 0) return 0;
+    if (canBuy === 1) return balance;
+    const minBase = getMinClassBasePrice(tournament);
+    return Math.max(0, balance - (canBuy - 1) * minBase);
+  })();
 
   useEffect(() => {
     setTeamIndex(0);
@@ -145,79 +159,113 @@ const TeamWiseSummaryT3: React.FC<Props> = ({ players, teams, tournament, teamId
         <TeamWiseImageBackgroundT3 height={PATTERN_H} />
 
         <div style={{ position: 'absolute', left: 0, top: 0, right: 0, height: TITLE_H, background: WHITE, zIndex: 3 }} />
-        <div style={{ position: 'absolute', left: 0, top: TITLE_H, right: 0, height: 56, background: 'rgba(0,0,0,0.35)', zIndex: 4 }} />
+        <div style={{ position: 'absolute', left: 0, top: TITLE_H, right: 0, height: HEADER_H, background: 'rgba(0,0,0,0.35)', zIndex: 4 }} />
         <div style={{ position: 'absolute', left: 0, top: 0, right: 0, height: TITLE_H, background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.13) 100%)', zIndex: 5, pointerEvents: 'none' }} />
 
-        <TeamLogoBadge team={currentTeam} />
-
-        <div style={{ position: 'absolute', left: 138, top: 22, width: 900, color: DARK, zIndex: 10 }}>
+        <div style={{ position: 'absolute', left: 38, top: 22, right: TITLE_H + 60, color: DARK, zIndex: 10 }}>
           <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: 4, textTransform: 'uppercase', lineHeight: 1 }}>
             {tournament.name}
           </div>
-          <div style={{ marginTop: 10, fontSize: 36, fontWeight: 700, lineHeight: 1.05, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ marginTop: 10, fontSize: 40, fontWeight: 800, lineHeight: 1, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {currentTeam.name}
           </div>
-          {currentTeam.shortCode && (
-            <div style={{ marginTop: 6, fontSize: 13, fontWeight: 700, letterSpacing: 3, color: 'rgba(42,47,53,0.65)' }}>
-              {currentTeam.shortCode}
+        </div>
+
+        <div
+          style={{
+            position: 'absolute',
+            right: 38,
+            top: 0,
+            height: TITLE_H,
+            width: TITLE_H,
+            zIndex: 10,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {currentTeam.logoURL ? (
+            <img
+              src={currentTeam.logoURL}
+              alt={currentTeam.name}
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            />
+          ) : (
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                borderRadius: 10,
+                border: `2px solid ${GOLD}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: DARK,
+                fontSize: 24,
+                fontWeight: 700,
+                letterSpacing: 1,
+              }}
+            >
+              {(currentTeam.shortCode || currentTeam.name || 'T').slice(0, 2).toUpperCase()}
             </div>
           )}
         </div>
 
-        <div style={{ position: 'absolute', right: 38, top: 24, textAlign: 'right', color: DARK, zIndex: 10 }}>
-          <div style={{ fontSize: 38, fontWeight: 700, lineHeight: 1 }}>{soldPlayers.length}</div>
-          <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, letterSpacing: 3 }}>PLAYERS SOLD</div>
-          {!teamId && totalTeams > 1 && (
-            <div style={{ marginTop: 10, fontSize: 12, fontWeight: 700, letterSpacing: 2, color: 'rgba(42,47,53,0.55)' }}>
-              TEAM {safeTeamIndex + 1} / {totalTeams}
-            </div>
-          )}
-        </div>
-
-        <div style={{ position: 'absolute', left: 38, top: 122, right: 38, height: 30, display: 'grid', gridTemplateColumns: GRID, columnGap: 24, alignItems: 'center', color: WHITE, fontSize: 22, fontWeight: 500, zIndex: 10 }}>
+        <div style={{ position: 'absolute', left: 38, top: 122, right: 38, height: 30, display: 'grid', gridTemplateColumns: COLS, columnGap: 28, alignItems: 'center', color: WHITE, fontSize: 22, fontWeight: 500, zIndex: 10 }}>
           <Header>#</Header>
           <Header>PLAYER</Header>
-          <Header>CLASS</Header>
-          <Header align="center">PRICE</Header>
+          <Header align="right">SOLD PRICE</Header>
         </div>
 
-        <div style={{ position: 'absolute', left: 0, right: 0, top: 184, bottom: FOOTER_H + 15, overflow: 'hidden', zIndex: 10 }}>
+        <div style={{ position: 'absolute', left: 0, right: 0, top: 184, bottom: FOOTER_H + ROWS_BOTTOM_PAD, overflow: 'hidden', zIndex: 10 }}>
           {pageRows.map((p, i) => {
             const globalIndex = page * ROWS_PER_PAGE + i + 1;
-            const meta = [p.position, p.currentClub].filter(Boolean).join(' · ');
 
             return (
               <div
                 key={p._id}
                 style={{
                   position: 'relative',
-                  height: 72,
+                  height: ROW_H,
                   margin: '0 38px',
                   display: 'grid',
-                  gridTemplateColumns: GRID,
-                  columnGap: 24,
+                  gridTemplateColumns: COLS,
+                  columnGap: 28,
                   alignItems: 'center',
                   borderBottom: '1px solid rgba(204,204,204,0.45)',
                   color: WHITE,
                   animation: `t3TeamWiseRowIn 360ms ${0.12 + i * 0.06}s cubic-bezier(0.22,1,0.36,1) both`,
                 }}
               >
-                <div style={{ color: MUTED, fontSize: 28, fontWeight: 400 }}>{globalIndex}</div>
-                <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ color: MUTED, fontSize: 24, fontWeight: 400 }}>{globalIndex}</div>
+                <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 14, height: '100%' }}>
                   <PlayerThumb player={p} />
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: 27, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'capitalize' }}>{p.name}</div>
-                    {meta && (
-                      <div style={{ marginTop: 4, color: 'rgba(255,255,255,0.62)', fontSize: 13, fontWeight: 500, letterSpacing: 1, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {meta}
-                      </div>
-                    )}
+                  <div
+                    style={{
+                      minWidth: 0,
+                      flex: 1,
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 34,
+                        fontWeight: 600,
+                        lineHeight: 1,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        textTransform: 'capitalize',
+                        width: '100%',
+                      }}
+                    >
+                      {p.name}
+                    </div>
                   </div>
                 </div>
-                <div style={{ color: p.playerClass ? GOLD : MUTED, fontSize: 22, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {p.playerClass || '—'}
-                </div>
-                <div style={{ textAlign: 'center', color: GOLD, fontSize: 25, fontWeight: 700 }}>
+                <div style={{ textAlign: 'right', color: GOLD, fontSize: 26, fontWeight: 700 }}>
                   {formatCurrency(p.finalPrice)}
                 </div>
               </div>
@@ -225,14 +273,15 @@ const TeamWiseSummaryT3: React.FC<Props> = ({ players, teams, tournament, teamId
           })}
         </div>
 
-        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 15, height: FOOTER_H, background: GOLD, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', color: DARK, zIndex: 10 }}>
-          <FooterStat label="PLAYERS" value={String(soldPlayers.length)} />
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 15, height: FOOTER_H, background: GOLD, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', color: DARK, zIndex: 10 }}>
+          <FooterStat label="PLAYERS" value={`${soldPlayers.length}/${squadSize || '—'}`} />
           <FooterStat label="SPENT" value={formatCurrency(spent)} />
-          <FooterStat label="ROSTER TOTAL" value={formatCurrency(rosterTotal)} />
+          <FooterStat label="MAX BID" value={formatCurrency(maxBid)} />
+          <FooterStat label="BALANCE" value={formatCurrency(balance)} />
         </div>
 
         {(totalPages > 1 || (!teamId && totalTeams > 1)) && (
-          <div style={{ position: 'absolute', right: 38, bottom: FOOTER_H + 30, display: 'flex', alignItems: 'center', gap: 10, zIndex: 10 }}>
+          <div style={{ position: 'absolute', right: 38, bottom: FOOTER_H + 22, display: 'flex', alignItems: 'center', gap: 10, zIndex: 12, pointerEvents: 'none' }}>
             {!teamId && totalTeams > 1 && (
               <>
                 {rosters.map((_, i) => (
@@ -276,35 +325,6 @@ const TeamWiseSummaryT3: React.FC<Props> = ({ players, teams, tournament, teamId
   );
 };
 
-function TeamLogoBadge({ team }: { team: Team }) {
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        left: 38,
-        top: 22,
-        width: 80,
-        height: 80,
-        borderRadius: 10,
-        border: `2px solid ${GOLD}`,
-        background: 'rgba(255,255,255,0.92)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-        zIndex: 10,
-        boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
-      }}
-    >
-      {team.logoURL ? (
-        <img src={team.logoURL} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-      ) : (
-        <span style={{ fontSize: 22, fontWeight: 800, color: GOLD }}>{team.shortCode?.slice(0, 2) ?? '?'}</span>
-      )}
-    </div>
-  );
-}
-
 function PlayerThumb({ player }: { player: Player }) {
   const src = player.photoURL?.trim() || player.secondaryImageURL?.trim() || '';
   const initials = player.name
@@ -317,8 +337,8 @@ function PlayerThumb({ player }: { player: Player }) {
   return (
     <div
       style={{
-        width: 48,
-        height: 48,
+        width: 44,
+        height: 44,
         borderRadius: 8,
         flexShrink: 0,
         border: `2px solid ${GOLD}`,
@@ -337,7 +357,7 @@ function PlayerThumb({ player }: { player: Player }) {
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         />
       ) : (
-        <span style={{ fontSize: 13, fontWeight: 700, color: GOLD }}>{initials || '?'}</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: GOLD }}>{initials || '?'}</span>
       )}
     </div>
   );

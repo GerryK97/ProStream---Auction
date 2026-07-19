@@ -16,6 +16,7 @@ import {
   FS_CARD_EXIT_MS,
   FS_CARD_GOLD_RAIL_W,
   FS_CARD_PANEL_PADDING,
+  FS_CARD_PANEL_LEFT_INSET,
   FS_CARD_SOLD_HOLD_MS,
   FS_CARD_TOP_STRIP_H,
   FS_CARD_UNSOLD_HOLD_MS,
@@ -552,7 +553,7 @@ export function FullScreenPlayerCardT3({
                 top: 8,
                 right: 24,
                 fontFamily: DISPLAY_FONT,
-                fontSize: Math.round(panelWidth * 0.24),
+                fontSize: Math.round(panelWidth * 0.18),
                 fontWeight: 800,
                 lineHeight: 1,
                 color: 'var(--t3-bar-gold, var(--t3-accent))',
@@ -565,7 +566,7 @@ export function FullScreenPlayerCardT3({
             </div>
           )}
 
-          <div style={{ padding: `${FS_CARD_PANEL_PADDING}px ${FS_CARD_PANEL_PADDING}px 0 ${FS_CARD_PANEL_PADDING + FS_CARD_GOLD_RAIL_W + 16}px`, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: `${FS_CARD_PANEL_PADDING}px ${FS_CARD_PANEL_PADDING}px 0 ${FS_CARD_PANEL_LEFT_INSET}px`, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <div
               style={{
                 fontFamily: DISPLAY_FONT,

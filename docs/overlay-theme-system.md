@@ -121,20 +121,24 @@ The Team Standings leaderboard ([`TeamSummaryT3.tsx`](../src/components/overlays
 ### Theme 3 Team Imagery (`team-wise-image`)
 
 - **Trigger:** Overlay Controls → **Team Imagery**; optional team filter locks to one franchise
-- **Layout:** One team per screen — **≤5 slots:** accent info bar + player row grouped and **centered together** on screen; **6+ slots:** top row, center bar, bottom row
-- **Center bar:** Tournament name, team logo, team name, total spent, players sold (`sold/squadSize`) — ticker-style accent rail with gradient overlay
+- **Layout:** One team per screen — **team details strip at top**, all player cards below as one set (1 row when ≤6 slots; 2 rows when 7–12, even split, max 6 per row); card size scales to fit
+- **Top strip:** Tournament name, team logo (full strip height), team name — accent rail; tournament logo on the right (spent / sold count removed)
 - **Tokens:** Same Theme 3 overlay namespace as TickerT3 — `--t3-accent`, `--t3-bg-panel`, `--t3-bg-card`, `--t3-text-primary`, `--t3-text-secondary`, `--t3-on-accent`, `--t3-player-no-*`
 - **Slots:** Sold players fill roster order; remaining squad positions show as open slots — never more than `squadSize` total
-- **Pagination:** Up to 10 slots per page; auto-advance every 8s through pages then the next team
+- **Pagination:** Max **12** slots per screen (adapts down when `squadSize` is smaller); if squad &gt; 12, pages auto-advance every 8s then the next team
 
 ### Visual system
 - **Trigger:** Overlay Controls → **Team Summary** (`displayMode: team-summary`); optional team filter highlights a row
 - **Background:** [`TeamWiseImageBackgroundT3.tsx`](../src/components/overlays/theme3/TeamWiseImageBackgroundT3.tsx) — shared summary panel background (Team Summary, Player Summary / `SoldPlayersSummaryT3`, Top 10 Sold / `Top10SummaryT3`)
+- **Player list rows (Player Summary / Top 10 / Team-wise):** player name ~34px filling the row; no secondary meta under the name; team shown as full name only (no logo / short code) where a team column exists; Player Summary / Team-wise show **12** rows per screen (row height ~56px)
+- **Columns:** `#` · Team · Players (`sold/squadSize`) · **Can Buy** (remaining squad slots) · **Max Bid** (balance minus reserve for remaining slots × min base) · Balance — Spent column removed
+- **Pagination:** Max **12 teams per screen**; if more than 12, pages auto-advance every 10s with page dots
 - **Tokens:** `--t3-bg-panel`, `--t3-accent`, `--t3-accent-rgb`, `--t3-accent-soft`, `--t3-bar-highlight` (overlay Theme 3 namespace only)
 - **Bottom strip:** accent-led gradient (`--t3-accent` → darker teal) replacing the legacy flat gold panel fill
 - **Header row:** semi-transparent dark scrim (`rgba(0,0,0,0.35)`) so column labels stay readable over the pattern
-- **Title block:** unchanged white block with dark text
+- **Title block:** white block with dark text; right side shows **tournament logo** at full title-row height (same on Player Summary / Top 10 Sold / Team-wise)
 - **Row highlights:** legacy gold accent (`CLR_GOLD`) preserved for highlighted team rows
+- **Footer:** Teams · Total Budget · Slots Left (sum of Can Buy)
 
 Skew-band drift is optional (10s cycle) and disabled under `prefers-reduced-motion`.
 
@@ -143,9 +147,9 @@ Skew-band drift is optional (10s cycle) and disabled under `prefers-reduced-moti
 Per-team sold roster ([`TeamWiseSummaryT3.tsx`](../src/components/overlays/theme3/TeamWiseSummaryT3.tsx)) uses the same panel shell as Player Summary: [`TeamWiseImageBackgroundT3.tsx`](../src/components/overlays/theme3/TeamWiseImageBackgroundT3.tsx), white title block, dark column header scrim, gold footer strip.
 
 - **Trigger:** Overlay Controls → **Team-wise** (`displayMode: team-wise-summary`); optional team filter locks to one franchise
-- **Layout:** One team per view — logo, team name, sold players table (`#`, player thumb/name, class, price)
-- **Pagination:** 10 players per page; auto-advance every 10s; after the last page cycles to the next team (unless filtered)
-- **Footer:** Players count, team spent, roster auction total
+- **Layout:** One team per view — full team name in title; sold players table (`#`, player thumb/name ~38px, sold price); no meta under player names; title-row right side is **that team’s logo** (full white-row height)
+- **Pagination:** 12 players per page; auto-advance every 10s; after the last page cycles to the next team (unless filtered)
+- **Footer:** Players (`sold/squadSize`) · Spent · Max Bid (same reserve rule as Team Summary) · Balance
 
 ## Theme 3 Wheel Spin (`wheel-spin`)
 

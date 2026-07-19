@@ -15,7 +15,6 @@ const DARK = '#2a2f35';
 const GOLD = '#b9aa62';
 const WHITE = '#ffffff';
 const MUTED = '#cccccc';
-const GREEN = '#20c997';
 
 const PANEL_LEFT = 192;
 const PANEL_TOP = 54;
@@ -25,6 +24,10 @@ const PATTERN_H = PANEL_H - 15;
 const TITLE_H = 107;
 const HEADER_H = 56;
 const FOOTER_H = 62;
+const ROW_H = 66;
+
+/** # | PLAYER | TEAM | PRICE */
+const COLS = '70px 1fr 340px 260px';
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
@@ -48,10 +51,6 @@ const Top10SummaryT3: React.FC<Props> = ({ players, teams, tournament, isExiting
     .filter(p => p.isSold && !p.isIconic && p.finalPrice)
     .sort((a, b) => (b.finalPrice ?? 0) - (a.finalPrice ?? 0) || a.name.localeCompare(b.name))
     .slice(0, 10);
-
-  const totalSold = players.filter(p => p.isSold && !p.isIconic).length;
-  const highestBid = top10[0]?.finalPrice ?? 0;
-  const top10Total = top10.reduce((sum, p) => sum + (p.finalPrice ?? 0), 0);
 
   if (!tournament) return null;
 
@@ -90,13 +89,48 @@ const Top10SummaryT3: React.FC<Props> = ({ players, teams, tournament, isExiting
           </div>
         </div>
 
-        <div style={{ position: 'absolute', right: 38, top: 28, textAlign: 'right', color: DARK, zIndex: 10 }}>
-          <div style={{ fontSize: 38, fontWeight: 700, lineHeight: 1 }}>{formatCurrency(highestBid)}</div>
-          <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, letterSpacing: 3 }}>HIGHEST BID</div>
+        <div
+          style={{
+            position: 'absolute',
+            right: 38,
+            top: 0,
+            height: TITLE_H,
+            width: TITLE_H,
+            zIndex: 10,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {tournament?.logoURL ? (
+            <img
+              src={tournament.logoURL}
+              alt={tournament.name}
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            />
+          ) : (
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                borderRadius: 10,
+                border: `2px solid ${GOLD}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: DARK,
+                fontSize: 24,
+                fontWeight: 700,
+                letterSpacing: 1,
+              }}
+            >
+              {(tournament?.name || 'T').slice(0, 2).toUpperCase()}
+            </div>
+          )}
         </div>
 
         {/* Header */}
-        <div style={{ position: 'absolute', left: 38, top: 122, right: 38, height: 30, display: 'grid', gridTemplateColumns: '70px 520px 300px 250px', columnGap: 34, alignItems: 'center', color: WHITE, fontSize: 22, fontWeight: 500, zIndex: 10 }}>
+        <div style={{ position: 'absolute', left: 38, top: 122, right: 38, height: 30, display: 'grid', gridTemplateColumns: COLS, columnGap: 28, alignItems: 'center', color: WHITE, fontSize: 22, fontWeight: 500, zIndex: 10 }}>
           <Header>#</Header>
           <Header>PLAYER</Header>
           <Header>TEAM</Header>
@@ -112,7 +146,6 @@ const Top10SummaryT3: React.FC<Props> = ({ players, teams, tournament, isExiting
           ) : (
             top10.map((player, index) => {
               const team = teams.find(t => t._id === player.winningTeamId);
-              const meta = [player.position, player.playerClass].filter(Boolean).join(' · ');
               const isPodium = index < 3;
 
               return (
@@ -120,11 +153,11 @@ const Top10SummaryT3: React.FC<Props> = ({ players, teams, tournament, isExiting
                   key={player._id}
                   style={{
                     position: 'relative',
-                    height: 72,
+                    height: ROW_H,
                     margin: '0 38px',
                     display: 'grid',
-                    gridTemplateColumns: '70px 520px 300px 250px',
-                    columnGap: 34,
+                    gridTemplateColumns: COLS,
+                    columnGap: 28,
                     alignItems: 'center',
                     borderBottom: `1px solid rgba(204,204,204,0.45)`,
                     background: index === 0 ? 'linear-gradient(90deg, rgba(185,170,98,0.16) 0%, rgba(185,170,98,0.04) 100%)' : 'transparent',
@@ -132,26 +165,54 @@ const Top10SummaryT3: React.FC<Props> = ({ players, teams, tournament, isExiting
                     animation: `t3Top10RowIn 360ms ${0.12 + index * 0.06}s cubic-bezier(0.22,1,0.36,1) both`,
                   }}
                 >
-                  <div style={{ color: isPodium ? GOLD : MUTED, fontSize: 30, fontWeight: isPodium ? 700 : 400 }}>
+                  <div style={{ color: isPodium ? GOLD : MUTED, fontSize: 28, fontWeight: isPodium ? 700 : 400 }}>
                     {index + 1}
                   </div>
 
-                  <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 16, height: '100%' }}>
                     <PlayerThumb player={player} rank={index + 1} />
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ fontSize: 28, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'capitalize', color: isPodium ? GOLD : WHITE }}>
+                    <div
+                      style={{
+                        minWidth: 0,
+                        flex: 1,
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 38,
+                          fontWeight: 600,
+                          lineHeight: 1,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          textTransform: 'capitalize',
+                          width: '100%',
+                          color: isPodium ? GOLD : WHITE,
+                        }}
+                      >
                         {player.name}
                       </div>
-                      {meta && <div style={{ marginTop: 4, color: 'rgba(255,255,255,0.62)', fontSize: 13, fontWeight: 500, letterSpacing: 1, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta}</div>}
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-                    {team?.logoURL && <img src={team.logoURL} alt="" style={{ width: 42, height: 42, objectFit: 'contain', flexShrink: 0 }} />}
-                    <span style={{ color: MUTED, fontSize: 22, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team?.shortCode ?? team?.name ?? '—'}</span>
+                  <div
+                    style={{
+                      color: MUTED,
+                      fontSize: 24,
+                      fontWeight: 600,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      minWidth: 0,
+                    }}
+                  >
+                    {team?.name ?? '—'}
                   </div>
 
-                  <div style={{ textAlign: 'right', color: GREEN, fontSize: 30, fontWeight: 700 }}>
+                  <div style={{ textAlign: 'right', color: GOLD, fontSize: 28, fontWeight: 700 }}>
                     {formatCurrency(player.finalPrice)}
                   </div>
                 </div>
@@ -160,12 +221,8 @@ const Top10SummaryT3: React.FC<Props> = ({ players, teams, tournament, isExiting
           )}
         </div>
 
-        {/* Footer */}
-        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 15, height: FOOTER_H, background: GOLD, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', color: DARK, zIndex: 10 }}>
-          <FooterStat label="PLAYERS SOLD" value={String(totalSold)} />
-          <FooterStat label="HIGHEST BID" value={formatCurrency(highestBid)} />
-          <FooterStat label="TOP 10 TOTAL" value={formatCurrency(top10Total)} />
-        </div>
+        {/* Footer strip */}
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 15, height: FOOTER_H, background: GOLD, zIndex: 10 }} />
       </div>
     </>
   );
@@ -184,8 +241,8 @@ function PlayerThumb({ player, rank }: { player: Player; rank: number }) {
   return (
     <div
       style={{
-        width: 50,
-        height: 50,
+        width: 48,
+        height: 48,
         borderRadius: 8,
         flexShrink: 0,
         border: `2px solid ${isPodium ? GOLD : 'rgba(185,170,98,0.65)'}`,
@@ -213,15 +270,6 @@ function PlayerThumb({ player, rank }: { player: Player; rank: number }) {
 
 function Header({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'center' | 'right' }) {
   return <div style={{ textAlign: align, fontSize: 24, fontWeight: 500, color: WHITE }}>{children}</div>;
-}
-
-function FooterStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-      <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase', opacity: 0.75 }}>{label}</span>
-      <span style={{ fontSize: 28, fontWeight: 700 }}>{value}</span>
-    </div>
-  );
 }
 
 export default Top10SummaryT3;

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { getMinClassBasePrice } from '@/lib/playerClassUtils';
 import { TeamWiseImageBackgroundT3 } from './TeamWiseImageBackgroundT3';
 import type { Player, Team, Tournament } from '@/types';
 
@@ -26,8 +27,13 @@ const PATTERN_H = PANEL_H - 15;
 const TITLE_H = 107;
 const HEADER_H = 56;
 const FOOTER_H = 62;
-const ROWS_PER_PAGE = 10;
+/** Max teams per screen; extras paginate with auto-advance. */
+const ROWS_PER_PAGE = 12;
+const ROW_H = 59;
 const PAGE_MS = 10000;
+
+/** # | TEAM | PLAYERS | CAN BUY | MAX BID | BALANCE */
+const COLS = '64px 1fr 120px 140px 200px 200px';
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
@@ -52,6 +58,28 @@ function soldCount(team: Team, players: Player[]): number {
   return players.filter(p => p.isSold && p.winningTeamId === team._id).length;
 }
 
+/** Remaining squad slots a team can still fill. */
+function canBuyMore(team: Team, players: Player[], squadSize: number): number {
+  return Math.max(0, squadSize - soldCount(team, players));
+}
+
+/**
+ * Max affordable bid — same reserve rule as sell / control panel:
+ * keep (remainingSlots - 1) × min base price for the rest of the squad.
+ */
+function calcMaxBid(
+  team: Team,
+  players: Player[],
+  tournament: Tournament,
+): number {
+  const balance = team.currentBalance ?? 0;
+  const remaining = canBuyMore(team, players, tournament.squadSize ?? 0);
+  if (remaining <= 0) return 0;
+  if (remaining === 1) return balance;
+  const minBase = getMinClassBasePrice(tournament);
+  return Math.max(0, balance - (remaining - 1) * minBase);
+}
+
 const TeamSummaryT3: React.FC<Props> = ({ teams, players, tournament, teamId, isExiting = false }) => {
   const [page, setPage] = useState(0);
 
@@ -61,10 +89,9 @@ const TeamSummaryT3: React.FC<Props> = ({ teams, players, tournament, teamId, is
   );
 
   const totalBudget = sorted.reduce((s, t) => s + (t.initialBudget ?? 0), 0);
-  const totalSpent = sorted.reduce(
-    (s, t) => s + ((t.initialBudget ?? 0) - (t.currentBalance ?? t.initialBudget ?? 0)),
-    0,
-  );
+  const totalCanBuy = tournament
+    ? sorted.reduce((s, t) => s + canBuyMore(t, players, tournament.squadSize ?? 0), 0)
+    : 0;
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / ROWS_PER_PAGE));
   const pageRows = sorted.slice(page * ROWS_PER_PAGE, page * ROWS_PER_PAGE + ROWS_PER_PAGE);
@@ -77,6 +104,8 @@ const TeamSummaryT3: React.FC<Props> = ({ teams, players, tournament, teamId, is
   }, [totalPages]);
 
   if (!tournament) return null;
+
+  const squadSize = tournament.squadSize ?? 0;
 
   return (
     <>
@@ -112,16 +141,52 @@ const TeamSummaryT3: React.FC<Props> = ({ teams, players, tournament, teamId, is
           </div>
         </div>
 
-        <div style={{ position: 'absolute', right: 38, top: 28, textAlign: 'right', color: DARK, zIndex: 10 }}>
-          <div style={{ fontSize: 38, fontWeight: 700, lineHeight: 1 }}>{sorted.length}</div>
-          <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, letterSpacing: 3 }}>TEAMS</div>
+        <div
+          style={{
+            position: 'absolute',
+            right: 38,
+            top: 0,
+            height: TITLE_H,
+            width: TITLE_H,
+            zIndex: 10,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {tournament.logoURL ? (
+            <img
+              src={tournament.logoURL}
+              alt={tournament.name}
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            />
+          ) : (
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                borderRadius: 10,
+                border: `2px solid ${GOLD}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: DARK,
+                fontSize: 22,
+                fontWeight: 700,
+                letterSpacing: 1,
+              }}
+            >
+              {(tournament.name || 'T').slice(0, 2).toUpperCase()}
+            </div>
+          )}
         </div>
 
-        <div style={{ position: 'absolute', left: 38, top: 122, right: 38, height: 30, display: 'grid', gridTemplateColumns: '70px 560px 160px 220px 220px', columnGap: 24, alignItems: 'center', color: WHITE, fontSize: 22, fontWeight: 500, zIndex: 10 }}>
+        <div style={{ position: 'absolute', left: 38, top: 122, right: 38, height: 30, display: 'grid', gridTemplateColumns: COLS, columnGap: 20, alignItems: 'center', color: WHITE, fontSize: 22, fontWeight: 500, zIndex: 10 }}>
           <Header>#</Header>
           <Header>TEAM</Header>
           <Header align="center">PLAYERS</Header>
-          <Header align="center">SPENT</Header>
+          <Header align="center">CAN BUY</Header>
+          <Header align="center">MAX BID</Header>
           <Header align="right">BALANCE</Header>
         </div>
 
@@ -129,9 +194,9 @@ const TeamSummaryT3: React.FC<Props> = ({ teams, players, tournament, teamId, is
           {pageRows.map((team, i) => {
             const globalIndex = page * ROWS_PER_PAGE + i + 1;
             const balance = team.currentBalance ?? team.initialBudget ?? 0;
-            const initial = team.initialBudget ?? 0;
-            const spent = initial - balance;
             const count = soldCount(team, players);
+            const buyLeft = canBuyMore(team, players, squadSize);
+            const maxBid = calcMaxBid(team, players, tournament);
             const highlighted = Boolean(teamId && team._id === teamId);
 
             return (
@@ -139,32 +204,50 @@ const TeamSummaryT3: React.FC<Props> = ({ teams, players, tournament, teamId, is
                 key={team._id}
                 style={{
                   position: 'relative',
-                  height: 72,
+                  height: ROW_H,
                   margin: '0 38px',
                   display: 'grid',
-                  gridTemplateColumns: '70px 560px 160px 220px 220px',
-                  columnGap: 24,
+                  gridTemplateColumns: COLS,
+                  columnGap: 20,
                   alignItems: 'center',
                   borderBottom: '1px solid rgba(204,204,204,0.45)',
                   color: WHITE,
                   background: highlighted ? 'rgba(185,170,98,0.18)' : 'transparent',
                   boxShadow: highlighted ? 'inset 3px 0 0 #b9aa62' : undefined,
-                  animation: `t3TeamSummaryRowIn 360ms ${0.12 + i * 0.06}s cubic-bezier(0.22,1,0.36,1) both`,
+                  animation: `t3TeamSummaryRowIn 360ms ${0.12 + i * 0.05}s cubic-bezier(0.22,1,0.36,1) both`,
                 }}
               >
-                <div style={{ color: MUTED, fontSize: 28, fontWeight: 400 }}>{globalIndex}</div>
-                <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ color: MUTED, fontSize: 26, fontWeight: 400 }}>{globalIndex}</div>
+                <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, height: '100%' }}>
                   <TeamLogo team={team} />
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: 27, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.name}</div>
-                    {team.shortCode && (
-                      <div style={{ marginTop: 4, color: 'rgba(255,255,255,0.62)', fontSize: 13, fontWeight: 500, letterSpacing: 1, textTransform: 'uppercase' }}>{team.shortCode}</div>
-                    )}
+                  <div
+                    style={{
+                      minWidth: 0,
+                      flex: 1,
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 30,
+                        fontWeight: 600,
+                        lineHeight: 1,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        width: '100%',
+                      }}
+                    >
+                      {team.name}
+                    </div>
                   </div>
                 </div>
-                <div style={{ textAlign: 'center', color: MUTED, fontSize: 25, fontWeight: 700 }}>{count}</div>
-                <div style={{ textAlign: 'center', color: GOLD, fontSize: 25, fontWeight: 700 }}>{formatCurrency(spent)}</div>
-                <div style={{ textAlign: 'right', color: GREEN, fontSize: 25, fontWeight: 700 }}>{formatCurrency(balance)}</div>
+                <div style={{ textAlign: 'center', color: MUTED, fontSize: 26, fontWeight: 700 }}>{count}/{squadSize || '—'}</div>
+                <div style={{ textAlign: 'center', color: buyLeft > 0 ? GOLD : MUTED, fontSize: 26, fontWeight: 700 }}>{buyLeft}</div>
+                <div style={{ textAlign: 'center', color: maxBid > 0 ? WHITE : MUTED, fontSize: 26, fontWeight: 700 }}>{formatCurrency(maxBid)}</div>
+                <div style={{ textAlign: 'right', color: GREEN, fontSize: 26, fontWeight: 700 }}>{formatCurrency(balance)}</div>
               </div>
             );
           })}
@@ -173,7 +256,7 @@ const TeamSummaryT3: React.FC<Props> = ({ teams, players, tournament, teamId, is
         <div style={{ position: 'absolute', left: 0, right: 0, bottom: 15, height: FOOTER_H, background: GOLD, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', color: DARK, zIndex: 10 }}>
           <FooterStat label="TEAMS" value={String(sorted.length)} />
           <FooterStat label="TOTAL BUDGET" value={formatCurrency(totalBudget)} />
-          <FooterStat label="TOTAL SPENT" value={formatCurrency(totalSpent)} />
+          <FooterStat label="SLOTS LEFT" value={String(totalCanBuy)} />
         </div>
 
         {totalPages > 1 && (
@@ -192,8 +275,8 @@ function TeamLogo({ team }: { team: Team }) {
   return (
     <div
       style={{
-        width: 48,
-        height: 48,
+        width: 42,
+        height: 42,
         borderRadius: 8,
         flexShrink: 0,
         border: `2px solid ${GOLD}`,

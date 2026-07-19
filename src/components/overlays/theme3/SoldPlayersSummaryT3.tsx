@@ -15,8 +15,6 @@ const DARK = '#2a2f35';
 const GOLD = '#b9aa62';
 const WHITE = '#ffffff';
 const MUTED = '#cccccc';
-const GREEN = '#20c997';
-const RED = '#ef4444';
 
 const PANEL_LEFT = 192;
 const PANEL_TOP = 54;
@@ -26,8 +24,15 @@ const PATTERN_H = PANEL_H - 15; // matches Team Summary — accent strip at bott
 const TITLE_H = 107;
 const HEADER_H = 56;
 const FOOTER_H = 62;
-const ROWS_PER_PAGE = 10;
+const ROWS_PER_PAGE = 12;
+/** Fits 12 rows between header and footer (available ~678px). */
+const ROW_H = 56;
+/** Extra clearance above footer so the last row never overlaps page dots. */
+const ROWS_BOTTOM_PAD = 48;
 const PAGE_MS = 10000;
+
+/** # | PLAYER | TEAM | SOLD PRICE */
+const COLS = '70px 1fr 340px 260px';
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
@@ -46,12 +51,6 @@ function formatCurrency(n?: number | null): string {
   return n.toLocaleString('en-IN');
 }
 
-function playerStatus(player: Player): { label: string; color: string } {
-  if (player.isSold) return { label: 'SOLD', color: GREEN };
-  if (player.isUnsold) return { label: 'UNSOLD', color: RED };
-  return { label: 'PENDING', color: MUTED };
-}
-
 const SoldPlayersSummaryT3: React.FC<Props> = ({ players, teams, tournament, isExiting = false }) => {
   const [page, setPage] = useState(0);
 
@@ -66,7 +65,6 @@ const SoldPlayersSummaryT3: React.FC<Props> = ({ players, teams, tournament, isE
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const rows = [...soldPlayers, ...unsoldPlayers, ...pendingPlayers];
-  const totalPlayers = players.filter(p => !p.isIconic).length;
   const totalPages = Math.max(1, Math.ceil(rows.length / ROWS_PER_PAGE));
   const pageRows = rows.slice(page * ROWS_PER_PAGE, page * ROWS_PER_PAGE + ROWS_PER_PAGE);
 
@@ -114,60 +112,120 @@ const SoldPlayersSummaryT3: React.FC<Props> = ({ players, teams, tournament, isE
           </div>
         </div>
 
-        <div style={{ position: 'absolute', right: 38, top: 28, textAlign: 'right', color: DARK, zIndex: 10 }}>
-          <div style={{ fontSize: 38, fontWeight: 700, lineHeight: 1 }}>{soldPlayers.length} / {totalPlayers}</div>
-          <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, letterSpacing: 3 }}>PLAYERS SOLD</div>
+        <div
+          style={{
+            position: 'absolute',
+            right: 38,
+            top: 0,
+            height: TITLE_H,
+            width: TITLE_H,
+            zIndex: 10,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {tournament.logoURL ? (
+            <img
+              src={tournament.logoURL}
+              alt={tournament.name}
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            />
+          ) : (
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                borderRadius: 10,
+                border: `2px solid ${GOLD}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: DARK,
+                fontSize: 24,
+                fontWeight: 700,
+                letterSpacing: 1,
+              }}
+            >
+              {(tournament.name || 'T').slice(0, 2).toUpperCase()}
+            </div>
+          )}
         </div>
 
         {/* Header */}
-        <div style={{ position: 'absolute', left: 38, top: 122, right: 38, height: 30, display: 'grid', gridTemplateColumns: '70px 390px 180px 180px 210px 140px', columnGap: 24, alignItems: 'center', color: WHITE, fontSize: 22, fontWeight: 500, zIndex: 10 }}>
+        <div style={{ position: 'absolute', left: 38, top: 122, right: 38, height: 30, display: 'grid', gridTemplateColumns: COLS, columnGap: 28, alignItems: 'center', color: WHITE, fontSize: 22, fontWeight: 500, zIndex: 10 }}>
           <Header>#</Header>
           <Header>PLAYER</Header>
-          <Header>CLASS</Header>
           <Header>TEAM</Header>
-          <Header align="center">PRICE</Header>
-          <Header align="right">STATUS</Header>
+          <Header align="right">SOLD PRICE</Header>
         </div>
 
-        {/* Rows */}
-        <div style={{ position: 'absolute', left: 0, right: 0, top: 184, bottom: FOOTER_H + 15, overflow: 'hidden', zIndex: 10 }}>
+        {/* Rows — bottom pad keeps the 10th row clear of pagination dots */}
+        <div style={{ position: 'absolute', left: 0, right: 0, top: 184, bottom: FOOTER_H + ROWS_BOTTOM_PAD, overflow: 'hidden', zIndex: 10 }}>
           {pageRows.map((p, i) => {
             const globalIndex = page * ROWS_PER_PAGE + i + 1;
             const team = teams.find(t => t._id === p.winningTeamId);
-            const status = playerStatus(p);
-            const meta = [p.position, p.currentClub].filter(Boolean).join(' · ');
 
             return (
               <div
                 key={p._id}
                 style={{
                   position: 'relative',
-                  height: 72,
+                  height: ROW_H,
                   margin: '0 38px',
                   display: 'grid',
-                  gridTemplateColumns: '70px 390px 180px 180px 210px 140px',
-                  columnGap: 24,
+                  gridTemplateColumns: COLS,
+                  columnGap: 28,
                   alignItems: 'center',
                   borderBottom: `1px solid rgba(204,204,204,0.45)`,
                   color: WHITE,
                   animation: `t3PlayerSummaryRowIn 360ms ${0.12 + i * 0.06}s cubic-bezier(0.22,1,0.36,1) both`,
                 }}
               >
-                <div style={{ color: MUTED, fontSize: 28, fontWeight: 400 }}>{globalIndex}</div>
-                <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ color: MUTED, fontSize: 24, fontWeight: 400 }}>{globalIndex}</div>
+                <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 14, height: '100%' }}>
                   <PlayerThumb player={p} />
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: 27, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'capitalize' }}>{p.name}</div>
-                    {meta && <div style={{ marginTop: 4, color: 'rgba(255,255,255,0.62)', fontSize: 13, fontWeight: 500, letterSpacing: 1, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta}</div>}
+                  <div
+                    style={{
+                      minWidth: 0,
+                      flex: 1,
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 34,
+                        fontWeight: 600,
+                        lineHeight: 1,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        textTransform: 'capitalize',
+                        width: '100%',
+                      }}
+                    >
+                      {p.name}
+                    </div>
                   </div>
                 </div>
-                <div style={{ color: p.playerClass ? GOLD : MUTED, fontSize: 22, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.playerClass || '—'}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-                  {team?.logoURL && <img src={team.logoURL} alt="" style={{ width: 36, height: 36, objectFit: 'contain', flexShrink: 0 }} />}
-                  <span style={{ color: MUTED, fontSize: 20, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team?.shortCode ?? team?.name ?? '—'}</span>
+                <div
+                  style={{
+                    color: MUTED,
+                    fontSize: 22,
+                    fontWeight: 600,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    minWidth: 0,
+                  }}
+                >
+                  {team?.name ?? '—'}
                 </div>
-                <div style={{ textAlign: 'center', color: p.isSold ? GOLD : MUTED, fontSize: 25, fontWeight: 700 }}>{p.isSold ? formatCurrency(p.finalPrice) : '—'}</div>
-                <div style={{ textAlign: 'right', color: status.color, fontSize: 16, fontWeight: 700, letterSpacing: 2 }}>{status.label}</div>
+                <div style={{ textAlign: 'right', color: p.isSold ? GOLD : MUTED, fontSize: 26, fontWeight: 700 }}>
+                  {p.isSold ? formatCurrency(p.finalPrice) : '—'}
+                </div>
               </div>
             );
           })}
@@ -181,7 +239,17 @@ const SoldPlayersSummaryT3: React.FC<Props> = ({ players, teams, tournament, isE
         </div>
 
         {totalPages > 1 && (
-          <div style={{ position: 'absolute', right: 38, bottom: FOOTER_H + 30, display: 'flex', gap: 8, zIndex: 10 }}>
+          <div
+            style={{
+              position: 'absolute',
+              right: 38,
+              bottom: FOOTER_H + 22,
+              display: 'flex',
+              gap: 8,
+              zIndex: 12,
+              pointerEvents: 'none',
+            }}
+          >
             {Array.from({ length: totalPages }).map((_, i) => (
               <div key={i} style={{ width: i === page ? 22 : 8, height: 8, borderRadius: 4, background: i === page ? GOLD : 'rgba(255,255,255,0.28)', transition: 'all 0.25s ease' }} />
             ))}
@@ -204,8 +272,8 @@ function PlayerThumb({ player }: { player: Player }) {
   return (
     <div
       style={{
-        width: 48,
-        height: 48,
+        width: 44,
+        height: 44,
         borderRadius: 8,
         flexShrink: 0,
         border: `2px solid ${GOLD}`,
@@ -224,7 +292,7 @@ function PlayerThumb({ player }: { player: Player }) {
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         />
       ) : (
-        <span style={{ fontSize: 13, fontWeight: 700, color: GOLD }}>{initials || '?'}</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: GOLD }}>{initials || '?'}</span>
       )}
     </div>
   );

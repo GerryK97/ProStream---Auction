@@ -8,17 +8,34 @@ const CANVAS_W = 1920;
 const CANVAS_H = 1080;
 /** Keep bottom row names above the fixed ticker rail. */
 const TICKER_CLEARANCE = TICKER_T3_HEIGHT + 12;
-const TOP_PAD = 14;
+const TOP_PAD = 48;
 const CENTER_H = 148;
-const FORMATION_LABEL_H = 26;
-const CARD_W = 276;
-const CARD_H = 368;
-const FORMATION_H = FORMATION_LABEL_H + CARD_H + 10;
-const PLAYERS_PER_ROW = 5;
-const PLAYERS_PER_PAGE = PLAYERS_PER_ROW * 2;
+/** Base card size (used when a row has ≤5 cards). */
+const BASE_CARD_W = 276;
+const BASE_CARD_H = 368;
+const CARD_GAP = 16;
+const ROW_INNER_MAX = 1840;
+/** Hard cap per screen; fewer slots when squadSize is smaller. */
+const MAX_PLAYERS_PER_PAGE = 12;
+/** Dual-row layout once a page has more than this many slots. */
+const MAX_PER_ROW = 6;
 const PAGE_MS = 8000;
 const EXIT_MS = 420;
 const ENTER_MS = 560;
+
+function cardSizeForRow(count: number): { w: number; h: number; gap: number } {
+    const n = Math.max(1, count);
+    const w = Math.min(BASE_CARD_W, Math.floor((ROW_INNER_MAX - (n - 1) * CARD_GAP) / n));
+    const h = Math.round(w * (BASE_CARD_H / BASE_CARD_W));
+    return { w, h, gap: CARD_GAP };
+}
+
+/** Even split across two rows; each row capped at MAX_PER_ROW. */
+function splitForPage(count: number): { top: number; bottom: number } {
+    if (count <= MAX_PER_ROW) return { top: 0, bottom: count };
+    const top = Math.min(MAX_PER_ROW, Math.ceil(count / 2));
+    return { top, bottom: count - top };
+}
 
 /** Theme 3 overlay tokens — aligned with TickerT3Shared */
 const T3 = {
@@ -82,11 +99,6 @@ const CSS = `
   }
 `;
 
-function formatCurrency(n?: number | null): string {
-    if (n == null) return '—';
-    return n.toLocaleString('en-IN');
-}
-
 interface TeamWiseImageT3Props {
     teams: Team[];
     players: Player[];
@@ -130,64 +142,51 @@ function buildSquadSlots(soldPlayers: Player[], squadSize: number): (Player | nu
 
 function teamPlayerPages(squadSize: number): number {
     if (squadSize <= 0) return 1;
-    return Math.max(1, Math.ceil(squadSize / PLAYERS_PER_PAGE));
+    return Math.max(1, Math.ceil(squadSize / MAX_PLAYERS_PER_PAGE));
 }
 
 function pageSlotCount(squadSlots: (Player | null)[], page: number): number {
-    const pageStart = page * PLAYERS_PER_PAGE;
+    const pageStart = page * MAX_PLAYERS_PER_PAGE;
     if (pageStart >= squadSlots.length) return 0;
-    return Math.min(PLAYERS_PER_PAGE, squadSlots.length - pageStart);
+    return Math.min(MAX_PLAYERS_PER_PAGE, squadSlots.length - pageStart);
 }
 
-function isDualRowPage(squadSlots: (Player | null)[], page: number): boolean {
-    return pageSlotCount(squadSlots, page) > PLAYERS_PER_ROW;
-}
-
-function rowSlots(
+function pageCardRows(
     squadSlots: (Player | null)[],
     page: number,
-    row: 'top' | 'bottom',
-): { cards: (Player | null)[]; startIdx: number } {
-    const pageStart = page * PLAYERS_PER_PAGE;
+): { cards: (Player | null)[]; startIdx: number }[] {
+    const pageStart = page * MAX_PLAYERS_PER_PAGE;
     const countOnPage = pageSlotCount(squadSlots, page);
+    if (countOnPage === 0) return [];
 
-    if (countOnPage === 0) {
-        return { cards: [], startIdx: pageStart };
+    const { top, bottom } = splitForPage(countOnPage);
+    const slots = squadSlots.slice(pageStart, pageStart + countOnPage);
+
+    if (top === 0) {
+        return [{ cards: slots, startIdx: pageStart }];
     }
 
-    if (!isDualRowPage(squadSlots, page)) {
-        if (row === 'top') {
-            return { cards: [], startIdx: pageStart };
-        }
-        const cards = squadSlots.slice(pageStart, pageStart + countOnPage);
-        return { cards, startIdx: pageStart };
-    }
-
-    if (row === 'top') {
-        const cards = squadSlots.slice(pageStart, pageStart + PLAYERS_PER_ROW);
-        return { cards, startIdx: pageStart };
-    }
-
-    const bottomStart = pageStart + PLAYERS_PER_ROW;
-    const cards = squadSlots.slice(bottomStart, pageStart + countOnPage);
-    return { cards, startIdx: bottomStart };
+    return [
+        { cards: slots.slice(0, top), startIdx: pageStart },
+        { cards: slots.slice(top, top + bottom), startIdx: pageStart + top },
+    ];
 }
 
-function bandAnimation(align: 'top' | 'bottom', phase: AnimPhase): React.CSSProperties {
+function bandAnimation(phase: AnimPhase): React.CSSProperties {
     if (phase === 'entering') {
         return {
-            animation: `${align === 'top' ? 't3TwiBandInTop' : 't3TwiBandInBottom'} ${ENTER_MS}ms cubic-bezier(0.22, 1, 0.36, 1) both`,
+            animation: `t3TwiBandInBottom ${ENTER_MS}ms cubic-bezier(0.22, 1, 0.36, 1) both`,
         };
     }
     if (phase === 'exiting') {
         return {
-            animation: `${align === 'top' ? 't3TwiBandOutTop' : 't3TwiBandOutBottom'} ${EXIT_MS}ms cubic-bezier(0.4, 0, 0.2, 1) both`,
+            animation: `t3TwiBandOutBottom ${EXIT_MS}ms cubic-bezier(0.4, 0, 0.2, 1) both`,
         };
     }
     return {};
 }
 
-function cardAnimation(phase: AnimPhase, cardIndex: number): React.CSSProperties {
+function cardAnimation(phase: AnimPhase, cardIndex: number, rowCount: number): React.CSSProperties {
     const stagger = cardIndex * 70;
     if (phase === 'entering') {
         return {
@@ -195,7 +194,7 @@ function cardAnimation(phase: AnimPhase, cardIndex: number): React.CSSProperties
         };
     }
     if (phase === 'exiting') {
-        const reverse = (PLAYERS_PER_ROW - 1 - cardIndex) * 50;
+        const reverse = (Math.max(1, rowCount) - 1 - cardIndex) * 50;
         return {
             animation: `t3TwiCardOut ${EXIT_MS}ms cubic-bezier(0.4, 0, 0.2, 1) ${reverse}ms both`,
         };
@@ -213,65 +212,35 @@ function centerAnimation(phase: AnimPhase): React.CSSProperties {
     return {};
 }
 
-function TeamLogo({ team, size = 56 }: { team: Team | null; size?: number }) {
-    if (!team?.logoURL) {
-        const initials = (team?.name ?? '?').slice(0, 2).toUpperCase();
-        return (
-            <div
-                style={{
-                    width: size,
-                    height: size,
-                    borderRadius: 8,
-                    background: 'rgba(0,0,0,0.35)',
-                    border: `2px solid ${T3.accent}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: size * 0.32,
-                    fontWeight: 900,
-                    color: T3.textPrimary,
-                    flexShrink: 0,
-                }}
-            >
-                {initials}
-            </div>
-        );
-    }
-    return (
-        <img
-            src={team.logoURL}
-            alt=""
-            style={{
-                width: size,
-                height: size,
-                objectFit: 'contain',
-                flexShrink: 0,
-                filter: `drop-shadow(0 2px 6px ${T3.shadow})`,
-            }}
-        />
-    );
-}
-
 function PlayerCard({
     player,
     index,
     animPhase,
     cardIndex,
+    rowCount,
+    cardW,
+    cardH,
 }: {
     player: Player | null;
     index: number;
     animPhase: AnimPhase;
     cardIndex: number;
+    rowCount: number;
+    cardW: number;
+    cardH: number;
 }) {
-    const animStyle = cardAnimation(animPhase, cardIndex);
+    const animStyle = cardAnimation(animPhase, cardIndex, rowCount);
+    const scale = cardW / BASE_CARD_W;
+    const nameSize = Math.max(14, Math.round(20 * scale));
+    const badgeSize = Math.max(13, Math.round(18 * scale));
 
     if (!player) {
         return (
             <div
                 className="t3-twi-anim"
                 style={{
-                    width: CARD_W,
-                    height: CARD_H,
+                    width: cardW,
+                    height: cardH,
                     background: T3.accentSoft,
                     border: '2px dashed var(--t3-accent-soft, rgba(0,137,140,0.35))',
                     borderRadius: 4,
@@ -283,8 +252,8 @@ function PlayerCard({
                     ...animStyle,
                 }}
             >
-                <div style={{ fontSize: 28, fontWeight: 900, color: T3.textMuted }}>—</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: T3.textSecondary, letterSpacing: '0.12em' }}>
+                <div style={{ fontSize: Math.round(28 * scale), fontWeight: 900, color: T3.textMuted }}>—</div>
+                <div style={{ fontSize: Math.max(11, Math.round(14 * scale)), fontWeight: 700, color: T3.textSecondary, letterSpacing: '0.12em' }}>
                     OPEN SLOT
                 </div>
             </div>
@@ -297,8 +266,8 @@ function PlayerCard({
         <div
             className="t3-twi-anim"
             style={{
-                width: CARD_W,
-                height: CARD_H,
+                width: cardW,
+                height: cardH,
                 background: T3.card,
                 border: `3px solid ${T3.accent}`,
                 borderRadius: 4,
@@ -330,7 +299,7 @@ function PlayerCard({
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: 72,
+                            fontSize: Math.round(72 * scale),
                             fontWeight: 900,
                             color: 'rgba(var(--t3-text-primary-rgb, 255,255,255), 0.12)',
                         }}
@@ -341,13 +310,13 @@ function PlayerCard({
                 <div
                     style={{
                         position: 'absolute',
-                        top: 10,
-                        left: 10,
+                        top: Math.round(10 * scale),
+                        left: Math.round(10 * scale),
                         background: T3.playerNoBg,
                         color: T3.playerNoText,
-                        fontSize: 18,
+                        fontSize: badgeSize,
                         fontWeight: 900,
-                        padding: '4px 10px',
+                        padding: `${Math.round(4 * scale)}px ${Math.round(10 * scale)}px`,
                         borderRadius: 5,
                         border: `1px solid ${T3.playerNoBorder}`,
                         boxShadow: '0 1px 4px rgba(0,0,0,0.28)',
@@ -356,10 +325,10 @@ function PlayerCard({
                     #{index + 1}
                 </div>
             </div>
-            <div style={{ padding: '12px 14px', background: T3.panel, flexShrink: 0 }}>
+            <div style={{ padding: `${Math.round(12 * scale)}px ${Math.round(14 * scale)}px`, background: T3.panel, flexShrink: 0 }}>
                 <div
                     style={{
-                        fontSize: 20,
+                        fontSize: nameSize,
                         fontWeight: 900,
                         color: T3.textPrimary,
                         textTransform: 'uppercase',
@@ -371,88 +340,67 @@ function PlayerCard({
                 >
                     {player.name}
                 </div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: T3.accent, marginTop: 3 }}>
-                    {formatCurrency(player.finalPrice ?? 0)}
-                </div>
             </div>
         </div>
     );
 }
 
-function FormationBand({
-    block,
-    cards,
-    startIdx,
-    align,
-    playerPage,
-    totalPages,
+function PlayerCardsSet({
+    rows,
     animPhase,
 }: {
-    block: TeamBlock | null;
-    cards: (Player | null)[];
-    startIdx: number;
-    align: 'top' | 'bottom';
-    playerPage: number;
-    totalPages: number;
+    rows: { cards: (Player | null)[]; startIdx: number }[];
     animPhase: AnimPhase;
 }) {
-    if (cards.length === 0) return null;
+    if (rows.length === 0) return null;
 
-    const rowEnd = startIdx + cards.length;
-    const rowLabel = block ? `SQUAD ${startIdx + 1}–${rowEnd}` : '';
+    const maxInRow = Math.max(...rows.map(r => r.cards.length), 1);
+    let { w: cardW, h: cardH, gap } = cardSizeForRow(maxInRow);
+
+    /** Keep two-row sets inside the canvas below the top strip. */
+    const availableH = CANVAS_H - TOP_PAD - TICKER_CLEARANCE - CENTER_H - 48;
+    const rowGap = 20;
+    const neededH = rows.length * cardH + Math.max(0, rows.length - 1) * rowGap;
+    if (neededH > availableH) {
+        const scale = availableH / neededH;
+        cardW = Math.max(160, Math.round(cardW * scale));
+        cardH = Math.max(220, Math.round(cardH * scale));
+    }
 
     return (
         <div
             className="t3-twi-anim"
             style={{
-                height: FORMATION_H,
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                justifyContent: 'flex-end',
-                gap: 8,
-                flexShrink: 0,
-                ...bandAnimation(align, animPhase),
+                justifyContent: 'center',
+                gap: rowGap,
+                width: '100%',
+                flex: 1,
+                minHeight: 0,
+                ...bandAnimation(animPhase),
             }}
         >
-            {block && (
+            {rows.map(row => (
                 <div
-                    style={{
-                        height: FORMATION_LABEL_H,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: T3.textMuted,
-                        letterSpacing: '0.14em',
-                        textTransform: 'uppercase',
-                    }}
+                    key={`row-${row.startIdx}`}
+                    style={{ display: 'flex', gap, alignItems: 'flex-end', justifyContent: 'center' }}
                 >
-                    <span style={{ color: T3.textSecondary }}>
-                        {rowLabel}
-                    </span>
-                    {totalPages > 1 && (
-                        <>
-                            <span>·</span>
-                            <span>
-                                PAGE {playerPage + 1}/{totalPages}
-                            </span>
-                        </>
-                    )}
+                    {row.cards.map((player, i) => (
+                        <PlayerCard
+                            key={player?._id ?? `empty-${row.startIdx}-${i}`}
+                            player={player}
+                            index={row.startIdx + i}
+                            animPhase={animPhase}
+                            cardIndex={i}
+                            rowCount={row.cards.length}
+                            cardW={cardW}
+                            cardH={cardH}
+                        />
+                    ))}
                 </div>
-            )}
-            <div style={{ display: 'flex', gap: 20, alignItems: 'flex-end' }}>
-                {cards.map((player, i) => (
-                    <PlayerCard
-                        key={player?._id ?? `empty-${startIdx}-${playerPage}-${i}`}
-                        player={player}
-                        index={startIdx + i}
-                        animPhase={animPhase}
-                        cardIndex={i}
-                    />
-                ))}
-            </div>
+            ))}
         </div>
     );
 }
@@ -460,7 +408,7 @@ function FormationBand({
 function CenterStrip({
     block,
     tournamentName,
-    squadSize,
+    tournamentLogoURL,
     teamIndex,
     teamCount,
     playerPage,
@@ -469,7 +417,7 @@ function CenterStrip({
 }: {
     block: TeamBlock | null;
     tournamentName: string;
-    squadSize: number;
+    tournamentLogoURL?: string | null;
     teamIndex: number;
     teamCount: number;
     playerPage: number;
@@ -509,15 +457,94 @@ function CenterStrip({
             />
             <div
                 style={{
+                    position: 'absolute',
+                    left: 72,
+                    top: 0,
+                    height: CENTER_H,
+                    width: CENTER_H,
+                    zIndex: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}
+            >
+                {block?.team.logoURL ? (
+                    <img
+                        src={block.team.logoURL}
+                        alt={block.team.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    />
+                ) : (
+                    <div
+                        style={{
+                            width: '72%',
+                            height: '72%',
+                            borderRadius: 10,
+                            border: '2px solid rgba(255,255,255,0.55)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: barText,
+                            fontSize: 28,
+                            fontWeight: 800,
+                            letterSpacing: 1,
+                        }}
+                    >
+                        {(block?.team.shortCode || block?.team.name || 'T').slice(0, 2).toUpperCase()}
+                    </div>
+                )}
+            </div>
+            <div
+                style={{
+                    position: 'absolute',
+                    right: 72,
+                    top: 0,
+                    height: CENTER_H,
+                    width: CENTER_H,
+                    zIndex: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}
+            >
+                {tournamentLogoURL ? (
+                    <img
+                        src={tournamentLogoURL}
+                        alt={tournamentName}
+                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    />
+                ) : (
+                    <div
+                        style={{
+                            width: '72%',
+                            height: '72%',
+                            borderRadius: 10,
+                            border: '2px solid rgba(255,255,255,0.55)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: barText,
+                            fontSize: 28,
+                            fontWeight: 800,
+                            letterSpacing: 1,
+                        }}
+                    >
+                        {(tournamentName || 'T').slice(0, 2).toUpperCase()}
+                    </div>
+                )}
+            </div>
+            <div
+                style={{
                     position: 'relative',
                     zIndex: 1,
                     height: '100%',
                     display: 'flex',
                     flexDirection: 'column',
-                    alignItems: 'center',
+                    alignItems: 'flex-start',
                     justifyContent: 'center',
-                    padding: '0 48px',
-                    gap: 8,
+                    paddingLeft: CENTER_H + 88,
+                    paddingRight: CENTER_H + 88,
+                    gap: 10,
                     fontFamily: "'Open Sans', sans-serif",
                 }}
             >
@@ -528,7 +555,7 @@ function CenterStrip({
                     color: barText,
                     letterSpacing: '0.18em',
                     textTransform: 'uppercase',
-                    maxWidth: 720,
+                    maxWidth: '100%',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
@@ -540,46 +567,22 @@ function CenterStrip({
             {block ? (
                 <div
                     style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 20,
+                        fontSize: 52,
+                        fontWeight: 900,
+                        color: barText,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.02em',
+                        lineHeight: 1,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
                         maxWidth: '100%',
                     }}
                 >
-                    <TeamLogo team={block.team} size={72} />
-                    <div style={{ minWidth: 0, textAlign: 'left' }}>
-                        <div
-                            style={{
-                                fontSize: 36,
-                                fontWeight: 900,
-                                color: barText,
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.03em',
-                                lineHeight: 1.05,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                            }}
-                        >
-                            {block.team.name}
-                        </div>
-                        <div
-                            style={{
-                                marginTop: 6,
-                                fontSize: 17,
-                                fontWeight: 800,
-                                color: barText,
-                                letterSpacing: '0.06em',
-                            }}
-                        >
-                            SPENT {formatCurrency(block.total)} · {block.players.length}/{squadSize} SOLD
-                        </div>
-                    </div>
+                    {block.team.name}
                 </div>
             ) : (
-                <div style={{ fontSize: 22, fontWeight: 800, color: barText, letterSpacing: '0.1em' }}>—</div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: barText, letterSpacing: '0.1em' }}>—</div>
             )}
 
             {(showTeamPagination || showPagePagination) && (
@@ -587,8 +590,9 @@ function CenterStrip({
                     style={{
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
+                        justifyContent: 'flex-start',
                         gap: 8,
+                        marginTop: 2,
                     }}
                 >
                     {showTeamPagination &&
@@ -731,9 +735,7 @@ export default function TeamWiseImageT3({ teams, players, tournament, teamId, is
         );
     }
 
-    const dualRows = isDualRowPage(squadSlots, playerPage);
-    const topRow = rowSlots(squadSlots, playerPage, 'top');
-    const bottomRow = rowSlots(squadSlots, playerPage, 'bottom');
+    const cardRows = pageCardRows(squadSlots, playerPage);
 
     return (
         <>
@@ -750,78 +752,24 @@ export default function TeamWiseImageT3({ teams, players, tournament, teamId, is
                     paddingBottom: TICKER_CLEARANCE,
                     display: 'flex',
                     flexDirection: 'column',
-                    justifyContent: dualRows ? 'space-between' : 'center',
+                    alignItems: 'stretch',
                     background: 'transparent',
                     fontFamily: "'Open Sans', sans-serif",
                     animation: animPhase === 'entering' ? `t3TwiRootIn ${ENTER_MS}ms ease both` : undefined,
                 }}
             >
-                {dualRows ? (
-                    <>
-                        <FormationBand
-                            block={currentBlock}
-                            cards={topRow.cards}
-                            startIdx={topRow.startIdx}
-                            align="top"
-                            playerPage={playerPage}
-                            totalPages={totalPages}
-                            animPhase={animPhase}
-                        />
+                <CenterStrip
+                    block={currentBlock}
+                    tournamentName={tournament?.name ?? 'AUCTION'}
+                    tournamentLogoURL={tournament?.logoURL}
+                    teamIndex={safeTeamIndex}
+                    teamCount={blocks.length}
+                    playerPage={playerPage}
+                    totalPages={totalPages}
+                    animPhase={animPhase}
+                />
 
-                        <CenterStrip
-                            block={currentBlock}
-                            tournamentName={tournament?.name ?? 'AUCTION'}
-                            squadSize={squadSize}
-                            teamIndex={safeTeamIndex}
-                            teamCount={blocks.length}
-                            playerPage={playerPage}
-                            totalPages={totalPages}
-                            animPhase={animPhase}
-                        />
-
-                        <FormationBand
-                            block={currentBlock}
-                            cards={bottomRow.cards}
-                            startIdx={bottomRow.startIdx}
-                            align="bottom"
-                            playerPage={playerPage}
-                            totalPages={totalPages}
-                            animPhase={animPhase}
-                        />
-                    </>
-                ) : (
-                    <div
-                        style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'stretch',
-                            justifyContent: 'center',
-                            gap: 28,
-                            width: '100%',
-                        }}
-                    >
-                        <CenterStrip
-                            block={currentBlock}
-                            tournamentName={tournament?.name ?? 'AUCTION'}
-                            squadSize={squadSize}
-                            teamIndex={safeTeamIndex}
-                            teamCount={blocks.length}
-                            playerPage={playerPage}
-                            totalPages={totalPages}
-                            animPhase={animPhase}
-                        />
-
-                        <FormationBand
-                            block={currentBlock}
-                            cards={bottomRow.cards}
-                            startIdx={bottomRow.startIdx}
-                            align="bottom"
-                            playerPage={playerPage}
-                            totalPages={totalPages}
-                            animPhase={animPhase}
-                        />
-                    </div>
-                )}
+                <PlayerCardsSet rows={cardRows} animPhase={animPhase} />
             </div>
         </>
     );
