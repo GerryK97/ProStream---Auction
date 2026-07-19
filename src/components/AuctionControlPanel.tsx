@@ -1790,8 +1790,16 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         setIsSpinning(true);
         setDisplayMode('wheel-spin');
         displayModeRef.current = 'wheel-spin';
-        if (spinTimerRef.current) clearTimeout(spinTimerRef.current);
-        if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+        if (spinTimerRef.current)       clearTimeout(spinTimerRef.current);
+        if (resetTimerRef.current)      clearTimeout(resetTimerRef.current);
+        // Cancel any pending auto-switch Small from the previous player.
+        // Without this, a stale Small PATCH can fire during the spin and
+        // arrive at the overlay before the new player's Large intro, causing
+        // Small → Large instead of Large → (hold) → Small.
+        if (autoSwitchTimerRef.current) {
+            clearTimeout(autoSwitchTimerRef.current);
+            autoSwitchTimerRef.current = null;
+        }
 
         const resetSpinUi = () => {
             setDisplayMode('standard');
@@ -1807,9 +1815,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                 setOverlaySize('large');
                 overlaySizeRef.current = 'large';
             }
-            void sendOverlaySettings(sizeForReset, tickerMode, 'standard').catch(() => {
-                setError('Player selected, but the overlay reset failed');
-            });
+            void sendOverlaySettingsRef.current(sizeForReset, tickerModeRef.current, 'standard')
+                .catch(() => setError('Player selected, but the overlay reset failed'));
         };
 
         try {
