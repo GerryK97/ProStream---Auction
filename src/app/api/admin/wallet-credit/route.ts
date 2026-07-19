@@ -13,6 +13,7 @@ import { getTokenFromRequest, verifyToken } from '@/lib/auth';
 import { isAdmin } from '@/lib/permissions';
 import { creditWalletBalance } from '@/lib/pg/wallet-queries';
 import { getUserById } from '@/lib/pg/user-queries';
+import type { PgUser } from '@/lib/pg/users-schema';
 import { sendSMS } from '@prostream/shared/sms';
 import { normalizeMobile, isValidE164 } from '@prostream/shared/phone';
 
@@ -58,9 +59,11 @@ export async function POST(request: NextRequest) {
 
     // ── SMS notification ────────────────────────────────────────────────────
     // Only send if the user has a mobile number on their account.
+    // getUserById returns a raw PgUser row — the column is `phone`, not `mobileNumber`
+    // (mobileNumber only exists on the mapped AuctionUser DTO from toAuctionUser()).
     // A missing or empty phone is silently skipped — the credit still succeeds.
     // SMS errors are also swallowed so a gateway failure never blocks the admin.
-    const rawPhone = targetUser.mobileNumber; // empty string '' when not set
+    const rawPhone = (targetUser as PgUser).phone;
     if (rawPhone) {
       try {
         const phone = normalizeMobile(rawPhone);

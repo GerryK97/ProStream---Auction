@@ -147,7 +147,8 @@ const WheelSpinT3: React.FC<WheelSpinT3Props> = ({ data, allPlayers = [], tourna
   const { players, winner, winnerIndex, centerImageURL } = data;
   const hubLogoSrc = useMemo(
     () => hubImageSrc(centerImageURL, tournament),
-    [centerImageURL, tournament?.wheelCenterImageURL],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [centerImageURL, tournament?.wheelCenterImageURL, tournament],
   );
   const N = Math.max(players.length, 1);
   const segDeg = 360 / N;
@@ -165,7 +166,8 @@ const WheelSpinT3: React.FC<WheelSpinT3Props> = ({ data, allPlayers = [], tourna
 
   const winnerPlayer = useMemo(
     () => (winner ? allPlayers.find(p => p._id === winner._id) ?? null : null),
-    [allPlayers, winner?._id],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allPlayers, winner?._id, winner],
   );
 
   const winnerPhotoSrc = useMemo(() => resolveWinnerPhoto(winnerPlayer), [winnerPlayer]);
