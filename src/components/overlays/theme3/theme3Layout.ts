@@ -5,7 +5,7 @@ export { TICKER_T3_HEIGHT };
 /** Live player bar height within the 1920×1080 canvas. */
 export const PLAYER_BAR_T3_HEIGHT = 132;
 
-/** Centered bar width — not full-bleed. */
+/** Small player bar width — left-aligned, not full-bleed. */
 export const PLAYER_BAR_T3_WIDTH = 1200;
 
 /** Photo column width — taller/wider than bar so the image stands out. */

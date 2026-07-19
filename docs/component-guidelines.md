@@ -14,10 +14,15 @@
 
 ### Theme 3 live player bar
 - Owned by the Theme 3 overlay layer; uses `--t3-*` tokens only.
-- Composed as a landscape bar above the ticker — not a floating card.
+- Composed as a landscape bar above the ticker, left-aligned — not a floating card.
 - Internal sections (`PlayerPhotoSection`, `PlayerIdentitySection`, `CurrentBidPanelT3`, sold/unsold overlays) are co-located with the bar orchestrator; they must not import System UI tokens.
 - Bid highlighting reacts to `auctionState.currentBid` changes via local refs (same pattern as Theme 2 `CurrentBidT2`).
 - Sold and unsold outcomes are shown inline on the bar before exit; no separate toast is required for Theme 3 live auction.
+
+### Theme 3 team card overlay
+- Custom Overlay only (`TeamCardOverlayT3` via `CustomT3Content`).
+- Visual language aligned with Player Summary (Montserrat, white header + dark labels, dark-green list panel, gold/muted values, hairline row dividers).
+- Compact corner panel: team name, players (`sold/squadSize`), balance — max 5 teams per page with auto pagination.
 
 ## Overlay Controls
 Overlay controls are System UI, even though they configure overlays. They should use System UI tokens and accessible product-control patterns while writing configuration that affects overlay output.

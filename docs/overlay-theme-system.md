@@ -30,11 +30,11 @@ Overlay themes may define:
 
 ## Theme 3 Live Player Bar (Ticker-aligned teal)
 
-Theme 3 adds a **centered live auction player bar** stacked above the ticker on the 1920×1080 canvas. The bar uses the same teal accent system as the ticker for a unified broadcast lower-third.
+Theme 3 adds a **left-aligned live auction player bar** stacked above the ticker on the 1920×1080 canvas. The bar uses the same teal accent system as the ticker for a unified broadcast lower-third.
 
 | Zone | Height | Position |
 |------|--------|----------|
-| Live player bar | 132px (`PLAYER_BAR_T3_HEIGHT`) | `bottom: TICKER_T3_HEIGHT + PLAYER_BAR_T3_TICKER_GAP` (84px), centered (`PLAYER_BAR_T3_WIDTH` 1200px) |
+| Live player bar | 132px (`PLAYER_BAR_T3_HEIGHT`) | `bottom: TICKER_T3_HEIGHT + PLAYER_BAR_T3_TICKER_GAP` (84px); left-aligned when Team Cards visible, centered when Team Cards hidden (`PLAYER_BAR_T3_WIDTH` 1200px) |
 | Ticker | 78px | `bottom: 0` |
 
 When the ticker is hidden, the player bar repositions to `bottom: 0`.
@@ -76,6 +76,14 @@ All animations respect `prefers-reduced-motion`.
 ### Where the live player bar is used
 - **Custom overlay** (`CustomT3Content`) — **Small:** lower-third [`LiveAuctionPlayerBarT3`](src/components/overlays/theme3/LiveAuctionPlayerBarT3.tsx); **Large:** portrait [`PortraitPlayerCardT3`](src/components/overlays/theme3/PortraitPlayerCardT3.tsx) (352×528, photo top, footer with number/name + two-column bid: max-height Current Bid + persistent Base after bidding starts). Controlled by overlay `size` (`large` | `small`). With **Auto Switch ON**, `select-player` includes `overlaySize: 'large'` (+ `sizeRev`) on `auction:player-selected` so the first paint is Large; a timer then publishes Small. Stale in-flight Small patches are ignored via `sizeRev`. With Auto OFF, size is unchanged when a player is added.
 - **Main Full Screen** (`FullScreenT3Content`) — uses the full-screen player card below (not the bar)
+
+### Theme 3 Custom — Team Card Overlay
+- **Component:** [`TeamCardOverlayT3.tsx`](../src/components/overlays/theme3/TeamCardOverlayT3.tsx) — **Custom Overlay only** (`CustomT3Content`); not shown on Full Screen routes
+- **Visibility:** `standard` / `custom-ticker` and `!hideTeamCards` (Overlay Controls → Team Cards)
+- **Position:** Default **bottom-right** above the ticker; drops to the canvas bottom when the ticker is hidden; honors `teamCardSize` (`large` | `small`)
+- **Columns:** Team name · Players (`sold/squadSize`, e.g. `2/12`) · Balance (teams sorted by balance desc)
+- **Visual:** Matches Player Summary — **white** column header with dark labels; list on dark green panel (`#0E2228` → `#0A1A22`); Montserrat rows with hairline dividers; Players gold, Balance muted
+- **Pagination:** Max **5 teams** per page; if more, auto-advance every 5s with gold page dots
 
 ## Theme 3 Full Screen 2 (alternate full-screen route)
 

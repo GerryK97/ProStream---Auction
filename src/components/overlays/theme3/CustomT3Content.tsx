@@ -12,6 +12,7 @@ import RestingTimeT3 from './RestingTimeT3';
 import TeamSummaryT3 from './TeamSummaryT3';
 import TeamWiseSummaryT3 from './TeamWiseSummaryT3';
 import WheelSpinT3 from './WheelSpinT3';
+import TeamCardOverlayT3 from './TeamCardOverlayT3';
 import type { Theme3ContentProps } from './types';
 import { isTheme3TeamImageryMode } from './types';
 import type { OverlaySettings } from '../OverlayWrapper';
@@ -63,12 +64,14 @@ const CustomT3Content: React.FC<Theme3ContentProps> = ({
   }, [overlaySettings.displayMode]);
 
   const showTicker = !overlaySettings.hideTickerCustom && activeMode !== 'wheel-spin';
+  const isLiveMode = activeMode === 'standard' || activeMode === 'custom-ticker';
   const showLiveBar =
     !overlaySettings.hidePremiumCard &&
-    (activeMode === 'standard' || activeMode === 'custom-ticker') &&
+    isLiveMode &&
     tournament?.status === 'Live' &&
     !!auctionState.currentPlayerId &&
     !!currentPlayer;
+  const showTeamCards = isLiveMode && !overlaySettings.hideTeamCards;
 
   const isLargeCard = overlaySettings.size === 'large';
 
@@ -212,8 +215,21 @@ const CustomT3Content: React.FC<Theme3ContentProps> = ({
             tournament={tournament}
             visible={showLiveBar}
             tickerVisible={showTicker}
+            align={showTeamCards ? 'left' : 'center'}
           />
         )
+      )}
+
+      {/* ── Team cards (Custom Overlay only; live modes) ── */}
+      {showTeamCards && (
+        <TeamCardOverlayT3
+          teams={teams}
+          players={players}
+          tournament={tournament}
+          size={overlaySettings.teamCardSize ?? 'large'}
+          position="bottom-right"
+          tickerVisible={showTicker}
+        />
       )}
 
       {/* ── Ticker ── */}

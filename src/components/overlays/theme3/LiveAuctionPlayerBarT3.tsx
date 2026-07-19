@@ -31,6 +31,8 @@ interface LiveAuctionPlayerBarT3Props {
   tournament: Tournament | null;
   visible: boolean;
   tickerVisible?: boolean;
+  /** Left when team cards are showing; centered when they are hidden. */
+  align?: 'left' | 'center';
 }
 
 const ENTER_MS = 480;
@@ -52,6 +54,7 @@ export function LiveAuctionPlayerBarT3({
   tournament,
   visible,
   tickerVisible = true,
+  align = 'center',
 }: LiveAuctionPlayerBarT3Props) {
   const [phase, setPhase] = useState<BarPhase>('entering');
   const [dismissed, setDismissed] = useState(false);
@@ -312,14 +315,14 @@ export function LiveAuctionPlayerBarT3({
         className={`${isEntering ? 't3-bar-enter' : ''} ${isExiting ? 't3-bar-exit' : ''}`}
         style={{
           position: 'absolute',
-          left: 0,
-          right: 0,
+          left: align === 'left' ? 48 : 0,
+          right: align === 'left' ? 'auto' : 0,
           bottom,
           height: PLAYER_BAR_T3_HEIGHT,
           zIndex: 49,
           pointerEvents: 'none',
           display: 'flex',
-          justifyContent: 'center',
+          justifyContent: align === 'left' ? 'flex-start' : 'center',
           alignItems: 'flex-end',
           overflow: 'visible',
           transform: barTransform,
