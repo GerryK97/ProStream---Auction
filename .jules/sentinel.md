@@ -1,0 +1,4 @@
+## 2025-05-22 - Hardcoded JWT Secret Fallback Removed
+**Vulnerability:** A hardcoded string (`'your-secret-key-change-this'`) was used as a fallback for `JWT_SECRET` in `src/lib/auth.ts`.
+**Learning:** This existed to prevent crashes in development environments where `NEXTAUTH_SECRET` might not be set. However, it creates a critical vulnerability where tokens could be predictably forged in production if the environment variable is accidentally missing or misconfigured.
+**Prevention:** Authentication mechanisms must "fail securely." In production, if critical secrets are missing, the application should throw a fatal error rather than silently falling back to insecure defaults. In development, generate a cryptographically strong random string (e.g., using `crypto.randomBytes`) so that the application still works but remains secure (even though tokens will be invalidated on restart).
