@@ -17,7 +17,7 @@ export async function GET() {
 
     // Database
     MONGODB_URI: process.env.MONGODB_URI
-      ? `✅ SET (${process.env.MONGODB_URI.substring(0, 60)}...)`
+      ? '✅ SET (hidden for security)'
       : '❌ NOT SET',
 
     // Derived info
