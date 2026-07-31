@@ -35,6 +35,7 @@ import {
 
 const formatCurrency = (amount: number) => amount.toLocaleString();
 const MemoOverlayControlsPanel = React.memo(OverlayControlsPanel);
+const WHEEL_WINNER_SELECTION_TIMEOUT_MS = 10_000;
 
 export interface ClassStat {
     code: string;
@@ -1116,6 +1117,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
     const spinInFlightRef = useRef(false);
     const spinTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
     const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const wheelSelectionAbortRef = useRef<AbortController | null>(null);
     const bidInFlightRef = useRef(false);
     const [bidInFlight, setBidInFlight] = useState(false);
     const bidSequenceRef = useRef(0);
@@ -1427,6 +1429,8 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
             if (autoSwitchTimerRef.current) clearTimeout(autoSwitchTimerRef.current);
             if (spinTimerRef.current)       clearTimeout(spinTimerRef.current);
             if (resetTimerRef.current)      clearTimeout(resetTimerRef.current);
+            wheelSelectionAbortRef.current?.abort();
+            wheelSelectionAbortRef.current = null;
         };
     }, []);
 
@@ -1792,6 +1796,13 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         displayModeRef.current = 'wheel-spin';
         if (spinTimerRef.current)       clearTimeout(spinTimerRef.current);
         if (resetTimerRef.current)      clearTimeout(resetTimerRef.current);
+        // A queued control change can carry displayMode:'standard'. Cancel it so
+        // it cannot arrive after the wheel event and hide the animation.
+        if (_settingsDebounceTimer.current) {
+            clearTimeout(_settingsDebounceTimer.current);
+            _settingsDebounceTimer.current = null;
+            _pendingSettingsArgs.current = null;
+        }
         // Cancel any pending auto-switch Small from the previous player.
         // Without this, a stale Small PATCH can fire during the spin and
         // arrive at the overlay before the new player's Large intro, causing
@@ -1820,9 +1831,6 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
         };
 
         try {
-            // Fire overlay settings update in parallel — don't block the spin call.
-            void sendOverlaySettings(overlaySizeRef.current, tickerMode, 'wheel-spin').catch(() => {});
-
             const res = await fetch('/api/overlay/spin', {
                 method: 'POST',
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
@@ -1847,47 +1855,62 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                 introSizeRev = ++sizeRevRef.current;
             }
 
-            // Fire select-player immediately while the wheel is spinning so the
-            // Pusher event (auction:player-selected) reaches all overlays and
-            // connected panels before the animation finishes. Optimistically apply
-            // the winner to the local panel at the same time.
-            const previousState = optimisticPlayerSelection(winnerId);
-            const selectPromise = fetch('/api/auction/select-player', {
-                method: 'POST',
-                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    tournamentId,
-                    playerId: winnerId,
-                    ...(autoIntro ? { overlaySize: 'large' as const, sizeRev: introSizeRev } : {}),
-                }),
-            }).then(async (selectRes) => {
-                const selected = await selectRes.json().catch(() => ({}));
-                if (!selectRes.ok) throw new Error(selected.error || 'Failed to select wheel winner');
-                applyPlayerSelected(selected);
-            }).catch(async (error) => {
-                if (error instanceof TypeError) {
-                    await refreshData().catch(() => {});
-                } else {
-                    restoreAuctionState(previousState);
-                }
-                setError(error instanceof Error ? error.message : 'Failed to select wheel winner');
-            });
-
-            // After the wheel animation completes, clear the spinning UI and await
-            // any still-pending select-player request.
+            // Do not publish auction:player-selected during the rotation. Some
+            // outputs render that event immediately, which bypasses the wheel and
+            // shows the player image. Select only after the wheel has stopped.
             spinTimerRef.current = setTimeout(async () => {
                 spinTimerRef.current = null;
+                const previousState = optimisticPlayerSelection(winnerId);
+                const controller = new AbortController();
+                wheelSelectionAbortRef.current = controller;
+                const selectionTimeout = setTimeout(
+                    () => controller.abort(),
+                    WHEEL_WINNER_SELECTION_TIMEOUT_MS,
+                );
 
-                // Wait for the in-flight selection to settle before resetting UI.
-                await selectPromise.catch(() => {});
-
-                // Keep winner reveal visible briefly, then reset overlay to standard.
+                // The overlay's winner hold is visual timing, not request timing.
+                // Reset it on schedule even if winner persistence is slow or hung.
                 resetTimerRef.current = setTimeout(() => {
                     resetTimerRef.current = null;
                     resetSpinUi();
                 }, WHEEL_WINNER_HOLD_MS);
 
-                selectPlayerInFlightRef.current = false;
+                try {
+                    const selectRes = await fetch('/api/auction/select-player', {
+                        method: 'POST',
+                        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                        signal: controller.signal,
+                        body: JSON.stringify({
+                            tournamentId,
+                            playerId: winnerId,
+                            ...(autoIntro ? { overlaySize: 'large' as const, sizeRev: introSizeRev } : {}),
+                        }),
+                    });
+                    const selected = await selectRes.json().catch(() => ({}));
+                    if (!selectRes.ok) throw new Error(selected.error || 'Failed to select wheel winner');
+                    applyPlayerSelected(selected);
+                } catch (error) {
+                    // Cleanup aborts are caused by unmounting, so avoid updating an
+                    // inactive component. Timeout aborts keep this controller active.
+                    if (wheelSelectionAbortRef.current !== controller) return;
+
+                    if (error instanceof Error && error.name === 'AbortError') {
+                        void refreshData().catch(() => {});
+                        setError('Selecting the wheel winner timed out. Please try again.');
+                    } else if (error instanceof TypeError) {
+                        void refreshData().catch(() => {});
+                        setError(error.message || 'Failed to select wheel winner');
+                    } else {
+                        restoreAuctionState(previousState);
+                        setError(error instanceof Error ? error.message : 'Failed to select wheel winner');
+                    }
+                } finally {
+                    clearTimeout(selectionTimeout);
+                    if (wheelSelectionAbortRef.current === controller) {
+                        wheelSelectionAbortRef.current = null;
+                    }
+                    selectPlayerInFlightRef.current = false;
+                }
             }, WHEEL_SPIN_DURATION_MS);
         } catch (error) {
             selectPlayerInFlightRef.current = false;

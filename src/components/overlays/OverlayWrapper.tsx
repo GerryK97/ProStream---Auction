@@ -162,10 +162,12 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
     const [wheelSpinData, setWheelSpinData] = useState<WheelSpinEvent | null>(null);
     const wheelResetTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
     const wheelModeResetTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+    /** Transient wheel mode owns displayMode until its rotation + winner hold finishes. */
+    const wheelModeLockedRef = React.useRef(false);
 
-    // Do NOT exit wheel-spin when currentPlayerId arrives. Control panels select
-    // the winner mid-spin so the profile is ready when the animation ends; mode
-    // reset is owned by the timer started in onWheelSpin below.
+    // Do NOT exit wheel-spin when currentPlayerId arrives. Winner selection is
+    // scheduled for the end of the rotation, and the wheel's own timer owns the
+    // brief winner hold before the player profile becomes visible.
 
     useEffect(() => {
         if (!tournament?._id) return;
@@ -213,7 +215,11 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
             setOverlaySettings(prev => ({
                 size: sizeIsStale ? prev.size : data.size,
                 tickerMode: data.tickerMode ?? 'sold',
-                displayMode: data.displayMode ?? 'standard',
+                // A delayed Standard settings request from the previous player/spin
+                // must not replace a wheel event that is currently animating.
+                displayMode: wheelModeLockedRef.current
+                    ? 'wheel-spin'
+                    : (data.displayMode ?? 'standard'),
                 hidePremiumCard: data.hidePremiumCard ?? false,
                 customTickerLine1: data.customTickerLine1 ?? '',
                 customTickerLine2: data.customTickerLine2 ?? '',
@@ -249,11 +255,13 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
             // The wheel event itself must activate wheel mode. This keeps spins
             // triggered from the compact/mobile panel working even when that
             // client does not separately publish overlay settings.
+            wheelModeLockedRef.current = true;
             setOverlaySettings(prev => ({ ...prev, displayMode: 'wheel-spin' }));
             setWheelSpinData(data);
             if (wheelResetTimerRef.current) clearTimeout(wheelResetTimerRef.current);
             if (wheelModeResetTimerRef.current) clearTimeout(wheelModeResetTimerRef.current);
             wheelModeResetTimerRef.current = setTimeout(() => {
+                wheelModeLockedRef.current = false;
                 setOverlaySettings(prev => (
                     prev.displayMode === 'wheel-spin'
                         ? { ...prev, displayMode: 'standard' }
@@ -274,6 +282,7 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
             channel.unbind('overlay:wheel-spin', onWheelSpin);
             if (wheelResetTimerRef.current) clearTimeout(wheelResetTimerRef.current);
             if (wheelModeResetTimerRef.current) clearTimeout(wheelModeResetTimerRef.current);
+            wheelModeLockedRef.current = false;
             // Don't unsubscribe the channel here — usePusherAuction owns it
         };
     }, [liveTournamentId]); // dep: liveTournamentId only — don't re-bind on every status change
