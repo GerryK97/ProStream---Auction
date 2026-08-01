@@ -29,6 +29,9 @@ Theme 1 primarily uses shared `--overlay-*` variables and theme-specific tokens 
 ## Theme 2
 Theme 2 uses namespaced `--t2-*` tokens for its independent visual system. It may also provide `--overlay-*` aliases for compatibility with shared overlay components.
 
+## Theme 3
+Theme 3 uses `--t3-*` / `--t3-bar-*` for broadcast lower-thirds and summary panels.
+
 ## Adding A Palette
 - Add the palette in `src/config/overlayPalettes.ts`.
 - Keep token names namespaced and deterministic.

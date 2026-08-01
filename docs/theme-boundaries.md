@@ -9,7 +9,7 @@ These layers may share data and neutral utilities, but they must not share visua
 
 ## Token Ownership
 - System UI owns `--surface-*`, `--text-*`, `--brand-*`, `--status-*`, `--border-*`, `--focus-ring`, app shell layout, forms, navigation, modals, and controls.
-- Overlay Output owns `--overlay-*`, `--t1*`, `--t2-*`, overlay typography, overlay palette identity, output-specific motion, and broadcast rendering behavior.
+- Overlay Output owns `--overlay-*`, `--t1*`, `--t2-*`, `--t3-*`, overlay typography, overlay palette identity, output-specific motion, and broadcast rendering behavior.
 - Shared primitives may own only neutral layout, behavior, data formatting, or accessibility helpers unless explicitly made layer-aware.
 
 ## Allowed
