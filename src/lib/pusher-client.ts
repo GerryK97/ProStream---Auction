@@ -16,6 +16,26 @@ if (process.env.NODE_ENV === 'development') {
 // Singleton Pusher client instance
 let pusherClientInstance: PusherJS | null = null;
 
+/** True when Pusher fires a noise/empty error payload (common on connect churn). */
+function isEmptyPusherPayload(value: unknown): boolean {
+  if (value == null) return true;
+  if (typeof value === 'string') {
+    const t = value.trim();
+    return t === '' || t === '{}' || t === 'null' || t === 'undefined';
+  }
+  if (typeof value !== 'object') return false;
+  try {
+    const keys = Object.keys(value as object);
+    if (keys.length === 0) return true;
+    return keys.every(k => {
+      const v = (value as Record<string, unknown>)[k];
+      return v == null || v === '' || (typeof v === 'object' && isEmptyPusherPayload(v));
+    });
+  } catch {
+    return true;
+  }
+}
+
 /**
  * Get or create the Pusher client instance
  */
@@ -58,16 +78,29 @@ export function getPusherClient(): PusherJS {
         console.log('[Pusher Client] Disconnected');
       });
 
-      pusherClientInstance.connection.bind('error', (error: any) => {
-        if (!error || Object.keys(error).length === 0) return;
-        if (error.type === 'WebSocketError') {
-          console.warn('[Pusher Client] WebSocket error:', error.error);
-        } else if (error.type === 'PusherError') {
-          if (!error.data || Object.keys(error.data).length === 0) return;
-          console.error('[Pusher Client] Pusher error:', error.data);
-        } else {
-          console.error('[Pusher Client] Connection error:', error);
+      pusherClientInstance.connection.bind('error', (error: unknown) => {
+        if (isEmptyPusherPayload(error)) return;
+
+        const err = error as {
+          type?: string;
+          data?: unknown;
+          error?: unknown;
+        };
+
+        if (err.type === 'WebSocketError') {
+          if (isEmptyPusherPayload(err.error)) return;
+          console.warn('[Pusher Client] WebSocket error:', err.error);
+          return;
         }
+
+        if (err.type === 'PusherError') {
+          // Empty `{}` payloads are benign (reconnect / handshake noise).
+          if (isEmptyPusherPayload(err.data)) return;
+          console.error('[Pusher Client] Pusher error:', err.data);
+          return;
+        }
+
+        console.error('[Pusher Client] Connection error:', error);
       });
 
       pusherClientInstance.connection.bind('unavailable', () => {

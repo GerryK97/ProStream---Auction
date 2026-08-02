@@ -77,6 +77,66 @@ All animations respect `prefers-reduced-motion`.
 - **Custom overlay** (`CustomT3Content`) — **Small:** lower-third [`LiveAuctionPlayerBarT3`](src/components/overlays/theme3/LiveAuctionPlayerBarT3.tsx); **Large:** portrait [`PortraitPlayerCardT3`](src/components/overlays/theme3/PortraitPlayerCardT3.tsx) (352×528, photo top, footer with number/name + two-column bid: max-height Current Bid + persistent Base after bidding starts). Controlled by overlay `size` (`large` | `small`). With **Auto Switch ON**, `select-player` includes `overlaySize: 'large'` (+ `sizeRev`) on `auction:player-selected` so the first paint is Large; a timer then publishes Small. Stale in-flight Small patches are ignored via `sizeRev`. With Auto OFF, size is unchanged when a player is added.
 - **Main Full Screen** (`FullScreenT3Content`) — uses the full-screen player card below (not the bar)
 
+## Theme 4 — Frame 15 + Full Screen routes
+
+Theme 4 (`theme4`, `--t4-*`) spans Custom lower-thirds and dedicated Full Screen / Full Screen 2 compositions.
+
+### Scope
+- **Custom** ([`CustomT4Content.tsx`](../src/components/overlays/theme4/CustomT4Content.tsx)) — transparent canvas; Frame 15 `small` or portrait `large`
+- **Full Screen** ([`FullScreenT4Content.tsx`](../src/components/overlays/theme4/FullScreenT4Content.tsx)) — opaque dedicated [`FullScreenPlayerCardT4`](../src/components/overlays/theme4/FullScreenPlayerCardT4.tsx) (Theme 3 FS structure, T4 chrome); post-sale waiting via `RestingTimeT4`
+- **Full Screen 2** ([`FullScreenAltT4Content.tsx`](../src/components/overlays/theme4/FullScreenAltT4Content.tsx)) — secondary-image hero + floating [`CurrentBidPanelT4`](../src/components/overlays/theme4/CurrentBidPanelT4.tsx) `bar`, sold toast, waiting, ticker/summaries/wheel
+- Frame 15 white artboard fill is **not** rendered on Custom (OBS transparency)
+
+### Layout (Frame 15 local coords)
+| Piece | Box |
+|-------|-----|
+| Shield inner | 255×280 at (274, 16) |
+| Base Price | 310×75 at (0, 133) |
+| Current Bid | 310×75 at (496, 132) |
+| Nameplate | 440×100 at (183, 285) |
+
+### Visual system
+- Shield: heraldic clip + silver inner stroke + multi-stop gradient outer rim
+- Panels: staggered slanted tiers; **Lalezar** 24 / 38; base white, bid `#E4D017`
+- Nameplate: inverted trapezoid; **Graduate** 40 tracking 6; gold fill + black stroke
+- Amounts: `en-US` grouping (e.g. `250,000`)
+
+### Composition
+- [`PlayerCardT4.tsx`](../src/components/overlays/theme4/PlayerCardT4.tsx)
+- [`PortraitPlayerCardT4.tsx`](../src/components/overlays/theme4/PortraitPlayerCardT4.tsx) — large centered portrait
+- [`FullScreenPlayerCardT4.tsx`](../src/components/overlays/theme4/FullScreenPlayerCardT4.tsx) — Full Screen opaque card
+- [`CurrentBidPanelT4.tsx`](../src/components/overlays/theme4/CurrentBidPanelT4.tsx) — `fullscreen` + `bar` bid layouts
+- [`fullScreenPlayerCardT4Layout.ts`](../src/components/overlays/theme4/fullScreenPlayerCardT4Layout.ts)
+- [`WheelSpinT4.tsx`](../src/components/overlays/theme4/WheelSpinT4.tsx) — heraldic Player Draw wheel (`wheel-spin`)
+- [`TickerT4.tsx`](../src/components/overlays/theme4/TickerT4.tsx) — overlays.uno **Prime** RSS ticker (`#0a3d8d` / `#222c40` / PT Sans Narrow)
+- [`SoldPlayersSummaryT4.tsx`](../src/components/overlays/theme4/SoldPlayersSummaryT4.tsx) — Player Summary (`sold-summary`), Fresh layout + ticker-blue title bands
+- [`TeamSummaryT4.tsx`](../src/components/overlays/theme4/TeamSummaryT4.tsx) — Team Summary (`team-summary`), same chrome + Theme 3 team data
+- [`TeamWiseSummaryT4.tsx`](../src/components/overlays/theme4/TeamWiseSummaryT4.tsx) — Team-wise (`team-wise-summary`), Player Summary chrome + per-team sold roster
+- [`Top10SummaryT4.tsx`](../src/components/overlays/theme4/Top10SummaryT4.tsx) — Top 10 Sold (`top10-summary`), same chrome + Theme 3 top-10 data
+- [`TeamWiseImageT4.tsx`](../src/components/overlays/theme4/TeamWiseImageT4.tsx) — Team Imagery (`team-wise-image`), Champion header + photo cards
+- [`RestingTimeT4.tsx`](../src/components/overlays/theme4/RestingTimeT4.tsx) — Resting Time (`resting`), logo-only brand showcase
+- [`teamWiseImageT4Layout.ts`](../src/components/overlays/theme4/teamWiseImageT4Layout.ts)
+- [`soldPlayersSummaryT4Layout.ts`](../src/components/overlays/theme4/soldPlayersSummaryT4Layout.ts) — shared summary geometry / colors
+- [`frame15PlayerCardT4Layout.ts`](../src/components/overlays/theme4/frame15PlayerCardT4Layout.ts)
+- [`t4ShieldPath.ts`](../src/components/overlays/theme4/t4ShieldPath.ts)
+- Preview: `/overlays/theme4-preview`
+
+### Wheel spin
+Same Spin control + `OverlayWrapper` timing as Theme 3. Theme 4 uses navy/gold segments, **player numbers near the outer rim** (not names), Bebas/Oswald type, circular heraldic winner photo, and a clean footer plate (no rainbow rays). Player cards hide while `displayMode === 'wheel-spin'`.
+
+### Ticker (Prime)
+Bottom full-bleed bar matching overlays.uno “RSS News Ticker · Prime”: blue scroll field, diagonal gold category, PT Sans Narrow. Auction modes drive the marquee (`tickerMode` / custom lines). Hidden on wheel-spin and summary modes; small player card clears the ticker height.
+
+### Summaries + Team Imagery
+Shared exit / hide card+ticker while active. Control panel for theme4: Standard, Player Summary, Team Summary, Team-wise, Top 10 Sold, Team Imagery, Resting Time, Custom Ticker.
+
+- `sold-summary` → [`SoldPlayersSummaryT4`](../src/components/overlays/theme4/SoldPlayersSummaryT4.tsx) — sold→unsold→remaining; footer SOLD/UNSOLD/REMAINING
+- `team-summary` → [`TeamSummaryT4`](../src/components/overlays/theme4/TeamSummaryT4.tsx) — balance desc; PLAYERS/CAN BUY/MAX BID/BALANCE; footer TEAMS/TOTAL BUDGET/SLOTS LEFT; optional team highlight via `teamWiseTeamId`
+- `team-wise-summary` → [`TeamWiseSummaryT4`](../src/components/overlays/theme4/TeamWiseSummaryT4.tsx) — per-team sold roster (`#`/player/price); footer PLAYERS/SPENT/MAX BID/BALANCE; optional team lock
+- `top10-summary` → [`Top10SummaryT4`](../src/components/overlays/theme4/Top10SummaryT4.tsx) — top 10 sold non-iconic by price; empty shiny footer
+- `team-wise-image` → [`TeamWiseImageT4`](../src/components/overlays/theme4/TeamWiseImageT4.tsx) — Champion gold bars + dark title + vertical headshot columns; Theme 3 sold-roster / squad / rotation data
+- `resting` → [`RestingTimeT4`](../src/components/overlays/theme4/RestingTimeT4.tsx) — break-time logo advertisement; streamer (`wheelCenterImageURL`) + tournament (`logoURL`); optional `overrideLabel` for post-sale waiting
+
 ### Theme 3 Custom — Team Card Overlay
 - **Component:** [`TeamCardOverlayT3.tsx`](../src/components/overlays/theme3/TeamCardOverlayT3.tsx) — **Custom Overlay only** (`CustomT3Content`); not shown on Full Screen routes
 - **Visibility:** `standard` / `custom-ticker` and `!hideTeamCards` (Overlay Controls → Team Cards)

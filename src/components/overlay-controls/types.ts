@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction, MutableRefObject } from 'react';
 
-export type OverlayThemeId = 'standard' | 'premium' | 'neon' | 'theme2' | 'theme3';
+export type OverlayThemeId = 'standard' | 'premium' | 'neon' | 'theme2' | 'theme3' | 'theme4';
 
 export type OverlaySize = 'large' | 'small';
 export type TickerMode = 'all' | 'sold' | 'available';

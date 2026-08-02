@@ -46,6 +46,7 @@ const THEME_OPTIONS: Array<{ id: OverlayThemeId; label: string; description: str
   { id: 'standard', label: 'Theme 1 Classic', description: 'Broadcast-safe classic auction layout.', available: true },
   { id: 'theme2', label: 'Theme 2 Palette System', description: 'Palette-driven overlay design with stronger visual identity.', available: true },
   { id: 'theme3', label: 'Theme 3 Broadcast', description: 'Teal live player bar, ticker, and summary panels.', available: true },
+  { id: 'theme4', label: 'Theme 4 Lightning Card', description: 'Frame 15 heraldic shield player card (custom overlay).', available: true },
   { id: 'premium', label: 'Premium', description: 'Coming soon.', available: false },
   { id: 'neon', label: 'Neon', description: 'Coming soon.', available: false },
 ];

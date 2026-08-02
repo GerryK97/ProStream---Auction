@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 255 280" fill="none">
+  <defs>
+    <path id="t4Outer" d="M 127.5 0 L 102 24 L 68 30 L 28 28 L 0 46 L 8 68 L 6 108 C 6 156 24 204 56 238 L 96 264 L 127.5 280 L 159 264 L 199 238 C 231 204 249 156 249 108 L 247 68 L 255 46 L 227 28 L 187 30 L 153 24 Z"/>
+    <path id="t4Inner" d="M 127.5 18 L 106 38 L 76 43 L 40 42 L 18 56 L 24 74 L 22 110 C 22 152 38 194 66 224 L 100 248 L 127.5 262 L 155 248 L 189 224 C 217 194 233 152 233 110 L 231 74 L 237 56 L 215 42 L 179 43 L 149 38 Z"/>
+    <linearGradient id="t4Gold" x1="15%" y1="0%" x2="85%" y2="100%">
+      <stop offset="0%" stop-color="#F3E2A0"/>
+      <stop offset="28%" stop-color="#D4AF37"/>
+      <stop offset="55%" stop-color="#B8860B"/>
+      <stop offset="78%" stop-color="#8A6A2F"/>
+      <stop offset="100%" stop-color="#3D2E14"/>
+    </linearGradient>
+  </defs>
+  <use href="#t4Outer" fill="none" stroke="url(#t4Gold)" stroke-width="12" stroke-linejoin="miter"/>
+  <use href="#t4Inner" fill="none" stroke="#E6E2D6" stroke-width="2.4" stroke-linejoin="miter"/>
+</svg>

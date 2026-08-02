@@ -35,6 +35,19 @@ const MODES: ModeDef[] = [
 ];
 
 function visibleModes(theme?: OverlayThemeId): ModeDef[] {
+    if (theme === 'theme4') {
+        const allow = new Set([
+            'standard',
+            'sold-summary',
+            'team-summary',
+            'team-wise-summary',
+            'top10-summary',
+            'team-wise-image',
+            'resting',
+            'custom-ticker',
+        ]);
+        return MODES.filter((m) => allow.has(m.value));
+    }
     if (theme === 'theme3') {
         return MODES.filter(m => !m.hideOnTheme3);
     }
@@ -45,7 +58,10 @@ function showTeamFilter(displayMode: DisplayMode, theme?: OverlayThemeId): boole
     if (displayMode === 'team-wise-summary' || displayMode === 'team-wise-image') {
         return true;
     }
-    return theme === 'theme3' && displayMode === 'team-summary';
+    return (
+        (theme === 'theme3' || theme === 'theme4') &&
+        displayMode === 'team-summary'
+    );
 }
 
 export default function DisplayModeTabs({
@@ -127,9 +143,11 @@ export default function DisplayModeTabs({
                     </select>
                     {!teamWiseTeamId && (
                         <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                            {overlayTheme === 'theme3'
-                                ? 'Standings for all teams; pick a team to highlight a row'
-                                : 'Showing aggregate summary across all teams'}
+                            {displayMode === 'team-wise-summary'
+                                ? 'Cycles sold roster per team; pick a team to lock'
+                                : overlayTheme === 'theme3' || overlayTheme === 'theme4'
+                                  ? 'Standings for all teams; pick a team to highlight a row'
+                                  : 'Showing aggregate summary across all teams'}
                         </span>
                     )}
                 </div>

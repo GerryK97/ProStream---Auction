@@ -32,6 +32,9 @@ Theme 2 uses namespaced `--t2-*` tokens for its independent visual system. It ma
 ## Theme 3
 Theme 3 uses `--t3-*` / `--t3-bar-*` for broadcast lower-thirds and summary panels.
 
+## Theme 4
+Theme 4 uses `--t4-*` for the Frame 15 heraldic Custom Overlay player card (Lalezar / Graduate, gold `#E4D017`). See `docs/overlay-theme-system.md` and `docs/theme-4-colors.md`.
+
 ## Adding A Palette
 - Add the palette in `src/config/overlayPalettes.ts`.
 - Keep token names namespaced and deterministic.

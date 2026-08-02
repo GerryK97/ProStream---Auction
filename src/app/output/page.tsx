@@ -154,18 +154,38 @@ const THEMES = [
     available: true,
   },
   {
-    id: 'premium' as OverlayThemeId,
-    label: 'Premium',
-    description: 'Coming soon.',
+    id: 'theme4' as OverlayThemeId,
+    label: 'Theme 4 — Lightning Card',
+    description: 'Frame 15 heraldic shield player card for custom OBS overlay (transparent).',
     preview: (
       <div
-        className="w-full aspect-video rounded-lg flex items-center justify-center text-white"
-        style={{ background: 'linear-gradient(135deg, #120a2a 0%, #3b0764 100%)' }}
+        className="w-full aspect-video rounded-lg overflow-hidden flex items-center justify-center text-xs relative"
+        style={{ background: 'linear-gradient(160deg,#050810 0%,#0A1428 55%,#080C18 100%)', border: '1px solid rgba(228,208,23,.28)' }}
       >
-        <span className="opacity-30 tracking-widest uppercase text-[10px]">Coming Soon</span>
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 w-[26%] overflow-hidden" style={{ transform: 'translateY(-20%)', clipPath: 'polygon(6% 0,100% 0,94% 100%,0 100%)' }}>
+          <div className="text-[6px] font-bold text-center py-0.5" style={{ background: '#D0D4DA', color: '#000' }}>BASE PRICE</div>
+          <div className="text-[7px] font-bold text-center py-1 tracking-widest" style={{ background: '#0C1424', color: '#fff' }}>250,000</div>
+        </div>
+        <div
+          className="relative"
+          style={{
+            width: '22%',
+            aspectRatio: '255/280',
+            clipPath: 'polygon(18% 8%, 38% 4%, 50% 16%, 62% 4%, 82% 8%, 90% 28%, 90% 58%, 50% 96%, 10% 58%, 10% 28%)',
+            background: 'linear-gradient(180deg,#3a4048,#1a1e28)',
+            boxShadow: '0 0 0 2px #E4D017',
+          }}
+        />
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 w-[26%] overflow-hidden" style={{ transform: 'translateY(-20%)', clipPath: 'polygon(0 0,94% 0,100% 100%,6% 100%)' }}>
+          <div className="text-[6px] font-bold text-center py-0.5" style={{ background: '#D0D4DA', color: '#000' }}>CURRENT BID</div>
+          <div className="text-[7px] font-bold text-center py-1 tracking-widest" style={{ background: '#0C1424', color: '#E4D017' }}>250,000</div>
+        </div>
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-[48%] text-center py-1 text-[8px] tracking-widest uppercase" style={{ background: 'linear-gradient(180deg,#2A5BB5,#0A1C48)', color: '#E4D017', clipPath: 'polygon(0 0,100% 0,92% 100%,8% 100%)' }}>
+          Player Name
+        </div>
       </div>
     ),
-    available: false,
+    available: true,
   },
 ];
 
@@ -399,7 +419,7 @@ ${'─'.repeat(60)}`;
   async function selectTheme(themeId: string) {
     if (!selectedTournamentId || themeId === currentTheme) return;
     setTournaments(prev => prev.map(t =>
-      t._id === selectedTournamentId ? { ...t, overlayTheme: themeId as 'standard' | 'premium' | 'neon' | 'theme2' | 'theme3', overlayPalette: 'default' } : t
+      t._id === selectedTournamentId ? { ...t, overlayTheme: themeId as 'standard' | 'premium' | 'neon' | 'theme2' | 'theme3' | 'theme4', overlayPalette: 'default' } : t
     ));
     setSaving(true);
     try {
