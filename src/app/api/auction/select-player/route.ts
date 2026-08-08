@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const [auctionState, player] = await Promise.all([
       AuctionStateModel.findOne({ tournamentId }, { currentAuctionStatus: 1 }).lean(),
       PlayerModel.findOne(
-        { _id: playerId, tournamentId, isSold: false },
+        { _id: playerId, tournamentId, isSold: false, isUnsold: { $ne: true } },
         {
           _id: 1,
           tournamentId: 1,
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 
     if (!player) {
       return NextResponse.json(
-        { error: 'Player not found or already sold' },
+        { error: 'Player not found, already sold, or marked unsold' },
         { status: 404 }
       );
     }
