@@ -19,6 +19,9 @@ export default function TournamentSelector({
     loading
   } = useTournamentContext();
 
+  const ALLOWED_STATUSES = new Set(['Draft', 'Live', 'Stopped', 'Completed']);
+  const selectableTournaments = tournaments.filter((t) => ALLOWED_STATUSES.has(t.status));
+
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case 'Live':
@@ -63,7 +66,7 @@ export default function TournamentSelector({
           }}
         >
           <option value="">-- {label} --</option>
-          {tournaments.map((t) => (
+          {selectableTournaments.map((t) => (
             <option key={t._id} value={t._id}>
               {t.name} ({t.status})
             </option>
@@ -86,20 +89,20 @@ export default function TournamentSelector({
         )}
       </div>
 
-      {selectedTournamentId && tournaments.length > 0 && (
+      {selectedTournamentId && selectableTournaments.length > 0 && (
         <div className="mt-2 flex items-center gap-2">
           <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Status:</span>
           <span
             className={`px-2 py-1 text-xs font-semibold rounded ${getStatusBadgeColor(
-              tournaments.find((t) => t._id === selectedTournamentId)?.status || ''
+              selectableTournaments.find((t) => t._id === selectedTournamentId)?.status || ''
             )}`}
           >
-            {tournaments.find((t) => t._id === selectedTournamentId)?.status}
+            {selectableTournaments.find((t) => t._id === selectedTournamentId)?.status}
           </span>
         </div>
       )}
 
-      {tournaments.length === 0 && (
+      {selectableTournaments.length === 0 && (
         <p className="mt-2 text-sm" style={{ color: 'var(--text-tertiary)' }}>
           No tournaments available. Create a tournament to get started.
         </p>
