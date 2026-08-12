@@ -482,8 +482,8 @@ ${'─'.repeat(60)}`;
         </p>
       </div>
 
-      {/* Tournament selector — only show if multiple tournaments */}
-      {tournaments.length > 1 && (
+      {/* Tournament selector — only show if multiple non-archived tournaments */}
+      {tournaments.filter(t => t.status !== 'Archived').length > 1 && (
         <div className="mb-8">
           <label className="text-sm font-medium mb-2 block" style={{ color: 'var(--text-secondary)' }}>Tournament</label>
           <select
@@ -497,7 +497,7 @@ ${'─'.repeat(60)}`;
             }}
           >
             <option value="">Select tournament…</option>
-            {tournaments.map(t => (
+            {tournaments.filter(t => t.status !== 'Archived').map(t => (
               <option key={t._id} value={t._id}>{t.name} ({t.year})</option>
             ))}
           </select>

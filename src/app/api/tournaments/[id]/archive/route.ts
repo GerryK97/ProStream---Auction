@@ -2,13 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { TournamentModel } from '@/models/Tournament';
 import { PlayerModel } from '@/models/Player';
+import { getUserFromRequest } from '@/lib/request-helpers';
 
-// POST /api/tournaments/[id]/archive - Archive a completed tournament
+// POST /api/tournaments/[id]/archive - Archive a completed tournament (Admin only)
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (user.role !== 'Admin') {
+      return NextResponse.json(
+        { error: 'Only administrators can archive tournaments' },
+        { status: 403 }
+      );
+    }
+
     await connectToDatabase();
     const { id } = await params;
 
@@ -22,7 +35,7 @@ export async function POST(
     }
 
     // Check if tournament is completed
-    if ((tournament as any).status !== 'Completed') {
+    if ((tournament as { status?: string }).status !== 'Completed') {
       return NextResponse.json(
         { error: 'Only completed tournaments can be archived' },
         { status: 400 }

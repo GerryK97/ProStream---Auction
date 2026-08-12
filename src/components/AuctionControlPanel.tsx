@@ -1655,7 +1655,7 @@ const AuctionControlPanel: React.FC<AuctionControlPanelProps> = ({ initialData, 
                                         ▶ Start Auction
                                     </button>
                                 )}
-                                {isCompleted && allSold && (
+                                {isCompleted && allSold && user?.role === 'Admin' && (
                                     <button onClick={handleArchiveTournament} className="text-white font-bold py-2 px-6 rounded-lg transition-colors hover:opacity-80" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-primary)' }}>
                                         Archive Tournament
                                     </button>

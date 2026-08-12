@@ -76,7 +76,7 @@ function TeamsManagePage() {
                         style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
                     >
                         <option value="">— Select a tournament —</option>
-                        {tournaments.map(t => (
+                        {tournaments.filter(t => t.status !== 'Archived').map(t => (
                             <option key={t._id} value={t._id}>{t.name} ({t.year}) — {t.status}</option>
                         ))}
                     </select>

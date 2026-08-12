@@ -99,6 +99,30 @@ function TournamentsManagePage() {
     }
   };
 
+  const handleArchive = async (id: string, name: string) => {
+    if (!confirm(`Archive "${name}"? It will be hidden from tournament selectors.`)) return;
+    try {
+      setError(null);
+      const res = await fetch(`/api/tournaments/${id}/archive`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || 'Failed to archive tournament');
+        return;
+      }
+      setTournaments(prev =>
+        sortTournamentsByStatus(
+          prev.map(t => (t._id === id ? { ...t, status: 'Archived' as const } : t)),
+        ),
+      );
+      await refreshTournamentContext();
+    } catch {
+      setError('An error occurred while archiving the tournament');
+    }
+  };
+
   const fetchTournaments = useCallback(async () => {
     try {
       setLoading(true);
@@ -400,6 +424,15 @@ function TournamentsManagePage() {
                       title="Manage user access"
                     >
                       Access
+                    </button>
+                  )}
+                  {currentUser?.role === 'Admin' && t.status === 'Completed' && (
+                    <button
+                      onClick={() => handleArchive(t._id, t.name)}
+                      className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm"
+                      title="Archive tournament (Admin)"
+                    >
+                      Archive
                     </button>
                   )}
                   <button
