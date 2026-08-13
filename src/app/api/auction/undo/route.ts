@@ -5,6 +5,7 @@ import { PlayerModel } from '@/models/Player';
 import { TeamModel } from '@/models/Team';
 import { triggerAuctionUndo } from '@/lib/pusher-server';
 import { serializeTeam, serializePlayer } from '@/lib/cloudinaryUtils';
+import { authorizeAuctionMutation } from '@/lib/auctionAuthorization';
 
 // POST /api/auction/undo - Undo the last player sale or unsold marking
 export async function POST(request: NextRequest) {
@@ -18,6 +19,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const access = await authorizeAuctionMutation(request, tournamentId);
+    if (!access.authorized) return access.response;
 
     // Find the most recently acted-upon sold/unsold players — parallel (no dependency)
     const [lastSoldPlayer, lastUnsoldPlayer] = await Promise.all([
@@ -59,6 +63,14 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      const teamDoc = await TeamModel.findOne({ _id: winningTeamId, tournamentId }).lean();
+      if (!teamDoc) {
+        return NextResponse.json(
+          { error: 'The winning team no longer belongs to this tournament' },
+          { status: 409 }
+        );
+      }
+
       // Unsell the player first — must happen before balance recalculation
       const restoredPlayer = await PlayerModel.findOneAndUpdate(
         { _id: playerId, tournamentId, isSold: true },
@@ -79,8 +91,7 @@ export async function POST(request: NextRequest) {
       // Derive correct balance from source of truth — idempotent, immune to $inc drift.
       // The player is already un-sold above, so this sum excludes the refunded player.
       // Fetch team doc + recalculated spend + auction state all in parallel.
-      const [teamDoc, totalSpentAgg, auctionState] = await Promise.all([
-        TeamModel.findById(winningTeamId).lean(),
+      const [totalSpentAgg, auctionState] = await Promise.all([
         PlayerModel.aggregate([
           { $match: { tournamentId, isSold: true, winningTeamId: String(winningTeamId) } },
           { $group: { _id: null, total: { $sum: '$finalPrice' } } },
@@ -92,7 +103,7 @@ export async function POST(request: NextRequest) {
 
       // Refund the team with derived balance
       const updatedTeam = await TeamModel.findOneAndUpdate(
-        { _id: winningTeamId },
+        { _id: winningTeamId, tournamentId },
         {
           $set: { currentBalance: newBalance },
           $pull: { playersPurchased: String(playerId) },

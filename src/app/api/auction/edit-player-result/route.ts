@@ -1,107 +1,200 @@
+import mongoose, { type ClientSession } from 'mongoose';
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { PlayerModel } from '@/models/Player';
 import { TeamModel } from '@/models/Team';
-import { TournamentModel } from '@/models/Tournament';
 import { triggerStateUpdate } from '@/lib/pusher-server';
-import { getUserFromRequest } from '@/lib/request-helpers';
-import { canPerformAction } from '@/lib/permissions';
+import { authorizeAuctionMutation } from '@/lib/auctionAuthorization';
+import { getTeamAuctionCapacity } from '@/lib/auctionRules';
+
+class AuctionResultEditError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
+
+async function recalculateTeamFromSoldPlayers(
+  tournamentId: string,
+  teamId: string,
+  session: ClientSession,
+) {
+  const team = await TeamModel.findOne({ _id: teamId, tournamentId })
+    .session(session)
+    .lean();
+  const soldPlayers = await PlayerModel.find(
+    { tournamentId, isSold: true, winningTeamId: teamId },
+    { _id: 1, finalPrice: 1 },
+  ).session(session).lean();
+
+  if (!team) {
+    throw new AuctionResultEditError('An affected team no longer belongs to this tournament', 409);
+  }
+
+  const totalSpent = soldPlayers.reduce(
+    (sum, soldPlayer) => sum + Number((soldPlayer as any).finalPrice ?? 0),
+    0,
+  );
+  await TeamModel.findOneAndUpdate(
+    { _id: teamId, tournamentId },
+    {
+      $set: {
+        currentBalance: Number((team as any).initialBudget ?? 0) - totalSpent,
+        playersPurchased: soldPlayers.map((soldPlayer) => String((soldPlayer as any)._id)),
+      },
+    },
+    { session },
+  );
+}
 
 // PATCH /api/auction/edit-player-result
 // Edit a sold or unsold player's status, final price, or winning team.
-// Handles budget adjustments when sale amount or team changes.
 export async function PATCH(request: NextRequest) {
-  try {
-    const user = await getUserFromRequest(request);
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (!canPerformAction(user.role, 'manage', 'auction')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+  let mongoSession: ClientSession | null = null;
 
+  try {
     await connectToDatabase();
     const { tournamentId, playerId, status, finalPrice, winningTeamId } = await request.json();
 
     if (!tournamentId || !playerId || !status) {
-      return NextResponse.json({ error: 'Missing required fields: tournamentId, playerId, status' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Missing required fields: tournamentId, playerId, status' },
+        { status: 400 },
+      );
     }
     if (!['sold', 'unsold', 'available'].includes(status)) {
-      return NextResponse.json({ error: 'status must be sold, unsold, or available' }, { status: 400 });
-    }
-    if (status === 'sold' && (!finalPrice || !winningTeamId)) {
-      return NextResponse.json({ error: 'finalPrice and winningTeamId required when status is sold' }, { status: 400 });
-    }
-
-    const tournament = await TournamentModel.findById(tournamentId).lean();
-    if (!tournament) return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
-
-    // Fetch current player state to know what to undo
-    const player = await PlayerModel.findById(playerId).lean();
-    if (!player) return NextResponse.json({ error: 'Player not found' }, { status: 404 });
-
-    // ── Step 1: Reverse previous state's budget impact ──────────────────────
-    if ((player as any).isSold && (player as any).winningTeamId && (player as any).finalPrice) {
-      // Refund old team and remove player from their roster
-      await TeamModel.findByIdAndUpdate((player as any).winningTeamId, {
-        $inc: { currentBalance: (player as any).finalPrice },
-        $pull: { playersPurchased: playerId },
-      });
+      return NextResponse.json(
+        { error: 'status must be sold, unsold, or available' },
+        { status: 400 },
+      );
     }
 
-    // ── Step 2: Apply new state ──────────────────────────────────────────────
-    let playerUpdate: Record<string, any>;
+    const access = await authorizeAuctionMutation(request, tournamentId);
+    if (!access.authorized) return access.response;
+    const tournament = access.tournament;
 
-    if (status === 'sold') {
-      const newPrice = Number(finalPrice);
-      if (isNaN(newPrice) || newPrice <= 0) {
-        return NextResponse.json({ error: 'finalPrice must be a positive number' }, { status: 400 });
+    let updatedPlayer: Record<string, any> | null = null;
+    let playerName = 'Player';
+    mongoSession = await mongoose.startSession();
+
+    // The player result and every affected team derivation are one transaction.
+    // Concurrent edits either retry on a write conflict or roll back together.
+    await mongoSession.withTransaction(async () => {
+      const player = await PlayerModel.findOne({ _id: playerId, tournamentId })
+        .session(mongoSession!)
+        .lean();
+      if (!player) {
+        throw new AuctionResultEditError('Player not found', 404);
       }
-      const newTeam = await TeamModel.findById(winningTeamId).lean();
-      if (!newTeam) return NextResponse.json({ error: 'Winning team not found' }, { status: 404 });
 
-      // Deduct from new team and add player to their roster
-      await TeamModel.findByIdAndUpdate(winningTeamId, {
-        $inc: { currentBalance: -newPrice },
-        $addToSet: { playersPurchased: playerId },
-      });
+      playerName = String((player as any).name ?? 'Player');
+      const previousTeamId = (player as any).isSold && (player as any).winningTeamId
+        ? String((player as any).winningTeamId)
+        : null;
+      const previousPrice = Number((player as any).finalPrice ?? 0);
+      let playerUpdate: Record<string, any>;
+      let targetTeamId: string | null = null;
 
-      playerUpdate = {
-        isSold: true,
-        isUnsold: false,
-        finalPrice: newPrice,
-        winningTeamId,
-        updatedAt: new Date(),
-      };
-    } else if (status === 'unsold') {
-      playerUpdate = {
-        isSold: false,
-        isUnsold: true,
-        finalPrice: null,
-        winningTeamId: null,
-        updatedAt: new Date(),
-      };
-    } else {
-      // available — reset to pool
-      playerUpdate = {
-        isSold: false,
-        isUnsold: false,
-        finalPrice: null,
-        winningTeamId: null,
-        updatedAt: new Date(),
-      };
-    }
+      if (status === 'sold') {
+        const newPrice = Number(finalPrice);
+        if (!winningTeamId || !Number.isFinite(newPrice) || newPrice <= 0) {
+          throw new AuctionResultEditError(
+            'A valid finalPrice and winningTeamId are required when status is sold',
+            400,
+          );
+        }
 
-    await PlayerModel.findByIdAndUpdate(playerId, { $set: playerUpdate });
+        const newTeam = await TeamModel.findOne({ _id: winningTeamId, tournamentId })
+          .session(mongoSession!)
+          .lean();
+        const purchasedCount = await PlayerModel.countDocuments({
+          tournamentId,
+          isSold: true,
+          winningTeamId: String(winningTeamId),
+          _id: { $ne: playerId },
+        }).session(mongoSession!);
+        if (!newTeam) {
+          throw new AuctionResultEditError('Winning team not found in this tournament', 404);
+        }
 
-    // Broadcast updated state — fetch all in parallel
+        // This player's previous price is refunded by the source-of-truth rebuild
+        // when it already belongs to the same team.
+        const effectiveBalance = Number((newTeam as any).currentBalance ?? 0)
+          + (previousTeamId === String(winningTeamId) ? previousPrice : 0);
+        const capacity = getTeamAuctionCapacity(
+          { ...(newTeam as any), currentBalance: effectiveBalance },
+          tournament as any,
+          purchasedCount,
+        );
+
+        if (capacity.isSquadFull) {
+          throw new AuctionResultEditError('Winning team already has a full squad', 400);
+        }
+        if (newPrice > capacity.maxBid) {
+          throw new AuctionResultEditError(
+            `Final price exceeds the team's maximum affordable bid of ${capacity.maxBid.toLocaleString()}`,
+            400,
+          );
+        }
+
+        targetTeamId = String(winningTeamId);
+        playerUpdate = {
+          isSold: true,
+          isUnsold: false,
+          finalPrice: newPrice,
+          winningTeamId: targetTeamId,
+          updatedAt: new Date(),
+        };
+      } else if (status === 'unsold') {
+        playerUpdate = {
+          isSold: false,
+          isUnsold: true,
+          finalPrice: null,
+          winningTeamId: null,
+          updatedAt: new Date(),
+        };
+      } else {
+        playerUpdate = {
+          isSold: false,
+          isUnsold: false,
+          finalPrice: null,
+          winningTeamId: null,
+          updatedAt: new Date(),
+        };
+      }
+
+      const playerVersion = (player as any).updatedAt;
+      updatedPlayer = await PlayerModel.findOneAndUpdate(
+        {
+          _id: playerId,
+          tournamentId,
+          ...(playerVersion ? { updatedAt: playerVersion } : {
+            isSold: Boolean((player as any).isSold),
+            isUnsold: Boolean((player as any).isUnsold),
+            finalPrice: (player as any).finalPrice ?? null,
+            winningTeamId: (player as any).winningTeamId ?? null,
+          }),
+        },
+        { $set: playerUpdate },
+        { returnDocument: 'after', session: mongoSession! },
+      ).lean() as Record<string, any> | null;
+      if (!updatedPlayer) {
+        throw new AuctionResultEditError('Player changed before the edit was saved', 409);
+      }
+
+      const affectedTeamIds = [
+        ...new Set([previousTeamId, targetTeamId].filter(Boolean) as string[]),
+      ];
+      for (const affectedTeamId of affectedTeamIds) {
+        await recalculateTeamFromSoldPlayers(tournamentId, affectedTeamId, mongoSession!);
+      }
+    });
+
     const [updatedPlayers, updatedTeams, auctionState] = await Promise.all([
       PlayerModel.find({ tournamentId }).lean(),
       TeamModel.find({ tournamentId }).lean(),
       AuctionStateModel.findOne({ tournamentId }).lean(),
     ]);
-
-    // Extract just the updated player from the already-fetched array (avoids extra round-trip)
-    const updatedPlayer = updatedPlayers.find((p) => String((p as any)._id) === playerId) ?? null;
 
     try {
       await triggerStateUpdate({
@@ -109,7 +202,7 @@ export async function PATCH(request: NextRequest) {
         auctionState: auctionState as any,
         players: updatedPlayers as any[],
         teams: updatedTeams as any[],
-        message: `Player result updated: ${(player as any).name} → ${status}`,
+        message: `Player result updated: ${playerName} → ${status}`,
       });
     } catch (pusherError) {
       console.error('[edit-player-result] Pusher error:', pusherError);
@@ -117,7 +210,12 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ ok: true, player: updatedPlayer, teams: updatedTeams });
   } catch (error) {
+    if (error instanceof AuctionResultEditError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error in /api/auction/edit-player-result:', error);
     return NextResponse.json({ error: 'Failed to update player result' }, { status: 500 });
+  } finally {
+    await mongoSession?.endSession();
   }
 }

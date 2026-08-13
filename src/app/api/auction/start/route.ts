@@ -6,7 +6,7 @@ import { PlayerModel } from '@/models/Player';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { triggerAuctionStarted, triggerWake } from '@/lib/pusher-server';
 import { getUserFromRequest } from '@/lib/request-helpers';
-import { canPerformAction } from '@/lib/permissions';
+import { canAccessTournament, canPerformAction } from '@/lib/permissions';
 import { serializeTeam, serializePlayer } from '@/lib/cloudinaryUtils';
 
 // POST /api/auction/start - Start auction with validation
@@ -47,11 +47,12 @@ export async function POST(request: NextRequest) {
     // Check if user has access to this tournament
     // Admin: can manage any tournament
     // Tournament role: creator OR explicitly assigned to this tournament
-    const hasAccess = user.role === 'Admin' ||
-                     (user.role === 'Tournament' && (
-                       (tournament as any).createdBy === user.userId ||
-                       user.assignedTournaments.includes(tournamentId)
-                     ));
+    const hasAccess = canAccessTournament(
+      user.userId,
+      user.role,
+      tournament as any,
+      user.assignedTournaments,
+    );
 
     if (!hasAccess) {
       return NextResponse.json({

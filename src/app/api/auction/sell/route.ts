@@ -1,10 +1,11 @@
 import { after, NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
-import { TournamentModel } from '@/models/Tournament';
 import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
 import { triggerPlayerSold, triggerClassCompleted } from '@/lib/pusher-server';
+import { authorizeAuctionMutation } from '@/lib/auctionAuthorization';
+import { getTeamAuctionCapacity } from '@/lib/auctionRules';
 import { getMinClassBasePrice } from '@/lib/playerClassUtils';
 import { serializeTeam, serializePlayer } from '@/lib/cloudinaryUtils';
 
@@ -17,120 +18,170 @@ export async function POST(request: NextRequest) {
     if (!tournamentId || !teamId) {
       return NextResponse.json(
         { error: 'Missing required fields: tournamentId, teamId' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // Fetch auction state, team, tournament, and squad count in parallel
-    const [auctionState, team, tournament, playersBought] = await Promise.all([
+    const access = await authorizeAuctionMutation(request, tournamentId);
+    if (!access.authorized) return access.response;
+    const tournament = access.tournament;
+
+    const [auctionState, team, playersBought] = await Promise.all([
       AuctionStateModel.findOne({ tournamentId }),
-      TeamModel.findOne({ _id: teamId }).lean(),
-      TournamentModel.findOne({ _id: tournamentId }).lean(),
+      TeamModel.findOne({ _id: teamId, tournamentId }).lean(),
       PlayerModel.countDocuments({ tournamentId, isSold: true, winningTeamId: String(teamId) }),
     ]);
 
     if (!auctionState) {
       return NextResponse.json(
         { error: 'Auction state not found for this tournament' },
-        { status: 404 }
+        { status: 404 },
       );
     }
-
-    // Validate
-    if (!auctionState.currentPlayerId || auctionState.currentBid === 0) {
-      return NextResponse.json(
-        { error: 'No valid bid to sell' },
-        { status: 400 }
-      );
+    if (tournament.status !== 'Live') {
+      return NextResponse.json({ error: 'Auction is not live' }, { status: 400 });
     }
-
-    // Validate team exists
+    if (
+      !auctionState.currentPlayerId
+      || auctionState.currentBid <= 0
+      || auctionState.currentAuctionStatus === 'Sold'
+    ) {
+      return NextResponse.json({ error: 'No valid bid to sell' }, { status: 400 });
+    }
     if (!team) {
+      return NextResponse.json({ error: 'Team not found in this tournament' }, { status: 404 });
+    }
+
+    if (
+      tournament.biddingMode === 'team'
+      && String((auctionState as any).winningTeamId ?? '') !== String(teamId)
+    ) {
       return NextResponse.json(
-        { error: 'Team not found' },
-        { status: 404 }
+        { error: 'The selected team is not the current winning bidder' },
+        { status: 409 },
       );
     }
 
-    // Validate team has enough balance
-    if (auctionState.currentBid > (team as any).currentBalance) {
-      return NextResponse.json(
-        { error: 'Team does not have enough balance for this player' },
-        { status: 400 }
-      );
+    const capacity = getTeamAuctionCapacity(team as any, tournament as any, playersBought);
+    if (capacity.isSquadFull) {
+      return NextResponse.json({ error: 'Cannot sell to a team with a full squad' }, { status: 400 });
     }
-
-    // Validate tournament is live
-    if (!tournament || (tournament as any).status !== 'Live') {
-      return NextResponse.json(
-        { error: 'Auction is not live' },
-        { status: 400 }
-      );
-    }
-
-    // Validate bid does not exceed team's max affordable bid (reserve budget for remaining squad slots)
-    const squadSize = (tournament as any)?.squadSize ?? 0;
-    const basePrice = getMinClassBasePrice(tournament as any);
-    const squadRemainingPlayers = squadSize - playersBought;
-    const maxBid = squadRemainingPlayers <= 1
-      ? ((team as any).currentBalance ?? 0)
-      : Math.max(0, ((team as any).currentBalance ?? 0) - (squadRemainingPlayers - 1) * basePrice);
-
-    if (auctionState.currentBid > maxBid) {
+    if (auctionState.currentBid > capacity.maxBid) {
       return NextResponse.json(
         {
-          error: `Cannot sell to ${(team as any).name} — bid of ₹${auctionState.currentBid.toLocaleString('en-IN')} exceeds their max bid of ₹${maxBid.toLocaleString('en-IN')} (balance needed for remaining squad slots)`,
+          error: `Cannot sell to ${(team as any).name}: bid of ₹${auctionState.currentBid.toLocaleString('en-IN')} exceeds their max bid of ₹${capacity.maxBid.toLocaleString('en-IN')}`,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const { currentPlayerId, currentBid } = auctionState;
+    const currentPlayerId = String(auctionState.currentPlayerId);
+    const currentBid = auctionState.currentBid;
+    const reserveAfterPurchase = Math.max(0, capacity.remainingSlots - 1)
+      * getMinClassBasePrice(tournament as any);
+    const minimumRequiredBalance = currentBid + reserveAfterPurchase;
 
-    // Atomic idempotency guard — filter includes isSold: false so only one concurrent
-    // request can ever succeed. If null, another request already sold this player.
-    // Explicit updatedAt ensures reliable timestamp comparison in the undo route.
+    // Claim the player first. The isSold guard makes duplicate sell requests idempotent.
     const updatedPlayer = await PlayerModel.findOneAndUpdate(
-      { _id: currentPlayerId, isSold: false },
+      { _id: currentPlayerId, tournamentId, isSold: false },
       {
         $set: {
           isSold: true,
+          isUnsold: false,
           finalPrice: currentBid,
           winningTeamId: teamId,
           updatedAt: new Date(),
         },
       },
-      { returnDocument: 'after' }
+      { returnDocument: 'after' },
     ).lean();
 
     if (!updatedPlayer) {
-      return NextResponse.json({ error: 'Player is already sold' }, { status: 409 });
+      return NextResponse.json({ error: 'Player is already sold or no longer available' }, { status: 409 });
     }
 
-    // Safe subtraction: the atomic isSold guard above ensures exactly one sell ever succeeds
-    const newBalance = (team as any).currentBalance - currentBid;
-
-    // Update team balance and auction state in parallel
-    const [updatedTeam, updatedState] = await Promise.all([
-      TeamModel.findOneAndUpdate(
-        { _id: teamId },
-        {
-          $set: { currentBalance: newBalance },
-          $addToSet: { playersPurchased: String(currentPlayerId) },
+    // Deduct atomically and re-check balance/squad capacity at write time. If this
+    // guard fails, restore the player so a partial sale cannot remain in the database.
+    const updatedTeam = await TeamModel.findOneAndUpdate(
+      {
+        _id: teamId,
+        tournamentId,
+        // Re-check the complete reserve invariant at write time, not only the
+        // immediate purchase price. Concurrent spending cannot consume the
+        // budget required to fill the remaining squad slots.
+        currentBalance: { $gte: minimumRequiredBalance },
+        playersPurchased: { $ne: currentPlayerId },
+        $expr: {
+          $lt: [
+            { $size: { $ifNull: ['$playersPurchased', []] } },
+            tournament.squadSize,
+          ],
         },
-        { returnDocument: 'after' }
-      ).lean(),
-      AuctionStateModel.findOneAndUpdate(
-        { tournamentId },
-        { $set: { currentAuctionStatus: 'Sold' } },
-        { returnDocument: 'after' }
-      ).lean(),
-    ]);
+      },
+      {
+        $inc: { currentBalance: -currentBid },
+        $addToSet: { playersPurchased: currentPlayerId },
+      },
+      { returnDocument: 'after' },
+    ).lean();
 
     if (!updatedTeam) {
+      await PlayerModel.findOneAndUpdate(
+        {
+          _id: currentPlayerId,
+          tournamentId,
+          isSold: true,
+          winningTeamId: teamId,
+          finalPrice: currentBid,
+        },
+        {
+          $set: { isSold: false, isUnsold: false, updatedAt: new Date() },
+          $unset: { finalPrice: '', winningTeamId: '' },
+        },
+      );
       return NextResponse.json(
-        { error: 'Team not found' },
-        { status: 404 }
+        { error: 'Team balance or squad changed before the sale completed. Refresh and try again.' },
+        { status: 409 },
+      );
+    }
+
+    const updatedState = await AuctionStateModel.findOneAndUpdate(
+      {
+        tournamentId,
+        currentPlayerId,
+        currentBid,
+        currentAuctionStatus: { $ne: 'Sold' },
+      },
+      { $set: { currentAuctionStatus: 'Sold', winningTeamId: teamId } },
+      { returnDocument: 'after' },
+    ).lean();
+
+    if (!updatedState) {
+      await Promise.all([
+        PlayerModel.findOneAndUpdate(
+          {
+            _id: currentPlayerId,
+            tournamentId,
+            isSold: true,
+            winningTeamId: teamId,
+            finalPrice: currentBid,
+          },
+          {
+            $set: { isSold: false, isUnsold: false, updatedAt: new Date() },
+            $unset: { finalPrice: '', winningTeamId: '' },
+          },
+        ),
+        TeamModel.findOneAndUpdate(
+          { _id: teamId, tournamentId, playersPurchased: currentPlayerId },
+          {
+            $inc: { currentBalance: currentBid },
+            $pull: { playersPurchased: currentPlayerId },
+          },
+        ),
+      ]);
+      return NextResponse.json(
+        { error: 'Auction state changed before the sale completed. Refresh and try again.' },
+        { status: 409 },
       );
     }
 
@@ -166,10 +217,10 @@ export async function POST(request: NextRequest) {
           const finalState = await AuctionStateModel.findOneAndUpdate(
             { tournamentId },
             {
-              $push: { completedClasses: activeClass },
+              $addToSet: { completedClasses: activeClass },
               $set: { currentAuctionClass: null },
             },
-            { returnDocument: 'after' }
+            { returnDocument: 'after' },
           ).lean();
           triggerClassCompleted(tournamentId, {
             completedClassCode: activeClass,
@@ -193,7 +244,7 @@ export async function POST(request: NextRequest) {
     console.error('Error selling player:', error);
     return NextResponse.json(
       { error: 'Failed to sell player' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

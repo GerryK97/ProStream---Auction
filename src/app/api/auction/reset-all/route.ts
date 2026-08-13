@@ -3,8 +3,8 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { PlayerModel } from '@/models/Player';
 import { TeamModel } from '@/models/Team';
-import { TournamentModel } from '@/models/Tournament';
 import { triggerStateUpdate } from '@/lib/pusher-server';
+import { authorizeAuctionMutation } from '@/lib/auctionAuthorization';
 
 // POST /api/auction/reset-all - Reset all sales and restart the auction
 export async function POST(request: NextRequest) {
@@ -18,6 +18,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const access = await authorizeAuctionMutation(request, tournamentId);
+    if (!access.authorized) return access.response;
 
     // Reset all players to unsold
     await PlayerModel.updateMany(
@@ -65,7 +68,7 @@ export async function POST(request: NextRequest) {
     // Trigger Pusher event so all connected clients (overlays, other browsers) update in real-time
     try {
       const [tournament, freshPlayers, freshTeams] = await Promise.all([
-        TournamentModel.findById(tournamentId).lean(),
+        Promise.resolve(access.tournament),
         PlayerModel.find({ tournamentId }).lean(),
         TeamModel.find({ tournamentId }).lean(),
       ]);

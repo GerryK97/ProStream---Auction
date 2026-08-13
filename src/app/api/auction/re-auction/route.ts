@@ -4,6 +4,7 @@ import { AuctionStateModel } from '@/models/AuctionState';
 import { PlayerModel } from '@/models/Player';
 import { triggerAuctionUndo } from '@/lib/pusher-server';
 import { serializePlayer } from '@/lib/cloudinaryUtils';
+import { authorizeAuctionMutation } from '@/lib/auctionAuthorization';
 
 // POST /api/auction/re-auction - Reset all unsold players back to available for re-auction
 export async function POST(request: NextRequest) {
@@ -17,6 +18,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const access = await authorizeAuctionMutation(request, tournamentId);
+    if (!access.authorized) return access.response;
 
     // Find all unsold players for this tournament
     const unsoldPlayers = await PlayerModel.find({ tournamentId, isUnsold: true }).lean();

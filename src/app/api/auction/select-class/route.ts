@@ -1,24 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
-import { TournamentModel } from '@/models/Tournament';
 import { PlayerModel } from '@/models/Player';
 import { triggerClassSelected } from '@/lib/pusher-server';
-import { getUserFromRequest } from '@/lib/request-helpers';
-import { canPerformAction } from '@/lib/permissions';
+import { authorizeAuctionMutation } from '@/lib/auctionAuthorization';
 
 // POST /api/auction/select-class
 // Auctioneer activates a player class for the spin wheel and bidding.
 // Only players in the selected class will appear on the spin wheel until the class is completed.
 export async function POST(request: NextRequest) {
   try {
-    const user = await getUserFromRequest(request);
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    if (!canPerformAction(user.role, 'manage', 'auction')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     await connectToDatabase();
     // className is the class NAME (e.g. "Platinum") — matches player.playerClass
     const { tournamentId, className } = await request.json();
@@ -30,9 +21,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate tournament exists and is Live, fetch auction state, count available players — all in parallel
-    const [tournament, auctionState, playerCount] = await Promise.all([
-      TournamentModel.findById(tournamentId).lean(),
+    const access = await authorizeAuctionMutation(request, tournamentId);
+    if (!access.authorized) return access.response;
+    const tournament = access.tournament;
+
+    // Validate live state and count available players in parallel.
+    const [auctionState, playerCount] = await Promise.all([
       AuctionStateModel.findOne({ tournamentId }),
       PlayerModel.countDocuments({
         tournamentId,
@@ -42,10 +36,7 @@ export async function POST(request: NextRequest) {
       }),
     ]);
 
-    if (!tournament) {
-      return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
-    }
-    if ((tournament as any).status !== 'Live') {
+    if (tournament.status !== 'Live') {
       return NextResponse.json({ error: 'Auction is not live' }, { status: 400 });
     }
 
@@ -124,19 +115,15 @@ export async function POST(request: NextRequest) {
 // Clears the active class filter so all players are visible again.
 export async function DELETE(request: NextRequest) {
   try {
-    const user = await getUserFromRequest(request);
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    if (!canPerformAction(user.role, 'manage', 'auction')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     await connectToDatabase();
     const { tournamentId } = await request.json();
 
     if (!tournamentId) {
       return NextResponse.json({ error: 'Missing tournamentId' }, { status: 400 });
     }
+
+    const access = await authorizeAuctionMutation(request, tournamentId);
+    if (!access.authorized) return access.response;
 
     const updatedState = await AuctionStateModel.findOneAndUpdate(
       { tournamentId },

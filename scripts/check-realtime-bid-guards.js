@@ -5,6 +5,27 @@ const checks = [
   'src/app/api/auction/bid/correct/route.ts',
 ];
 
+const scopedMutationRoutes = [
+  'src/app/api/auction/bid/route.ts',
+  'src/app/api/auction/bid/correct/route.ts',
+  'src/app/api/auction/edit-player-result/route.ts',
+  'src/app/api/auction/mark-unsold/route.ts',
+  'src/app/api/auction/re-auction/route.ts',
+  'src/app/api/auction/recalculate-balances/route.ts',
+  'src/app/api/auction/reset-all/route.ts',
+  'src/app/api/auction/reset/route.ts',
+  'src/app/api/auction/select-class/route.ts',
+  'src/app/api/auction/select-player/route.ts',
+  'src/app/api/auction/sell/route.ts',
+  'src/app/api/auction/undo/route.ts',
+];
+
+const explicitlyAuthorizedLifecycleRoutes = [
+  'src/app/api/auction/start/route.ts',
+  'src/app/api/auction/restart/route.ts',
+  'src/app/api/auction/stop/route.ts',
+];
+
 let failed = false;
 for (const file of checks) {
   const src = fs.readFileSync(file, 'utf8');
@@ -22,5 +43,43 @@ for (const file of checks) {
   }
 }
 
+const correctionSource = fs.readFileSync('src/app/api/auction/bid/correct/route.ts', 'utf8');
+if (!correctionSource.includes('currentBid: previousBid')) {
+  console.error('❌ bid/correct: correction writes must compare-and-swap the previously read currentBid.');
+  failed = true;
+}
+
+const sellSource = fs.readFileSync('src/app/api/auction/sell/route.ts', 'utf8');
+if (!sellSource.includes('currentBalance: { $gte: minimumRequiredBalance }')) {
+  console.error('❌ sell: atomic team update must preserve reserve budget for remaining squad slots.');
+  failed = true;
+}
+
+const editResultSource = fs.readFileSync('src/app/api/auction/edit-player-result/route.ts', 'utf8');
+if (!editResultSource.includes('withTransaction(')) {
+  console.error('❌ edit-player-result: player and affected-team writes must share a transaction.');
+  failed = true;
+}
+
+for (const file of scopedMutationRoutes) {
+  const src = fs.readFileSync(file, 'utf8');
+  const usesCombinedGuard = src.includes('authorizeAuctionMutation(request, tournamentId)');
+  const usesLowLatencyBidGuard =
+    src.includes('authenticateAuctionManager(request)') &&
+    src.includes('authorizeAuctionTournament(');
+  if (!usesCombinedGuard && !usesLowLatencyBidGuard) {
+    console.error(`❌ ${file}: auction mutations must use tournament-scoped authorization.`);
+    failed = true;
+  }
+}
+
+for (const file of explicitlyAuthorizedLifecycleRoutes) {
+  const src = fs.readFileSync(file, 'utf8');
+  if (!src.includes('getUserFromRequest(request)') || !src.includes('canAccessTournament(')) {
+    console.error(`❌ ${file}: lifecycle mutations must authenticate and check tournament access.`);
+    failed = true;
+  }
+}
+
 if (failed) process.exit(1);
-console.log('✅ Realtime bid guard passed: bid Pusher triggers are fire-and-forget and DB history is not persisted.');
+console.log('✅ Auction guards passed: realtime bid latency rules and tournament-scoped mutation authorization are enforced.');

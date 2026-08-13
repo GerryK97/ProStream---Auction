@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { triggerAuctionReset } from '@/lib/pusher-server';
+import { authorizeAuctionMutation } from '@/lib/auctionAuthorization';
 
 // POST /api/auction/reset - Reset the current auction (remove player from bidding board and return to available players list)
 export async function POST(request: NextRequest) {
@@ -15,6 +16,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const access = await authorizeAuctionMutation(request, tournamentId);
+    if (!access.authorized) return access.response;
 
     // Get auction state
     const auctionState = await AuctionStateModel.findOne({ tournamentId });

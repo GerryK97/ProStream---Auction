@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
-import { TournamentModel } from '@/models/Tournament';
 import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
-import { getUserFromRequest } from '@/lib/request-helpers';
-import { canPerformAction } from '@/lib/permissions';
+import { authorizeAuctionMutation } from '@/lib/auctionAuthorization';
 
 // POST /api/auction/recalculate-balances
 // Recalculates currentBalance and playersPurchased for every team in a tournament
@@ -12,12 +10,6 @@ import { canPerformAction } from '@/lib/permissions';
 // Safe to run at any time; does not touch player records or auction state.
 export async function POST(request: NextRequest) {
   try {
-    const user = await getUserFromRequest(request);
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (!canPerformAction(user.role, 'manage', 'auction')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     await connectToDatabase();
     const { tournamentId } = await request.json();
 
@@ -25,10 +17,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required field: tournamentId' }, { status: 400 });
     }
 
-    const tournament = await TournamentModel.findById(tournamentId).lean();
-    if (!tournament) {
-      return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
-    }
+    const access = await authorizeAuctionMutation(request, tournamentId);
+    if (!access.authorized) return access.response;
+    const tournament = access.tournament;
 
     const teams = await TeamModel.find({ tournamentId }).lean();
     if (!teams.length) {

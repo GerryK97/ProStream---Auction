@@ -6,6 +6,7 @@ import { TournamentModel } from '@/models/Tournament';
 import { triggerPlayerSelected } from '@/lib/pusher-server';
 import { serializePlayer } from '@/lib/cloudinaryUtils';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
+import { authorizeAuctionMutation } from '@/lib/auctionAuthorization';
 
 // POST /api/auction/select-player - Select a specific player for auction
 export async function POST(request: NextRequest) {
@@ -18,6 +19,13 @@ export async function POST(request: NextRequest) {
         { error: 'Missing required fields: tournamentId, playerId' },
         { status: 400 }
       );
+    }
+
+    const access = await authorizeAuctionMutation(request, tournamentId);
+    if (!access.authorized) return access.response;
+    const tournament = access.tournament;
+    if (tournament.status !== 'Live') {
+      return NextResponse.json({ error: 'Auction is not live' }, { status: 400 });
     }
 
     const resolvedOverlaySize =
@@ -73,10 +81,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update auction state and fetch tournament in parallel
-    const [updatedState, tournament] = await Promise.all([
-      AuctionStateModel.findOneAndUpdate(
-        { tournamentId },
+    const updatedState = await AuctionStateModel.findOneAndUpdate(
+        { tournamentId, currentAuctionStatus: { $ne: 'Bidding' } },
         {
           $set: {
             currentPlayerId: playerId,
@@ -87,17 +93,14 @@ export async function POST(request: NextRequest) {
           },
         },
         { returnDocument: 'after' }
-      ).lean(),
-      TournamentModel.findById(
-        tournamentId,
-        {
-          basePricePerPlayer: 1,
-          basePriceStrategy: 1,
-          usePlayerClasses: 1,
-          playerClasses: 1,
-        }
-      ).lean(),
-    ]);
+      ).lean();
+
+    if (!updatedState) {
+      return NextResponse.json(
+        { error: 'Auction state changed before the player could be selected' },
+        { status: 409 }
+      );
+    }
 
     const basePrice = getClassBasePrice(tournament as any, player as any);
     const selectedPlayer = serializePlayer(player as any) as any;

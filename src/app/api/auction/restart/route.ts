@@ -5,7 +5,7 @@ import { PlayerModel } from '@/models/Player';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { triggerAuctionRestarted } from '@/lib/pusher-server';
 import { getUserFromRequest } from '@/lib/request-helpers';
-import { canPerformAction } from '@/lib/permissions';
+import { canAccessTournament, canPerformAction } from '@/lib/permissions';
 
 // POST /api/auction/restart - Restart a stopped auction
 export async function POST(request: NextRequest) {
@@ -43,8 +43,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user has access to this tournament
-    const hasAccess = user.role === 'Admin' ||
-                     (user.role === 'Tournament' && (tournament as any).createdBy === user.userId);
+    const hasAccess = canAccessTournament(
+      user.userId,
+      user.role,
+      tournament as any,
+      user.assignedTournaments,
+    );
 
     if (!hasAccess) {
       return NextResponse.json({

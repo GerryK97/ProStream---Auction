@@ -3,10 +3,14 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { TournamentModel } from '@/models/Tournament';
 import { PlayerModel } from '@/models/Player';
+import { TeamModel } from '@/models/Team';
 import { triggerBidPlaced } from '@/lib/pusher-server';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
-import { getUserFromRequest } from '@/lib/request-helpers';
-import { canPerformAction } from '@/lib/permissions';
+import {
+  authenticateAuctionManager,
+  authorizeAuctionTournament,
+} from '@/lib/auctionAuthorization';
+import { getTeamAuctionCapacity } from '@/lib/auctionRules';
 import { serializePlayer } from '@/lib/cloudinaryUtils';
 
 // POST /api/auction/bid - Place a bid for the current player
@@ -14,77 +18,64 @@ export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
 
-    const user = await getUserFromRequest(request);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    if (!canPerformAction(user.role, 'manage', 'auction')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const { tournamentId, teamId: rawTeamId, amount } = await request.json();
+    const teamId = typeof rawTeamId === 'string' && rawTeamId.trim() ? rawTeamId : null;
 
-    const { tournamentId, teamId: bodyTeamId, amount } = await request.json();
-    const teamId = bodyTeamId;
-
-    if (!tournamentId || typeof amount !== 'number') {
+    if (!tournamentId || typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
       return NextResponse.json(
-        { error: 'Missing required fields: tournamentId, amount' },
-        { status: 400 }
+        { error: 'Missing or invalid fields: tournamentId, amount' },
+        { status: 400 },
       );
     }
 
-    // ── Round-trip 1: fetch auction state + tournament in parallel ────────
-    const [auctionState, tournament] = await Promise.all([
+    const authentication = await authenticateAuctionManager(request);
+    if (!authentication.authorized) return authentication.response;
+
+    // Keep the bid hot path to one parallel Mongo round-trip after cached auth.
+    const [auctionState, rawTournament] = await Promise.all([
       AuctionStateModel.findOne({ tournamentId }),
-      TournamentModel.findOne(
-        { _id: tournamentId },
-        { status: 1, playerBasePrice: 1, classPrices: 1, baseStrategy: 1 }
-      ).lean(),
+      TournamentModel.findById(tournamentId).lean(),
     ]);
+    const access = authorizeAuctionTournament(
+      authentication.user,
+      rawTournament as Record<string, any> | null,
+    );
+    if (!access.authorized) return access.response;
+    const tournament = access.tournament;
+
+    if (tournament.status !== 'Live') {
+      return NextResponse.json({ error: 'Auction is not live' }, { status: 400 });
+    }
+    if (tournament.biddingMode === 'team' && !teamId) {
+      return NextResponse.json({ error: 'A team is required for team bidding' }, { status: 400 });
+    }
 
     if (!auctionState) {
       return NextResponse.json({ error: 'Auction state not found for this tournament' }, { status: 404 });
     }
-    if (!tournament || (tournament as any).status !== 'Live') {
-      return NextResponse.json({ error: 'Auction is not live' }, { status: 400 });
-    }
     if (!auctionState.currentPlayerId) {
       return NextResponse.json({ error: 'No player is currently up for auction' }, { status: 400 });
     }
-
-    // ── Bid amount validation (cheap, no DB) ─────────────────────────────
+    if (auctionState.currentAuctionStatus === 'Sold') {
+      return NextResponse.json({ error: 'The current player has already been sold' }, { status: 409 });
+    }
     if (amount <= auctionState.currentBid) {
       return NextResponse.json({ error: 'Bid must be higher than the current bid' }, { status: 400 });
     }
 
-    // ── Round-trip 2: fetch player + update state — both parallel
-    const previousBid = auctionState.currentBid;
-    const now = Date.now();
-    const previousLeaderId = (auctionState as any).winningTeamId ?? null;
-    const eventHistory = [
-      ...(previousBid > 0 ? [{ teamId: previousLeaderId, amount: previousBid, timestamp: now - 1 }] : []),
-      { teamId: teamId || null, amount, timestamp: now },
-    ];
-
-    const [player, updatedState] = await Promise.all([
+    // Validate every entity and affordability rule before mutating auction state.
+    // This prevents invalid opening bids and full-squad bids from becoming authoritative.
+    const [player, team, playersBought] = await Promise.all([
       PlayerModel.findOne(
-        { _id: auctionState.currentPlayerId },
-        { isSold: 1, playerClass: 1, basePrice: 1, name: 1, displayName: 1 }
+        { _id: auctionState.currentPlayerId, tournamentId },
+        { isSold: 1, playerClass: 1, basePrice: 1, name: 1, displayName: 1 },
       ).lean(),
-      AuctionStateModel.findOneAndUpdate(
-        { tournamentId, currentBid: { $lt: amount } },
-        {
-          $set: {
-            currentBid: amount,
-            winningTeamId: teamId || null,
-            currentAuctionStatus: 'Bidding',
-            history: [],
-          },
-        },
-        { returnDocument: 'after' }
-      ).lean(),
+      teamId ? TeamModel.findOne({ _id: teamId, tournamentId }).lean() : Promise.resolve(null),
+      teamId
+        ? PlayerModel.countDocuments({ tournamentId, isSold: true, winningTeamId: teamId })
+        : Promise.resolve(0),
     ]);
 
-    // Validate player (checked after parallel write — reject double-sold race)
     if (!player) {
       return NextResponse.json({ error: 'Player not found' }, { status: 404 });
     }
@@ -92,16 +83,66 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Player is already sold' }, { status: 400 });
     }
 
-    if (!updatedState) {
-      return NextResponse.json({ error: 'Bid was superseded by a newer bid' }, { status: 409 });
-    }
-
-    // Base price check (needs player, done after fetch)
     const actualBasePrice = getClassBasePrice(tournament as any, player as any);
-    if (previousBid === 0 && amount < actualBasePrice) {
+    if (auctionState.currentBid === 0 && amount < actualBasePrice) {
       return NextResponse.json(
         { error: `The first bid must be at least the base price of ${actualBasePrice.toLocaleString()}` },
-        { status: 400 }
+        { status: 400 },
+      );
+    }
+
+    if (teamId) {
+      if (!team) {
+        return NextResponse.json({ error: 'Team not found in this tournament' }, { status: 404 });
+      }
+
+      const capacity = getTeamAuctionCapacity(team as any, tournament as any, playersBought);
+      if (capacity.isSquadFull) {
+        return NextResponse.json({ error: 'This team already has a full squad' }, { status: 400 });
+      }
+      if (amount > capacity.maxBid) {
+        return NextResponse.json(
+          {
+            error: `Bid exceeds ${(team as any).name}'s maximum affordable bid of ${capacity.maxBid.toLocaleString()}`,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    const previousBid = auctionState.currentBid;
+    const previousLeaderId = (auctionState as any).winningTeamId ?? null;
+    const currentPlayerId = String(auctionState.currentPlayerId);
+    const now = Date.now();
+    const eventHistory = [
+      ...(previousBid > 0 ? [{ teamId: previousLeaderId, amount: previousBid, timestamp: now - 1 }] : []),
+      { teamId, amount, timestamp: now },
+    ];
+
+    // Compare-and-swap on both player and bid. A player selection or competing bid
+    // that lands after validation cannot accidentally receive this stale bid.
+    const updatedState = await AuctionStateModel.findOneAndUpdate(
+      {
+        tournamentId,
+        currentPlayerId,
+        currentBid: previousBid,
+        currentAuctionStatus: { $ne: 'Sold' },
+      },
+      {
+        $set: {
+          currentBid: amount,
+          winningTeamId: teamId,
+          currentAuctionStatus: 'Bidding',
+          history: [],
+        },
+      },
+      { returnDocument: 'after' },
+    ).lean();
+
+    if (!updatedState) {
+      return NextResponse.json(
+        { error: 'Auction state changed before this bid was applied. Refresh and try again.' },
+        { status: 409 },
       );
     }
 
@@ -116,8 +157,6 @@ export async function POST(request: NextRequest) {
     triggerBidPlaced(tournamentId, {
       auctionState: eventAuctionState as any,
       currentPlayer: serializePlayer(player as any) as any,
-      // Teams are already loaded in clients; auctionState.winningTeamId and
-      // history[-1].teamId identify the leader. Avoid a team DB read + payload.
       winningTeam: null,
       currentBid: amount,
       previousBid,
