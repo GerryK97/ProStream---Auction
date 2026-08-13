@@ -37,6 +37,10 @@ for (const file of checks) {
     console.error(`❌ ${file}: bid Pusher trigger must handle errors with .catch(...) when fired without awaiting.`);
     failed = true;
   }
+  if (!src.includes('after(() => pusherDelivery)')) {
+    console.error(`❌ ${file}: in-flight Pusher delivery must be registered with Next after() for serverless reliability.`);
+    failed = true;
+  }
   if (/\$push\s*:\s*{\s*history\b/.test(src) || /\$push\s*:\s*{[\s\S]*?history\s*:/.test(src)) {
     console.error(`❌ ${file}: active bid routes must not persist bid history; keep only currentBid + winningTeamId in DB.`);
     failed = true;
@@ -46,6 +50,18 @@ for (const file of checks) {
 const correctionSource = fs.readFileSync('src/app/api/auction/bid/correct/route.ts', 'utf8');
 if (!correctionSource.includes('currentBid: previousBid')) {
   console.error('❌ bid/correct: correction writes must compare-and-swap the previously read currentBid.');
+  failed = true;
+}
+
+const bidSource = fs.readFileSync('src/app/api/auction/bid/route.ts', 'utf8');
+if (!/Promise\.all\s*\(\s*\[\s*connectToDatabase\(\),\s*authenticateAuctionManager\(request\)/s.test(bidSource)) {
+  console.error('❌ bid: Mongo connection and authentication must start in parallel on the cold path.');
+  failed = true;
+}
+
+const vercelConfig = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
+if (!Array.isArray(vercelConfig.regions) || vercelConfig.regions.length !== 1 || vercelConfig.regions[0] !== 'bom1') {
+  console.error('❌ vercel.json: auction functions must run in bom1 beside MongoDB and Pusher ap2.');
   failed = true;
 }
 

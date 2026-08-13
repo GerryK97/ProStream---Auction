@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { TournamentModel } from '@/models/Tournament';
@@ -16,8 +16,6 @@ import { serializePlayer } from '@/lib/cloudinaryUtils';
 // POST /api/auction/bid - Place a bid for the current player
 export async function POST(request: NextRequest) {
   try {
-    await connectToDatabase();
-
     const { tournamentId, teamId: rawTeamId, amount } = await request.json();
     const teamId = typeof rawTeamId === 'string' && rawTeamId.trim() ? rawTeamId : null;
 
@@ -28,7 +26,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const authentication = await authenticateAuctionManager(request);
+    // MongoDB and a cold auth-cache lookup are independent. Start them together
+    // so a serverless cold invocation pays the slower operation once instead of
+    // waiting for two sequential network handshakes.
+    const [, authentication] = await Promise.all([
+      connectToDatabase(),
+      authenticateAuctionManager(request),
+    ]);
     if (!authentication.authorized) return authentication.response;
 
     // Keep the bid hot path to one parallel Mongo round-trip after cached auth.
@@ -154,7 +158,7 @@ export async function POST(request: NextRequest) {
     // Fire-and-forget Pusher for bids. The operator panel already applies an
     // optimistic local update, and overlays receive the WebSocket event as soon
     // as Pusher accepts it. Do not block the bid HTTP response on Pusher REST RTT.
-    triggerBidPlaced(tournamentId, {
+    const pusherDelivery = triggerBidPlaced(tournamentId, {
       auctionState: eventAuctionState as any,
       currentPlayer: serializePlayer(player as any) as any,
       winningTeam: null,
@@ -162,6 +166,10 @@ export async function POST(request: NextRequest) {
       previousBid,
       message: `New bid placed: ${amount.toLocaleString()}`,
     }).catch((err) => console.error('[bid] Pusher trigger failed:', err));
+    // Start publishing immediately, but register the in-flight promise with
+    // Next's request lifecycle so Vercel does not freeze the function before
+    // Pusher acknowledges delivery after the HTTP response has been returned.
+    after(() => pusherDelivery);
 
     return NextResponse.json(updatedState);
   } catch (error) {

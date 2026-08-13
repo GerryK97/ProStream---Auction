@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { AuctionStateModel } from '@/models/AuctionState';
 import { PlayerModel } from '@/models/Player';
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
       history: eventHistory,
     };
 
-    triggerBidPlaced(tournamentId, {
+    const pusherDelivery = triggerBidPlaced(tournamentId, {
       auctionState: eventAuctionState as any,
       currentPlayer: serializePlayer(player as any) as any,
       winningTeam: null,
@@ -127,6 +127,7 @@ export async function POST(request: NextRequest) {
       previousBid,
       message: `Bid corrected to: ${amount.toLocaleString()}`,
     }).catch((err) => console.error('[bid/correct] Pusher trigger failed:', err));
+    after(() => pusherDelivery);
 
     return NextResponse.json(updatedState);
   } catch (error) {
