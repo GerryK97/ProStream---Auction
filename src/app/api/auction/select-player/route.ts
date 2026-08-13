@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
             currentAuctionStatus: 'Pending',
             history: [],
           },
+          $inc: { revision: 1 },
         },
         { returnDocument: 'after' }
       ).lean();

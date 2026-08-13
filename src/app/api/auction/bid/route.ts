@@ -139,6 +139,7 @@ export async function POST(request: NextRequest) {
           currentAuctionStatus: 'Bidding',
           history: [],
         },
+        $inc: { revision: 1 },
       },
       { returnDocument: 'after' },
     ).lean();
@@ -171,7 +172,7 @@ export async function POST(request: NextRequest) {
     // Pusher acknowledges delivery after the HTTP response has been returned.
     after(() => pusherDelivery);
 
-    return NextResponse.json(updatedState);
+    return NextResponse.json(eventAuctionState);
   } catch (error) {
     console.error('Error placing bid:', error);
     return NextResponse.json({ error: 'Failed to place bid' }, { status: 500 });

@@ -13,6 +13,7 @@ const bidSchema = new Schema<Bid>(
 const auctionStateSchema = new Schema<AuctionState>(
   {
     tournamentId: { type: String, required: true, unique: true },
+    revision: { type: Number, default: 0 },
     currentPlayerId: { type: String, default: null },
     currentBid: { type: Number, default: 0 },
     winningTeamId: { type: String, default: null },

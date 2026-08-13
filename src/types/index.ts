@@ -121,6 +121,7 @@ export interface Player {
 
 export interface AuctionState {
   tournamentId: string;
+  revision?: number;
   currentPlayerId: string | null;
   currentBid: number;
   winningTeamId: string | null;

@@ -103,6 +103,7 @@ export async function POST(request: NextRequest) {
           currentAuctionStatus: 'Bidding',
           history: [],
         },
+        $inc: { revision: 1 },
       },
       { returnDocument: 'after' }
     ).lean();
@@ -129,7 +130,7 @@ export async function POST(request: NextRequest) {
     }).catch((err) => console.error('[bid/correct] Pusher trigger failed:', err));
     after(() => pusherDelivery);
 
-    return NextResponse.json(updatedState);
+    return NextResponse.json(eventAuctionState);
   } catch (error) {
     console.error('Error correcting bid:', error);
     return NextResponse.json({ error: 'Failed to correct bid' }, { status: 500 });

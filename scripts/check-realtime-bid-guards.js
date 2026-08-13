@@ -45,6 +45,20 @@ for (const file of checks) {
     console.error(`❌ ${file}: active bid routes must not persist bid history; keep only currentBid + winningTeamId in DB.`);
     failed = true;
   }
+  if (!/\$inc\s*:\s*{\s*revision\s*:\s*1\s*}/.test(src)) {
+    console.error(`❌ ${file}: every accepted bid/correction must increment the monotonic auction revision.`);
+    failed = true;
+  }
+  if (!src.includes('return NextResponse.json(eventAuctionState)')) {
+    console.error(`❌ ${file}: HTTP and Pusher must expose the same revision payload so first arrival preserves bid history.`);
+    failed = true;
+  }
+}
+
+const selectPlayerSource = fs.readFileSync('src/app/api/auction/select-player/route.ts', 'utf8');
+if (!/\$inc\s*:\s*{\s*revision\s*:\s*1\s*}/.test(selectPlayerSource)) {
+  console.error('❌ select-player: every player selection must increment the monotonic auction revision.');
+  failed = true;
 }
 
 const correctionSource = fs.readFileSync('src/app/api/auction/bid/correct/route.ts', 'utf8');

@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
         {
           $setOnInsert: {
             tournamentId,
+            revision: 0,
             currentPlayerId: null,
             currentBid: 0,
             winningTeamId: null,
