@@ -58,19 +58,19 @@ Custom size via `overlaySettings.size`. Full Screen ignores size and always uses
 
 Layouts: `fullscreen` (embedded in FS card) and `bar` (320px floating). Frame 15 panel chrome (silver header / dark body / gold amounts).
 
-## Wheel spin (`WheelSpinT4`)
+## Slot reel (`SlotReelT4`)
 
-Heraldic **Player Draw** wheel — same timing / winner math as Theme 3, different art direction:
+Heraldic **slot reel** player selection — same Spin control, `overlay:wheel-spin` event, and timing as Theme 3; Theme 4 spins **player numbers only**, then reveals the winner plate:
 
-| vs Theme 3 | Theme 4 |
-|------------|---------|
-| Rainbow segments | Alternating navy / antique-gold slices + gold dividers |
-| Name labels mid-slice | **Player numbers only**, placed near the **outer rim** |
-| Saira / Nunito | Bebas Neue title + numbers; Oswald on winner meta |
-| Triangle pointer + light rays | Gold-rim chevron pointer; clean plate winner card |
-| “Spin the Wheel” | “Player Draw” / hub “DRAW” |
+| vs Theme 3 wheel | Theme 4 slot reel |
+|------------------|-------------------|
+| Rainbow SVG wheel | Vertical `#` number strip in a gold/navy bezel |
+| Name labels on slices | Player number only while spinning |
+| Saira / Nunito | Bebas Neue numbers; Oswald on winner meta |
+| Triangle pointer + light rays | Gold chevrons on the center lock row; clean plate winner card |
+| “Spin the Wheel” | Tournament logo + name at top; “Selecting Player” subtitle; logo “DRAW” |
 
-Triggered by `displayMode: wheel-spin` + `overlay:wheel-spin` (same control panel Spin flow). Wired in `CustomT4Content` and `FullScreenT4Content`.
+Triggered by `displayMode: wheel-spin` + `overlay:wheel-spin` (same control panel Spin flow). Wired in `CustomT4Content`, `FullScreenT4Content`, and `FullScreenAltT4Content`.
 
 ## Ticker (`TickerT4`) — overlays.uno Prime
 
@@ -106,7 +106,7 @@ Fullscreen summary for `displayMode: sold-summary`.
 | Data | Theme 3 only: sold (price desc) → unsold → remaining |
 | Footer | Shiny accent strip (same gradient + sheen as title): SOLD / UNSOLD / REMAINING + page dots |
 
-Wired in `CustomT4Content` / `FullScreenT4Content`. Cards, ticker, and wheel hide while active.
+Wired in `CustomT4Content` / `FullScreenT4Content`. Cards, ticker, and slot reel hide while active.
 
 ## Team Summary (`TeamSummaryT4`)
 

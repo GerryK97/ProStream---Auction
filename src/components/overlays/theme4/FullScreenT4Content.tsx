@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Theme4Canvas } from './Theme4Canvas';
 import FullScreenPlayerCardT4 from './FullScreenPlayerCardT4';
-import WheelSpinT4 from './WheelSpinT4';
+import SlotReelT4 from './SlotReelT4';
 import TickerT4 from './TickerT4';
 import SoldPlayersSummaryT4 from './SoldPlayersSummaryT4';
 import TeamSummaryT4 from './TeamSummaryT4';
@@ -33,7 +33,7 @@ function isSummaryMode(mode: DisplayMode): boolean {
 }
 
 /**
- * Full Screen Theme 4 — opaque dedicated full-bleed player card + ticker/summaries/wheel.
+ * Full Screen Theme 4 — opaque dedicated full-bleed player card + ticker/summaries/slot reel.
  */
 const FullScreenT4Content: React.FC<Theme4ContentProps> = ({
   currentPlayer,
@@ -214,7 +214,7 @@ const FullScreenT4Content: React.FC<Theme4ContentProps> = ({
       )}
 
       {isWheelSpin && wheelSpinData && (
-        <WheelSpinT4 data={wheelSpinData} allPlayers={players} tournament={tournament} />
+        <SlotReelT4 data={wheelSpinData} allPlayers={players} tournament={tournament} />
       )}
 
       {showPlayerCard && currentPlayer && (

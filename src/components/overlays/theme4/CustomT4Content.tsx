@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Theme4Canvas } from './Theme4Canvas';
 import PlayerCardT4 from './PlayerCardT4';
 import PortraitPlayerCardT4 from './PortraitPlayerCardT4';
-import WheelSpinT4 from './WheelSpinT4';
+import SlotReelT4 from './SlotReelT4';
 import TickerT4 from './TickerT4';
 import SoldPlayersSummaryT4 from './SoldPlayersSummaryT4';
 import TeamSummaryT4 from './TeamSummaryT4';
@@ -35,7 +35,7 @@ function isSummaryMode(mode: DisplayMode): boolean {
  * Custom (transparent) Theme 4 overlay.
  * size=small → Frame 15 lower-third card
  * size=large → centered portrait
- * displayMode=wheel-spin → Player Draw wheel
+ * displayMode=wheel-spin → slot reel player selection
  * displayMode=sold-summary | team-summary | top10-summary | team-wise-image | resting → panels
  * ticker → Prime news-ticker bar
  */
@@ -159,7 +159,7 @@ const CustomT4Content: React.FC<Theme4ContentProps> = ({
       )}
 
       {isWheelSpin && wheelSpinData && (
-        <WheelSpinT4 data={wheelSpinData} allPlayers={players} tournament={tournament} />
+        <SlotReelT4 data={wheelSpinData} allPlayers={players} tournament={tournament} />
       )}
 
       {showCard &&

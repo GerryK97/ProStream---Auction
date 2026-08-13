@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Theme4Canvas } from './Theme4Canvas';
 import CurrentBidPanelT4, { type BidPanelPhaseT4 } from './CurrentBidPanelT4';
-import WheelSpinT4 from './WheelSpinT4';
+import SlotReelT4 from './SlotReelT4';
 import TickerT4 from './TickerT4';
 import SoldPlayersSummaryT4 from './SoldPlayersSummaryT4';
 import TeamSummaryT4 from './TeamSummaryT4';
@@ -474,7 +474,7 @@ const FullScreenAltT4Content: React.FC<Theme4ContentProps> = ({
         )}
 
       {activeMode === 'wheel-spin' && wheelSpinData && (
-        <WheelSpinT4 data={wheelSpinData} allPlayers={players} tournament={tournament} />
+        <SlotReelT4 data={wheelSpinData} allPlayers={players} tournament={tournament} />
       )}
 
       {isLiveMode && (

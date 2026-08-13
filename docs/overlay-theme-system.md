@@ -84,7 +84,7 @@ Theme 4 (`theme4`, `--t4-*`) spans Custom lower-thirds and dedicated Full Screen
 ### Scope
 - **Custom** ([`CustomT4Content.tsx`](../src/components/overlays/theme4/CustomT4Content.tsx)) — transparent canvas; Frame 15 `small` or portrait `large`
 - **Full Screen** ([`FullScreenT4Content.tsx`](../src/components/overlays/theme4/FullScreenT4Content.tsx)) — opaque dedicated [`FullScreenPlayerCardT4`](../src/components/overlays/theme4/FullScreenPlayerCardT4.tsx) (Theme 3 FS structure, T4 chrome); post-sale waiting via `RestingTimeT4`
-- **Full Screen 2** ([`FullScreenAltT4Content.tsx`](../src/components/overlays/theme4/FullScreenAltT4Content.tsx)) — secondary-image hero + floating [`CurrentBidPanelT4`](../src/components/overlays/theme4/CurrentBidPanelT4.tsx) `bar`, sold toast, waiting, ticker/summaries/wheel
+- **Full Screen 2** ([`FullScreenAltT4Content.tsx`](../src/components/overlays/theme4/FullScreenAltT4Content.tsx)) — secondary-image hero + floating [`CurrentBidPanelT4`](../src/components/overlays/theme4/CurrentBidPanelT4.tsx) `bar`, sold toast, waiting, ticker/summaries/slot reel
 - Frame 15 white artboard fill is **not** rendered on Custom (OBS transparency)
 
 ### Layout (Frame 15 local coords)
@@ -107,7 +107,7 @@ Theme 4 (`theme4`, `--t4-*`) spans Custom lower-thirds and dedicated Full Screen
 - [`FullScreenPlayerCardT4.tsx`](../src/components/overlays/theme4/FullScreenPlayerCardT4.tsx) — Full Screen opaque card
 - [`CurrentBidPanelT4.tsx`](../src/components/overlays/theme4/CurrentBidPanelT4.tsx) — `fullscreen` + `bar` bid layouts
 - [`fullScreenPlayerCardT4Layout.ts`](../src/components/overlays/theme4/fullScreenPlayerCardT4Layout.ts)
-- [`WheelSpinT4.tsx`](../src/components/overlays/theme4/WheelSpinT4.tsx) — heraldic Player Draw wheel (`wheel-spin`)
+- [`SlotReelT4.tsx`](../src/components/overlays/theme4/SlotReelT4.tsx) — heraldic slot-reel player selection (`wheel-spin`)
 - [`TickerT4.tsx`](../src/components/overlays/theme4/TickerT4.tsx) — overlays.uno **Prime** RSS ticker (`#0a3d8d` / `#222c40` / PT Sans Narrow)
 - [`SoldPlayersSummaryT4.tsx`](../src/components/overlays/theme4/SoldPlayersSummaryT4.tsx) — Player Summary (`sold-summary`), Fresh layout + ticker-blue title bands
 - [`TeamSummaryT4.tsx`](../src/components/overlays/theme4/TeamSummaryT4.tsx) — Team Summary (`team-summary`), same chrome + Theme 3 team data
@@ -121,8 +121,8 @@ Theme 4 (`theme4`, `--t4-*`) spans Custom lower-thirds and dedicated Full Screen
 - [`t4ShieldPath.ts`](../src/components/overlays/theme4/t4ShieldPath.ts)
 - Preview: `/overlays/theme4-preview`
 
-### Wheel spin
-Same Spin control + `OverlayWrapper` timing as Theme 3. Theme 4 uses navy/gold segments, **player numbers near the outer rim** (not names), Bebas/Oswald type, circular heraldic winner photo, and a clean footer plate (no rainbow rays). Player cards hide while `displayMode === 'wheel-spin'`.
+### Slot reel (`wheel-spin`)
+Same Spin control + `OverlayWrapper` timing as Theme 3 (`WHEEL_SPIN_DURATION_MS` + `WHEEL_WINNER_HOLD_MS`). Theme 4 replaces the wheel with a vertical **slot reel of player numbers**: gold/navy bezel, 3-row window, center lock, streamer logo beside the reel, **tournament logo + name in the top header**, Bebas type on the spinning `#` values, and the circular heraldic winner plate (photo + name) after the reel stops. Player cards hide while `displayMode === 'wheel-spin'`. Wired in `CustomT4Content`, `FullScreenT4Content`, and `FullScreenAltT4Content`.
 
 ### Ticker (Prime)
 Bottom full-bleed bar matching overlays.uno “RSS News Ticker · Prime”: blue scroll field, diagonal gold category, PT Sans Narrow. Auction modes drive the marquee (`tickerMode` / custom lines). Hidden on wheel-spin and summary modes; small player card clears the ticker height.
