@@ -66,6 +66,7 @@ function buildProfileFields(player: Player, tournament: Tournament | null) {
   if (ppf?.showAge) {
     fields.push({ label: 'Age', value: player.age ?? '—' });
   }
+  fields.push({ label: 'Position', value: player.position || '—' });
   if (ppf?.showBattingStyle) {
     fields.push({ label: 'Batting', value: player.battingStyle || '—' });
   }
