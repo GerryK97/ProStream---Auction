@@ -75,7 +75,7 @@ All animations respect `prefers-reduced-motion`.
 
 ### Where the live player bar is used
 - **Custom overlay** (`CustomT3Content`) — **Small:** lower-third [`LiveAuctionPlayerBarT3`](src/components/overlays/theme3/LiveAuctionPlayerBarT3.tsx); **Large:** portrait [`PortraitPlayerCardT3`](src/components/overlays/theme3/PortraitPlayerCardT3.tsx) (352×528, photo top, footer with number/name + two-column bid: max-height Current Bid + persistent Base after bidding starts). Controlled by overlay `size` (`large` | `small`). With **Auto Switch ON**, `select-player` includes `overlaySize: 'large'` (+ `sizeRev`) on `auction:player-selected` so the first paint is Large; a timer then publishes Small. Stale in-flight Small patches are ignored via `sizeRev`. With Auto OFF, size is unchanged when a player is added.
-- **Main Full Screen** (`FullScreenT3Content`) — uses the full-screen player card below (not the bar)
+- **Main Full Screen** (`FullScreenT3Content`) — uses the full-screen player card below (not the bar). Player Summary / Team Summary / other summary modes hide that opaque card immediately (`overlaySettings.displayMode`) so the profile cannot cover the panel.
 
 ## Theme 4 — Frame 15 + Full Screen routes
 
@@ -83,7 +83,7 @@ Theme 4 (`theme4`, `--t4-*`) spans Custom lower-thirds and dedicated Full Screen
 
 ### Scope
 - **Custom** ([`CustomT4Content.tsx`](../src/components/overlays/theme4/CustomT4Content.tsx)) — transparent canvas; Frame 15 `small` or portrait `large`
-- **Full Screen** ([`FullScreenT4Content.tsx`](../src/components/overlays/theme4/FullScreenT4Content.tsx)) — opaque dedicated [`FullScreenPlayerCardT4`](../src/components/overlays/theme4/FullScreenPlayerCardT4.tsx) (Theme 3 FS structure, T4 chrome); post-sale waiting via `RestingTimeT4`
+- **Full Screen** ([`FullScreenT4Content.tsx`](../src/components/overlays/theme4/FullScreenT4Content.tsx)) — opaque dedicated [`FullScreenPlayerCardT4`](../src/components/overlays/theme4/FullScreenPlayerCardT4.tsx) (Theme 3 FS structure, T4 chrome); post-sale waiting via `RestingTimeT4`. On **Sold**, the profile/stats/bid panel are replaced by a large animated [`SoldDetailsSectionT4`](../src/components/overlays/theme4/SoldDetailsSectionT4.tsx) (SOLD badge + price + buying team). Player Summary / Team Summary / other summary modes hide the player card immediately (`overlaySettings.displayMode`) so the opaque profile cannot cover the panel.
 - **Full Screen 2** ([`FullScreenAltT4Content.tsx`](../src/components/overlays/theme4/FullScreenAltT4Content.tsx)) — secondary-image hero + floating [`CurrentBidPanelT4`](../src/components/overlays/theme4/CurrentBidPanelT4.tsx) `bar`, sold toast, waiting, ticker/summaries/slot reel
 - Frame 15 white artboard fill is **not** rendered on Custom (OBS transparency)
 
@@ -104,8 +104,9 @@ Theme 4 (`theme4`, `--t4-*`) spans Custom lower-thirds and dedicated Full Screen
 ### Composition
 - [`PlayerCardT4.tsx`](../src/components/overlays/theme4/PlayerCardT4.tsx)
 - [`PortraitPlayerCardT4.tsx`](../src/components/overlays/theme4/PortraitPlayerCardT4.tsx) — large centered portrait
-- [`FullScreenPlayerCardT4.tsx`](../src/components/overlays/theme4/FullScreenPlayerCardT4.tsx) — Full Screen opaque card
-- [`CurrentBidPanelT4.tsx`](../src/components/overlays/theme4/CurrentBidPanelT4.tsx) — `fullscreen` + `bar` bid layouts
+- [`FullScreenPlayerCardT4.tsx`](../src/components/overlays/theme4/FullScreenPlayerCardT4.tsx) — Full Screen opaque card; sold reveal uses [`SoldDetailsSectionT4`](../src/components/overlays/theme4/SoldDetailsSectionT4.tsx)
+- [`SoldDetailsSectionT4.tsx`](../src/components/overlays/theme4/SoldDetailsSectionT4.tsx) — Full Screen sold reveal (large SOLD badge + price + team, enter/pulse animations)
+- [`CurrentBidPanelT4.tsx`](../src/components/overlays/theme4/CurrentBidPanelT4.tsx) — `fullscreen` + `bar` bid layouts (hidden during sold reveal — details live in SoldDetailsSectionT4)
 - [`fullScreenPlayerCardT4Layout.ts`](../src/components/overlays/theme4/fullScreenPlayerCardT4Layout.ts)
 - [`SlotReelT4.tsx`](../src/components/overlays/theme4/SlotReelT4.tsx) — heraldic slot-reel player selection (`wheel-spin`)
 - [`TickerT4.tsx`](../src/components/overlays/theme4/TickerT4.tsx) — overlays.uno **Prime** RSS ticker (`#0a3d8d` / `#222c40` / PT Sans Narrow)
@@ -157,7 +158,7 @@ The Full Screen 2 overlay (`/overlays/:id/fullscreen2`, [`FullScreenAltT3Content
 
 ## Theme 3 Full-Screen Player Card (main Full Screen route)
 
-The primary Full Screen overlay (`/overlays/:id`, [`FullScreenT3Content.tsx`](../src/components/overlays/theme3/FullScreenT3Content.tsx)) renders an **opaque 1920×1080 player card** instead of the lower-third bar. The Custom route uses **Small** (horizontal bar) or **Large** (portrait card) per overlay `size`; Full Screen 2 uses the secondary-image layout described above.
+The primary Full Screen overlay (`/overlays/:id`, [`FullScreenT3Content.tsx`](../src/components/overlays/theme3/FullScreenT3Content.tsx)) renders an **opaque 1920×1080 player card** instead of the lower-third bar. Summary display modes (`sold-summary`, `team-summary`, and the other summary tabs) take over immediately from `overlaySettings.displayMode` so the card cannot stay on top. The Custom route uses **Small** (horizontal bar) or **Large** (portrait card) per overlay `size`; Full Screen 2 uses the secondary-image layout described above.
 
 ### Layout
 - **Canvas fill:** Opaque `--t3-gradient-canvas` background with ticker-aligned accent skew bands ([`PlayerBarBackgroundT3.tsx`](../src/components/overlays/theme3/PlayerBarBackgroundT3.tsx))

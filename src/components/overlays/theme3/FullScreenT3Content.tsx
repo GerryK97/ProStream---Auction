@@ -24,6 +24,15 @@ const SUMMARY_MODES: DisplayMode[] = [
 
 const LIVE_MODES: DisplayMode[] = ['standard', 'custom-ticker'];
 
+const SUMMARY_PANELS: DisplayMode[] = [
+  'sold-summary', 'team-summary', 'team-wise-summary',
+  'team-wise-image', 'top10-summary', 'resting',
+];
+
+function isSummaryPanel(mode: DisplayMode): boolean {
+  return SUMMARY_PANELS.includes(mode);
+}
+
 /** Full Screen overlay — 1920×1080 canvas with full-screen player card + ticker. */
 const FullScreenT3Content: React.FC<Theme3ContentProps> = ({
   soldPlayers,
@@ -45,8 +54,16 @@ const FullScreenT3Content: React.FC<Theme3ContentProps> = ({
   const soldPlayerIdRef = useRef<string | undefined>(undefined);
   const waitingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const requestedMode = overlaySettings.displayMode;
+  const requestIsSummary = isSummaryPanel(requestedMode);
+  const requestIsWheel = requestedMode === 'wheel-spin';
   const isLiveMode = LIVE_MODES.includes(activeMode);
   const isCustomTicker = activeMode === 'custom-ticker';
+  const visibleSummaryMode = requestIsSummary
+    ? requestedMode
+    : isSummaryPanel(activeMode) && summaryExiting
+      ? activeMode
+      : null;
 
   useEffect(() => {
     const incoming = overlaySettings.displayMode;
@@ -63,38 +80,31 @@ const FullScreenT3Content: React.FC<Theme3ContentProps> = ({
       return;
     }
 
-    const prevIsSummary = SUMMARY_MODES.includes(prev);
-    const nextIsSummary = SUMMARY_MODES.includes(incoming);
-    const prevIsLive = LIVE_MODES.includes(prev);
-    const nextIsLive = LIVE_MODES.includes(incoming);
-
-    if (prevIsLive && !nextIsLive && !nextIsSummary) {
+    // Entering a summary must be synchronous. A delayed setActiveMode is
+    // cancelled by React Strict Mode cleanup, which leaves the opaque player
+    // card on screen forever.
+    if (isSummaryPanel(incoming)) {
+      setActiveMode(incoming);
+      setSummaryExiting(false);
       setPanelExiting(true);
-      const t = setTimeout(() => {
-        setActiveMode(incoming);
-        setPanelExiting(false);
-      }, 600);
-      return () => clearTimeout(t);
+      setWaitingForNextPlayer(false);
+      return;
     }
+
+    const prevIsSummary = SUMMARY_MODES.includes(prev);
+    const nextIsLive = LIVE_MODES.includes(incoming);
+    const prevIsLive = LIVE_MODES.includes(prev);
 
     if (prevIsLive && nextIsLive && prev !== incoming) {
       setActiveMode(incoming);
       return;
     }
 
-    if (prevIsSummary && !nextIsSummary) {
+    if (prevIsSummary && !SUMMARY_MODES.includes(incoming)) {
       setSummaryExiting(true);
       const t = setTimeout(() => {
         setActiveMode(incoming);
         setSummaryExiting(false);
-      }, 600);
-      return () => clearTimeout(t);
-    }
-
-    if (prevIsLive && nextIsSummary) {
-      setPanelExiting(true);
-      const t = setTimeout(() => {
-        setActiveMode(incoming);
         setPanelExiting(false);
       }, 600);
       return () => clearTimeout(t);
@@ -148,6 +158,8 @@ const FullScreenT3Content: React.FC<Theme3ContentProps> = ({
   const showPlayerCard =
     !overlaySettings.hidePremiumCard &&
     isLiveMode &&
+    !requestIsSummary &&
+    !requestIsWheel &&
     tournament?.status === 'Live' &&
     !!auctionState.currentPlayerId &&
     !!currentPlayer &&
@@ -156,131 +168,86 @@ const FullScreenT3Content: React.FC<Theme3ContentProps> = ({
 
   const showWaiting =
     isLiveMode &&
+    !requestIsSummary &&
+    !requestIsWheel &&
     tournament?.status === 'Live' &&
     waitingForNextPlayer &&
     !overlaySettings.hidePremiumCard;
 
   const showTicker =
     !overlaySettings.hideTickerFullscreen &&
+    !requestIsSummary &&
+    !requestIsWheel &&
     activeMode !== 'wheel-spin' &&
     !(activeMode === 'standard' && (showPlayerCard || showWaiting));
 
+  const summaryExitingNow = summaryExiting && !requestIsSummary;
+
   return (
     <Theme3Canvas>
-      {/* ── Player Summary panel ── */}
-      {activeMode === 'sold-summary' && (
+      {visibleSummaryMode && (
         <div
           style={{
-            position: 'absolute', inset: 0, zIndex: 20,
-            opacity: summaryExiting ? 0 : 1,
-            transform: summaryExiting ? 'scale(0.97)' : 'scale(1)',
+            position: 'absolute',
+            inset: 0,
+            zIndex: 40,
+            opacity: summaryExitingNow ? 0 : 1,
+            transform: summaryExitingNow ? 'scale(0.97)' : 'scale(1)',
             transition: 'opacity 0.5s ease, transform 0.5s ease',
+            pointerEvents: 'none',
           }}
         >
-          <SoldPlayersSummaryT3
-            players={players}
-            teams={teams}
-            tournament={tournament}
-            isExiting={summaryExiting}
-          />
-        </div>
-      )}
-
-      {/* ── Top 10 Sold panel ── */}
-      {activeMode === 'top10-summary' && (
-        <div
-          style={{
-            position: 'absolute', inset: 0, zIndex: 20,
-            opacity: summaryExiting ? 0 : 1,
-            transform: summaryExiting ? 'scale(0.97)' : 'scale(1)',
-            transition: 'opacity 0.5s ease, transform 0.5s ease',
-          }}
-        >
-          <Top10SummaryT3
-            players={players}
-            teams={teams}
-            tournament={tournament}
-            isExiting={summaryExiting}
-          />
-        </div>
-      )}
-
-      {/* ── Team Summary standings panel ── */}
-      {activeMode === 'team-summary' && (
-        <div
-          style={{
-            position: 'absolute', inset: 0, zIndex: 20,
-            opacity: summaryExiting ? 0 : 1,
-            transform: summaryExiting ? 'scale(0.97)' : 'scale(1)',
-            transition: 'opacity 0.5s ease, transform 0.5s ease',
-          }}
-        >
-          <TeamSummaryT3
-            teams={teams}
-            players={players}
-            tournament={tournament}
-            teamId={overlaySettings.teamWiseTeamId ?? ''}
-            isExiting={summaryExiting}
-          />
-        </div>
-      )}
-
-      {/* ── Team-wise roster panel (one team at a time) ── */}
-      {activeMode === 'team-wise-summary' && (
-        <div
-          style={{
-            position: 'absolute', inset: 0, zIndex: 20,
-            opacity: summaryExiting ? 0 : 1,
-            transform: summaryExiting ? 'scale(0.97)' : 'scale(1)',
-            transition: 'opacity 0.5s ease, transform 0.5s ease',
-          }}
-        >
-          <TeamWiseSummaryT3
-            players={players}
-            teams={teams}
-            tournament={tournament}
-            teamId={overlaySettings.teamWiseTeamId ?? ''}
-            isExiting={summaryExiting}
-          />
-        </div>
-      )}
-
-      {/* ── Resting Time lower-third ── */}
-      {activeMode === 'resting' && (
-        <div
-          style={{
-            position: 'absolute', inset: 0, zIndex: 20,
-            opacity: summaryExiting ? 0 : 1,
-            transform: summaryExiting ? 'scale(0.97)' : 'scale(1)',
-            transition: 'opacity 0.5s ease, transform 0.5s ease',
-          }}
-        >
-          <RestingTimeT3 tournament={tournament} />
-        </div>
-      )}
-
-      {/* ── Team Imagery lineup panel ── */}
-      {isTheme3TeamImageryMode(activeMode) && (
-        <div
-          style={{
-            position: 'absolute', inset: 0, zIndex: 20,
-            opacity: summaryExiting ? 0 : 1,
-            transform: summaryExiting ? 'scale(0.97)' : 'scale(1)',
-            transition: 'opacity 0.5s ease, transform 0.5s ease',
-          }}
-        >
-          <TeamWiseImageryT3
-            players={players}
-            teams={teams}
-            tournament={tournament}
-            teamId={overlaySettings.teamWiseTeamId ?? ''}
-            isExiting={summaryExiting}
-          />
+          {visibleSummaryMode === 'sold-summary' && (
+            <SoldPlayersSummaryT3
+              players={players}
+              teams={teams}
+              tournament={tournament}
+              isExiting={summaryExitingNow}
+            />
+          )}
+          {visibleSummaryMode === 'top10-summary' && (
+            <Top10SummaryT3
+              players={players}
+              teams={teams}
+              tournament={tournament}
+              isExiting={summaryExitingNow}
+            />
+          )}
+          {visibleSummaryMode === 'team-summary' && (
+            <TeamSummaryT3
+              teams={teams}
+              players={players}
+              tournament={tournament}
+              teamId={overlaySettings.teamWiseTeamId ?? ''}
+              isExiting={summaryExitingNow}
+            />
+          )}
+          {visibleSummaryMode === 'team-wise-summary' && (
+            <TeamWiseSummaryT3
+              players={players}
+              teams={teams}
+              tournament={tournament}
+              teamId={overlaySettings.teamWiseTeamId ?? ''}
+              isExiting={summaryExitingNow}
+            />
+          )}
+          {visibleSummaryMode === 'resting' && (
+            <RestingTimeT3 tournament={tournament} />
+          )}
+          {isTheme3TeamImageryMode(visibleSummaryMode) && (
+            <TeamWiseImageryT3
+              players={players}
+              teams={teams}
+              tournament={tournament}
+              teamId={overlaySettings.teamWiseTeamId ?? ''}
+              isExiting={summaryExitingNow}
+            />
+          )}
         </div>
       )}
 
       {/* ── Wheel spin ── */}
-      {activeMode === 'wheel-spin' && wheelSpinData && (
+      {(activeMode === 'wheel-spin' || requestIsWheel) && wheelSpinData && (
         <WheelSpinT3 data={wheelSpinData} allPlayers={players} tournament={tournament} />
       )}
 

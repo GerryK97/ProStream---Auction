@@ -6,6 +6,7 @@ import { getClassConfig } from '@/lib/playerClassUtils';
 import { optimizeImage } from '@/lib/imageOptimization';
 import ResilientImage from '../shared/ResilientImage';
 import CurrentBidPanelT4, { type BidPanelPhaseT4 } from './CurrentBidPanelT4';
+import SoldDetailsSectionT4 from './SoldDetailsSectionT4';
 import {
   buildPlayerCardLoopItemsT4,
   PlayerCardLoopSectionT4,
@@ -363,6 +364,7 @@ export function FullScreenPlayerCardT4({
   );
   const soldPrice = currentPlayer.finalPrice ?? auctionState.currentBid;
   const loopActive = phase === 'livePending' || phase === 'liveBidding';
+  const showSoldOverlay = phase === 'soldReveal';
   const showUnsoldOverlay = phase === 'unsoldReveal';
   const isExiting = phase === 'exiting';
   const isEntering = phase === 'entering';
@@ -396,9 +398,16 @@ export function FullScreenPlayerCardT4({
           0%, 100% { opacity: 1; transform: scale(1); }
           50%      { opacity: 0.35; transform: scale(0.65); }
         }
+        @keyframes t4FsSoldFlash {
+          0% { opacity: 0; }
+          20% { opacity: 0.55; }
+          100% { opacity: 0; }
+        }
         .t4fs-live-dot { animation: t4FsLiveDot 1.1s ease-in-out infinite; }
+        .t4fs-sold-flash { animation: t4FsSoldFlash 0.7s ease-out both; }
         @media (prefers-reduced-motion: reduce) {
-          .t4fs-live-dot { animation: none !important; }
+          .t4fs-live-dot,
+          .t4fs-sold-flash { animation: none !important; }
         }
       `}</style>
 
@@ -707,7 +716,7 @@ export function FullScreenPlayerCardT4({
             </div>
 
             <div style={{ marginBottom: 20, minHeight: 38 }}>
-              {phase !== 'soldReveal' && (
+              {!showSoldOverlay && (
                 <PlayerCardLoopSectionT4
                   items={loopItems}
                   active={loopActive}
@@ -726,73 +735,108 @@ export function FullScreenPlayerCardT4({
               }}
             />
 
-            {phase !== 'soldReveal' && profileFields.length > 0 && (
-              <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                {profileFields.map(field => (
-                  <div
-                    key={field.label}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'baseline',
-                      justifyContent: 'space-between',
-                      gap: 16,
-                      minHeight: statSlotH,
-                      borderBottom: '1px solid rgba(255,255,255,0.06)',
-                      padding: '8px 0',
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontFamily: LABEL_FONT,
-                        fontSize: 26,
-                        fontWeight: 600,
-                        letterSpacing: '0.12em',
-                        textTransform: 'uppercase',
-                        color: 'rgba(255,255,255,0.45)',
-                      }}
-                    >
-                      {field.label}
-                    </span>
-                    <span
-                      style={{
-                        fontFamily: LABEL_FONT,
-                        fontSize: Math.max(34, Math.round(statSlotH * 0.45)),
-                        fontWeight: 700,
-                        color: field.color ?? '#fff',
-                        textAlign: 'right',
-                      }}
-                    >
-                      {field.value}
-                    </span>
-                  </div>
-                ))}
+            {showSoldOverlay ? (
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  paddingBottom: FS_CARD_T4_PANEL_PADDING,
+                }}
+              >
+                <SoldDetailsSectionT4
+                  soldTeam={soldTeam}
+                  soldPrice={soldPrice}
+                  reducedMotion={reducedMotion}
+                />
               </div>
-            )}
+            ) : (
+              <>
+                {profileFields.length > 0 && (
+                  <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+                    {profileFields.map(field => (
+                      <div
+                        key={field.label}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'baseline',
+                          justifyContent: 'space-between',
+                          gap: 16,
+                          minHeight: statSlotH,
+                          borderBottom: '1px solid rgba(255,255,255,0.06)',
+                          padding: '8px 0',
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: LABEL_FONT,
+                            fontSize: 26,
+                            fontWeight: 600,
+                            letterSpacing: '0.12em',
+                            textTransform: 'uppercase',
+                            color: 'rgba(255,255,255,0.45)',
+                          }}
+                        >
+                          {field.label}
+                        </span>
+                        <span
+                          style={{
+                            fontFamily: LABEL_FONT,
+                            fontSize: Math.max(34, Math.round(statSlotH * 0.45)),
+                            fontWeight: 700,
+                            color: field.color ?? '#fff',
+                            textAlign: 'right',
+                          }}
+                        >
+                          {field.value}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-            <div
-              style={{
-                marginTop: 'auto',
-                paddingTop: 24,
-                paddingBottom: FS_CARD_T4_PANEL_PADDING,
-              }}
-            >
-              <CurrentBidPanelT4
-                auctionState={auctionState}
-                teams={teams}
-                tournament={tournament}
-                currentPlayer={currentPlayer}
-                isBidding={isBidding}
-                bidPopping={bidPopping}
-                bidDelta={bidDelta}
-                phase={bidPanelPhase}
-                soldPrice={soldPrice}
-                soldTeam={soldTeam}
-                reducedMotion={reducedMotion}
-                layout="fullscreen"
-              />
-            </div>
+                <div
+                  style={{
+                    marginTop: 'auto',
+                    paddingTop: 24,
+                    paddingBottom: FS_CARD_T4_PANEL_PADDING,
+                  }}
+                >
+                  <CurrentBidPanelT4
+                    auctionState={auctionState}
+                    teams={teams}
+                    tournament={tournament}
+                    currentPlayer={currentPlayer}
+                    isBidding={isBidding}
+                    bidPopping={bidPopping}
+                    bidDelta={bidDelta}
+                    phase={bidPanelPhase}
+                    soldPrice={soldPrice}
+                    soldTeam={soldTeam}
+                    reducedMotion={reducedMotion}
+                    layout="fullscreen"
+                  />
+                </div>
+              </>
+            )}
           </div>
         </div>
+
+        {showSoldOverlay && !reducedMotion && (
+          <div
+            className="t4fs-sold-flash"
+            aria-hidden
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 11,
+              pointerEvents: 'none',
+              background:
+                'radial-gradient(ellipse 70% 60% at 50% 45%, rgba(110,196,154,0.35) 0%, transparent 70%)',
+            }}
+          />
+        )}
 
         {showUnsoldOverlay && (
           <div

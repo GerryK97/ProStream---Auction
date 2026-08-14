@@ -54,10 +54,19 @@ const FullScreenT4Content: React.FC<Theme4ContentProps> = ({
   const soldPlayerIdRef = useRef<string | undefined>(undefined);
   const waitingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const requestedMode = overlaySettings.displayMode;
+  const requestIsSummary = isSummaryMode(requestedMode);
+  const requestIsWheel = requestedMode === 'wheel-spin';
   const isLiveMode = LIVE_MODES.has(activeMode);
   const isCustomTicker = activeMode === 'custom-ticker';
   const isWheelSpin = activeMode === 'wheel-spin' && !!wheelSpinData;
   const isSummary = isSummaryMode(activeMode);
+  /** Prefer the live requested mode so summaries appear even if activeMode lags behind the player card. */
+  const visibleSummaryMode = requestIsSummary
+    ? requestedMode
+    : isSummary && summaryExiting
+      ? activeMode
+      : null;
 
   useEffect(() => {
     const incoming = overlaySettings.displayMode;
@@ -70,6 +79,15 @@ const FullScreenT4Content: React.FC<Theme4ContentProps> = ({
       setSummaryExiting(false);
       setWaitingForNextPlayer(false);
       setCardVisible(true);
+      return;
+    }
+
+    // Entering a summary must be immediate — the opaque player card would cover
+    // the panel if we waited on the delayed activeMode transition.
+    if (isSummaryMode(incoming)) {
+      setActiveMode(incoming);
+      setSummaryExiting(false);
+      setWaitingForNextPlayer(false);
       return;
     }
 
@@ -132,6 +150,8 @@ const FullScreenT4Content: React.FC<Theme4ContentProps> = ({
   const showPlayerCard =
     !overlaySettings.hidePremiumCard &&
     isLiveMode &&
+    !requestIsSummary &&
+    !requestIsWheel &&
     tournament?.status === 'Live' &&
     !!auctionState.currentPlayerId &&
     !!currentPlayer &&
@@ -140,75 +160,79 @@ const FullScreenT4Content: React.FC<Theme4ContentProps> = ({
 
   const showWaiting =
     isLiveMode &&
+    !requestIsSummary &&
+    !requestIsWheel &&
     tournament?.status === 'Live' &&
     waitingForNextPlayer &&
     !overlaySettings.hidePremiumCard;
 
   const showTicker =
     !overlaySettings.hideTickerFullscreen &&
+    !requestIsSummary &&
     !isSummary &&
     activeMode !== 'wheel-spin' &&
+    requestedMode !== 'wheel-spin' &&
     !(activeMode === 'standard' && (showPlayerCard || showWaiting));
 
   return (
     <Theme4Canvas>
-      {isSummary && (
+      {visibleSummaryMode && (
         <div
           style={{
             position: 'absolute',
             inset: 0,
-            zIndex: 20,
-            opacity: summaryExiting ? 0 : 1,
-            transform: summaryExiting ? 'scale(0.97)' : 'scale(1)',
+            zIndex: 40,
+            opacity: summaryExiting && !requestIsSummary ? 0 : 1,
+            transform: summaryExiting && !requestIsSummary ? 'scale(0.97)' : 'scale(1)',
             transition: 'opacity 0.5s ease, transform 0.5s ease',
             pointerEvents: 'none',
           }}
         >
-          {activeMode === 'sold-summary' && (
+          {visibleSummaryMode === 'sold-summary' && (
             <SoldPlayersSummaryT4
               players={players}
               teams={teams}
               tournament={tournament}
-              isExiting={summaryExiting}
+              isExiting={summaryExiting && !requestIsSummary}
             />
           )}
-          {activeMode === 'team-summary' && (
+          {visibleSummaryMode === 'team-summary' && (
             <TeamSummaryT4
               teams={teams}
               players={players}
               tournament={tournament}
               teamId={overlaySettings.teamWiseTeamId ?? ''}
-              isExiting={summaryExiting}
+              isExiting={summaryExiting && !requestIsSummary}
             />
           )}
-          {activeMode === 'team-wise-summary' && (
+          {visibleSummaryMode === 'team-wise-summary' && (
             <TeamWiseSummaryT4
               players={players}
               teams={teams}
               tournament={tournament}
               teamId={overlaySettings.teamWiseTeamId ?? ''}
-              isExiting={summaryExiting}
+              isExiting={summaryExiting && !requestIsSummary}
             />
           )}
-          {activeMode === 'top10-summary' && (
+          {visibleSummaryMode === 'top10-summary' && (
             <Top10SummaryT4
               players={players}
               teams={teams}
               tournament={tournament}
-              isExiting={summaryExiting}
+              isExiting={summaryExiting && !requestIsSummary}
             />
           )}
-          {activeMode === 'team-wise-image' && (
+          {visibleSummaryMode === 'team-wise-image' && (
             <TeamWiseImageryT4
               teams={teams}
               players={players}
               tournament={tournament}
               teamId={overlaySettings.teamWiseTeamId ?? ''}
-              isExiting={summaryExiting}
+              isExiting={summaryExiting && !requestIsSummary}
             />
           )}
-          {activeMode === 'resting' && (
-            <RestingTimeT4 tournament={tournament} isExiting={summaryExiting} />
+          {visibleSummaryMode === 'resting' && (
+            <RestingTimeT4 tournament={tournament} isExiting={summaryExiting && !requestIsSummary} />
           )}
         </div>
       )}

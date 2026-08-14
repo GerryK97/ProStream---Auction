@@ -40,7 +40,8 @@ Custom size via `overlaySettings.size`. Full Screen ignores size and always uses
 |-------|------|
 | Canvas | Opaque `--t4-gradient-canvas` |
 | Layout | Photo box fitted to original aspect (`c_limit`, no crop); details panel fills remaining width; soft rail-edge fade only |
-| Bid | `CurrentBidPanelT4` `layout="fullscreen"` |
+| Bid | `CurrentBidPanelT4` `layout="fullscreen"` while live |
+| Sold | [`SoldDetailsSectionT4`](../src/components/overlays/theme4/SoldDetailsSectionT4.tsx) — large SOLD badge (`--t4-success`), gold price (~128px), buying-team plate; enter + pulse + shine animations; replaces profile + bid panel for 5s hold |
 | Ticker | Hidden while live card / waiting (standard mode) |
 | Post-sale | `RestingTimeT4` + `overrideLabel="Waiting for Next Player"` |
 
