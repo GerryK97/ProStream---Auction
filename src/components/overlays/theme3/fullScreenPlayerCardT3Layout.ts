@@ -21,8 +21,8 @@ export const FS_CARD_TOP_STRIP_H = 72;
 
 export const FS_CARD_ENTER_MS = 480;
 export const FS_CARD_EXIT_MS = 400;
-export const FS_CARD_SOLD_HOLD_MS = 5000;
-export const FS_CARD_UNSOLD_HOLD_MS = 2500;
+export const FS_CARD_SOLD_HOLD_MS = 10000;
+export const FS_CARD_UNSOLD_HOLD_MS = 5000;
 export const FS_CARD_LOOP_INTERVAL_MS = 4000;
 export const FS_CARD_LOOP_FADE_MS = 300;
 

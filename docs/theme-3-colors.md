@@ -243,7 +243,16 @@ Shared shell across Team Summary, Team-wise, Player Summary, Top 10:
 |---------|-------|
 | SOLD stamp text | `--t3-success` `#6EC49A` |
 
-**`SoldMessageT3.tsx`**
+**`UnsoldDetailsSectionT3.tsx`** (Full Screen)
+
+| Element | Color |
+|---------|-------|
+| UNSOLD stamp | `--t3-danger` `#D87070` on dark red plate |
+| Stamp pulse / flash | danger rgba glow |
+| Struck base price | muted white + line-through |
+| Card desaturate | filter on FS card during unsold reveal |
+
+**`SoldMessageT3.tsx`** (Custom / bar stamps)
 
 | Element | Color |
 |---------|-------|
@@ -279,7 +288,7 @@ Shared shell across Team Summary, Team-wise, Player Summary, Top 10:
 
 ### 4.5b Post-sale waiting banner (`PostSaleWaitingBannerT3.tsx`)
 
-Shown after the full-screen card exits (5s sold hold or unsold hold) until the next player is selected.
+Shown after the full-screen card exits (10s sold hold or unsold hold) until the next player is selected.
 
 | Element | Color |
 |---------|-------|

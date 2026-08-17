@@ -169,6 +169,7 @@ The primary Full Screen overlay (`/overlays/:id`, [`FullScreenT3Content.tsx`](..
 
 ### Composition
 - [`FullScreenPlayerCardT3.tsx`](../src/components/overlays/theme3/FullScreenPlayerCardT3.tsx) — phase machine, enter/exit, sold/unsold, bid feedback
+- [`UnsoldDetailsSectionT3.tsx`](../src/components/overlays/theme3/UnsoldDetailsSectionT3.tsx) — Full Screen unsold stamp + struck base (enter/pulse/shine)
 - [`fullScreenPlayerCardT3Layout.ts`](../src/components/overlays/theme3/fullScreenPlayerCardT3Layout.ts) — geometry and timing constants
 - [`playerCardLoopItems.tsx`](../src/components/overlays/theme3/playerCardLoopItems.tsx) — shared detail-loop builder (also used by the lower-third bar)
 - [`CurrentBidT3.tsx`](../src/components/overlays/theme3/CurrentBidT3.tsx) — `layout="fullscreen"` uses the same **two-column Base Price + Current Bid** layout as Custom Small; Current Bid caption **30px**, amount **120px**, panel min-height **200px** so text fills the bid area
@@ -176,8 +177,8 @@ The primary Full Screen overlay (`/overlays/:id`, [`FullScreenT3Content.tsx`](..
 ### Animation phases
 1. **Enter** — hero image is prefetched; then the **fully populated** card fades/rises in as one unit (no empty chrome flash)
 2. **Live pending / bidding** — profile detail loop; bid pop, delta flash, accent ripple; LIVE pill pulse
-3. **Sold reveal** — SOLD watermark + team-hero bid panel; 5s hold then exit
-4. **Unsold reveal** — desaturate + `UnsoldBarOverlayT3`; 2.5s hold then exit
+3. **Sold reveal** — SOLD watermark + team-hero bid panel; **10s** hold then exit
+4. **Unsold reveal** — desaturate + large animated [`UnsoldDetailsSectionT3`](../src/components/overlays/theme3/UnsoldDetailsSectionT3.tsx) stamp (Returned to pool + struck base); red flash; **5s** hold then exit
 5. **Exit** — scale down + fade + upward drift
 6. **Waiting for next player** — [`RestingTimeT3.tsx`](../src/components/overlays/theme3/RestingTimeT3.tsx) with `overrideLabel="Waiting for Next Player"` until the next player is selected
 

@@ -7,8 +7,8 @@ import { optimizeImage } from '@/lib/imageOptimization';
 import ResilientImage from '../shared/ResilientImage';
 import { PlayerBarBackgroundT3 } from './PlayerBarBackgroundT3';
 import CurrentBidPanelT3, { type BidPanelPhase } from './CurrentBidT3';
-import { UnsoldBarOverlayT3 } from './SoldMessageT3';
 import { SoldDetailsSectionT3 } from './SoldDetailsSectionT3';
+import UnsoldDetailsSectionT3 from './UnsoldDetailsSectionT3';
 import { buildPlayerCardLoopItems, PlayerCardLoopSection } from './playerCardLoopItems';
 import {
   FS_CARD_CANVAS_W,
@@ -380,9 +380,16 @@ export function FullScreenPlayerCardT3({
           0%, 100% { opacity: 1; transform: scale(1); }
           50%      { opacity: 0.35; transform: scale(0.65); }
         }
+        @keyframes t3FsUnsoldFlash {
+          0% { opacity: 0; }
+          18% { opacity: 0.55; }
+          100% { opacity: 0; }
+        }
         .t3fs-live-dot { animation: t3FsLiveDot 1.1s ease-in-out infinite; }
+        .t3fs-unsold-flash { animation: t3FsUnsoldFlash 0.7s ease-out both; }
         @media (prefers-reduced-motion: reduce) {
-          .t3fs-live-dot { animation: none !important; }
+          .t3fs-live-dot,
+          .t3fs-unsold-flash { animation: none !important; }
         }
       `}</style>
 
@@ -584,7 +591,7 @@ export function FullScreenPlayerCardT3({
             </div>
 
             <div style={{ marginBottom: 20, minHeight: 38 }}>
-              {!showSoldOverlay && (
+              {!showSoldOverlay && !showUnsoldOverlay && (
                 <PlayerCardLoopSection
                   items={loopItems}
                   active={loopActive}
@@ -596,7 +603,7 @@ export function FullScreenPlayerCardT3({
 
             <div style={{ height: 2, background: 'rgba(255,255,255,0.1)', marginBottom: 24 }} />
 
-            {!showSoldOverlay && profileFields.length > 0 && (
+            {!showSoldOverlay && !showUnsoldOverlay && profileFields.length > 0 && (
               <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
                 {profileFields.map(field => (
                   <div
@@ -637,6 +644,14 @@ export function FullScreenPlayerCardT3({
               />
             )}
 
+            {showUnsoldOverlay && (
+              <UnsoldDetailsSectionT3
+                currentPlayer={currentPlayer}
+                tournament={tournament}
+                reducedMotion={reducedMotion}
+              />
+            )}
+
             <div style={{ marginTop: 'auto', paddingTop: 24, paddingBottom: FS_CARD_PANEL_PADDING }}>
               <CurrentBidPanelT3
                 auctionState={auctionState}
@@ -656,7 +671,20 @@ export function FullScreenPlayerCardT3({
           </div>
         </div>
 
-        {showUnsoldOverlay && <UnsoldBarOverlayT3 />}
+        {showUnsoldOverlay && !reducedMotion && (
+          <div
+            className="t3fs-unsold-flash"
+            aria-hidden
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 11,
+              pointerEvents: 'none',
+              background:
+                'radial-gradient(ellipse 70% 60% at 50% 45%, rgba(216,112,112,0.4) 0%, transparent 70%)',
+            }}
+          />
+        )}
       </div>
     </>
   );
