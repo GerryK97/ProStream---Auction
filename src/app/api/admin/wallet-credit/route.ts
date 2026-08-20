@@ -13,6 +13,7 @@ import { getTokenFromRequest, verifyToken } from '@/lib/auth';
 import { isAdmin } from '@/lib/permissions';
 import { creditWalletBalance } from '@/lib/pg/wallet-queries';
 import { getUserById } from '@/lib/pg/user-queries';
+import { notifyUser } from '@/lib/notifications/store';
 import type { PgUser } from '@/lib/pg/users-schema';
 import { sendSMS } from '@prostream/shared/sms';
 import { normalizeMobile, isValidE164 } from '@prostream/shared/phone';
@@ -55,6 +56,16 @@ export async function POST(request: NextRequest) {
       amount: parsed,
       description,
       createdBy: payload.userId,
+    });
+
+    // ── In-app notification (persistent inbox + push) ───────────────────────
+    const noteSuffix = note?.trim() ? ` (${note.trim()})` : '';
+    await notifyUser({
+      userId,
+      type: 'wallet_topup',
+      title: 'Wallet credited',
+      body: `Rs. ${parsed} added to your wallet${noteSuffix}. New balance: Rs. ${result.wallet.balance}.`,
+      data: { amount: parsed, newBalance: result.wallet.balance },
     });
 
     // ── SMS notification ────────────────────────────────────────────────────

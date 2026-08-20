@@ -150,3 +150,30 @@ export async function markRead(
     .returning({ id: notifications.id });
   return rows.length;
 }
+
+/**
+ * Persist an inbox notification for a single user AND fire a best-effort push to
+ * all their devices. Never throws — push/persist failures are swallowed so the
+ * calling business action (wallet credit, assignment) is never blocked.
+ */
+export async function notifyUser(input: NotificationInput): Promise<void> {
+  try {
+    await createNotification(input);
+  } catch (err) {
+    console.warn('[notifyUser] persist failed:', err);
+  }
+  try {
+    // Lazy import to avoid a static cycle between store <-> push helpers.
+    const { getPushTokensForUser, sendExpoPush } = await import('@/lib/push/sendPush');
+    const tokens = await getPushTokensForUser(input.userId);
+    if (tokens.length > 0) {
+      await sendExpoPush(tokens, {
+        title: input.title,
+        body: input.body,
+        data: { type: input.type ?? 'system', ...(input.data && typeof input.data === 'object' ? input.data as Record<string, unknown> : {}) },
+      });
+    }
+  } catch (err) {
+    console.warn('[notifyUser] push failed:', err);
+  }
+}

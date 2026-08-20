@@ -82,3 +82,12 @@ export async function getPushTokensForRole(role: string): Promise<string[]> {
     .where(inArray(devicePushTokens.userId, adminIds.map((u) => u.id)));
   return rows.map((r) => r.expoPushToken);
 }
+
+/** Device push tokens for a single user (all their registered devices). */
+export async function getPushTokensForUser(userId: string): Promise<string[]> {
+  const rows = await pgDb
+    .select({ expoPushToken: devicePushTokens.expoPushToken })
+    .from(devicePushTokens)
+    .where(eq(devicePushTokens.userId, userId));
+  return rows.map((r) => r.expoPushToken);
+}
