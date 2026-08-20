@@ -21,6 +21,9 @@ import {
 import { DEFAULT_OVERLAY_PRICES, getOverlayPricingDefaultsByKey } from '@/lib/overlays/overlayPricing';
 
 import { randomUUID } from 'crypto';
+import { notifyUser } from '@/lib/notifications/store';
+import { sendSMS } from '@/lib/textlk';
+import { getUserById } from '@/lib/pg/user-queries';
 
 function canGenerateOverlays(_user: RequestUser) {
   // Tournament-specific access is enforced after reading tournamentId.
@@ -182,6 +185,34 @@ export async function POST(request: NextRequest) {
       priceCharged: overlayPrice,
       isActive: true,
     });
+
+    // Notify billed user via push notification and SMS (fire-and-forget)
+    if (billedUserId && overlayPrice > 0) {
+      (async () => {
+        try {
+          const billedUser = await getUserById(chargeUserId);
+          const msg = `Rs.${overlayPrice.toLocaleString()} deducted from your ProStream wallet for ${overlayConfig.label}: ${requestedTournamentName}. New balance: Rs.${deduction?.transaction.balanceAfter?.toLocaleString() ?? 'N/A'}`;
+          
+          // Push notification
+          await notifyUser({
+            userId: chargeUserId,
+            type: 'wallet_deduction',
+            title: 'Wallet Deduction',
+            body: msg,
+            data: { amount: overlayPrice, tournamentName: requestedTournamentName, overlayType },
+          });
+
+          // SMS if user has phone
+          if (billedUser?.phone) {
+            await sendSMS(billedUser.phone, msg).catch((err) => {
+              console.warn('[Overlay SMS] Failed to send:', err);
+            });
+          }
+        } catch (err) {
+          console.warn('[Overlay billing notify]', err);
+        }
+      })();
+    }
 
     return NextResponse.json({
       session,
