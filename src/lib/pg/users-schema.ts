@@ -111,6 +111,15 @@ export const notifications = pgTable(
 export type PgNotification = typeof notifications.$inferSelect;
 export type PgNewNotification = typeof notifications.$inferInsert;
 
+/* ── App config (singleton key/value; e.g. version gating) ───────────────── */
+export const appConfig = pgTable('app_config', {
+  key:       varchar('key', { length: 64 }).primaryKey(),
+  value:     text('value'),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export type PgAppConfig = typeof appConfig.$inferSelect;
+
 /* ── Phone OTP Verifications ─────────────────────────────────────────────── */
 export const phoneVerifications = pgTable('phone_verifications', {
   id:         serial('id').primaryKey(),
