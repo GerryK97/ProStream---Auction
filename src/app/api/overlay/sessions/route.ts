@@ -98,6 +98,7 @@ export async function POST(request: NextRequest) {
   let requestedOverlayType: AuctionOverlayType = 'fullscreen';
   let requestedTournamentName = 'Unknown tournament';
   let requestedUserId: string | null = null;
+  let chargedUserId: string | null = null;
 
   try {
     await connectToDatabase();
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
     if (!canGenerateOverlays(user)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     requestedUserId = user.userId;
 
-    const { tournamentId, overlayType = 'fullscreen', theme = 'standard', palette = 'default' } = await request.json();
+    const { tournamentId, overlayType = 'fullscreen', theme = 'standard', palette = 'default', billedUserId } = await request.json();
     if (!tournamentId) {
       return NextResponse.json({ error: 'Missing required field: tournamentId' }, { status: 400 });
     }
@@ -119,6 +120,10 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
     requestedOverlayType = overlayType;
+
+    // Admin can bill another user's wallet
+    const chargeUserId = user.role === 'Admin' && billedUserId ? String(billedUserId) : user.userId;
+    chargedUserId = chargeUserId;
 
     // Validate theme — must be a non-empty string, but we store whatever the client
     // sends and let the overlay fall back to 'standard' if unknown. Sanitise to string.
@@ -136,9 +141,9 @@ export async function POST(request: NextRequest) {
     if (overlayPrice > 0) {
       try {
         deduction = await deductWalletBalance({
-          userId: user.userId,
+          userId: chargeUserId,
           amount: overlayPrice,
-          description: `${overlayConfig.label}: ${requestedTournamentName}`,
+          description: `${overlayConfig.label}: ${requestedTournamentName}${billedUserId ? ' [admin]' : ''}`,
           createdBy: user.userId,
         });
       } catch (error) {
@@ -185,13 +190,13 @@ export async function POST(request: NextRequest) {
       overlayType,
     }, { status: 201 });
   } catch (error) {
-    if (deduction && requestedUserId) {
+    if (deduction && chargedUserId) {
       try {
         const refund = await creditWalletBalance({
-          userId: requestedUserId,
+          userId: chargedUserId,
           amount: Math.abs(deduction.transaction.amount),
           description: `Refund failed overlay generation: ${getAuctionOverlayConfig(requestedOverlayType).label} · ${requestedTournamentName}`,
-          createdBy: requestedUserId,
+          createdBy: requestedUserId || chargedUserId,
         });
         console.error('Overlay session creation failed after deduction. Refund issued:', refund.transaction.id, error);
       } catch (refundError) {
