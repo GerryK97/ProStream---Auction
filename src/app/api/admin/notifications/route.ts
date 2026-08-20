@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, getTokenFromRequest } from '@/lib/auth';
 import { isAdmin } from '@/lib/permissions';
 import { getAllPushTokens, sendExpoPush } from '@/lib/push/sendPush';
+import { pgDb } from '@/lib/pg/db';
+import { users } from '@/lib/pg/users-schema';
+import { createNotificationForUsers } from '@/lib/notifications/store';
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,8 +26,16 @@ export async function POST(request: NextRequest) {
     }
 
     const tokens = await getAllPushTokens();
+
+    // Persist an inbox notification for every user (Active accounts).
+    const allUsers = await pgDb.select({ id: users.id }).from(users);
+    const persisted = await createNotificationForUsers(
+      allUsers.map((u) => u.id),
+      { type: 'admin_broadcast', title: title.trim(), body: messageBody.trim() },
+    );
+
     if (tokens.length === 0) {
-      return NextResponse.json({ sent: 0, failed: 0, invalidTokens: 0 });
+      return NextResponse.json({ sent: 0, failed: 0, invalidTokens: 0, persisted });
     }
 
     const result = await sendExpoPush(tokens, {
@@ -33,7 +44,7 @@ export async function POST(request: NextRequest) {
       data: { type: 'admin_broadcast' },
     });
 
-    return NextResponse.json(result);
+    return NextResponse.json({ ...result, persisted });
   } catch (err) {
     console.error('[admin/notifications]', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

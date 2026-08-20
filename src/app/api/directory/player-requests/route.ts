@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, getTokenFromRequest } from '@/lib/auth';
 import { getPushTokensForRole, sendExpoPush } from '@/lib/push/sendPush';
+import { createNotificationForRole } from '@/lib/notifications/store';
 
 /**
  * POST /api/directory/player-requests
@@ -34,21 +35,31 @@ export async function POST(request: NextRequest) {
     const requester = payload.username || payload.userId;
     const adminTokens = await getPushTokensForRole('Admin');
 
-    const result = await sendExpoPush(adminTokens, {
-      title: 'New player profile request',
-      body: `${requester} requested "${playerName}" (CricHeroes ID: ${cricheroesId})`,
-      data: {
-        type: 'player_request',
-        playerName,
-        cricheroesId,
-        requestedBy: requester,
-        requestedByUserId: payload.userId,
-      },
+    const title = 'New player profile request';
+    const message = `${requester} requested "${playerName}" (CricHeroes ID: ${cricheroesId})`;
+    const data = {
+      type: 'player_request',
+      playerName,
+      cricheroesId,
+      requestedBy: requester,
+      requestedByUserId: payload.userId,
+    };
+
+    // Persist an inbox notification for every admin (so it is not lost if their
+    // device is offline), then fire the push best-effort.
+    const persisted = await createNotificationForRole('Admin', {
+      type: 'player_request',
+      title,
+      body: message,
+      data,
     });
+
+    const result = await sendExpoPush(adminTokens, { title, body: message, data });
 
     return NextResponse.json({
       ok: true,
-      notifiedAdmins: result.sent,
+      notifiedAdmins: persisted,
+      pushed: result.sent,
       message: 'Your request has been sent to the admin.',
     });
   } catch (err) {

@@ -88,6 +88,29 @@ export const devicePushTokens = pgTable(
 
 export type PgDevicePushToken = typeof devicePushTokens.$inferSelect;
 
+/* ── In-app Notifications (persistent inbox) ─────────────────────────────── */
+export const notifications = pgTable(
+  'notifications',
+  {
+    id:        serial('id').primaryKey(),
+    userId:    text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    // Free-form category, e.g. 'player_request', 'admin_broadcast', 'system'.
+    type:      varchar('type', { length: 40 }).notNull().default('system'),
+    title:     text('title').notNull(),
+    body:      text('body').notNull(),
+    // Optional structured payload (deep-link target, entity ids, etc.).
+    data:      text('data'),
+    readAt:    timestamp('read_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdx:     uniqueIndex('notifications_user_created_idx').on(table.userId, table.id),
+  }),
+);
+
+export type PgNotification = typeof notifications.$inferSelect;
+export type PgNewNotification = typeof notifications.$inferInsert;
+
 /* ── Phone OTP Verifications ─────────────────────────────────────────────── */
 export const phoneVerifications = pgTable('phone_verifications', {
   id:         serial('id').primaryKey(),
