@@ -6,6 +6,7 @@ import { usePusherAuction } from '@/hooks/usePusherAuction';
 import { Tournament, Player, Team } from '@/types';
 import { OVERLAY_PALETTES } from '@/config/overlayPalettes';
 import { getClassBasePrice, getClassConfig, getMinClassBasePrice } from '@/lib/playerClassUtils';
+import { getEnabledTeamOfficials } from '@/lib/teamOfficials';
 
 const formatCurrency = (amount: number) => amount.toLocaleString('en-IN');
 
@@ -79,8 +80,9 @@ function StatTile({ label, value, highlight, danger, squadFull }: {
     );
 }
 
-function TeamHeaderCard({ team }: { team: Team }) {
+function TeamHeaderCard({ team, tournament }: { team: Team; tournament: Tournament | null }) {
     const initials = team.shortCode?.slice(0, 2) ?? team.name.slice(0, 2).toUpperCase();
+    const officials = getEnabledTeamOfficials(team, tournament);
     return (
         <div className="flex items-center gap-4 px-4 py-4 border-b"
              style={{ borderColor: 'var(--overlay-border-accent-subtle)' }}>
@@ -107,10 +109,27 @@ function TeamHeaderCard({ team }: { team: Team }) {
                      style={{ color: 'var(--overlay-color-primary)', fontFamily: "'Rajdhani', sans-serif", letterSpacing: 2 }}>
                     {team.name.toUpperCase()}
                 </div>
-                {team.ownerName && (
-                    <div className="text-sm mt-0.5"
-                         style={{ color: 'var(--overlay-text-muted)', fontFamily: "'Rajdhani', sans-serif" }}>
-                        {team.ownerName}
+                {officials.length > 0 && (
+                    <div className="flex items-center gap-3 mt-1 flex-wrap">
+                        {officials.map((o) => (
+                            <div key={o.role} className="flex items-center gap-1.5 min-w-0">
+                                {o.photoURL ? (
+                                    <img src={o.photoURL} alt={o.name}
+                                         className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                                         style={{ border: '1px solid var(--overlay-color-primary)' }} />
+                                ) : null}
+                                <div className="min-w-0">
+                                    <div className="text-[10px] uppercase tracking-wide leading-none"
+                                         style={{ color: 'var(--overlay-color-primary)', fontFamily: "'Rajdhani', sans-serif" }}>
+                                        {o.role}
+                                    </div>
+                                    <div className="text-sm leading-tight truncate"
+                                         style={{ color: 'var(--overlay-text-muted)', fontFamily: "'Rajdhani', sans-serif" }}>
+                                        {o.name}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>
@@ -296,7 +315,7 @@ function TeamOwnerDashboard({ tournament, players, teams, isConnected, tournamen
                 </div>
             ) : (
                 <div>
-                    <TeamHeaderCard team={selectedTeam} />
+                    <TeamHeaderCard team={selectedTeam} tournament={tournament} />
 
                     {/* Stats tiles */}
                     <div className="grid grid-cols-3 gap-3 px-4 py-4">
