@@ -82,6 +82,13 @@ const tournamentSchema = new Schema<Tournament>(
       },
       default: () => ({ showAge: false, showBattingStyle: false, showBowlingStyle: false, statFields: [] }),
     },
+    teamOfficialsConfig: {
+      type: {
+        enabledRoles:  { type: [String], default: ['Owner'] },
+        requiredRoles: { type: [String], default: ['Owner'] },
+      },
+      default: () => ({ enabledRoles: ['Owner'], requiredRoles: ['Owner'] }),
+    },
     playerCardTemplates: {
       type: [
         {

@@ -3,6 +3,7 @@ import { teamDB } from '@/lib/db-mongodb';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction, canAccessTeam, canModifyResource } from '@/lib/permissions';
 import { tournamentDB } from '@/lib/db-mongodb';
+import { resolveTeamOfficialsConfig, validateAndNormalizeOfficials, deriveOwnerName } from '@/lib/teamOfficials';
 import { serializeTeam } from '@/lib/cloudinaryUtils';
 
 // GET /api/teams/[id] - Get team by ID
@@ -95,6 +96,22 @@ export async function PUT(
     }
 
     const body = await request.json();
+
+    // If officials (or ownerName) are being edited, validate against tournament config
+    if (body.officials !== undefined || body.ownerName !== undefined) {
+      const tournament = await tournamentDB.getById((team as any).tournamentId) as any;
+      const cfg = resolveTeamOfficialsConfig(tournament);
+      // Fall back to existing officials/ownerName when only one side is provided
+      const submittedOfficials = body.officials !== undefined ? body.officials : (team as any).officials;
+      const legacyOwner = body.ownerName !== undefined ? body.ownerName : (team as any).ownerName;
+      const officialsResult = validateAndNormalizeOfficials(submittedOfficials, cfg, legacyOwner);
+      if ('error' in officialsResult) {
+        return NextResponse.json({ error: officialsResult.error }, { status: 400 });
+      }
+      body.officials = officialsResult.officials;
+      body.ownerName = deriveOwnerName(officialsResult.officials) || (typeof legacyOwner === 'string' ? legacyOwner.trim() : '');
+    }
+
     const updatedTeam = await teamDB.update(id, body);
     if (!updatedTeam) {
       return NextResponse.json(

@@ -5,6 +5,28 @@ export interface StatFieldDef {
   label: string;  // display label, e.g. 'Matches Played'
 }
 
+// ── Team officials ───────────────────────────────────────────────────────────
+export type TeamOfficialRole = 'Owner' | 'Manager' | 'Captain';
+
+export const TEAM_OFFICIAL_ROLES: TeamOfficialRole[] = ['Owner', 'Manager', 'Captain'];
+
+export interface TeamOfficial {
+  role: TeamOfficialRole;
+  name: string;
+  photoURL?: string; // Cloudinary URL
+}
+
+/** Per-tournament config: which official roles are enabled and which are required on team create. */
+export interface TeamOfficialsConfig {
+  enabledRoles: TeamOfficialRole[];
+  requiredRoles: TeamOfficialRole[]; // subset of enabledRoles
+}
+
+export const DEFAULT_TEAM_OFFICIALS_CONFIG: TeamOfficialsConfig = {
+  enabledRoles: ['Owner'],
+  requiredRoles: ['Owner'],
+};
+
 export interface PlayerProfileFieldsConfig {
   showAge: boolean;
   showBattingStyle: boolean;
@@ -78,6 +100,7 @@ export interface Tournament {
   directQuickBidsEnabled?: boolean;
   directQuickBids?: { amount: number }[];
   playerProfileFields?: PlayerProfileFieldsConfig; // Optional player data fields enabled for this tournament
+  teamOfficialsConfig?: TeamOfficialsConfig;       // Which team-official roles are enabled/required
   playerCardTemplates?: Array<{ id: string; name: string; pngUrl: string; layoutId?: string }>; // Uploaded card background templates
   auctionDate?: string; // ISO date string e.g. "2026-07-15"
   completedAt?: string | Date; // Set when status transitions to Completed
@@ -90,7 +113,8 @@ export interface Team {
   createdBy?: string;
   name: string;
   shortCode: string;
-  ownerName: string;
+  ownerName: string;              // Kept for backward-compat; derived from the Owner official.
+  officials?: TeamOfficial[];     // Team officials (Owner/Manager/Captain) with photos.
   logoURL?: string;
   initialBudget?: number;
   currentBalance?: number;

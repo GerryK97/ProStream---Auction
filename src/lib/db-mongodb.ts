@@ -5,7 +5,7 @@ import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
 import { addAssignedTournament, getAssignedTournaments } from '@/lib/pg/user-queries';
 import { OverlayConfigModel, OverlaySceneModel, OverlayHistoryModel, OverlayAnalyticsModel } from '@/models/OverlayConfig';
-import { Tournament, Team, Player, OverlayConfig, OverlayScene, OverlayHistory } from '@/types';
+import { Tournament, Team, Player, OverlayConfig, OverlayScene, OverlayHistory, TeamOfficial } from '@/types';
 import { canAccessTournament, canAccessTeam, canAccessPlayer } from './permissions';
 
 // Helper function to generate IDs
@@ -173,7 +173,7 @@ export const teamDB = {
   },
 
   create: async (
-    data: { name: string; shortCode: string; ownerName: string; logoURL?: string; tournamentId: string },
+    data: { name: string; shortCode: string; ownerName: string; officials?: TeamOfficial[]; logoURL?: string; tournamentId: string },
     createdBy?: string
   ): Promise<Team> => {
     await connectToDatabase();
@@ -188,6 +188,7 @@ export const teamDB = {
       name: data.name,
       shortCode: data.shortCode,
       ownerName: data.ownerName,
+      officials: data.officials ?? [],
       logoURL: data.logoURL || `https://placehold.co/100x100/374151/F3F4F6/png?text=${encodeURIComponent(data.name.charAt(0))}`,
       initialBudget: tournament.budgetPerTeam,
       currentBalance: tournament.budgetPerTeam,

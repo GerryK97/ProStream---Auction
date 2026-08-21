@@ -5,6 +5,7 @@ import { TournamentModel } from '@/models/Tournament';
 import { connectToDatabase } from '@/lib/mongodb';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
+import { resolveTeamOfficialsConfig, validateAndNormalizeOfficials, deriveOwnerName } from '@/lib/teamOfficials';
 import { validateOverlaySessionToken, getOverlayTokenFromRequest } from '@/lib/overlay-auth';
 import { serializeTeam } from '@/lib/cloudinaryUtils';
 
@@ -89,10 +90,10 @@ export async function POST(request: NextRequest) {
     if (!canPerformAction(user.role, 'create', 'team')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const body = await request.json();
-    const { name, shortCode, ownerName, logoURL, tournamentId } = body;
+    const { name, shortCode, ownerName, logoURL, tournamentId, officials } = body;
 
-    if (!name || !shortCode || !ownerName || !tournamentId) {
-      return NextResponse.json({ error: 'name, shortCode, ownerName, and tournamentId are required' }, { status: 400 });
+    if (!name || !shortCode || !tournamentId) {
+      return NextResponse.json({ error: 'name, shortCode, and tournamentId are required' }, { status: 400 });
     }
 
     // Validate tournament access
@@ -106,8 +107,24 @@ export async function POST(request: NextRequest) {
       user.assignedTournaments.includes(tournamentId);
     if (!hasAccess) return NextResponse.json({ error: 'Access denied to this tournament' }, { status: 403 });
 
+    // Validate + normalize officials against the tournament's config
+    const cfg = resolveTeamOfficialsConfig(tournament);
+    const officialsResult = validateAndNormalizeOfficials(officials, cfg, ownerName);
+    if ('error' in officialsResult) {
+      return NextResponse.json({ error: officialsResult.error }, { status: 400 });
+    }
+    const normalizedOfficials = officialsResult.officials;
+    const derivedOwnerName = deriveOwnerName(normalizedOfficials) || (typeof ownerName === 'string' ? ownerName.trim() : '');
+
     const newTeam = await teamDB.create(
-      { name, shortCode, ownerName, logoURL, tournamentId },
+      {
+        name,
+        shortCode,
+        ownerName: derivedOwnerName,
+        officials: normalizedOfficials,
+        logoURL,
+        tournamentId,
+      },
       user.userId
     );
     return NextResponse.json(serializeTeam(newTeam as any), { status: 201 });

@@ -8,6 +8,7 @@ import { serializeTournament } from '@/lib/cloudinaryUtils';
 import { connectToDatabase } from '@/lib/mongodb';
 import { TeamModel } from '@/models/Team';
 import { PlayerModel } from '@/models/Player';
+import { normalizeTeamOfficialsConfig } from '@/lib/teamOfficials';
 
 /**
  * Validate player class codes
@@ -141,6 +142,9 @@ export async function POST(request: NextRequest) {
         );
       }
     }
+
+    // Normalize team officials config (Owner always enabled + required)
+    body.teamOfficialsConfig = normalizeTeamOfficialsConfig(body.teamOfficialsConfig);
 
     // Create tournament with createdBy tracking
     const newTournament = await tournamentDB.create(body, user.userId);

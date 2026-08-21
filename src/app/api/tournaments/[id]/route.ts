@@ -8,6 +8,7 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { PlayerModel } from '@/models/Player';
 import { TeamModel } from '@/models/Team';
 import { AuctionStateModel } from '@/models/AuctionState';
+import { normalizeTeamOfficialsConfig } from '@/lib/teamOfficials';
 import { serializeTournament } from '@/lib/cloudinaryUtils';
 
 /**
@@ -222,6 +223,10 @@ export async function PUT(
     }
 
     const oldBudget = (tournament as any).budgetPerTeam;
+    // Normalize team officials config on edit (Owner always enabled + required)
+    if (body.teamOfficialsConfig !== undefined) {
+      body.teamOfficialsConfig = normalizeTeamOfficialsConfig(body.teamOfficialsConfig);
+    }
     const updatedTournament = await tournamentDB.update(id, body);
     if (!updatedTournament) {
       return NextResponse.json(
