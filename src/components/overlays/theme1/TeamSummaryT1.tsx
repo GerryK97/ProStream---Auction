@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Team, Tournament } from '@/types';
+import { getEnabledTeamOfficials } from '@/lib/teamOfficials';
 
 interface TeamSummaryT1Props {
     teams: Team[];
@@ -216,6 +217,22 @@ const TeamSummaryT1: React.FC<TeamSummaryT1Props> = ({ teams, tournament, isExit
                             }}>
                                 {team.name}
                             </div>
+                            {/* Officials line under team name */}
+                            {(() => {
+                                const officials = getEnabledTeamOfficials(team, tournament);
+                                if (officials.length === 0) return null;
+                                const text = officials.map(o => `${o.role}: ${o.name}`).join('   ·   ');
+                                return (
+                                    <div style={{
+                                        position: 'absolute', left: 118, top: AVATAR_SIZE - 6,
+                                        fontFamily: FONT_ROW, fontSize: 13, fontWeight: 500,
+                                        color: 'var(--overlay-text-dim)', letterSpacing: 1,
+                                        whiteSpace: 'nowrap', maxWidth: 370, overflow: 'hidden', textOverflow: 'ellipsis',
+                                    }}>
+                                        {text}
+                                    </div>
+                                );
+                            })()}
 
                             {/* Budget (col 2) */}
                             <div style={{

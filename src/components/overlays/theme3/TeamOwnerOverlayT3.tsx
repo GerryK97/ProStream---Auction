@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { TeamWiseImageBackgroundT3 } from './TeamWiseImageBackgroundT3';
 import { getClassBasePrice, getClassConfig, getMinClassBasePrice } from '@/lib/playerClassUtils';
+import { getEnabledTeamOfficials } from '@/lib/teamOfficials';
 import type { Player, Team, Tournament } from '@/types';
 
 const DARK = '#2a2f35';
@@ -388,9 +389,20 @@ function TeamOwnerDashboardT3({ tournament, players, teams, isConnected, tournam
               <div style={{ fontSize: 20, fontWeight: 700, color: WHITE, textTransform: 'uppercase', letterSpacing: 1, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {selectedTeam.name}
               </div>
-              {selectedTeam.ownerName && (
-                <div style={{ marginTop: 4, fontSize: 13, fontWeight: 500, color: MUTED }}>
-                  {selectedTeam.ownerName}
+              {getEnabledTeamOfficials(selectedTeam, tournament).length > 0 && (
+                <div style={{ marginTop: 4, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  {getEnabledTeamOfficials(selectedTeam, tournament).map((o) => (
+                    <div key={o.role} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                      {o.photoURL && (
+                        <img src={o.photoURL} alt={o.name}
+                             style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', border: `1px solid ${GOLD}` }} />
+                      )}
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1.5, color: GOLD, textTransform: 'uppercase', lineHeight: 1 }}>{o.role}</div>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: MUTED, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.name}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
               {selectedTeam.shortCode && (
