@@ -65,10 +65,10 @@ export async function POST(
       );
     }
 
-    // Update tournament status to Archived
+    // Update tournament status to Archived (stamp time for retention clock)
     const updatedTournament = await TournamentModel.findByIdAndUpdate(
       id,
-      { $set: { status: 'Archived' } },
+      { $set: { status: 'Archived', completedAt: new Date() } },
       { returnDocument: 'after' }
     ).lean();
 

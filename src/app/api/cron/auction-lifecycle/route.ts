@@ -4,14 +4,17 @@
  * Vercel cron job (runs daily at 02:00 UTC via vercel.json).
  * Secured by the CRON_SECRET header that Vercel injects automatically.
  *
- * Two tasks:
- *  1. AUTO-COMPLETE  — any tournament whose auctionDate is today or earlier AND
- *                      whose status is NOT already Completed / Archived gets
- *                      bumped to "Completed" and stamped with completedAt.
+ * Task:
+ *  AUTO-DELETE — any tournament an ADMIN has deliberately Archived, whose
+ *                completedAt (archive timestamp) is older than 60 days, is
+ *                deleted along with all its players, teams, and auction state.
  *
- *  2. AUTO-DELETE    — any tournament with status === "Completed" and
- *                      completedAt older than 60 days is deleted along with
- *                      all its players, teams, and auction state.
+ * NOTE: Date-based AUTO-COMPLETE was removed. A tournament's scheduled
+ * `auctionDate` passing does NOT mean the auction happened — auctions slip,
+ * span days, or are created with placeholder dates. Completion is driven only
+ * by explicit actions: /api/auction/stop (all players sold) and
+ * /api/tournaments/[id]/complete (manual). See incident: tournaments were being
+ * force-completed on their auction morning by this cron.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -50,32 +53,14 @@ export async function GET(req: NextRequest) {
 
     const now = new Date();
 
-    // ── 1. AUTO-COMPLETE ─────────────────────────────────────────────────────
-    // Build today's date string in YYYY-MM-DD (UTC)
-    const todayStr = now.toISOString().slice(0, 10); // e.g. "2026-06-27"
-
-    const ACTIVE_STATUSES = ['Draft', 'Setup', 'Pending', 'Live', 'Paused', 'Stopped'];
-
-    const toComplete = await TournamentModel.find({
-      status: { $in: ACTIVE_STATUSES },
-      auctionDate: { $exists: true, $ne: '', $lte: todayStr },
-    }).lean() as any[];
-
-    let completed = 0;
-    if (toComplete.length > 0) {
-      const ids = toComplete.map((t: any) => t._id);
-      const result = await TournamentModel.updateMany(
-        { _id: { $in: ids } },
-        { $set: { status: 'Completed', completedAt: now } },
-      );
-      completed = result.modifiedCount;
-    }
-
-    // ── 2. AUTO-DELETE ───────────────────────────────────────────────────────
+    // ── AUTO-DELETE (Archived only) ──────────────────────────────────────────
+    // Only tournaments an admin has explicitly Archived are eligible for
+    // permanent cleanup. This requires a deliberate human action first, so no
+    // active or merely-completed tournament is ever auto-deleted.
     const cutoff = new Date(now.getTime() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
 
     const toDelete = await TournamentModel.find({
-      status: 'Completed',
+      status: 'Archived',
       completedAt: { $exists: true, $lte: cutoff },
     }).lean() as any[];
 
@@ -96,7 +81,7 @@ export async function GET(req: NextRequest) {
     const summary = {
       ok: true,
       ranAt: now.toISOString(),
-      autoCompleted: completed,
+      autoCompleted: 0, // date-based auto-complete removed
       autoDeleted: deleted,
       retentionDays: RETENTION_DAYS,
     };

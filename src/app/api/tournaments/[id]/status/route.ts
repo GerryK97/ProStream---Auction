@@ -61,10 +61,19 @@ export async function PATCH(
       }
     }
 
-    // Update tournament status
+    // Update tournament status. Stamp completedAt when moving to Archived
+    // (starts the 60-day retention clock); clear it when unarchiving.
+    const setFields: Record<string, unknown> = { status };
+    if (status === 'Archived') {
+      setFields.completedAt = new Date();
+    } else if ((existing as { status?: string }).status === 'Archived') {
+      // Unarchiving: stop the retention clock so it is never auto-deleted.
+      setFields.completedAt = null;
+    }
+
     const updatedTournament = await TournamentModel.findOneAndUpdate(
       { _id: id },
-      { $set: { status } },
+      { $set: setFields },
       { returnDocument: 'after' }
     ).lean();
 
