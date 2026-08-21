@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Team, Tournament } from '@/types';
+import { Team, Tournament, TeamOfficial, TeamOfficialRole } from '@/types';
 import { getAuthHeaders } from '@/lib/api-client';
+import { resolveTeamOfficialsConfig, getTeamOfficials } from '@/lib/teamOfficials';
 import ImageUpload from './ImageUpload';
 import { PlusIcon } from './icons';
 
@@ -20,16 +21,46 @@ const TeamForm: React.FC<TeamFormProps> = ({ tournaments, defaultTournamentId = 
     const [tournamentId, setTournamentId] = useState(editTeam?.tournamentId ?? defaultTournamentId);
     const [name, setName] = useState(editTeam?.name ?? '');
     const [shortCode, setShortCode] = useState(editTeam?.shortCode ?? '');
-    const [ownerName, setOwnerName] = useState(editTeam?.ownerName ?? '');
     const [logoURL, setLogoURL] = useState(editTeam?.logoURL ?? '');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
 
     const selectedTournament = tournaments.find(t => t._id === tournamentId);
+    const { enabledRoles, requiredRoles } = resolveTeamOfficialsConfig(selectedTournament);
+
+    // Officials keyed by role for the currently selected tournament
+    const [officialsByRole, setOfficialsByRole] = useState<Record<string, TeamOfficial>>(() => {
+        const existing = getTeamOfficials(editTeam);
+        const map: Record<string, TeamOfficial> = {};
+        for (const o of existing) map[o.role] = o;
+        return map;
+    });
+
+    const setOfficial = (role: TeamOfficialRole, patch: Partial<TeamOfficial>) => {
+        setOfficialsByRole(prev => ({
+            ...prev,
+            [role]: { role, name: prev[role]?.name ?? '', photoURL: prev[role]?.photoURL, ...patch },
+        }));
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name || !shortCode || !ownerName || !tournamentId) return;
+        if (!name || !shortCode || !tournamentId) return;
+
+        // Build officials payload from enabled roles only
+        const officials: TeamOfficial[] = enabledRoles
+            .map(role => officialsByRole[role])
+            .filter((o): o is TeamOfficial => !!o && !!o.name?.trim())
+            .map(o => ({ role: o.role, name: o.name.trim(), photoURL: o.photoURL?.trim() || undefined }));
+
+        // Client-side required check
+        for (const role of requiredRoles) {
+            if (!officials.some(o => o.role === role)) {
+                setError(`${role} name is required.`);
+                return;
+            }
+        }
+
         setSaving(true);
         setError('');
         try {
@@ -38,7 +69,7 @@ const TeamForm: React.FC<TeamFormProps> = ({ tournaments, defaultTournamentId = 
                 {
                     method: isEditMode ? 'PUT' : 'POST',
                     headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, shortCode, ownerName, logoURL: logoURL || undefined, tournamentId }),
+                    body: JSON.stringify({ name, shortCode, officials, logoURL: logoURL || undefined, tournamentId }),
                 }
             );
             if (!res.ok) {
@@ -86,9 +117,38 @@ const TeamForm: React.FC<TeamFormProps> = ({ tournaments, defaultTournamentId = 
                 <input type="text" value={shortCode} onChange={(e) => setShortCode(e.target.value)} required maxLength={6} className="w-full rounded-md p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
             </div>
 
-            <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Owner Name</label>
-                <input type="text" value={ownerName} onChange={(e) => setOwnerName(e.target.value)} required className="w-full rounded-md p-2" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }} />
+            {/* Team Officials — dynamic by tournament config */}
+            <div className="space-y-3 rounded-md p-3" style={{ border: '1px solid var(--border-primary)' }}>
+                <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Team Officials</p>
+                {enabledRoles.map((role) => {
+                    const isRequired = requiredRoles.includes(role);
+                    const official = officialsByRole[role];
+                    return (
+                        <div key={role} className="grid grid-cols-1 gap-2">
+                            <label className="block text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>
+                                {role} Name{isRequired && ' *'}
+                            </label>
+                            <input
+                                type="text"
+                                value={official?.name ?? ''}
+                                onChange={(e) => setOfficial(role, { name: e.target.value })}
+                                required={isRequired}
+                                className="w-full rounded-md p-2"
+                                style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
+                            />
+                            <ImageUpload
+                                value={official?.photoURL ?? ''}
+                                onChange={(url) => setOfficial(role, { photoURL: url })}
+                                folder="teams"
+                                label={`${role} Photo (optional)`}
+                                placeholder="Photo URL"
+                                previewClassName="w-14 h-14"
+                                previewShape="circle"
+                                id={`team-official-${role.toLowerCase()}`}
+                            />
+                        </div>
+                    );
+                })}
             </div>
 
             <ImageUpload

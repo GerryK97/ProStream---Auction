@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { Tournament, BidIncrementRange, StatFieldDef } from '@/types';
+import { Tournament, BidIncrementRange, StatFieldDef, TeamOfficialRole, TEAM_OFFICIAL_ROLES } from '@/types';
 import { getAuthHeaders } from '@/lib/api-client';
 import DeleteButton from '@/components/shared/DeleteButton';
 import { SPORT_LABELS } from '@/lib/sportPositions';
@@ -52,6 +52,7 @@ const EMPTY_FORM = {
   directQuickBidsEnabled: false,
   directQuickBids: [1000, 5000, 10000, 20000, 25000, 50000].map(a => ({ amount: a })) as { amount: number }[],
   playerProfileFields: { showAge: false, showBattingStyle: false, showBowlingStyle: false, statFields: [] as StatFieldDef[] },
+  teamOfficialsConfig: { enabledRoles: ['Owner'] as TeamOfficialRole[], requiredRoles: ['Owner'] as TeamOfficialRole[] },
 };
 
 function generateCodes(classes: ClassRow[]): string[] {
@@ -168,6 +169,10 @@ function TournamentsManagePage() {
       directQuickBidsEnabled: t.directQuickBidsEnabled ?? false,
       directQuickBids: (t.directQuickBids && t.directQuickBids.length > 0) ? t.directQuickBids : [1000, 5000, 10000, 20000, 25000, 50000].map(a => ({ amount: a })),
       playerProfileFields: t.playerProfileFields ?? { showAge: false, showBattingStyle: false, showBowlingStyle: false, statFields: [] },
+      teamOfficialsConfig: {
+        enabledRoles: (t.teamOfficialsConfig?.enabledRoles ?? ['Owner']) as TeamOfficialRole[],
+        requiredRoles: (t.teamOfficialsConfig?.requiredRoles ?? ['Owner']) as TeamOfficialRole[],
+      },
     });
     setShowCreate(true);
   };
@@ -251,6 +256,12 @@ function TournamentsManagePage() {
             label: sf.label.trim(),
             key: sf.label.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''),
           })),
+      },
+      teamOfficialsConfig: {
+        // Owner is always enabled + required; backend normalizes too.
+        enabledRoles: Array.from(new Set<TeamOfficialRole>(['Owner', ...form.teamOfficialsConfig.enabledRoles])),
+        requiredRoles: Array.from(new Set<TeamOfficialRole>(['Owner', ...form.teamOfficialsConfig.requiredRoles]))
+          .filter(r => r === 'Owner' || form.teamOfficialsConfig.enabledRoles.includes(r)),
       },
     };
   };
@@ -931,6 +942,60 @@ function TournamentsManagePage() {
                     )}
                   </div>
                 )}
+
+                {/* Team Officials */}
+                <div className="border border-gray-700 rounded-lg p-4 space-y-3">
+                  <div>
+                    <p className="text-sm font-medium text-white">Team Officials</p>
+                    <p className="text-xs text-gray-400 mt-1">Choose which officials teams provide. Enabled roles appear in the team form and overlays. Owner is always enabled.</p>
+                  </div>
+                  {TEAM_OFFICIAL_ROLES.map((role) => {
+                    const isOwner = role === 'Owner';
+                    const enabled = isOwner || form.teamOfficialsConfig.enabledRoles.includes(role);
+                    const required = isOwner || form.teamOfficialsConfig.requiredRoles.includes(role);
+                    return (
+                      <div key={role} className="flex items-center justify-between gap-3">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={enabled}
+                            disabled={isOwner}
+                            onChange={e => setForm(f => {
+                              const on = e.target.checked;
+                              const enabledRoles = on
+                                ? Array.from(new Set<TeamOfficialRole>([...f.teamOfficialsConfig.enabledRoles, role]))
+                                : f.teamOfficialsConfig.enabledRoles.filter(r => r !== role);
+                              const requiredRoles = on
+                                ? f.teamOfficialsConfig.requiredRoles
+                                : f.teamOfficialsConfig.requiredRoles.filter(r => r !== role);
+                              return { ...f, teamOfficialsConfig: { enabledRoles, requiredRoles } };
+                            })}
+                            className="w-4 h-4 accent-blue-500"
+                          />
+                          <span className="text-sm text-white font-medium">{role}{isOwner && <span className="text-xs text-gray-400 ml-1">(always on)</span>}</span>
+                        </label>
+                        {enabled && (
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={required}
+                              disabled={isOwner}
+                              onChange={e => setForm(f => {
+                                const req = e.target.checked;
+                                const requiredRoles = req
+                                  ? Array.from(new Set<TeamOfficialRole>([...f.teamOfficialsConfig.requiredRoles, role]))
+                                  : f.teamOfficialsConfig.requiredRoles.filter(r => r !== role);
+                                return { ...f, teamOfficialsConfig: { ...f.teamOfficialsConfig, requiredRoles } };
+                              })}
+                              className="w-3.5 h-3.5 accent-amber-500"
+                            />
+                            <span className="text-xs text-gray-400">Required</span>
+                          </label>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
 
                 {/* Player Profile Fields */}
                 <div className="border border-gray-700 rounded-lg p-4 space-y-4">
