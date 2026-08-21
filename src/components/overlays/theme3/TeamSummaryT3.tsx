@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { getMinClassBasePrice } from '@/lib/playerClassUtils';
+import { getEnabledTeamOfficials } from '@/lib/teamOfficials';
 import { TeamWiseImageBackgroundT3 } from './TeamWiseImageBackgroundT3';
 import type { Player, Team, Tournament } from '@/types';
 
@@ -242,6 +243,15 @@ const TeamSummaryT3: React.FC<Props> = ({ teams, players, tournament, teamId, is
                     >
                       {team.name}
                     </div>
+                    {(() => {
+                      const officials = getEnabledTeamOfficials(team, tournament);
+                      if (officials.length === 0) return null;
+                      return (
+                        <div style={{ fontSize: 13, fontWeight: 500, color: MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
+                          {officials.map(o => `${o.role}: ${o.name}`).join('  ·  ')}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
                 <div style={{ textAlign: 'center', color: MUTED, fontSize: 26, fontWeight: 700 }}>{count}/{squadSize || '—'}</div>

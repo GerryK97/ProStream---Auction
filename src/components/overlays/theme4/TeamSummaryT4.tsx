@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { getMinClassBasePrice } from '@/lib/playerClassUtils';
+import { getEnabledTeamOfficials } from '@/lib/teamOfficials';
 import type { Player, Team, Tournament } from '@/types';
 import { formatT4Amount } from './frame15PlayerCardT4Layout';
 import {
@@ -409,6 +410,15 @@ const TeamSummaryT4: React.FC<Props> = ({
                   >
                     {team.name}
                   </div>
+                  {(() => {
+                    const officials = getEnabledTeamOfficials(team, tournament);
+                    if (officials.length === 0) return null;
+                    return (
+                      <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 500, color: T4_SUMMARY_TEXT, opacity: 0.7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {officials.map(o => `${o.role}: ${o.name}`).join('  ·  ')}
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div
                   style={{

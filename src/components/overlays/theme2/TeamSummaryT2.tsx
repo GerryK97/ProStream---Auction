@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Team, Tournament } from '@/types';
+import { getEnabledTeamOfficials } from '@/lib/teamOfficials';
 
 interface Props {
   teams: Team[];
@@ -172,8 +173,19 @@ const TeamSummaryT2: React.FC<Props> = ({ teams, tournament, isExiting = false }
                         : <span style={{ fontSize: 13, fontWeight: 700, color: GOLD }}>{team.shortCode?.slice(0, 2)}</span>
                       }
                     </div>
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {team.name}
+                    <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {team.name}
+                      </span>
+                      {(() => {
+                        const officials = getEnabledTeamOfficials(team, tournament);
+                        if (officials.length === 0) return null;
+                        return (
+                          <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--t2-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {officials.map(o => `${o.role}: ${o.name}`).join('  ·  ')}
+                          </span>
+                        );
+                      })()}
                     </span>
                   </div>
 
