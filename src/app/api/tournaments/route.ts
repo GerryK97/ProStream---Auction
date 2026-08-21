@@ -123,6 +123,14 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
+    // Auction date is mandatory
+    if (!body.auctionDate || String(body.auctionDate).trim() === '') {
+      return NextResponse.json(
+        { error: 'Auction date is required' },
+        { status: 400 }
+      );
+    }
+
     // Validate player class codes if player classes are enabled
     if (body.usePlayerClasses && body.playerClasses) {
       const validation = validatePlayerClassCodes(body.playerClasses);

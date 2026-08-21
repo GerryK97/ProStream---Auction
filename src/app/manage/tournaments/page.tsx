@@ -37,6 +37,7 @@ const sortTournamentsByStatus = (items: TournamentWithCreator[]) => {
 const EMPTY_FORM = {
   name: '',
   year: new Date().getFullYear(),
+  auctionDate: '',
   budgetPerTeam: 1000000,
   squadSize: 11,
   basePricePerPlayer: 50000,
@@ -147,6 +148,7 @@ function TournamentsManagePage() {
     setForm({
       name: t.name,
       year: t.year,
+      auctionDate: (t as any).auctionDate ?? '',
       budgetPerTeam: t.budgetPerTeam,
       squadSize: t.squadSize,
       basePricePerPlayer: t.basePricePerPlayer,
@@ -198,6 +200,8 @@ function TournamentsManagePage() {
   };
 
   const validateForm = (): string | null => {
+    if (!form.name.trim()) return 'Tournament name is required.';
+    if (!form.auctionDate.trim()) return 'Auction date is required.';
     if (form.basePriceStrategy === 'player-class-based') {
       if (form.playerClasses.length === 0) return 'Add at least one player class for class-wise pricing.';
       const invalid = form.playerClasses.find(cls => !cls.name.trim() || cls.basePrice <= 0);
@@ -215,6 +219,7 @@ function TournamentsManagePage() {
       name: form.name,
       sport: form.sport,
       year: form.year,
+      auctionDate: form.auctionDate.trim(),
       budgetPerTeam: form.budgetPerTeam,
       squadSize: form.squadSize,
       basePricePerPlayer: form.basePricePerPlayer,
@@ -557,6 +562,16 @@ function TournamentsManagePage() {
                       required
                       value={form.year}
                       onChange={e => setForm(f => ({ ...f, year: parseInt(e.target.value) || new Date().getFullYear() }))}
+                      className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Auction Date *</label>
+                    <input
+                      type="date"
+                      required
+                      value={form.auctionDate}
+                      onChange={e => setForm(f => ({ ...f, auctionDate: e.target.value }))}
                       className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
                     />
                   </div>
