@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Player, Team, Tournament } from '@/types';
+import { getEnabledTeamOfficials } from '@/lib/teamOfficials';
 import {
   T4_TWI_BASE_CARD_H,
   T4_TWI_BASE_CARD_W,
@@ -356,6 +357,7 @@ export default function TeamWiseImageT4({
           playerPage={playerPage}
           totalPages={totalPages}
           animPhase={animPhase}
+          officials={currentBlock?.team ? getEnabledTeamOfficials(currentBlock.team, tournament) : undefined}
         />
 
         {/* Second gold rule under title (Champion dual-bar feel) */}
@@ -421,6 +423,7 @@ function TitleBand({
   playerPage,
   totalPages,
   animPhase,
+  officials,
 }: {
   block: TeamBlock | null;
   tournamentName: string;
@@ -430,6 +433,7 @@ function TitleBand({
   playerPage: number;
   totalPages: number;
   animPhase: AnimPhase;
+  officials?: { role: string; name: string; photoURL?: string }[];
 }) {
   const showTeamPagination = teamCount > 1;
   const showPagePagination = totalPages > 1;
@@ -522,6 +526,22 @@ function TitleBand({
         >
           {block?.team.name ?? '—'}
         </div>
+        {block && officials && officials.length > 0 && (
+          <div style={{ display: 'flex', gap: 18, marginTop: 6, flexWrap: 'wrap' }}>
+            {officials.map((o) => (
+              <div key={o.role} style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                {o.photoURL && (
+                  <img src={o.photoURL} alt={o.name}
+                    style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${T4_TWI_TEXT_TITLE}` }} />
+                )}
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontFamily: FONT, fontSize: 12, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: T4_TWI_TEXT_TITLE, opacity: 0.8, lineHeight: 1 }}>{o.role}</div>
+                  <div style={{ fontFamily: FONT, fontSize: 22, fontWeight: 600, color: T4_TWI_TEXT_TITLE, lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 260 }}>{o.name}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         {tournamentName ? (
           <div
             style={{

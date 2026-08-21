@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Player, Team, Tournament } from '@/types';
+import { getEnabledTeamOfficials } from '@/lib/teamOfficials';
 import ResilientImage from '@/components/overlays/shared/ResilientImage';
 
 interface Props {
@@ -190,6 +191,26 @@ const TeamWiseImageT1: React.FC<Props> = ({
             }}>
               {currentTeam.name.toUpperCase()}
             </div>
+            {(() => {
+              const officials = getEnabledTeamOfficials(currentTeam, tournament);
+              if (officials.length === 0) return null;
+              return (
+                <div style={{ display: 'flex', gap: 18, marginTop: 6, flexWrap: 'wrap' }}>
+                  {officials.map((o) => (
+                    <div key={o.role} style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                      {o.photoURL && (
+                        <ResilientImage src={o.photoURL} alt={o.name}
+                          style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--overlay-color-primary)' }} />
+                      )}
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontFamily: FONT_BODY, fontSize: 12, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--overlay-color-primary)', lineHeight: 1 }}>{o.role}</div>
+                        <div style={{ fontFamily: FONT_BODY, fontSize: 17, fontWeight: 500, color: 'var(--overlay-text-subtle)', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.name}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
             <div style={{
               fontFamily: FONT_BODY,
               fontSize: 20,

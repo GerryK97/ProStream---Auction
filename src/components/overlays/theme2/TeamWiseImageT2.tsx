@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Player, Team, Tournament } from '@/types';
+import { getEnabledTeamOfficials } from '@/lib/teamOfficials';
 import ResilientImage from '@/components/overlays/shared/ResilientImage';
 
 interface Props {
@@ -201,6 +202,26 @@ const TeamWiseImageT2: React.FC<Props> = ({
               }}>
                 {currentTeam.name}
               </div>
+              {(() => {
+                const officials = getEnabledTeamOfficials(currentTeam, tournament);
+                if (officials.length === 0) return null;
+                return (
+                  <div style={{ display: 'flex', gap: 16, marginTop: 4, flexWrap: 'wrap' }}>
+                    {officials.map((o) => (
+                      <div key={o.role} style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+                        {o.photoURL && (
+                          <ResilientImage src={o.photoURL} alt={o.name}
+                            style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${GOLD}` }} />
+                        )}
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: GOLD, lineHeight: 1 }}>{o.role}</div>
+                          <div style={{ fontSize: 15, fontWeight: 500, color: TEXT_MUTED, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.name}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
               <div style={{ fontSize: 15, color: TEXT_MUTED, marginTop: 3, letterSpacing: 1 }}>
                 {allCurrentPlayers.length} PLAYER{allCurrentPlayers.length !== 1 ? 'S' : ''}&nbsp;·&nbsp;FULL SQUAD
                 {totalPages > 1 && (

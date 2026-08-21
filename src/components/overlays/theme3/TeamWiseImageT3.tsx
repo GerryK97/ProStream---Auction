@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Player, Team, Tournament } from '@/types';
+import { getEnabledTeamOfficials } from '@/lib/teamOfficials';
 import { TICKER_T3_HEIGHT } from './TickerT3Shared';
 
 const CANVAS_W = 1920;
@@ -414,6 +415,7 @@ function CenterStrip({
     playerPage,
     totalPages,
     animPhase,
+    officials,
 }: {
     block: TeamBlock | null;
     tournamentName: string;
@@ -423,6 +425,7 @@ function CenterStrip({
     playerPage: number;
     totalPages: number;
     animPhase: AnimPhase;
+    officials?: { role: string; name: string; photoURL?: string }[];
 }) {
     const showTeamPagination = teamCount > 1;
     const showPagePagination = totalPages > 1;
@@ -583,6 +586,23 @@ function CenterStrip({
                 </div>
             ) : (
                 <div style={{ fontSize: 28, fontWeight: 800, color: barText, letterSpacing: '0.1em' }}>—</div>
+            )}
+
+            {block && officials && officials.length > 0 && (
+                <div style={{ display: 'flex', gap: 14, justifyContent: 'center', marginTop: 6, flexWrap: 'wrap' }}>
+                    {officials.map((o) => (
+                        <div key={o.role} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                            {o.photoURL && (
+                                <img src={o.photoURL} alt={o.name}
+                                    style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', border: `1px solid ${barText}` }} />
+                            )}
+                            <div style={{ minWidth: 0, textAlign: 'left' }}>
+                                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1.2, textTransform: 'uppercase', color: barText, opacity: 0.85, lineHeight: 1 }}>{o.role}</div>
+                                <div style={{ fontSize: 14, fontWeight: 600, color: barText, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 160 }}>{o.name}</div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             )}
 
             {(showTeamPagination || showPagePagination) && (
@@ -767,6 +787,7 @@ export default function TeamWiseImageT3({ teams, players, tournament, teamId, is
                     playerPage={playerPage}
                     totalPages={totalPages}
                     animPhase={animPhase}
+                    officials={currentBlock?.team ? getEnabledTeamOfficials(currentBlock.team, tournament) : undefined}
                 />
 
                 <PlayerCardsSet rows={cardRows} animPhase={animPhase} />
