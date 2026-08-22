@@ -14,6 +14,7 @@ import WheelSpinT3 from './WheelSpinT3';
 import type { Theme3ContentProps } from './types';
 import { isTheme3TeamImageryMode } from './types';
 import type { OverlaySettings } from '../OverlayWrapper';
+import type { Player } from '@/types';
 
 type DisplayMode = OverlaySettings['displayMode'];
 
@@ -51,8 +52,24 @@ const FullScreenT3Content: React.FC<Theme3ContentProps> = ({
   const [waitingExiting, setWaitingExiting] = useState(false);
   const [cardVisible, setCardVisible] = useState(true);
   const prevModeRef = useRef<DisplayMode>(overlaySettings.displayMode);
+  /** Latch last live player through mark-unsold (API clears currentPlayerId immediately). */
+  const stagePlayerRef = useRef<Player | undefined>(currentPlayer);
   const soldPlayerIdRef = useRef<string | undefined>(undefined);
   const waitingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync during render so the card never unmounts for a frame before isUnsold lands.
+  if (currentPlayer) {
+    stagePlayerRef.current = currentPlayer;
+  } else if (stagePlayerRef.current) {
+    const updated = players.find(p => p._id === stagePlayerRef.current!._id);
+    if (updated?.isUnsold) {
+      stagePlayerRef.current = updated;
+    }
+  }
+
+  const stagePlayer =
+    currentPlayer ??
+    (stagePlayerRef.current?.isUnsold ? stagePlayerRef.current : undefined);
 
   const requestedMode = overlaySettings.displayMode;
   const requestIsSummary = isSummaryPanel(requestedMode);
@@ -146,7 +163,8 @@ const FullScreenT3Content: React.FC<Theme3ContentProps> = ({
   }, [currentPlayer?._id, auctionState.currentPlayerId, isLiveMode, tournament?.status, waitingForNextPlayer]);
 
   const handleCardDismissed = () => {
-    soldPlayerIdRef.current = currentPlayer?._id;
+    soldPlayerIdRef.current = stagePlayer?._id;
+    stagePlayerRef.current = undefined;
     setCardVisible(false);
     if (waitingTimerRef.current) clearTimeout(waitingTimerRef.current);
     waitingTimerRef.current = setTimeout(() => {
@@ -155,16 +173,23 @@ const FullScreenT3Content: React.FC<Theme3ContentProps> = ({
     }, 200);
   };
 
+  const holdingUnsoldReveal = !!stagePlayer?.isUnsold && !auctionState.currentPlayerId;
+
   const showPlayerCard =
     !overlaySettings.hidePremiumCard &&
     isLiveMode &&
     !requestIsSummary &&
     !requestIsWheel &&
     tournament?.status === 'Live' &&
-    !!auctionState.currentPlayerId &&
-    !!currentPlayer &&
+    !!stagePlayer &&
+    (!!auctionState.currentPlayerId || holdingUnsoldReveal) &&
     cardVisible &&
     !waitingForNextPlayer;
+
+  const cardAuctionState =
+    holdingUnsoldReveal && stagePlayer
+      ? { ...auctionState, currentPlayerId: stagePlayer._id }
+      : auctionState;
 
   const showWaiting =
     isLiveMode &&
@@ -252,7 +277,7 @@ const FullScreenT3Content: React.FC<Theme3ContentProps> = ({
       )}
 
       {/* ── Full-screen player card (standard / custom-ticker) ── */}
-      {showPlayerCard && (
+      {showPlayerCard && stagePlayer && (
         <div
           style={{
             position: 'absolute',
@@ -264,9 +289,9 @@ const FullScreenT3Content: React.FC<Theme3ContentProps> = ({
           }}
         >
           <FullScreenPlayerCardT3
-            key={auctionState.currentPlayerId}
-            currentPlayer={currentPlayer}
-            auctionState={auctionState}
+            key={stagePlayer._id}
+            currentPlayer={stagePlayer}
+            auctionState={cardAuctionState}
             teams={teams}
             tournament={tournament}
             tickerVisible={showTicker && isCustomTicker}

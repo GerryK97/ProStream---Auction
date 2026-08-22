@@ -30,7 +30,7 @@ export const FS_CARD_T4_TOP_STRIP_H = 72;
 export const FS_CARD_T4_ENTER_MS = 480;
 export const FS_CARD_T4_EXIT_MS = 400;
 export const FS_CARD_T4_SOLD_HOLD_MS = 5000;
-export const FS_CARD_T4_UNSOLD_HOLD_MS = 2500;
+export const FS_CARD_T4_UNSOLD_HOLD_MS = 5000;
 export const FS_CARD_T4_LOOP_INTERVAL_MS = 4000;
 export const FS_CARD_T4_LOOP_FADE_MS = 300;
 

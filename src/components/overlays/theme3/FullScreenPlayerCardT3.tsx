@@ -285,7 +285,13 @@ export function FullScreenPlayerCardT3({
       }, FS_CARD_SOLD_HOLD_MS);
     }
 
-    if (currentPlayer.isUnsold && !prevUnsoldRef.current) {
+    // mark-unsold clears currentPlayerId in the same update that sets isUnsold.
+    if (
+      currentPlayer.isUnsold &&
+      phase !== 'unsoldReveal' &&
+      phase !== 'exiting' &&
+      phase !== 'soldReveal'
+    ) {
       prevUnsoldRef.current = true;
       setPhase('unsoldReveal');
       clearTimers();
@@ -293,6 +299,7 @@ export function FullScreenPlayerCardT3({
         setPhase('exiting');
         schedule(() => setDismissed(true), reducedMotion ? 0 : FS_CARD_EXIT_MS);
       }, FS_CARD_UNSOLD_HOLD_MS);
+      return;
     }
 
     if (!currentPlayer.isUnsold) {

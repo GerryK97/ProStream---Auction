@@ -83,7 +83,7 @@ Theme 4 (`theme4`, `--t4-*`) spans Custom lower-thirds and dedicated Full Screen
 
 ### Scope
 - **Custom** ([`CustomT4Content.tsx`](../src/components/overlays/theme4/CustomT4Content.tsx)) — transparent canvas; Frame 15 `small` or portrait `large`
-- **Full Screen** ([`FullScreenT4Content.tsx`](../src/components/overlays/theme4/FullScreenT4Content.tsx)) — opaque dedicated [`FullScreenPlayerCardT4`](../src/components/overlays/theme4/FullScreenPlayerCardT4.tsx) (Theme 3 FS structure, T4 chrome); post-sale waiting via `RestingTimeT4`. On **Sold**, the profile/stats/bid panel are replaced by a large animated [`SoldDetailsSectionT4`](../src/components/overlays/theme4/SoldDetailsSectionT4.tsx) (SOLD badge + price + buying team). Player Summary / Team Summary / other summary modes hide the player card immediately (`overlaySettings.displayMode`) so the opaque profile cannot cover the panel.
+- **Full Screen** ([`FullScreenT4Content.tsx`](../src/components/overlays/theme4/FullScreenT4Content.tsx)) — opaque dedicated [`FullScreenPlayerCardT4`](../src/components/overlays/theme4/FullScreenPlayerCardT4.tsx) (Theme 3 FS structure, T4 chrome); post-sale waiting via `RestingTimeT4`. On **Sold**, the profile/stats/bid panel are replaced by a large animated [`SoldDetailsSectionT4`](../src/components/overlays/theme4/SoldDetailsSectionT4.tsx) (SOLD badge + price + buying team). On **Unsold**, the card is held via a stage-player latch (mark-unsold clears `currentPlayerId` immediately) and shows [`UnsoldDetailsSectionT4`](../src/components/overlays/theme4/UnsoldDetailsSectionT4.tsx) for 5s. Player Summary / Team Summary / other summary modes hide the player card immediately (`overlaySettings.displayMode`) so the opaque profile cannot cover the panel.
 - **Full Screen 2** ([`FullScreenAltT4Content.tsx`](../src/components/overlays/theme4/FullScreenAltT4Content.tsx)) — secondary-image hero + floating [`CurrentBidPanelT4`](../src/components/overlays/theme4/CurrentBidPanelT4.tsx) `bar`, sold toast, waiting, ticker/summaries/slot reel
 - Frame 15 white artboard fill is **not** rendered on Custom (OBS transparency)
 
@@ -104,9 +104,10 @@ Theme 4 (`theme4`, `--t4-*`) spans Custom lower-thirds and dedicated Full Screen
 ### Composition
 - [`PlayerCardT4.tsx`](../src/components/overlays/theme4/PlayerCardT4.tsx)
 - [`PortraitPlayerCardT4.tsx`](../src/components/overlays/theme4/PortraitPlayerCardT4.tsx) — large centered portrait
-- [`FullScreenPlayerCardT4.tsx`](../src/components/overlays/theme4/FullScreenPlayerCardT4.tsx) — Full Screen opaque card; sold reveal uses [`SoldDetailsSectionT4`](../src/components/overlays/theme4/SoldDetailsSectionT4.tsx)
+- [`FullScreenPlayerCardT4.tsx`](../src/components/overlays/theme4/FullScreenPlayerCardT4.tsx) — Full Screen opaque card; sold/unsold reveals use dedicated detail sections
 - [`SoldDetailsSectionT4.tsx`](../src/components/overlays/theme4/SoldDetailsSectionT4.tsx) — Full Screen sold reveal (large SOLD badge + price + team, enter/pulse animations)
-- [`CurrentBidPanelT4.tsx`](../src/components/overlays/theme4/CurrentBidPanelT4.tsx) — `fullscreen` + `bar` bid layouts (hidden during sold reveal — details live in SoldDetailsSectionT4)
+- [`UnsoldDetailsSectionT4.tsx`](../src/components/overlays/theme4/UnsoldDetailsSectionT4.tsx) — Full Screen unsold reveal (stamp + struck base, enter/pulse/shine)
+- [`CurrentBidPanelT4.tsx`](../src/components/overlays/theme4/CurrentBidPanelT4.tsx) — `fullscreen` + `bar` bid layouts (hidden during sold/unsold reveal)
 - [`fullScreenPlayerCardT4Layout.ts`](../src/components/overlays/theme4/fullScreenPlayerCardT4Layout.ts)
 - [`SlotReelT4.tsx`](../src/components/overlays/theme4/SlotReelT4.tsx) — heraldic slot-reel player selection (`wheel-spin`)
 - [`TickerT4.tsx`](../src/components/overlays/theme4/TickerT4.tsx) — overlays.uno **Prime** RSS ticker (`#0a3d8d` / `#222c40` / PT Sans Narrow)

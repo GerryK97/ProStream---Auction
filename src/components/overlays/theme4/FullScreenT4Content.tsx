@@ -14,6 +14,7 @@ import RestingTimeT4 from './RestingTimeT4';
 import { T4_SUMMARY_EXIT_MS } from './soldPlayersSummaryT4Layout';
 import type { Theme4ContentProps } from './types';
 import type { OverlaySettings } from '../OverlayWrapper';
+import type { Player } from '@/types';
 
 type DisplayMode = OverlaySettings['displayMode'];
 
@@ -51,8 +52,24 @@ const FullScreenT4Content: React.FC<Theme4ContentProps> = ({
   const [waitingExiting, setWaitingExiting] = useState(false);
   const [cardVisible, setCardVisible] = useState(true);
   const prevModeRef = useRef<DisplayMode>(overlaySettings.displayMode);
+  /** Latch last live player through mark-unsold (API clears currentPlayerId immediately). */
+  const stagePlayerRef = useRef<Player | undefined>(currentPlayer);
   const soldPlayerIdRef = useRef<string | undefined>(undefined);
   const waitingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync during render so the card never unmounts for a frame before isUnsold lands.
+  if (currentPlayer) {
+    stagePlayerRef.current = currentPlayer;
+  } else if (stagePlayerRef.current) {
+    const updated = players.find(p => p._id === stagePlayerRef.current!._id);
+    if (updated?.isUnsold) {
+      stagePlayerRef.current = updated;
+    }
+  }
+
+  const stagePlayer =
+    currentPlayer ??
+    (stagePlayerRef.current?.isUnsold ? stagePlayerRef.current : undefined);
 
   const requestedMode = overlaySettings.displayMode;
   const requestIsSummary = isSummaryMode(requestedMode);
@@ -138,7 +155,8 @@ const FullScreenT4Content: React.FC<Theme4ContentProps> = ({
   ]);
 
   const handleCardDismissed = () => {
-    soldPlayerIdRef.current = currentPlayer?._id;
+    soldPlayerIdRef.current = stagePlayer?._id;
+    stagePlayerRef.current = undefined;
     setCardVisible(false);
     if (waitingTimerRef.current) clearTimeout(waitingTimerRef.current);
     waitingTimerRef.current = setTimeout(() => {
@@ -147,14 +165,16 @@ const FullScreenT4Content: React.FC<Theme4ContentProps> = ({
     }, 200);
   };
 
+  const holdingUnsoldReveal = !!stagePlayer?.isUnsold && !auctionState.currentPlayerId;
+
   const showPlayerCard =
     !overlaySettings.hidePremiumCard &&
     isLiveMode &&
     !requestIsSummary &&
     !requestIsWheel &&
     tournament?.status === 'Live' &&
-    !!auctionState.currentPlayerId &&
-    !!currentPlayer &&
+    !!stagePlayer &&
+    (!!auctionState.currentPlayerId || holdingUnsoldReveal) &&
     cardVisible &&
     !waitingForNextPlayer;
 
@@ -173,6 +193,11 @@ const FullScreenT4Content: React.FC<Theme4ContentProps> = ({
     activeMode !== 'wheel-spin' &&
     requestedMode !== 'wheel-spin' &&
     !(activeMode === 'standard' && (showPlayerCard || showWaiting));
+
+  const cardAuctionState =
+    holdingUnsoldReveal && stagePlayer
+      ? { ...auctionState, currentPlayerId: stagePlayer._id }
+      : auctionState;
 
   return (
     <Theme4Canvas>
@@ -241,11 +266,11 @@ const FullScreenT4Content: React.FC<Theme4ContentProps> = ({
         <SlotReelT4 data={wheelSpinData} allPlayers={players} tournament={tournament} />
       )}
 
-      {showPlayerCard && currentPlayer && (
+      {showPlayerCard && stagePlayer && (
         <FullScreenPlayerCardT4
-          key={auctionState.currentPlayerId}
-          currentPlayer={currentPlayer}
-          auctionState={auctionState}
+          key={stagePlayer._id}
+          currentPlayer={stagePlayer}
+          auctionState={cardAuctionState}
           teams={teams}
           tournament={tournament}
           tickerVisible={showTicker}

@@ -7,6 +7,7 @@ import { optimizeImage } from '@/lib/imageOptimization';
 import ResilientImage from '../shared/ResilientImage';
 import CurrentBidPanelT4, { type BidPanelPhaseT4 } from './CurrentBidPanelT4';
 import SoldDetailsSectionT4 from './SoldDetailsSectionT4';
+import UnsoldDetailsSectionT4 from './UnsoldDetailsSectionT4';
 import {
   buildPlayerCardLoopItemsT4,
   PlayerCardLoopSectionT4,
@@ -305,7 +306,15 @@ export function FullScreenPlayerCardT4({
       }, FS_CARD_T4_SOLD_HOLD_MS);
     }
 
-    if (currentPlayer.isUnsold && !prevUnsoldRef.current) {
+    // mark-unsold clears currentPlayerId in the same update that sets isUnsold.
+    // Enter unsold reveal whenever we see isUnsold outside reveal/exit — not only
+    // on the false→true edge (remount / stage-player hold).
+    if (
+      currentPlayer.isUnsold &&
+      phase !== 'unsoldReveal' &&
+      phase !== 'exiting' &&
+      phase !== 'soldReveal'
+    ) {
       prevUnsoldRef.current = true;
       setPhase('unsoldReveal');
       clearTimers();
@@ -313,6 +322,7 @@ export function FullScreenPlayerCardT4({
         setPhase('exiting');
         schedule(() => setDismissed(true), reducedMotion ? 0 : FS_CARD_T4_EXIT_MS);
       }, FS_CARD_T4_UNSOLD_HOLD_MS);
+      return;
     }
 
     if (!currentPlayer.isUnsold) {
@@ -403,11 +413,18 @@ export function FullScreenPlayerCardT4({
           20% { opacity: 0.55; }
           100% { opacity: 0; }
         }
+        @keyframes t4FsUnsoldFlash {
+          0% { opacity: 0; }
+          18% { opacity: 0.55; }
+          100% { opacity: 0; }
+        }
         .t4fs-live-dot { animation: t4FsLiveDot 1.1s ease-in-out infinite; }
         .t4fs-sold-flash { animation: t4FsSoldFlash 0.7s ease-out both; }
+        .t4fs-unsold-flash { animation: t4FsUnsoldFlash 0.7s ease-out both; }
         @media (prefers-reduced-motion: reduce) {
           .t4fs-live-dot,
-          .t4fs-sold-flash { animation: none !important; }
+          .t4fs-sold-flash,
+          .t4fs-unsold-flash { animation: none !important; }
         }
       `}</style>
 
@@ -716,7 +733,7 @@ export function FullScreenPlayerCardT4({
             </div>
 
             <div style={{ marginBottom: 20, minHeight: 38 }}>
-              {!showSoldOverlay && (
+              {!showSoldOverlay && !showUnsoldOverlay && (
                 <PlayerCardLoopSectionT4
                   items={loopItems}
                   active={loopActive}
@@ -748,6 +765,22 @@ export function FullScreenPlayerCardT4({
                 <SoldDetailsSectionT4
                   soldTeam={soldTeam}
                   soldPrice={soldPrice}
+                  reducedMotion={reducedMotion}
+                />
+              </div>
+            ) : showUnsoldOverlay ? (
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  paddingBottom: FS_CARD_T4_PANEL_PADDING,
+                }}
+              >
+                <UnsoldDetailsSectionT4
+                  currentPlayer={currentPlayer}
+                  tournament={tournament}
                   reducedMotion={reducedMotion}
                 />
               </div>
@@ -838,34 +871,19 @@ export function FullScreenPlayerCardT4({
           />
         )}
 
-        {showUnsoldOverlay && (
+        {showUnsoldOverlay && !reducedMotion && (
           <div
+            className="t4fs-unsold-flash"
+            aria-hidden
             style={{
               position: 'absolute',
               inset: 0,
-              zIndex: 12,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'rgba(5,8,16,0.45)',
+              zIndex: 11,
               pointerEvents: 'none',
+              background:
+                'radial-gradient(ellipse 70% 60% at 50% 45%, rgba(232,90,90,0.4) 0%, transparent 70%)',
             }}
-          >
-            <div
-              style={{
-                padding: '18px 48px',
-                border: '3px solid var(--t4-danger, #E85A5A)',
-                background: 'rgba(0,0,0,0.72)',
-                fontFamily: NAME_FONT,
-                fontSize: 64,
-                letterSpacing: '0.12em',
-                color: 'var(--t4-danger, #E85A5A)',
-                textTransform: 'uppercase',
-              }}
-            >
-              Unsold
-            </div>
-          </div>
+          />
         )}
       </div>
     </>
