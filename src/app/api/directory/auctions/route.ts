@@ -20,7 +20,11 @@ export async function GET(request: NextRequest) {
     (request.nextUrl.searchParams.get('ids') ?? '')
       .split(',')
       .map((id) => id.trim())
-      .filter((id) => /^[a-f\d]{24}$/i.test(id)),
+      // Auction tournament IDs are application-generated strings such as
+      // `t1774695573477a9rpmyxg1`, not Mongo ObjectIds. Restrict the accepted
+      // shape and size while preserving the identifiers stored in
+      // users.assignedTournaments.
+      .filter((id) => /^[a-zA-Z0-9_-]{1,128}$/.test(id)),
   )).slice(0, 50);
 
   if (ids.length === 0) return NextResponse.json([]);
