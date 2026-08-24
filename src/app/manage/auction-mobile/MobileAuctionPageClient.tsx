@@ -20,7 +20,7 @@ export default function MobileAuctionPageClient({ initialData }: MobileAuctionPa
   const soldPlayers = initialData?.players?.filter((player) => player.isSold).length ?? 0;
 
   return (
-    <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
+    <ProtectedRoute allowedRoles={['Admin', 'Operator']}>
       <MobileAuctionControlPanel initialData={initialData || undefined} stats={{ totalTeams, totalPlayers, soldPlayers }} />
     </ProtectedRoute>
   );

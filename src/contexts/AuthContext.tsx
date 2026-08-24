@@ -8,7 +8,7 @@ export interface User {
   email: string;
   logoURL?: string;
   mobileNumber?: string;
-  role: 'Admin' | 'Tournament' | 'Player' | 'Audience';
+  role: 'Admin' | 'Operator' | 'Scorer' | 'Player' | 'Audience';
   status: 'Active' | 'PendingApproval' | 'Suspended';
   assignedTournaments?: string[];
   plan?: 'Free' | 'Standard' | 'Offer';

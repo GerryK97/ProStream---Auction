@@ -21,7 +21,7 @@ export default function AuctionPageClient({ initialData }: AuctionPageClientProp
   const status = tournament?.status || 'Not Started';
 
   return (
-    <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
+    <ProtectedRoute allowedRoles={['Admin', 'Operator']}>
       <div className="pt-2 pb-2 min-w-0">
         <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Auction</h1>
       </div>

@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
 
     const passwordHash = await hashPassword(password);
-    const defaultRole = 'Tournament';
+    const defaultRole = 'Operator';
     const isAutoApproved = shouldAutoApproveRole(defaultRole);
     const status = isAutoApproved ? 'Active' : 'PendingApproval';
 

@@ -463,7 +463,7 @@ ${'─'.repeat(60)}`;
   // ── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <ProtectedRoute allowedRoles={['Admin', 'Tournament', 'Player', 'Audience']}>
+    <ProtectedRoute allowedRoles={['Admin', 'Operator', 'Player', 'Audience']}>
     <div>
       {/* Steps Progress */}
       <div className="px-6 pt-6 pb-2">

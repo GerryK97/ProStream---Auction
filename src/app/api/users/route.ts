@@ -12,7 +12,7 @@ import {
   type UserStatus,
 } from '@/lib/pg/user-queries';
 
-const ALLOWED_ROLES: UserRole[] = ['Admin', 'Tournament', 'Player', 'Audience'];
+const ALLOWED_ROLES: UserRole[] = ['Admin', 'Operator', 'Scorer', 'Player', 'Audience'];
 const ALLOWED_STATUSES: UserStatus[] = ['Active', 'PendingApproval', 'Suspended'];
 const ALLOWED_PLANS: UserPlan[] = ['Free', 'Standard', 'Offer'];
 
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       username,
       email,
       password,
-      role = 'Tournament',
+      role = 'Operator',
       status = 'Active',
       assignedTournaments = [],
       plan = 'Free',

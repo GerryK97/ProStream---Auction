@@ -24,7 +24,7 @@ const NAV_GROUPS = [
       {
         label: 'Tournaments',
         href: '/manage/tournaments',
-        roles: ['Admin', 'Tournament'],
+        roles: ['Admin', 'Operator'],
         icon: (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0">
             <path d="M6 9H4.5a2.5 2.5 0 010-5H6" />
@@ -39,7 +39,7 @@ const NAV_GROUPS = [
       {
         label: 'Teams',
         href: '/manage/teams',
-        roles: ['Admin', 'Tournament'],
+        roles: ['Admin', 'Operator'],
         icon: (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0">
             <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
@@ -52,7 +52,7 @@ const NAV_GROUPS = [
       {
         label: 'Players',
         href: '/manage/players',
-        roles: ['Admin', 'Tournament'],
+        roles: ['Admin', 'Operator'],
         icon: (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0">
             <circle cx="12" cy="8" r="5" />
@@ -74,7 +74,7 @@ const NAV_GROUPS = [
       {
         label: 'Auction Results',
         href: '/manage/auction-results',
-        roles: ['Admin', 'Tournament'],
+        roles: ['Admin', 'Operator'],
         icon: (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0">
             <line x1="18" y1="20" x2="18" y2="10" />

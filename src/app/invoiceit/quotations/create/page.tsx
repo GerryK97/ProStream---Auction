@@ -7,7 +7,7 @@ import QuotationForm from '@/components/invoiceit/QuotationForm';
 
 export default function CreateQuotationPage() {
   return (
-    <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
+    <ProtectedRoute allowedRoles={['Admin', 'Operator']}>
       <div className="p-6">
         <div className="mx-auto max-w-5xl">
           <div className="mb-6">

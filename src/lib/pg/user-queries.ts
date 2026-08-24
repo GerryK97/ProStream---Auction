@@ -3,7 +3,7 @@ import { pgDb } from './db';
 import { users, type NewPgUser, type PgUser } from './users-schema';
 import { resolveImageUrl } from '@/lib/cloudinaryUtils';
 
-export type UserRole = 'Admin' | 'Tournament' | 'Player' | 'Audience';
+export type UserRole = 'Admin' | 'Operator' | 'Scorer' | 'Player' | 'Audience';
 export type UserStatus = 'Active' | 'PendingApproval' | 'Suspended';
 export type UserPlan = 'Free' | 'Standard' | 'Offer';
 

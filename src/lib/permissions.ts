@@ -1,6 +1,6 @@
 ﻿import { JWTPayload } from './auth';
 
-export type UserRole = 'Admin' | 'Tournament' | 'Player' | 'Audience';
+export type UserRole = 'Admin' | 'Operator' | 'Scorer' | 'Player' | 'Audience';
 export type Action = 'create' | 'read' | 'update' | 'delete' | 'manage';
 
 export interface RoutePermission {
@@ -8,7 +8,7 @@ export interface RoutePermission {
   allowedRoles: UserRole[];
 }
 
-const ALL_ROLES: UserRole[] = ['Admin', 'Tournament', 'Player', 'Audience'];
+const ALL_ROLES: UserRole[] = ['Admin', 'Operator', 'Scorer', 'Player', 'Audience'];
 
 /**
  * Define which roles can access which routes
@@ -21,14 +21,14 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
   { path: '/contact', allowedRoles: ALL_ROLES },
 
   // Auction routes
-  { path: '/auction', allowedRoles: ['Admin', 'Tournament'] },
-  { path: '/auction/setup', allowedRoles: ['Admin', 'Tournament'] },
+  { path: '/auction', allowedRoles: ['Admin', 'Operator'] },
+  { path: '/auction/setup', allowedRoles: ['Admin', 'Operator'] },
 
   // Management routes
-  { path: '/manage', allowedRoles: ['Admin', 'Tournament'] },
-  { path: '/manage/tournaments', allowedRoles: ['Admin', 'Tournament'] },
-  { path: '/manage/teams', allowedRoles: ['Admin', 'Tournament'] },
-  { path: '/manage/players', allowedRoles: ['Admin', 'Tournament'] },
+  { path: '/manage', allowedRoles: ['Admin', 'Operator'] },
+  { path: '/manage/tournaments', allowedRoles: ['Admin', 'Operator'] },
+  { path: '/manage/teams', allowedRoles: ['Admin', 'Operator'] },
+  { path: '/manage/players', allowedRoles: ['Admin', 'Operator'] },
 
   // Overlay redirect page - kept so /overlays still works for bookmarks
   { path: '/overlays', allowedRoles: ['Admin'] },
@@ -44,13 +44,13 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
   { path: '/manage/overlay-prices', allowedRoles: ['Admin'] },
 
   // InvoiceIt routes
-  { path: '/invoiceit', allowedRoles: ['Admin', 'Tournament'] },
-  { path: '/invoiceit/', allowedRoles: ['Admin', 'Tournament'] },
+  { path: '/invoiceit', allowedRoles: ['Admin', 'Operator'] },
+  { path: '/invoiceit/', allowedRoles: ['Admin', 'Operator'] },
 
   // API routes for InvoiceIt (allow through to be handled by route handlers)
-  { path: '/api/invoices/', allowedRoles: ['Admin', 'Tournament'] },
-  { path: '/api/quotations/', allowedRoles: ['Admin', 'Tournament'] },
-  { path: '/api/customers/', allowedRoles: ['Admin', 'Tournament'] },
+  { path: '/api/invoices/', allowedRoles: ['Admin', 'Operator'] },
+  { path: '/api/quotations/', allowedRoles: ['Admin', 'Operator'] },
+  { path: '/api/customers/', allowedRoles: ['Admin', 'Operator'] },
   // All other /api/ routes (tournaments, teams, players, etc.)
   { path: '/api/', allowedRoles: ALL_ROLES },
 ];
@@ -92,13 +92,21 @@ export function canPerformAction(
       overlayConfig: ['create', 'read', 'update', 'delete', 'manage'],
       invoice: ['create', 'read', 'update', 'delete', 'manage'],
     },
-    Tournament: {
+    Operator: {
       tournament: ['create', 'read', 'update'],
       team: ['create', 'read', 'update', 'delete', 'manage'],
       player: ['create', 'read', 'update', 'delete', 'manage'],
       auction: ['read', 'update', 'manage'],
       overlayConfig: ['create', 'read', 'update', 'delete'],
       invoice: ['create', 'read', 'update', 'delete'],
+      user: [],
+    },
+    Scorer: {
+      tournament: ['read'],
+      player: ['read'],
+      auction: ['read'],
+      overlayConfig: ['read'],
+      team: ['read'],
       user: [],
     },
     Player: {
@@ -136,7 +144,7 @@ export function isAdmin(userRole: UserRole | string): boolean {
  * Check if user can manage resources
  */
 export function canManageResources(userRole: UserRole | string): boolean {
-  return ['Admin', 'Tournament'].includes(userRole);
+  return ['Admin', 'Operator'].includes(userRole);
 }
 
 /**
@@ -150,7 +158,7 @@ export function getAllowedTournaments(
   if (userRole === 'Admin') {
     return allTournaments;
   }
-  if (userRole === 'Tournament') {
+  if (userRole === 'Operator') {
     return assignedTournaments || [];
   }
   return [];

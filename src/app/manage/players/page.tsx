@@ -414,7 +414,7 @@ function PlayersManagePage() {
 
 export default function PlayersPage() {
     return (
-        <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
+        <ProtectedRoute allowedRoles={['Admin', 'Operator']}>
             <PlayersManagePage />
         </ProtectedRoute>
     );

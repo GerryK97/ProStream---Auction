@@ -7,7 +7,7 @@ import InvoiceForm from '@/components/invoiceit/InvoiceForm';
 
 export default function CreateInvoicePage() {
   return (
-    <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
+    <ProtectedRoute allowedRoles={['Admin', 'Operator']}>
       <div className="p-6">
         <div className="mx-auto max-w-5xl">
           <div className="mb-6">

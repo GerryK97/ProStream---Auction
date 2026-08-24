@@ -106,7 +106,7 @@ export default function SignupPage() {
       setSuccessMessage(
         cleanPhone
           ? 'Account created successfully. Mobile verification can be completed later from Profile.'
-          : 'Account created successfully! You can now login as a Tournament Manager.',
+          : 'Account created successfully! You can now login as an Operator.',
       );
       setTimeout(() => {
         router.push('/auth/login');
@@ -316,7 +316,7 @@ export default function SignupPage() {
             <div className="rounded-md p-3" style={{ backgroundColor: 'var(--surface-subtle)', border: '1px solid var(--border-primary)' }}>
               <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Role</p>
               <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                New accounts start as <strong style={{ color: 'var(--text-primary)' }}>Tournament Manager</strong>. Admins can change roles later if needed.
+                New accounts start as <strong style={{ color: 'var(--text-primary)' }}>Operator</strong>. Admins can change roles later if needed.
               </p>
             </div>
 

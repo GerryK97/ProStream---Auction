@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       // Other roles: access to assigned tournaments
       let hasAccess = user!.role === 'Admin' || user!.assignedTournaments.includes(tournamentId);
 
-      if (!hasAccess && user!.role === 'Tournament') {
+      if (!hasAccess && user!.role === 'Operator') {
         const tournament = await TournamentModel.findById(tournamentId).select('createdBy').lean() as { createdBy: string } | null;
         hasAccess = tournament?.createdBy === user!.userId;
       }

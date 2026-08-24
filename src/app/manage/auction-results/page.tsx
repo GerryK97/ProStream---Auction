@@ -545,7 +545,7 @@ function AuctionResultsPage() {
 
 export default function AuctionResultsPageWrapper() {
     return (
-        <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
+        <ProtectedRoute allowedRoles={['Admin', 'Operator']}>
             <AuctionResultsPage />
         </ProtectedRoute>
     );

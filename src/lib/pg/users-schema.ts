@@ -1,7 +1,7 @@
 ﻿import { sql } from 'drizzle-orm';
 import { boolean, integer, pgEnum, pgTable, serial, text, timestamp, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 
-export const userRoleEnum = pgEnum('user_role', ['Admin', 'Tournament', 'Player', 'Audience']);
+export const userRoleEnum = pgEnum('user_role', ['Admin', 'Operator', 'Scorer', 'Player', 'Audience']);
 export const userStatusEnum = pgEnum('user_status', ['Active', 'PendingApproval', 'Suspended']);
 export const userPlanEnum = pgEnum('user_plan', ['Free', 'Standard', 'Offer']);
 export const transactionTypeEnum = pgEnum('transaction_type', ['topup', 'deduction']);

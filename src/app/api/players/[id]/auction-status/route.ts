@@ -40,7 +40,7 @@ export async function PATCH(
     if (!tournament) return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
 
     const hasAccess = user.role === 'Admin' ||
-      (user.role === 'Tournament' && tournament.createdBy === user.userId);
+      (user.role === 'Operator' && tournament.createdBy === user.userId);
     if (!hasAccess) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     // Step 1: Refund old team if player was previously sold

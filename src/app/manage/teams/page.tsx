@@ -170,7 +170,7 @@ function TeamsManagePage() {
 
 export default function TeamsPage() {
     return (
-        <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
+        <ProtectedRoute allowedRoles={['Admin', 'Operator']}>
             <TeamsManagePage />
         </ProtectedRoute>
     );

@@ -36,7 +36,7 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<EditingUser | null>(null);
   const [editFormData, setEditFormData] = useState({
     email: '',
-    role: 'Tournament',
+    role: 'Operator',
     status: 'Active',
     assignedTournaments: [] as string[],
     plan: 'Free' as 'Free' | 'Standard' | 'Offer',
@@ -47,7 +47,7 @@ export default function UsersPage() {
     email: '',
     password: '',
     mobileNumber: '',
-    role: 'Tournament',
+    role: 'Operator',
     status: 'Active',
     plan: 'Free' as 'Free' | 'Standard' | 'Offer',
   });
@@ -128,7 +128,7 @@ export default function UsersPage() {
         email: '',
         password: '',
         mobileNumber: '',
-        role: 'Tournament',
+        role: 'Operator',
         status: 'Active',
         plan: 'Free',
       });
@@ -243,7 +243,7 @@ export default function UsersPage() {
       setEditingUser(null);
       setEditFormData({
         email: '',
-        role: 'Tournament',
+        role: 'Operator',
         status: 'Active',
         assignedTournaments: [],
         plan: 'Free',
@@ -555,7 +555,8 @@ export default function UsersPage() {
                         className="w-full px-4 py-2 border rounded focus:outline-none focus:border-blue-500"
                       >
                         <option value="Admin">Admin</option>
-                        <option value="Tournament">Tournament Manager</option>
+                        <option value="Operator">Operator</option>
+                        <option value="Scorer">Scorer</option>
                         <option value="Player">Player</option>
                         <option value="Audience">Audience</option>
                       </select>
@@ -654,7 +655,8 @@ export default function UsersPage() {
                         style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
                       >
                         <option value="Admin">Admin</option>
-                        <option value="Tournament">Tournament Manager</option>
+                        <option value="Operator">Operator</option>
+                        <option value="Scorer">Scorer</option>
                         <option value="Player">Player</option>
                         <option value="Audience">Audience</option>
                       </select>

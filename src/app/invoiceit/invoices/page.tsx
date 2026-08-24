@@ -90,7 +90,7 @@ export default function InvoicesListPage() {
   };
 
   return (
-    <ProtectedRoute allowedRoles={['Admin', 'Tournament']}>
+    <ProtectedRoute allowedRoles={['Admin', 'Operator']}>
       <div className="p-6">
         <div className="mx-auto max-w-7xl">
           <div className="flex items-center justify-between mb-6">
