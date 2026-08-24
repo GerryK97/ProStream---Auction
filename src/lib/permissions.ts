@@ -10,6 +10,12 @@ export interface RoutePermission {
 
 const ALL_ROLES: UserRole[] = ['Admin', 'Operator', 'Scorer', 'Player', 'Audience'];
 
+// JWTs minted before the schema migration may still carry `Tournament` until
+// they expire. Treat that legacy claim as Operator at authorization boundaries.
+function normalizeRole(role: UserRole | string): UserRole | string {
+  return role === 'Tournament' ? 'Operator' : role;
+}
+
 /**
  * Define which roles can access which routes
  */
@@ -71,7 +77,7 @@ export function canAccessRoute(userRole: UserRole | string, path: string): boole
     return false;
   }
 
-  return permission.allowedRoles.includes(userRole as UserRole);
+  return permission.allowedRoles.includes(normalizeRole(userRole) as UserRole);
 }
 
 /**
@@ -127,7 +133,7 @@ export function canPerformAction(
     },
   };
 
-  const userPermissions = permissions[userRole] || {};
+  const userPermissions = permissions[normalizeRole(userRole)] || {};
   const resourceActions = userPermissions[resourceType] || [];
 
   return resourceActions.includes(action);
@@ -144,7 +150,7 @@ export function isAdmin(userRole: UserRole | string): boolean {
  * Check if user can manage resources
  */
 export function canManageResources(userRole: UserRole | string): boolean {
-  return ['Admin', 'Operator'].includes(userRole);
+  return ['Admin', 'Operator'].includes(normalizeRole(userRole));
 }
 
 /**
