@@ -1,7 +1,7 @@
 import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { pgDb } from './db';
-import { pricingConfig, users, walletTransactions, wallets } from './users-schema';
+import { appConfig, pricingConfig, users, walletTransactions, wallets } from './users-schema';
 
 export const WALLET_CURRENCY = 'LKR';
 
@@ -318,6 +318,9 @@ export type AccountsRechargerTotal = {
 
 export type AccountsLedger = {
   rows: AccountsLedgerRow[];
+  // When configured, totals intentionally start from this time while rows keep
+  // the complete immutable transaction history for auditability.
+  reportingStartedAt: string | null;
   totals: {
     // Cash collected = sum of paid_recharge amounts.
     moneyReceived: number;
@@ -330,6 +333,35 @@ export type AccountsLedger = {
   };
   perRecharger: AccountsRechargerTotal[];
 };
+
+const RECHARGE_OPENING_TOTALS_CONFIG_KEY = 'wallet_recharge_opening_totals';
+
+type RechargeOpeningTotals = {
+  startedAt: Date;
+  totals: Record<string, number>;
+};
+
+function parseRechargeOpeningTotals(value: string | null): RechargeOpeningTotals | null {
+  if (!value) return null;
+
+  try {
+    const parsed = JSON.parse(value) as { startedAt?: unknown; totals?: unknown };
+    const startedAt = typeof parsed.startedAt === 'string' ? new Date(parsed.startedAt) : null;
+    if (!startedAt || Number.isNaN(startedAt.getTime()) || !parsed.totals || typeof parsed.totals !== 'object') {
+      return null;
+    }
+
+    const totals = Object.fromEntries(
+      Object.entries(parsed.totals as Record<string, unknown>).filter(
+        ([userId, amount]) => typeof userId === 'string' && typeof amount === 'number' && Number.isFinite(amount) && amount >= 0,
+      ),
+    ) as Record<string, number>;
+
+    return { startedAt, totals };
+  } catch {
+    return null;
+  }
+}
 
 export async function getAccountsLedger({
   createdBy,
@@ -347,6 +379,27 @@ export async function getAccountsLedger({
   if (from) conditions.push(gte(walletTransactions.createdAt, from));
   if (to) conditions.push(lte(walletTransactions.createdAt, to));
   const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const [openingConfig] = await pgDb
+    .select({ value: appConfig.value })
+    .from(appConfig)
+    .where(eq(appConfig.key, RECHARGE_OPENING_TOTALS_CONFIG_KEY))
+    .limit(1);
+  const openingTotals = parseRechargeOpeningTotals(openingConfig?.value ?? null);
+  const reportConditions = [...conditions];
+  if (openingTotals) reportConditions.push(gte(walletTransactions.createdAt, openingTotals.startedAt));
+  const reportWhere = reportConditions.length > 0 ? and(...reportConditions) : undefined;
+  const includeOpeningTotals = Boolean(
+    openingTotals &&
+      (!from || from <= openingTotals.startedAt) &&
+      (!to || to >= openingTotals.startedAt),
+  );
+  const visibleOpeningTotals = includeOpeningTotals
+    ? Object.fromEntries(
+        Object.entries(openingTotals!.totals).filter(([userId]) => !createdBy || userId === createdBy),
+      )
+    : {};
+  const openingMoneyReceived = Object.values(visibleOpeningTotals).reduce((sum, amount) => sum + amount, 0);
 
   const targetUser = alias(users, 'target_user');
   const recharger = alias(users, 'recharger');
@@ -383,7 +436,7 @@ export async function getAccountsLedger({
       count: sql<number>`COUNT(*)`,
     })
     .from(walletTransactions)
-    .where(where)
+    .where(reportWhere)
     .groupBy(walletTransactions.category);
 
   const byCategory = new Map(totalsRows.map((r) => [r.category, r]));
@@ -401,26 +454,55 @@ export async function getAccountsLedger({
     .from(walletTransactions)
     .leftJoin(users, eq(walletTransactions.createdBy, users.id))
     .where(
-      and(eq(walletTransactions.category, 'paid_recharge'), ...(where ? [where] : [])),
+      and(eq(walletTransactions.category, 'paid_recharge'), ...(reportWhere ? [reportWhere] : [])),
     )
     .groupBy(walletTransactions.createdBy)
     .orderBy(sql`COALESCE(SUM(${walletTransactions.amount}), 0) DESC`);
 
+  const openingUserIds = Object.keys(visibleOpeningTotals);
+  const openingUsers = openingUserIds.length > 0
+    ? await pgDb
+        .select({ id: users.id, displayName: users.displayName })
+        .from(users)
+        .where(inArray(users.id, openingUserIds))
+    : [];
+  const openingNames = new Map(openingUsers.map((user) => [user.id, user.displayName]));
+  const perRecharger = new Map(
+    perRechargerRows.map((row) => [
+      row.createdBy ?? 'unknown',
+      {
+        createdBy: row.createdBy,
+        createdByName: row.createdByName,
+        paidRecharge: Number(row.paidRecharge ?? 0),
+        count: Number(row.count ?? 0),
+      },
+    ]),
+  );
+  for (const [userId, amount] of Object.entries(visibleOpeningTotals)) {
+    const existing = perRecharger.get(userId);
+    if (existing) {
+      existing.paidRecharge += amount;
+    } else {
+      perRecharger.set(userId, {
+        createdBy: userId,
+        createdByName: openingNames.get(userId) ?? null,
+        paidRecharge: amount,
+        count: 0,
+      });
+    }
+  }
+
   return {
     rows,
+    reportingStartedAt: openingTotals?.startedAt.toISOString() ?? null,
     totals: {
-      moneyReceived: Number(paid?.total ?? 0),
+      moneyReceived: Number(paid?.total ?? 0) + openingMoneyReceived,
       paidRechargeCount: Number(paid?.count ?? 0),
       freeCredit: Number(free?.total ?? 0),
       freeCreditCount: Number(free?.count ?? 0),
       overlayCharges: Number(overlay?.total ?? 0),
       overlayChargeCount: Number(overlay?.count ?? 0),
     },
-    perRecharger: perRechargerRows.map((r) => ({
-      createdBy: r.createdBy,
-      createdByName: r.createdByName,
-      paidRecharge: Number(r.paidRecharge ?? 0),
-      count: Number(r.count ?? 0),
-    })),
+    perRecharger: Array.from(perRecharger.values()).sort((a, b) => b.paidRecharge - a.paidRecharge),
   };
 }
