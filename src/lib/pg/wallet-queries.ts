@@ -1,8 +1,11 @@
-import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { pgDb } from './db';
-import { pricingConfig, walletTransactions, wallets } from './users-schema';
+import { pricingConfig, users, walletTransactions, wallets } from './users-schema';
 
 export const WALLET_CURRENCY = 'LKR';
+
+export type TransactionCategory = 'paid_recharge' | 'free_credit' | 'overlay_charge';
 
 export type WalletResponse = {
   id: number;
@@ -16,12 +19,14 @@ export type WalletTransactionResponse = {
   id: number;
   walletId: number;
   type: 'topup' | 'deduction';
+  category: TransactionCategory | null;
   amount: number;
   balanceBefore: number;
   balanceAfter: number;
   description: string;
   referenceId: number | null;
   createdBy: string | null;
+  createdByName: string | null;
   createdAt: Date;
 };
 
@@ -64,23 +69,42 @@ export async function ensureWalletForUser(userId: string): Promise<WalletRespons
   return toWalletResponse(wallet);
 }
 
+// Selects transactions for a wallet, joining `users` so each row carries the
+// display name of whoever performed it (`createdByName`) for full attribution.
+async function selectWalletTransactions(walletId: number, limit?: number) {
+  const base = pgDb
+    .select({
+      id: walletTransactions.id,
+      walletId: walletTransactions.walletId,
+      type: walletTransactions.type,
+      category: walletTransactions.category,
+      amount: walletTransactions.amount,
+      balanceBefore: walletTransactions.balanceBefore,
+      balanceAfter: walletTransactions.balanceAfter,
+      description: walletTransactions.description,
+      referenceId: walletTransactions.referenceId,
+      createdBy: walletTransactions.createdBy,
+      createdByName: users.displayName,
+      createdAt: walletTransactions.createdAt,
+    })
+    .from(walletTransactions)
+    .leftJoin(users, eq(walletTransactions.createdBy, users.id))
+    .where(eq(walletTransactions.walletId, walletId))
+    .orderBy(desc(walletTransactions.createdAt));
+
+  return limit ? base.limit(limit) : base;
+}
+
 export async function getWalletWithRecentTransactions(userId: string, limit = 10) {
   const wallet = await ensureWalletForUser(userId);
-  const transactions = await pgDb.query.walletTransactions.findMany({
-    where: eq(walletTransactions.walletId, wallet.id),
-    orderBy: [desc(walletTransactions.createdAt)],
-    limit,
-  });
+  const transactions = await selectWalletTransactions(wallet.id, limit);
 
   return { wallet, balance: wallet.balance, currency: WALLET_CURRENCY, transactions };
 }
 
 export async function getWalletTransactions(userId: string) {
   const wallet = await ensureWalletForUser(userId);
-  const transactions = await pgDb.query.walletTransactions.findMany({
-    where: eq(walletTransactions.walletId, wallet.id),
-    orderBy: [desc(walletTransactions.createdAt)],
-  });
+  const transactions = await selectWalletTransactions(wallet.id);
 
   return { wallet, balance: wallet.balance, currency: WALLET_CURRENCY, transactions };
 }
@@ -149,12 +173,14 @@ export async function deductWalletBalance({
   description,
   referenceId,
   createdBy,
+  category = 'overlay_charge',
 }: {
   userId: string;
   amount: number;
   description: string;
   referenceId?: number | null;
   createdBy?: string | null;
+  category?: TransactionCategory;
 }) {
   if (!Number.isInteger(amount) || amount <= 0) {
     throw new Error('Wallet deduction amount must be a positive integer');
@@ -186,6 +212,7 @@ export async function deductWalletBalance({
     const [transaction] = await tx.insert(walletTransactions).values({
       walletId: updatedWallet.id,
       type: 'deduction',
+      category,
       amount: -amount,
       balanceBefore,
       balanceAfter,
@@ -207,12 +234,14 @@ export async function creditWalletBalance({
   description,
   referenceId,
   createdBy,
+  category = 'paid_recharge',
 }: {
   userId: string;
   amount: number;
   description: string;
   referenceId?: number | null;
   createdBy?: string | null;
+  category?: TransactionCategory;
 }) {
   if (!Number.isInteger(amount) || amount <= 0) {
     throw new Error('Wallet credit amount must be a positive integer');
@@ -241,6 +270,7 @@ export async function creditWalletBalance({
     const [transaction] = await tx.insert(walletTransactions).values({
       walletId: updatedWallet.id,
       type: 'topup',
+      category,
       amount,
       balanceBefore,
       balanceAfter,
@@ -254,4 +284,143 @@ export async function creditWalletBalance({
       transaction,
     };
   });
+}
+
+/* ── Accounts ledger ──────────────────────────────────────────────────────
+ * Read-only aggregation over the immutable wallet_transactions log. This is
+ * the "Accounts" view for Admins and users granted canRechargeWallet. It
+ * returns the WHOLE ledger (every recharge by everyone) with attribution.
+ * Filters (recharger + date range) are convenience, not access restrictions.
+ */
+
+export type AccountsLedgerRow = {
+  id: number;
+  createdAt: Date;
+  type: 'topup' | 'deduction';
+  category: TransactionCategory | null;
+  amount: number;
+  balanceAfter: number;
+  description: string;
+  // Who performed the transaction (the recharger / admin).
+  createdBy: string | null;
+  createdByName: string | null;
+  // The wallet owner the money moved for (the target user).
+  targetUserId: string;
+  targetUserName: string | null;
+};
+
+export type AccountsRechargerTotal = {
+  createdBy: string | null;
+  createdByName: string | null;
+  paidRecharge: number;
+  count: number;
+};
+
+export type AccountsLedger = {
+  rows: AccountsLedgerRow[];
+  totals: {
+    // Cash collected = sum of paid_recharge amounts.
+    moneyReceived: number;
+    paidRechargeCount: number;
+    // Free/promo credit, shown separately and NOT counted as cash.
+    freeCredit: number;
+    freeCreditCount: number;
+    overlayCharges: number;
+    overlayChargeCount: number;
+  };
+  perRecharger: AccountsRechargerTotal[];
+};
+
+export async function getAccountsLedger({
+  createdBy,
+  from,
+  to,
+  limit = 500,
+}: {
+  createdBy?: string | null;
+  from?: Date | null;
+  to?: Date | null;
+  limit?: number;
+} = {}): Promise<AccountsLedger> {
+  const conditions = [];
+  if (createdBy) conditions.push(eq(walletTransactions.createdBy, createdBy));
+  if (from) conditions.push(gte(walletTransactions.createdAt, from));
+  if (to) conditions.push(lte(walletTransactions.createdAt, to));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const targetUser = alias(users, 'target_user');
+  const recharger = alias(users, 'recharger');
+
+  const rowsRaw = await pgDb
+    .select({
+      id: walletTransactions.id,
+      createdAt: walletTransactions.createdAt,
+      type: walletTransactions.type,
+      category: walletTransactions.category,
+      amount: walletTransactions.amount,
+      balanceAfter: walletTransactions.balanceAfter,
+      description: walletTransactions.description,
+      createdBy: walletTransactions.createdBy,
+      createdByName: recharger.displayName,
+      targetUserId: wallets.userId,
+      targetUserName: targetUser.displayName,
+    })
+    .from(walletTransactions)
+    .innerJoin(wallets, eq(walletTransactions.walletId, wallets.id))
+    .leftJoin(targetUser, eq(targetUser.id, wallets.userId))
+    .leftJoin(recharger, eq(recharger.id, walletTransactions.createdBy))
+    .where(where)
+    .orderBy(desc(walletTransactions.createdAt))
+    .limit(limit);
+
+  const rows = rowsRaw as unknown as AccountsLedgerRow[];
+
+  // Totals (unbounded by the row limit) computed via aggregate query.
+  const totalsRows = await pgDb
+    .select({
+      category: walletTransactions.category,
+      total: sql<number>`COALESCE(SUM(ABS(${walletTransactions.amount})), 0)`,
+      count: sql<number>`COUNT(*)`,
+    })
+    .from(walletTransactions)
+    .where(where)
+    .groupBy(walletTransactions.category);
+
+  const byCategory = new Map(totalsRows.map((r) => [r.category, r]));
+  const paid = byCategory.get('paid_recharge');
+  const free = byCategory.get('free_credit');
+  const overlay = byCategory.get('overlay_charge');
+
+  const perRechargerRows = await pgDb
+    .select({
+      createdBy: walletTransactions.createdBy,
+      createdByName: sql<string | null>`MAX(${users.displayName})`,
+      paidRecharge: sql<number>`COALESCE(SUM(${walletTransactions.amount}), 0)`,
+      count: sql<number>`COUNT(*)`,
+    })
+    .from(walletTransactions)
+    .leftJoin(users, eq(walletTransactions.createdBy, users.id))
+    .where(
+      and(eq(walletTransactions.category, 'paid_recharge'), ...(where ? [where] : [])),
+    )
+    .groupBy(walletTransactions.createdBy)
+    .orderBy(sql`COALESCE(SUM(${walletTransactions.amount}), 0) DESC`);
+
+  return {
+    rows,
+    totals: {
+      moneyReceived: Number(paid?.total ?? 0),
+      paidRechargeCount: Number(paid?.count ?? 0),
+      freeCredit: Number(free?.total ?? 0),
+      freeCreditCount: Number(free?.count ?? 0),
+      overlayCharges: Number(overlay?.total ?? 0),
+      overlayChargeCount: Number(overlay?.count ?? 0),
+    },
+    perRecharger: perRechargerRows.map((r) => ({
+      createdBy: r.createdBy,
+      createdByName: r.createdByName,
+      paidRecharge: Number(r.paidRecharge ?? 0),
+      count: Number(r.count ?? 0),
+    })),
+  };
 }

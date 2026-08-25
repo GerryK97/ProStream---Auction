@@ -147,6 +147,20 @@ export function isAdmin(userRole: UserRole | string): boolean {
 }
 
 /**
+ * Check if a user may take PAID wallet recharges (for any user) and view the
+ * Accounts ledger. Admins always can; other roles need the per-user
+ * `canRechargeWallet` grant. This is a DB-backed capability, NOT a JWT claim,
+ * so callers must load the fresh user row (the JWT lives 7 days and cannot
+ * carry the flag). Free/promo credit remains Admin-only and is gated separately.
+ */
+export function canRechargeWallet(user: {
+  role: UserRole | string;
+  canRechargeWallet?: boolean | null;
+}): boolean {
+  return isAdmin(user.role) || user.canRechargeWallet === true;
+}
+
+/**
  * Check if user can manage resources
  */
 export function canManageResources(userRole: UserRole | string): boolean {

@@ -21,6 +21,7 @@ export type AuctionUser = {
   mobileNumber: string;
   phoneVerified: boolean;
   assignedTournaments: string[];
+  canRechargeWallet: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -46,6 +47,7 @@ export function toAuctionUser(user: PgUser): AuctionUser {
     mobileNumber: user.phone ?? '',
     phoneVerified: user.phoneVerified ?? false,
     assignedTournaments: user.assignedTournaments ?? [],
+    canRechargeWallet: user.canRechargeWallet ?? false,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
@@ -166,6 +168,10 @@ export async function setUserStatus(id: string, status: UserStatus) {
 
 export async function setUserPassword(id: string, passwordHash: string) {
   return updateUser(id, { passwordHash });
+}
+
+export async function setWalletRechargeAccess(id: string, canRechargeWallet: boolean) {
+  return updateUser(id, { canRechargeWallet });
 }
 
 export async function addAssignedTournament(userId: string, tournamentId: string) {

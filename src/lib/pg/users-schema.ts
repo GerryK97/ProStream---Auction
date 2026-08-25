@@ -1,10 +1,18 @@
 ﻿import { sql } from 'drizzle-orm';
-import { boolean, integer, pgEnum, pgTable, serial, text, timestamp, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, pgEnum, pgTable, serial, text, timestamp, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 
 export const userRoleEnum = pgEnum('user_role', ['Admin', 'Operator', 'Player', 'Audience', 'Scorer']);
 export const userStatusEnum = pgEnum('user_status', ['Active', 'PendingApproval', 'Suspended']);
 export const userPlanEnum = pgEnum('user_plan', ['Free', 'Standard', 'Offer']);
 export const transactionTypeEnum = pgEnum('transaction_type', ['topup', 'deduction']);
+// Semantic category layered on top of `type`. `paid_recharge` = cash collected
+// from a customer (revenue), `free_credit` = admin promo credit (not revenue),
+// `overlay_charge` = a deduction for overlay/session usage.
+export const transactionCategoryEnum = pgEnum('transaction_category', [
+  'paid_recharge',
+  'free_credit',
+  'overlay_charge',
+]);
 
 export const users = pgTable(
   'users',
@@ -21,6 +29,10 @@ export const users = pgTable(
     phoneVerified: boolean('phone_verified').notNull().default(false),
     photoCloudinaryId: text('photo_cloudinary_id'),
     assignedTournaments: text('assigned_tournaments').array().notNull().default(sql`'{}'::text[]`),
+    // Per-user capability grant: allow this user to take paid wallet recharges
+    // for any user and view the Accounts ledger, without granting full Admin.
+    // Checked per request (the JWT is minted for 7 days and cannot carry it).
+    canRechargeWallet: boolean('can_recharge_wallet').notNull().default(false),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
@@ -49,6 +61,8 @@ export const walletTransactions = pgTable('wallet_transactions', {
     .notNull()
     .references(() => wallets.id, { onDelete: 'cascade' }),
   type: transactionTypeEnum('type').notNull(),
+  // Nullable during backfill; new rows always set it. See transactionCategoryEnum.
+  category: transactionCategoryEnum('category'),
   amount: integer('amount').notNull(),
   balanceBefore: integer('balance_before').notNull(),
   balanceAfter: integer('balance_after').notNull(),
@@ -56,7 +70,9 @@ export const walletTransactions = pgTable('wallet_transactions', {
   referenceId: integer('reference_id'),
   createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (table) => ({
+  categoryCreatedIdx: index('wallet_tx_category_created_idx').on(table.category, table.createdAt),
+}));
 
 export const pricingConfig = pgTable('pricing_config', {
   id: serial('id').primaryKey(),
