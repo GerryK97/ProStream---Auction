@@ -84,6 +84,7 @@ export async function PUT(
       assignedTournaments,
       plan,
       mobileNumber,
+      canRechargeWallet,
     } = await request.json();
 
     const updateDoc: Record<string, any> = {};
@@ -116,6 +117,7 @@ export async function PUT(
     }
 
     if (assignedTournaments !== undefined) updateDoc.assignedTournaments = assignedTournaments;
+    if (typeof canRechargeWallet === 'boolean') updateDoc.canRechargeWallet = canRechargeWallet;
     if (mobileNumber !== undefined) {
       updateDoc.phone = mobileNumber || null;
       // Reset verification status whenever the phone number is changed by admin
