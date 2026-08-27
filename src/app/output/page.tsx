@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useTournamentContext } from '@/contexts/TournamentContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAuthHeaders } from '@/lib/api-client';
@@ -53,6 +54,7 @@ const THEMES = [
     id: 'standard' as OverlayThemeId,
     label: 'Theme 1 Classic',
     description: 'Clean dark gradient with team leaderboard, live bidding view, and sold banner.',
+    previewImage: '/overlay-previews/auction-theme-1-preview.jpg',
     preview: (
       <div
         className="w-full aspect-video rounded-lg overflow-hidden flex flex-col items-center justify-center text-white text-xs"
@@ -119,6 +121,7 @@ const THEMES = [
     id: 'theme3' as OverlayThemeId,
     label: 'Theme 3 Broadcast',
     description: 'Teal-accent live player bar, ticker, team standings, and gold-trim summary panels for broadcast output.',
+    previewImage: '/overlay-previews/auction-theme-3-preview.jpg',
     preview: (
       <div
         className="w-full aspect-video rounded-lg overflow-hidden flex flex-col justify-between text-xs"
@@ -157,6 +160,7 @@ const THEMES = [
     id: 'theme4' as OverlayThemeId,
     label: 'Theme 4 — Lightning Card',
     description: 'Frame 15 heraldic shield player card for custom OBS overlay (transparent).',
+    previewImage: '/overlay-previews/auction-theme-4-preview.jpg',
     preview: (
       <div
         className="w-full aspect-video rounded-lg overflow-hidden flex items-center justify-center text-xs relative"
@@ -584,7 +588,17 @@ ${'─'.repeat(60)}`;
                   backgroundColor: isSelected ? 'rgba(79,70,229,0.08)' : 'var(--surface-elevated)',
                 }}
               >
-                <div className="mb-3">{t.preview}</div>
+                <div className="mb-3">
+                  {'previewImage' in t && t.previewImage ? (
+                    <Image
+                      src={t.previewImage}
+                      alt={`${t.label} preview`}
+                      width={960}
+                      height={540}
+                      className="w-full aspect-video rounded-lg object-cover"
+                    />
+                  ) : t.preview}
+                </div>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{t.label}</span>
                   {isSelected && (

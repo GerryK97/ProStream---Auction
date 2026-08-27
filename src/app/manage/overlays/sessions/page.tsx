@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { getAuthHeaders } from '@/lib/api-client';
 import { useTournamentContext } from '@/contexts/TournamentContext';
@@ -42,11 +43,11 @@ const DEFAULT_PRICES: OverlayPrices = {
   team_owners: 300,
 };
 
-const THEME_OPTIONS: Array<{ id: OverlayThemeId; label: string; description: string; available: boolean }> = [
-  { id: 'standard', label: 'Theme 1 Classic', description: 'Broadcast-safe classic auction layout.', available: true },
+const THEME_OPTIONS: Array<{ id: OverlayThemeId; label: string; description: string; previewImage?: string; available: boolean }> = [
+  { id: 'standard', label: 'Theme 1 Classic', description: 'Broadcast-safe classic auction layout.', previewImage: '/overlay-previews/auction-theme-1-preview.jpg', available: true },
   { id: 'theme2', label: 'Theme 2 Palette System', description: 'Palette-driven overlay design with stronger visual identity.', available: true },
-  { id: 'theme3', label: 'Theme 3 Broadcast', description: 'Teal live player bar, ticker, and summary panels.', available: true },
-  { id: 'theme4', label: 'Theme 4 Lightning Card', description: 'Frame 15 heraldic shield player card (custom overlay).', available: true },
+  { id: 'theme3', label: 'Theme 3 Broadcast', description: 'Teal live player bar, ticker, and summary panels.', previewImage: '/overlay-previews/auction-theme-3-preview.jpg', available: true },
+  { id: 'theme4', label: 'Theme 4 Lightning Card', description: 'Frame 15 heraldic shield player card (custom overlay).', previewImage: '/overlay-previews/auction-theme-4-preview.jpg', available: true },
   { id: 'premium', label: 'Premium', description: 'Coming soon.', available: false },
   { id: 'neon', label: 'Neon', description: 'Coming soon.', available: false },
 ];
@@ -398,6 +399,15 @@ function SessionsPage() {
                       className="rounded-2xl p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50"
                       style={{ backgroundColor: selected ? 'rgba(79,70,229,0.16)' : 'var(--surface-elevated)', border: `1px solid ${selected ? 'var(--brand-primary)' : 'var(--border-primary)'}` }}
                     >
+                      {theme.previewImage ? (
+                        <Image
+                          src={theme.previewImage}
+                          alt={`${theme.label} preview`}
+                          width={960}
+                          height={540}
+                          className="mb-3 w-full aspect-video rounded-xl object-cover"
+                        />
+                      ) : null}
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{theme.label}</p>
                         {!theme.available && <span className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>Coming soon</span>}
