@@ -93,7 +93,9 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/overlay/sessions — creates exactly one overlay output and charges once at creation time
+// POST /api/overlay/sessions — creates exactly one overlay output. Admin
+// self-generation is free; non-Admins and Admin-selected billed users are
+// charged once at creation time.
 export async function POST(request: NextRequest) {
   let deduction:
     | Awaited<ReturnType<typeof deductWalletBalance>>
@@ -124,8 +126,11 @@ export async function POST(request: NextRequest) {
     }
     requestedOverlayType = overlayType;
 
-    // Admin can bill another user's wallet
-    const chargeUserId = user.role === 'Admin' && billedUserId ? String(billedUserId) : user.userId;
+    // Admin self-generation is free. An Admin may explicitly choose another
+    // user to bill, while all non-Admin users are charged as normal.
+    const isAdmin = user.role === 'Admin';
+    const isBillingAnotherUser = isAdmin && Boolean(billedUserId);
+    const chargeUserId = isBillingAnotherUser ? String(billedUserId) : user.userId;
     chargedUserId = chargeUserId;
 
     // Validate theme — must be a non-empty string, but we store whatever the client
@@ -139,14 +144,15 @@ export async function POST(request: NextRequest) {
     requestedTournamentName = (tournament as any).name;
 
     const overlayConfig = getAuctionOverlayConfig(overlayType);
-    const overlayPrice = await getPrice(overlayConfig.pricingKey, DEFAULT_OVERLAY_PRICES[overlayType]);
+    const configuredOverlayPrice = await getPrice(overlayConfig.pricingKey, DEFAULT_OVERLAY_PRICES[overlayType]);
+    const overlayPrice = isAdmin && !isBillingAnotherUser ? 0 : configuredOverlayPrice;
 
     if (overlayPrice > 0) {
       try {
         deduction = await deductWalletBalance({
           userId: chargeUserId,
           amount: overlayPrice,
-          description: `${overlayConfig.label}: ${requestedTournamentName}${billedUserId ? ' [admin]' : ''}`,
+          description: `${overlayConfig.label}: ${requestedTournamentName}${isBillingAnotherUser ? ' [admin]' : ''}`,
           createdBy: user.userId,
         });
       } catch (error) {
@@ -187,7 +193,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Notify billed user via push notification and SMS (fire-and-forget)
-    if (billedUserId && overlayPrice > 0) {
+    if (isBillingAnotherUser && overlayPrice > 0) {
       (async () => {
         try {
           const billedUser = await getUserById(chargeUserId);
