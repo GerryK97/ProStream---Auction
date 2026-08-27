@@ -37,7 +37,10 @@ export async function POST(request: NextRequest) {
     // documents can be large, but this route only needs the status, player card
     // fields, and pricing configuration.
     const [auctionState, player] = await Promise.all([
-      AuctionStateModel.findOne({ tournamentId }, { currentAuctionStatus: 1 }).lean(),
+      AuctionStateModel.findOne(
+        { tournamentId },
+        { currentAuctionStatus: 1, currentAuctionClass: 1 },
+      ).lean(),
       PlayerModel.findOne(
         { _id: playerId, tournamentId, isSold: false, isUnsold: { $ne: true } },
         {
@@ -81,8 +84,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const activeClass = (auctionState as any).currentAuctionClass as string | null;
+    if (activeClass && (player as any).playerClass !== activeClass) {
+      return NextResponse.json(
+        { error: `Only players from the active class "${activeClass}" can be selected` },
+        { status: 409 },
+      );
+    }
+
     const updatedState = await AuctionStateModel.findOneAndUpdate(
-        { tournamentId, currentAuctionStatus: { $ne: 'Bidding' } },
+        {
+          tournamentId,
+          currentAuctionStatus: { $ne: 'Bidding' },
+          currentAuctionClass: activeClass ?? null,
+        },
         {
           $set: {
             currentPlayerId: playerId,
