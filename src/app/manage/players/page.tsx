@@ -16,6 +16,10 @@ function PlayersManagePage() {
     const router = useRouter();
     const { tournaments, selectedTournamentId, setSelectedTournamentId, loading: tournamentsLoading } = useTournamentContext();
 
+    const selectableTournaments = tournaments.filter(t =>
+        t.status === 'Draft' || t.status === 'Completed' || t.status === 'Live' || t.status === 'Stopped'
+    );
+
     const [players, setPlayers] = useState<Player[]>([]);
     const [loadingPlayers, setLoadingPlayers] = useState(false);
     const [isAddModalOpen, setAddModalOpen] = useState(false);
@@ -43,6 +47,19 @@ function PlayersManagePage() {
 
     // Clear selection and filters when tournament changes
     useEffect(() => { setSelectedIds(new Set()); setSearchQuery(''); setNoImageOnly(false); setStatusFilters(new Set()); }, [selectedTournamentId]);
+
+    // Drop selection if the current tournament is archived / not selectable here
+    useEffect(() => {
+        if (!selectedTournamentId || tournamentsLoading) return;
+        const selected = tournaments.find(t => t._id === selectedTournamentId);
+        const allowed =
+            selected &&
+            (selected.status === 'Draft' ||
+                selected.status === 'Completed' ||
+                selected.status === 'Live' ||
+                selected.status === 'Stopped');
+        if (!allowed) setSelectedTournamentId(null);
+    }, [selectedTournamentId, tournaments, tournamentsLoading, setSelectedTournamentId]);
 
     useEffect(() => { fetchPlayers(); }, [fetchPlayers]);
 
@@ -175,7 +192,7 @@ function PlayersManagePage() {
                         style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
                     >
                         <option value="">— Select a tournament —</option>
-                        {tournaments.map(t => (
+                        {selectableTournaments.map(t => (
                             <option key={t._id} value={t._id}>{t.name} ({t.year}) — {t.status}</option>
                         ))}
                     </select>

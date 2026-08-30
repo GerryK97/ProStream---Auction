@@ -112,10 +112,12 @@ Client auction logic is shared by `hooks/useAuction.tsx`, `hooks/usePusherAuctio
 /overlays/[id]             # Full Screen overlay
 /overlays/[id]/custom      # Custom overlay
 /overlays/[id]/fullscreen2 # Full Screen 2 overlay
-/overlays/[id]/team-owner  # Team owner overlay
+/overlays/[id]/team-owner  # Team owner overlay (live current player + bid strip)
 ```
 
 Overlay routes bypass app chrome and are intended for OBS/browser-source usage.
+
+The Team Owners overlay (`/team-owner`) is theme-aware via palette CSS variables. It always shows a **Now Bidding** strip with the live current player (photo/name) and current bid amount, driven by `auctionState` from `usePusherAuction`. When no player is on stage, the strip shows an idle “Waiting for next player” state.
 
 ### Overlay controls and paid sessions
 

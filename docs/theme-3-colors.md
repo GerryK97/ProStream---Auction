@@ -357,6 +357,7 @@ Uses `--t3-*` tokens via local `T3` map:
 | Page background | `TeamWiseImageBackgroundT3` layers |
 | Header block | `#ffffff` |
 | Team selector bar | `rgba(0,0,0,0.72)`, border `#b9aa62` |
+| **Now Bidding strip** | Gold border / soft gold wash; player name white; bid amount gold; idle muted |
 | Stat tiles border | `rgba(185,170,98,0.35)` |
 | Reconnect banner | `--t3-danger` / `--t3-danger-soft` |
 | Section header (bought) | `#b9aa62` on `#2a2f35` text |

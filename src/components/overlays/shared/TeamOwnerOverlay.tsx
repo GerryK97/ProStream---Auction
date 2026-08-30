@@ -3,12 +3,105 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { usePusherAuction } from '@/hooks/usePusherAuction';
-import { Tournament, Player, Team } from '@/types';
+import { Tournament, Player, Team, AuctionState } from '@/types';
 import { OVERLAY_PALETTES } from '@/config/overlayPalettes';
 import { getClassBasePrice, getClassConfig, getMinClassBasePrice } from '@/lib/playerClassUtils';
 import { getEnabledTeamOfficials } from '@/lib/teamOfficials';
 
 const formatCurrency = (amount: number) => amount.toLocaleString('en-IN');
+
+/** Live current-player + bid strip — tournament-wide, always on for Team Owners. */
+function LiveBiddingStrip({ currentPlayer, currentBid }: {
+    currentPlayer: Player | null;
+    currentBid: number;
+}) {
+    if (!currentPlayer) {
+        return (
+            <div
+                className="mx-4 mt-3 px-3 py-2.5 rounded-xl text-center text-xs font-semibold uppercase tracking-widest"
+                style={{
+                    background: 'rgba(0,0,0,0.25)',
+                    border: '1px solid var(--overlay-border-accent-subtle)',
+                    color: 'var(--overlay-text-muted)',
+                    fontFamily: "'Rajdhani', sans-serif",
+                }}
+            >
+                Waiting for next player
+            </div>
+        );
+    }
+
+    const initials = currentPlayer.name
+        .split(' ')
+        .map((w: string) => w[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase();
+
+    return (
+        <div
+            className="mx-4 mt-3 rounded-xl overflow-hidden flex items-center gap-3 px-3 py-2.5"
+            style={{
+                background: 'rgba(var(--overlay-color-primary-rgb),0.12)',
+                border: '1px solid var(--overlay-border-accent-strong)',
+                boxShadow: '0 0 16px rgba(var(--overlay-color-primary-rgb),0.18)',
+            }}
+        >
+            <div
+                className="w-11 h-11 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center"
+                style={{
+                    background: 'var(--overlay-bg-photo)',
+                    border: '2px solid var(--overlay-color-primary)',
+                }}
+            >
+                {currentPlayer.photoURL ? (
+                    <img
+                        src={currentPlayer.photoURL}
+                        alt={currentPlayer.name}
+                        className="w-full h-full object-cover"
+                    />
+                ) : (
+                    <span
+                        className="text-xs font-bold"
+                        style={{ color: 'var(--overlay-color-primary)', fontFamily: "'Rajdhani', sans-serif" }}
+                    >
+                        {initials}
+                    </span>
+                )}
+            </div>
+
+            <div className="flex-1 min-w-0">
+                <div
+                    className="text-[10px] uppercase tracking-widest font-bold leading-none mb-1"
+                    style={{ color: 'var(--overlay-color-primary)', fontFamily: "'Rajdhani', sans-serif" }}
+                >
+                    Now Bidding
+                </div>
+                <div
+                    className="text-base font-bold truncate leading-tight"
+                    style={{ color: 'var(--overlay-text-bright)', fontFamily: "'Rajdhani', sans-serif" }}
+                >
+                    {currentPlayer.name}
+                </div>
+            </div>
+
+            <div className="flex-shrink-0 text-right">
+                <div
+                    className="text-[10px] uppercase tracking-widest font-bold leading-none mb-1"
+                    style={{ color: 'var(--overlay-text-muted)', fontFamily: "'Rajdhani', sans-serif" }}
+                >
+                    Current Bid
+                </div>
+                <div
+                    className="text-lg font-bold leading-tight"
+                    style={{ color: 'var(--overlay-color-primary)', fontFamily: "'Rajdhani', sans-serif" }}
+                >
+                    {formatCurrency(currentBid)}
+                </div>
+            </div>
+        </div>
+    );
+}
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
@@ -232,12 +325,13 @@ function PendingPlayerRow({ player, tournament }: { player: Player; tournament: 
 
 // ── Main dashboard ─────────────────────────────────────────────────────────
 
-function TeamOwnerDashboard({ tournament, players, teams, isConnected, tournamentId }: {
+function TeamOwnerDashboard({ tournament, players, teams, isConnected, tournamentId, auctionState }: {
     tournament: Tournament | null;
     players: Player[];
     teams: Team[];
     isConnected: boolean;
     tournamentId: string;
+    auctionState: AuctionState;
 }) {
     const STORAGE_KEY = `team-owner-selection-${tournamentId}`;
 
@@ -261,6 +355,10 @@ function TeamOwnerDashboard({ tournament, players, teams, isConnected, tournamen
     };
 
     const selectedTeam = teams.find(t => t._id === selectedTeamId) ?? null;
+    const currentPlayer = auctionState.currentPlayerId
+        ? players.find(p => p._id === auctionState.currentPlayerId) ?? null
+        : null;
+    const currentBid = auctionState.currentBid ?? 0;
 
     // Derived stats
     const boughtPlayers = selectedTeam
@@ -292,6 +390,8 @@ function TeamOwnerDashboard({ tournament, players, teams, isConnected, tournamen
     return (
         <div>
             <TeamSelectorBar teams={teams} selectedTeamId={selectedTeamId} onSelect={handleSelect} />
+
+            <LiveBiddingStrip currentPlayer={currentPlayer} currentBid={currentBid} />
 
             {!isConnected && (
                 <div className="mx-4 mt-3 px-3 py-2 rounded-lg text-xs text-center font-semibold"
@@ -406,7 +506,7 @@ export default function TeamOwnerOverlay({ tournamentId }: { tournamentId: strin
     const requestedTheme = searchParams.get('theme');
     const requestedPalette = searchParams.get('palette');
 
-    const { tournament, players, teams, isConnected, isRevoked } = usePusherAuction(tournamentId, undefined, urlToken, 'team_owners');
+    const { tournament, players, teams, isConnected, isRevoked, auctionState } = usePusherAuction(tournamentId, undefined, urlToken, 'team_owners');
 
     // Derive palette CSS vars — same URL override/fallback contract as OverlayWrapper
     const theme = requestedTheme && requestedTheme in OVERLAY_PALETTES
@@ -464,6 +564,7 @@ export default function TeamOwnerOverlay({ tournamentId }: { tournamentId: strin
                 teams={teams}
                 isConnected={isConnected}
                 tournamentId={tournamentId}
+                auctionState={auctionState}
             />
         </div>
     );

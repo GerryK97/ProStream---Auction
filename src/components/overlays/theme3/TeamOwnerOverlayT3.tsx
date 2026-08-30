@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { TeamWiseImageBackgroundT3 } from './TeamWiseImageBackgroundT3';
 import { getClassBasePrice, getClassConfig, getMinClassBasePrice } from '@/lib/playerClassUtils';
 import { getEnabledTeamOfficials } from '@/lib/teamOfficials';
-import type { Player, Team, Tournament } from '@/types';
+import type { AuctionState, Player, Team, Tournament } from '@/types';
 
 const DARK = '#2a2f35';
 const GOLD = '#b9aa62';
@@ -26,10 +26,105 @@ export interface TeamOwnerOverlayT3Props {
   teams: Team[];
   isConnected: boolean;
   tournamentId: string;
+  auctionState: AuctionState;
   paletteCssVars?: React.CSSProperties;
 }
 
 const formatCurrency = (amount: number) => amount.toLocaleString('en-IN');
+
+/** Live current-player + bid strip — tournament-wide, always on for Team Owners. */
+function LiveBiddingStrip({ currentPlayer, currentBid }: {
+  currentPlayer: Player | null;
+  currentBid: number;
+}) {
+  if (!currentPlayer) {
+    return (
+      <div
+        style={{
+          margin: '12px 16px 0',
+          padding: '10px 14px',
+          borderRadius: 10,
+          textAlign: 'center',
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: 2,
+          textTransform: 'uppercase',
+          background: 'rgba(0,0,0,0.35)',
+          border: '1px solid rgba(185,170,98,0.28)',
+          color: MUTED,
+        }}
+      >
+        Waiting for next player
+      </div>
+    );
+  }
+
+  const initials = currentPlayer.name
+    .split(' ')
+    .map((w: string) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+  return (
+    <div
+      style={{
+        margin: '12px 16px 0',
+        padding: '10px 14px',
+        borderRadius: 10,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        background: 'rgba(185,170,98,0.12)',
+        border: `1px solid ${GOLD}`,
+        boxShadow: '0 0 16px rgba(185,170,98,0.2)',
+      }}
+    >
+      <div
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: '50%',
+          flexShrink: 0,
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: DARK,
+          border: `2px solid ${GOLD}`,
+        }}
+      >
+        {currentPlayer.photoURL ? (
+          <img
+            src={currentPlayer.photoURL}
+            alt={currentPlayer.name}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        ) : (
+          <span style={{ fontSize: 12, fontWeight: 700, color: GOLD }}>{initials}</span>
+        )}
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: GOLD, lineHeight: 1, marginBottom: 4 }}>
+          Now Bidding
+        </div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: WHITE, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.15 }}>
+          {currentPlayer.name}
+        </div>
+      </div>
+
+      <div style={{ flexShrink: 0, textAlign: 'right' }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: MUTED, lineHeight: 1, marginBottom: 4 }}>
+          Current Bid
+        </div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: GOLD, lineHeight: 1.15 }}>
+          {formatCurrency(currentBid)}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function TeamSelectorBar({ teams, selectedTeamId, onSelect }: {
   teams: Team[];
@@ -295,7 +390,7 @@ function PendingPlayerRow({ player, tournament }: { player: Player; tournament: 
   );
 }
 
-function TeamOwnerDashboardT3({ tournament, players, teams, isConnected, tournamentId }: Omit<TeamOwnerOverlayT3Props, 'paletteCssVars'>) {
+function TeamOwnerDashboardT3({ tournament, players, teams, isConnected, tournamentId, auctionState }: Omit<TeamOwnerOverlayT3Props, 'paletteCssVars'>) {
   const STORAGE_KEY = `team-owner-selection-${tournamentId}`;
 
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(() => {
@@ -317,6 +412,10 @@ function TeamOwnerDashboardT3({ tournament, players, teams, isConnected, tournam
   };
 
   const selectedTeam = teams.find(t => t._id === selectedTeamId) ?? null;
+  const currentPlayer = auctionState.currentPlayerId
+    ? players.find(p => p._id === auctionState.currentPlayerId) ?? null
+    : null;
+  const currentBid = auctionState.currentBid ?? 0;
 
   const boughtPlayers = selectedTeam
     ? players
@@ -345,6 +444,8 @@ function TeamOwnerDashboardT3({ tournament, players, teams, isConnected, tournam
   return (
     <div style={{ position: 'relative', minHeight: '100%', animation: 't3OwnerIn 420ms cubic-bezier(0.22,1,0.36,1) both' }}>
       <TeamSelectorBar teams={teams} selectedTeamId={selectedTeamId} onSelect={handleSelect} />
+
+      <LiveBiddingStrip currentPlayer={currentPlayer} currentBid={currentBid} />
 
       {!isConnected && (
         <div
@@ -508,6 +609,7 @@ export default function TeamOwnerOverlayT3({
   teams,
   isConnected,
   tournamentId,
+  auctionState,
   paletteCssVars = {},
 }: TeamOwnerOverlayT3Props) {
   const viewportHeight = useViewportHeight();
@@ -567,6 +669,7 @@ export default function TeamOwnerOverlayT3({
             teams={teams}
             isConnected={isConnected}
             tournamentId={tournamentId}
+            auctionState={auctionState}
           />
         </div>
       </div>
