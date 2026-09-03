@@ -7,7 +7,7 @@ import { triggerWheelSpin } from '@/lib/pusher-server';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
 import { resolveImageUrl } from '@/lib/cloudinaryUtils';
-import { WHEEL_SPIN_DURATION_MS } from '@/lib/wheelSpinTiming';
+import { WHEEL_SPIN_DURATION_MS, WHEEL_MAX_SEGMENTS } from '@/lib/wheelSpinTiming';
 
 // POST /api/overlay/spin
 // Picks a random winner from available players, broadcasts overlay:wheel-spin
@@ -61,14 +61,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: msg }, { status: 400 });
     }
 
-    const winnerIndex = Math.floor(Math.random() * availablePlayers.length);
-    const winnerRaw = availablePlayers[winnerIndex] as any;
+    const winnerIndexFull = Math.floor(Math.random() * availablePlayers.length);
+    const winnerRaw = availablePlayers[winnerIndexFull] as any;
     const winnerId = winnerRaw._id.toString();
     const spinDurationMs = WHEEL_SPIN_DURATION_MS;
 
-    // Strip to _id + playerNo only — full details for winner go in a separate field
-    // to stay well under Pusher's 10 KB per-event limit
-    const players = availablePlayers.map(p => ({
+    // Build the reel of segments the overlay renders. Sending every available
+    // player (hundreds in large tournaments) blows past Pusher's 10 KB per-event
+    // limit (HTTP 413) and makes the wheel unreadable, so we cap the reel to
+    // WHEEL_MAX_SEGMENTS slices. The true winner is always included, and we report
+    // its index within the (capped) reel. `_id` is kept so themes that render the
+    // player's name (Theme 3/4 look names up by _id) still work.
+    let reelSource = availablePlayers;
+    let winnerIndex = winnerIndexFull;
+    if (availablePlayers.length > WHEEL_MAX_SEGMENTS) {
+      const others = availablePlayers.filter((_, i) => i !== winnerIndexFull);
+      // Shuffle the non-winners (Fisher–Yates) and keep the first (cap - 1).
+      for (let i = others.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [others[i], others[j]] = [others[j], others[i]];
+      }
+      const kept = others.slice(0, WHEEL_MAX_SEGMENTS - 1);
+      winnerIndex = Math.floor(Math.random() * WHEEL_MAX_SEGMENTS);
+      kept.splice(winnerIndex, 0, winnerRaw);
+      reelSource = kept;
+    }
+
+    // Strip to _id + playerNo only — full winner details travel in `winner` below.
+    const players = reelSource.map(p => ({
       _id: (p as any)._id.toString(),
       playerNo: (p as any).playerNo as string | undefined,
     }));
