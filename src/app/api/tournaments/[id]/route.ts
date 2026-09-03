@@ -165,8 +165,19 @@ export async function GET(
 
     return NextResponse.json(serializeTournament(tournament as any));
   } catch (error) {
+    // Log the cause. Returning only a generic message with nothing logged
+    // makes production faults effectively undiagnosable.
+    console.error('[/api/tournaments/[id]] fetch failed:', error);
+    const err = error as { name?: string; errors?: Record<string, unknown>; message?: string };
+    if (err?.name === 'ValidationError' && err.errors) {
+      const fields = Object.keys(err.errors);
+      return NextResponse.json(
+        { error: `Invalid tournament data: ${fields.join(', ')}`, fields },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
-      { error: 'Failed to fetch tournament' },
+      { error: 'Failed to fetch tournament', detail: err?.message ?? undefined },
       { status: 500 }
     );
   }
@@ -242,8 +253,19 @@ export async function PUT(
 
     return NextResponse.json(serializeTournament(updatedTournament as any));
   } catch (error) {
+    // Log the cause. Returning only a generic message with nothing logged
+    // makes production faults effectively undiagnosable.
+    console.error('[/api/tournaments/[id]] update failed:', error);
+    const err = error as { name?: string; errors?: Record<string, unknown>; message?: string };
+    if (err?.name === 'ValidationError' && err.errors) {
+      const fields = Object.keys(err.errors);
+      return NextResponse.json(
+        { error: `Invalid tournament data: ${fields.join(', ')}`, fields },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
-      { error: 'Failed to update tournament' },
+      { error: 'Failed to update tournament', detail: err?.message ?? undefined },
       { status: 500 }
     );
   }
@@ -289,8 +311,19 @@ export async function DELETE(
     }
     return NextResponse.json({ message: 'Tournament deleted successfully' });
   } catch (error) {
+    // Log the cause. Returning only a generic message with nothing logged
+    // makes production faults effectively undiagnosable.
+    console.error('[/api/tournaments/[id]] delete failed:', error);
+    const err = error as { name?: string; errors?: Record<string, unknown>; message?: string };
+    if (err?.name === 'ValidationError' && err.errors) {
+      const fields = Object.keys(err.errors);
+      return NextResponse.json(
+        { error: `Invalid tournament data: ${fields.join(', ')}`, fields },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
-      { error: 'Failed to delete tournament' },
+      { error: 'Failed to delete tournament', detail: err?.message ?? undefined },
       { status: 500 }
     );
   }

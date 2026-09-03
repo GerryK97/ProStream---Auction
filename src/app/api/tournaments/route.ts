@@ -11,6 +11,26 @@ import { PlayerModel } from '@/models/Player';
 import { normalizeTeamOfficialsConfig } from '@/lib/teamOfficials';
 
 /**
+ * Fields the Tournament mongoose schema marks `required: true`.
+ * Kept here so a missing field is reported as a 400 naming the field,
+ * rather than surfacing as an opaque 500.
+ */
+const REQUIRED_TOURNAMENT_FIELDS = [
+  'name',
+  'year',
+  'budgetPerTeam',
+  'squadSize',
+  'basePricePerPlayer',
+] as const;
+
+const NUMERIC_TOURNAMENT_FIELDS = [
+  'year',
+  'budgetPerTeam',
+  'squadSize',
+  'basePricePerPlayer',
+] as const;
+
+/**
  * Validate player class codes
  * Ensures all classes have codes and no duplicates exist
  */
@@ -132,6 +152,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate the fields the Tournament schema marks as required before
+    // hitting Mongoose. Without this the schema throws a ValidationError that
+    // the catch block flattens into a generic 500, which gives the client no
+    // idea which field is missing.
+    const missing = REQUIRED_TOURNAMENT_FIELDS.filter((field) => {
+      const value = body[field];
+      return value === undefined || value === null || value === '';
+    });
+    if (missing.length > 0) {
+      return NextResponse.json(
+        {
+          error: `Missing required field${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}`,
+          fields: missing,
+        },
+        { status: 400 }
+      );
+    }
+
+    const numericErrors = NUMERIC_TOURNAMENT_FIELDS.filter(
+      (field) => body[field] !== undefined && !Number.isFinite(Number(body[field]))
+    );
+    if (numericErrors.length > 0) {
+      return NextResponse.json(
+        {
+          error: `These fields must be numeric: ${numericErrors.join(', ')}`,
+          fields: numericErrors,
+        },
+        { status: 400 }
+      );
+    }
+
     // Validate player class codes if player classes are enabled
     if (body.usePlayerClasses && body.playerClasses) {
       const validation = validatePlayerClassCodes(body.playerClasses);
@@ -167,8 +218,32 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
+    // Log the real cause: the response is deliberately generic, but silently
+    // discarding the error made a simple missing-field mistake look like a
+    // server fault and cost real debugging time.
+    console.error('[POST /api/tournaments] create failed:', error);
+
+    // Surface mongoose validation failures as 400 with the offending fields,
+    // since they are caused by the request, not by the server.
+    const err = error as { name?: string; errors?: Record<string, unknown>; message?: string };
+    if (err?.name === 'ValidationError' && err.errors) {
+      const fields = Object.keys(err.errors);
+      return NextResponse.json(
+        {
+          error: `Invalid tournament data: ${fields.join(', ')}`,
+          fields,
+        },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
-      { error: 'Failed to create tournament' },
+      {
+        error: 'Failed to create tournament',
+        // Detail is safe here: it is a validation/DB message, and without it
+        // the client has no way to tell a bad request from an outage.
+        detail: err?.message ?? undefined,
+      },
       { status: 500 }
     );
   }
