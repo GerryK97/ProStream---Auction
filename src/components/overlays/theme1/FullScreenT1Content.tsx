@@ -10,6 +10,7 @@ import Top10SummaryOverlay from './Top10SummaryT1';
 import WheelSpinOverlay from '../shared/WheelSpinOverlay';
 import ResilientImage from '../shared/ResilientImage';
 import SoldMessageFullScreen from './SoldMessageT1';
+import UnsoldMessageFullScreen from './UnsoldMessageT1';
 import { AuctionState, Player, Team, Tournament } from '@/types';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
 import type { OverlaySettings } from '../OverlayWrapper';
@@ -279,6 +280,7 @@ function PlayerAuctionPanel({
     ? auctionState.currentBid
     : (auctionState.currentAuctionStatus === 'Bidding' && hasPlayer ? basePrice : 0);
   const isSold = auctionState.currentAuctionStatus === 'Sold';
+  const isUnsold = !!currentPlayer?.isUnsold;
   const isBidding = auctionState.currentAuctionStatus === 'Bidding';
 
   const [bidPopping, setBidPopping] = useState(false);
@@ -562,6 +564,37 @@ function PlayerAuctionPanel({
             </div>
           </div>
         )}
+
+        {/* UNSOLD stamp */}
+        {isUnsold && !isSold && (
+          <div style={{
+            position: 'absolute',
+            top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 10,
+          }}>
+            <div className="animate-stamp-seal" style={{
+              border: '8px solid #ef4444',
+              borderRadius: 16,
+              padding: '14px 36px',
+              background: 'rgba(239,68,68,0.06)',
+              transform: 'rotate(-6deg)',
+            }}>
+              <span style={{
+                fontFamily: "'Varela Round', sans-serif",
+                fontSize: 90,
+                fontWeight: 700,
+                color: '#ef4444',
+                letterSpacing: 14,
+                lineHeight: 1,
+                display: 'block',
+              }}>
+                UNSOLD
+              </span>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
@@ -604,9 +637,29 @@ export function FullScreenT1Content({
 
   // Sold message toast state
   const [soldToast, setSoldToast] = useState<{ player: Player; team: Team; price: number } | null>(null);
+  const [unsoldToast, setUnsoldToast] = useState<{ player: Player; basePrice: number } | null>(null);
   const [toastExiting, setToastExiting] = useState(false);
+  const [unsoldToastExiting, setUnsoldToastExiting] = useState(false);
   const prevAuctionStatusRef = useRef<string | null>(null);
+  const prevUnsoldRef = useRef(false);
+  /** Latch last live player through mark-unsold (API clears currentPlayerId immediately). */
+  const stagePlayerRef = useRef<Player | undefined>(currentPlayer);
   const toastTimersRef = useRef<{ exit: ReturnType<typeof setTimeout> | null; clear: ReturnType<typeof setTimeout> | null }>({ exit: null, clear: null });
+  const unsoldToastTimersRef = useRef<{ exit: ReturnType<typeof setTimeout> | null; clear: ReturnType<typeof setTimeout> | null }>({ exit: null, clear: null });
+
+  // Sync during render so the panel never unmounts for a frame before isUnsold lands.
+  if (currentPlayer) {
+    stagePlayerRef.current = currentPlayer;
+  } else if (stagePlayerRef.current) {
+    const updated = players.find(p => p._id === stagePlayerRef.current!._id);
+    if (updated?.isUnsold) {
+      stagePlayerRef.current = updated;
+    }
+  }
+
+  const stagePlayer =
+    currentPlayer ??
+    (stagePlayerRef.current?.isUnsold ? stagePlayerRef.current : undefined);
 
   useEffect(() => {
     const incoming = effectiveSettings.displayMode;
@@ -678,6 +731,24 @@ export function FullScreenT1Content({
     prevAuctionStatusRef.current = status;
   }, [auctionState.currentAuctionStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Unsold message — show when player is marked unsold
+  useEffect(() => {
+    const id = stagePlayerRef.current?._id;
+    if (!id) {
+      prevUnsoldRef.current = false;
+      return;
+    }
+    const player = players.find(p => p._id === id);
+    const nowUnsold = !!player?.isUnsold;
+    if (nowUnsold && !prevUnsoldRef.current && player) {
+      if (unsoldToastTimersRef.current.exit)  clearTimeout(unsoldToastTimersRef.current.exit);
+      if (unsoldToastTimersRef.current.clear) clearTimeout(unsoldToastTimersRef.current.clear);
+      setUnsoldToast({ player, basePrice: getClassBasePrice(tournament, player) });
+      setUnsoldToastExiting(false);
+    }
+    prevUnsoldRef.current = nowUnsold;
+  }, [players, tournament]);
+
   // Dismiss sold message when a new player is selected for auction
   useEffect(() => {
     if (!soldToast) return;
@@ -692,6 +763,21 @@ export function FullScreenT1Content({
     }
   }, [currentPlayer?._id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Dismiss unsold message when a new player is selected for auction
+  useEffect(() => {
+    if (!unsoldToast) return;
+    if (currentPlayer && currentPlayer._id !== unsoldToast.player._id) {
+      if (unsoldToastTimersRef.current.exit)  clearTimeout(unsoldToastTimersRef.current.exit);
+      if (unsoldToastTimersRef.current.clear) clearTimeout(unsoldToastTimersRef.current.clear);
+      setUnsoldToastExiting(true);
+      unsoldToastTimersRef.current.clear = setTimeout(() => {
+        setUnsoldToast(null);
+        setUnsoldToastExiting(false);
+        stagePlayerRef.current = undefined;
+      }, 600);
+    }
+  }, [currentPlayer?._id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Immediately clear sold message when wheel spin starts (it covers the wheel at zIndex 200)
   useEffect(() => {
     if (effectiveSettings.displayMode === 'wheel-spin') {
@@ -699,6 +785,8 @@ export function FullScreenT1Content({
       if (toastTimersRef.current.clear) clearTimeout(toastTimersRef.current.clear);
       setSoldToast(null);
       setToastExiting(false);
+      setUnsoldToast(null);
+      setUnsoldToastExiting(false);
     }
   }, [effectiveSettings.displayMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -847,12 +935,12 @@ export function FullScreenT1Content({
         {/* ── New Player Auction Panel ── (standard + custom-ticker modes, with ScaleY enter/exit) */}
         {(activeMode === 'standard' || activeMode === 'custom-ticker') && (
           <div
-            key={currentPlayer?._id ?? 'no-player'}
+            key={stagePlayer?._id ?? currentPlayer?._id ?? 'no-player'}
             className={panelExiting ? 'fs-panel-exit' : 'fs-panel-enter'}
             style={{ position: 'absolute', inset: 0, transformOrigin: 'center center' }}
           >
             <PlayerAuctionPanel
-              currentPlayer={currentPlayer}
+              currentPlayer={stagePlayer ?? currentPlayer}
               tournament={tournament}
               auctionState={auctionState}
             />
@@ -880,6 +968,16 @@ export function FullScreenT1Content({
             team={soldToast.team}
             finalPrice={soldToast.price}
             exiting={toastExiting}
+          />
+        )}
+
+        {/* Full-screen unsold message — covers everything including ticker */}
+        {unsoldToast && (
+          <UnsoldMessageFullScreen
+            player={unsoldToast.player}
+            tournament={tournament}
+            basePrice={unsoldToast.basePrice}
+            exiting={unsoldToastExiting}
           />
         )}
       </div>

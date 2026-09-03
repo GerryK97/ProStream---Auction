@@ -10,6 +10,7 @@ import RestingTimeOverlay from './RestingTimeT1';
 import Top10SummaryOverlay from './Top10SummaryT1';
 import WheelSpinOverlay from '../shared/WheelSpinOverlay';
 import SoldMessageToast from '../shared/SoldMessageToast';
+import UnsoldMessageToast from '../shared/UnsoldMessageToast';
 import LeadingBidsOverlay from '../shared/LeadingBidsOverlay';
 import { AuctionState, Player, Team, Tournament } from '@/types';
 import { getClassBasePrice } from '@/lib/playerClassUtils';
@@ -288,7 +289,7 @@ function BidInfoPanel({
     prevBidRef.current = auctionState.currentBid;
   }, [auctionState.currentBid, auctionState.currentAuctionStatus]);
 
-  if (!currentPlayer || tournament?.status !== 'Live' || auctionState.currentAuctionStatus === 'Sold') return null;
+  if (!currentPlayer || tournament?.status !== 'Live' || auctionState.currentAuctionStatus === 'Sold' || currentPlayer.isUnsold) return null;
 
   const basePrice = getClassBasePrice(tournament, currentPlayer);
   const currentBid = auctionState.currentBid > 0
@@ -631,8 +632,33 @@ export function CustomT1Content({
 
   // Sold message toast state
   const [soldToast, setSoldToast] = useState<{ player: Player; team: Team; price: number } | null>(null);
+  const [unsoldToast, setUnsoldToast] = useState<{ player: Player; basePrice: number } | null>(null);
   const [toastExiting, setToastExiting] = useState(false);
+  const [unsoldToastExiting, setUnsoldToastExiting] = useState(false);
   const prevAuctionStatusRef = useRef<string | null>(null);
+  const prevUnsoldRef = useRef(false);
+  /** Latch last live player through mark-unsold (API clears currentPlayerId immediately). */
+  const stagePlayerRef = useRef<Player | undefined>(currentPlayer);
+
+  // Sync during render so the card never unmounts for a frame before isUnsold lands.
+  if (currentPlayer) {
+    stagePlayerRef.current = currentPlayer;
+  } else if (stagePlayerRef.current) {
+    const updated = players.find(p => p._id === stagePlayerRef.current!._id);
+    if (updated?.isUnsold) {
+      stagePlayerRef.current = updated;
+    }
+  }
+
+  const stagePlayer =
+    currentPlayer ??
+    (stagePlayerRef.current?.isUnsold ? stagePlayerRef.current : undefined);
+  const holdingUnsoldReveal = !!stagePlayer?.isUnsold && !auctionState.currentPlayerId;
+  const displayPlayer = stagePlayer ?? currentPlayer;
+  const cardAuctionState =
+    holdingUnsoldReveal && stagePlayer
+      ? { ...auctionState, currentPlayerId: stagePlayer._id }
+      : auctionState;
 
   useEffect(() => {
     const updateScale = () => {
@@ -660,6 +686,29 @@ export function CustomT1Content({
     }
     prevAuctionStatusRef.current = status;
   }, [auctionState.currentAuctionStatus, auctionState.currentBid, currentPlayer, teams]);
+
+  // Unsold message toast — show when player is marked unsold, auto-dismiss after 5s
+  useEffect(() => {
+    const id = stagePlayerRef.current?._id;
+    if (!id) {
+      prevUnsoldRef.current = false;
+      return;
+    }
+    const player = players.find(p => p._id === id);
+    const nowUnsold = !!player?.isUnsold;
+    if (nowUnsold && !prevUnsoldRef.current && player) {
+      setUnsoldToast({ player, basePrice: getClassBasePrice(tournament, player) });
+      setUnsoldToastExiting(false);
+      const exitTimer = setTimeout(() => setUnsoldToastExiting(true), 4400);
+      const removeTimer = setTimeout(() => {
+        setUnsoldToast(null);
+        setUnsoldToastExiting(false);
+        stagePlayerRef.current = undefined;
+      }, 5000);
+      return () => { clearTimeout(exitTimer); clearTimeout(removeTimer); };
+    }
+    prevUnsoldRef.current = nowUnsold;
+  }, [players, tournament]);
 
   return (
     <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative', background: 'transparent' }}>
@@ -767,7 +816,7 @@ export function CustomT1Content({
         {/* Large: centred between Base Price right=471 and Current Bid left=1019 → card left=555  */}
         {/* Small: centred between Base Price right=619 and Current Bid left=871  → card left=660  */}
         {/* Bottom=84 keeps card bottom flush with panel bottoms (996px), 10px above ticker (1006). */}
-        {(visibleMode === 'standard' || visibleMode === 'custom-ticker') && !overlaySettings.hidePremiumCard && (
+        {(visibleMode === 'standard' || visibleMode === 'custom-ticker') && !overlaySettings.hidePremiumCard && displayPlayer && (
           <div
             style={{
               position: 'absolute',
@@ -779,10 +828,11 @@ export function CustomT1Content({
           >
             <div key={playerKey} className="fs-player-enter">
               <PlayerCardOverlay
-                currentPlayer={currentPlayer}
+                currentPlayer={displayPlayer}
                 tournament={tournament}
-                auctionState={auctionState}
+                auctionState={cardAuctionState}
                 teams={teams}
+                isUnsoldReveal={holdingUnsoldReveal}
               />
             </div>
           </div>
@@ -790,11 +840,11 @@ export function CustomT1Content({
 
         {/* ── Bid Info Panel ── (standard + custom-ticker modes) */}
         {/* Small: 60% scale, pills repositioned just above ticker */}
-        {(visibleMode === 'standard' || visibleMode === 'custom-ticker') && !overlaySettings.hidePremiumCard && (
+        {(visibleMode === 'standard' || visibleMode === 'custom-ticker') && !overlaySettings.hidePremiumCard && displayPlayer && (
           <BidInfoPanel
             tournament={tournament}
-            currentPlayer={currentPlayer}
-            auctionState={auctionState}
+            currentPlayer={displayPlayer}
+            auctionState={cardAuctionState}
             smallMode={overlaySettings.size === 'small'}
           />
         )}
@@ -833,7 +883,7 @@ export function CustomT1Content({
             auctionState={auctionState}
             teams={teams}
             position={overlaySettings.soldMessagePosition ?? 'bottom-right'}
-            isVisible={tournament?.biddingMode === 'team' && auctionState.currentAuctionStatus === 'Bidding' && !soldToast}
+            isVisible={tournament?.biddingMode === 'team' && auctionState.currentAuctionStatus === 'Bidding' && !soldToast && !unsoldToast}
           />
         )}
 
@@ -844,6 +894,16 @@ export function CustomT1Content({
             team={soldToast.team}
             finalPrice={soldToast.price}
             exiting={toastExiting}
+            position={overlaySettings.soldMessagePosition ?? 'bottom-right'}
+          />
+        )}
+
+        {/* Unsold Message Toast */}
+        {unsoldToast && (
+          <UnsoldMessageToast
+            player={unsoldToast.player}
+            basePrice={unsoldToast.basePrice}
+            exiting={unsoldToastExiting}
             position={overlaySettings.soldMessagePosition ?? 'bottom-right'}
           />
         )}

@@ -10,6 +10,7 @@ interface PlayerCardT1Props {
     teams?: Team[];
     size?: 'small' | 'medium' | 'large';
     position?: 'top' | 'center' | 'bottom';
+    isUnsoldReveal?: boolean;
 }
 
 const PlayerCardT1: React.FC<PlayerCardT1Props> = ({
@@ -18,6 +19,7 @@ const PlayerCardT1: React.FC<PlayerCardT1Props> = ({
     auctionState,
     teams = [],
     size = 'medium',
+    isUnsoldReveal = false,
 }) => {
     const [previousBid, setPreviousBid] = useState<number>(0);
     const [bidPulseKey, setBidPulseKey] = useState<number>(0);
@@ -26,7 +28,8 @@ const PlayerCardT1: React.FC<PlayerCardT1Props> = ({
 
     const shouldShow = !!(tournament?.status === 'Live'
         && currentPlayer
-        && auctionState.currentAuctionStatus !== 'Sold');
+        && (auctionState.currentAuctionStatus !== 'Sold' || isUnsoldReveal)
+        && (!currentPlayer.isUnsold || isUnsoldReveal));
 
     useEffect(() => {
         if (shouldShow) {
@@ -170,6 +173,7 @@ const PlayerCardT1: React.FC<PlayerCardT1Props> = ({
                                             width: '100%',
                                             height: '100%',
                                             objectFit: 'cover',
+                                            filter: isUnsoldReveal ? 'saturate(0.35) brightness(0.88)' : undefined,
                                         }}
                                     />
                                 </div>
@@ -288,6 +292,42 @@ const PlayerCardT1: React.FC<PlayerCardT1Props> = ({
                                 </span>
                             )}
                         </div>
+
+                        {isUnsoldReveal && (
+                            <div style={{
+                                position: 'absolute',
+                                inset: 0,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: 'rgba(0,0,0,0.35)',
+                                pointerEvents: 'none',
+                                zIndex: 20,
+                                borderRadius: 24,
+                            }}>
+                                <div
+                                    className="animate-stamp-seal"
+                                    style={{
+                                        border: '3px solid #EF4444',
+                                        borderRadius: 8,
+                                        padding: '8px 20px',
+                                        background: 'rgba(239,68,68,0.08)',
+                                        transform: 'rotate(-8deg)',
+                                    }}
+                                >
+                                    <span style={{
+                                        fontFamily: "'Bebas Neue', cursive",
+                                        fontSize: 36,
+                                        color: '#EF4444',
+                                        letterSpacing: 6,
+                                        lineHeight: 1,
+                                        display: 'block',
+                                    }}>
+                                        UNSOLD
+                                    </span>
+                                </div>
+                            </div>
+                        )}
 
                     </div>
 
