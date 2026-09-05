@@ -275,8 +275,9 @@ function mapTeams(plan, docs) {
 
 function mapPlayers(plan, docs) {
   for (const [index, doc] of docs.entries()) {
-    const path = `players[${index}]`;
+    let path = `players[${index}]`;
     const id = docId(doc, path);
+    path = `players[${index}, id=${id}]`;
     const isSold = bool(doc.isSold, `${path}.isSold`);
     const isUnsold = bool(doc.isUnsold, `${path}.isUnsold`);
     const finalPrice = integer(doc.finalPrice, `${path}.finalPrice`);
