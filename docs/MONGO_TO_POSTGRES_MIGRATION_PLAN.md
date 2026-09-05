@@ -121,9 +121,9 @@ The last two are the point of the whole migration: a multi-step sale that
 fails partway rolls back atomically with no partial state and no compensation
 code. Nothing has been applied to the real `prostream-postgres` database.
 
-### D-B — ETL script + dry run (in progress)
-1. One Node script per model: read all Mongo documents, transform, insert into
-   Postgres inside a single transaction per collection.
+### D-B — Guarded ETL + isolated trial ✅ COMPLETE
+1. One guarded Node script reads all Mongo documents, transforms them, and
+   inserts them into Postgres in a single all-or-nothing transaction.
 2. Run against a **scratch** copy of the Postgres database (same pattern as
    the Neon-to-Dokploy trial: create, populate, verify, discard).
 3. Reconcile: row count per collection must match Mongo document count
@@ -132,6 +132,34 @@ code. Nothing has been applied to the real `prostream-postgres` database.
 4. This phase can run repeatedly against fresh Mongo Atlas exports without
    touching production, exactly like the earlier Neon trial-then-final
    pattern.
+
+#### Isolated Dokploy trial result (2026-09-05)
+
+The `prostream_trial` database was verified empty, with 23 `auction` tables
+and no `public` tables, before import. A fresh read validated **5,449 Mongo
+documents** with plan fingerprint
+`7e4df836a7a9f74d5ce8f564af9f6003c6202026775a9514315b012ee9db09ea`.
+The guarded import and a separate fresh-source `--verify` pass both succeeded.
+
+The resulting trial includes 48 tournaments, 342 teams, 3,850 referentially
+valid players, 44 auction states, 44 bid-history rows, 147 overlay sessions,
+6 invoices, 3 quotations, and 984 archived legacy records. Counts for every
+target table matched the deterministic import plan. The ETL also compared all
+money rows and configured `jsonb` shapes exactly, not by sampling. Independent
+PostgreSQL checks confirmed zero negative team balances, invalid sold/unsold
+player states, negative bids, unvalidated constraints, or public-schema tables.
+
+Two duplicate `10,000` quick-bid buttons in separate source tournaments were
+explicitly normalized to one button per tournament. They are behaviorally
+identical at runtime and cannot coexist under the target's
+`(tournament_id, amount)` key. The first value is retained and each redundant
+source child is reported in the deterministic ETL normalizations. The same run
+also reported four inert `{ upTo: 0, increment: 0 }` bid-bracket placeholders,
+1,279 legacy player-class/current-class conversions, and 984 historical
+documents archived because their relational parent no longer exists.
+
+This was an isolated rehearsal only. The production `prostream-postgres`
+database, application routing, and MongoDB source were not changed.
 
 #### Guarded rehearsal tooling
 
