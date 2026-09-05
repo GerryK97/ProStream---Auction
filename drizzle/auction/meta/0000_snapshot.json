@@ -172,7 +172,7 @@
         },
         "bid_at_epoch_ms": {
           "name": "bid_at_epoch_ms",
-          "type": "integer",
+          "type": "bigint",
           "primaryKey": false,
           "notNull": false
         },

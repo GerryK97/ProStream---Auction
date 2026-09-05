@@ -10,8 +10,12 @@
     "migrate:player-class-codes": "ts-node --compiler-options '{\"module\":\"commonjs\"}' src/scripts/migratePlayerClassCodes.ts",
     "test:realtime": "node scripts/check-realtime-bid-guards.js",
     "test:auction-schema": "bash scripts/ops/test-auction-schema.sh",
+    "test:auction-etl": "node scripts/ops/test-auction-etl-mapping.mjs",
     "db:auction:generate": "drizzle-kit generate",
-    "db:auction:migrate": "drizzle-kit migrate"
+    "db:auction:migrate": "drizzle-kit migrate",
+    "db:auction:etl:dry-run": "node scripts/ops/auction-mongo-to-postgres.mjs --dry-run",
+    "db:auction:etl:apply": "node scripts/ops/auction-mongo-to-postgres.mjs --apply",
+    "db:auction:etl:verify": "node scripts/ops/auction-mongo-to-postgres.mjs --verify"
   },
   "dependencies": {
     "@google/genai": "^1.28.0",

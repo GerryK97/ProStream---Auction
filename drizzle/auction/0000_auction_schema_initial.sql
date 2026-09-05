@@ -28,7 +28,7 @@ CREATE TABLE "auction"."bid_history" (
 	"player_id" text,
 	"team_id" text,
 	"amount" integer NOT NULL,
-	"bid_at_epoch_ms" integer,
+	"bid_at_epoch_ms" bigint,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint

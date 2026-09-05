@@ -121,7 +121,7 @@ The last two are the point of the whole migration: a multi-step sale that
 fails partway rolls back atomically with no partial state and no compensation
 code. Nothing has been applied to the real `prostream-postgres` database.
 
-### D-B — ETL script + dry run (about 4–5 days)
+### D-B — ETL script + dry run (in progress)
 1. One Node script per model: read all Mongo documents, transform, insert into
    Postgres inside a single transaction per collection.
 2. Run against a **scratch** copy of the Postgres database (same pattern as
@@ -132,6 +132,51 @@ code. Nothing has been applied to the real `prostream-postgres` database.
 4. This phase can run repeatedly against fresh Mongo Atlas exports without
    touching production, exactly like the earlier Neon trial-then-final
    pattern.
+
+#### Guarded rehearsal tooling
+
+`scripts/ops/auction-mongo-to-postgres.mjs` maps every remaining Mongo
+collection to the `auction` schema, including embedded child arrays. It is
+deliberately fail-closed:
+
+- `npm run db:auction:etl:dry-run` reads and validates Mongo only. It does not
+  open PostgreSQL or write anything.
+- `npm run db:auction:etl:apply` needs an explicitly named, empty scratch
+  database (`AUCTION_ETL_DATABASE_URL`) whose name contains `scratch`, `trial`,
+  `test`, `dev`, or `local`, plus both exact-name and write confirmations. It
+  has no `TRUNCATE`, `DELETE`, or upsert path.
+- `npm run db:auction:etl:verify` compares every target table count, every
+  money row, and every migrated `jsonb` shape to a fresh Mongo read. It makes
+  no changes.
+
+The required environment variables for an isolated rehearsal are:
+
+```sh
+export AUCTION_ETL_DATABASE_URL='postgresql://.../auction_trial'
+export AUCTION_ETL_CONFIRM_TARGET='auction_trial'
+export AUCTION_ETL_CONFIRM_APPLY='IMPORT_INTO_EMPTY_SCRATCH'
+npm run db:auction:etl:dry-run
+npm run db:auction:etl:apply
+npm run db:auction:etl:verify
+```
+
+`MONGODB_URI` is always the source and is used read-only. The tool refuses a
+target equal to `DATABASE_URL`, so this procedure cannot use the app's normal
+database URL by mistake. `npm run test:auction-etl` tests field mapping,
+embedded child-table expansion, BSON `Map` to `jsonb` conversion, millisecond
+bid history timestamps, and invalid money/state rejection without accessing a
+real database.
+
+The rehearsal reports, rather than silently discarding, legacy `{ upTo: 0,
+increment: 0 }` bid-bracket placeholders. They are inert in the existing
+runtime because non-negative bids never match a `currentBid < 0` range, but
+cannot be imported as valid rows because they duplicate the child-table key and
+violate the positive-increment constraint. A slab with no meaningful positive
+rows still fails validation and must be repaired explicitly.
+
+During ETL review, `bid_history.bid_at_epoch_ms` was corrected from PostgreSQL
+`integer` to `bigint`: a modern millisecond epoch is about 1.7 trillion and
+would otherwise overflow before any migration could safely run.
 
 ### D-C — Port the 16 CAS routes first (about 1–1.5 weeks)
 Priority order, most money-critical first:

@@ -20,6 +20,7 @@
 import { sql } from 'drizzle-orm';
 import {
   boolean,
+  bigint,
   check,
   index,
   integer,
@@ -387,7 +388,8 @@ export const bidHistory = auction.table(
     amount: integer('amount').notNull(),
     // Mongo stored a numeric epoch; keep it alongside a real timestamp so the
     // migrated values remain byte-comparable against the source during ETL.
-    bidAtEpochMs: integer('bid_at_epoch_ms'),
+    // A millisecond epoch is already ~1.7e12, beyond PostgreSQL `integer`.
+    bidAtEpochMs: bigint('bid_at_epoch_ms', { mode: 'number' }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
