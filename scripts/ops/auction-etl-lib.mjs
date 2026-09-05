@@ -249,8 +249,18 @@ function mapTournaments(plan, docs) {
 
     const quickBids = doc.directQuickBids ?? [];
     if (!Array.isArray(quickBids)) fail(`${path}.directQuickBids`, 'must be an array');
+    const seenQuickBidAmounts = new Set();
     for (const [childIndex, child] of quickBids.entries()) {
       const amount = integer(child.amount, `${path}.directQuickBids[${childIndex}].amount`, { required: true });
+      // Mongo permits identical buttons in this embedded array, but they have
+      // no distinct runtime behavior: each produces the same bid amount. The
+      // relational table deliberately uses (tournament_id, amount) as its key,
+      // so retain the first button and record this explicit normalization.
+      if (seenQuickBidAmounts.has(amount)) {
+        plan.normalizations.push(`${path}.directQuickBids[${childIndex}] ignored duplicate quick-bid amount ${amount}`);
+        continue;
+      }
+      seenQuickBidAmounts.add(amount);
       addRow(plan, 'direct_quick_bids', { tournament_id: id, amount });
     }
 

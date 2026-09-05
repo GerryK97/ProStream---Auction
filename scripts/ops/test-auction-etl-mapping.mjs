@@ -55,6 +55,23 @@ const legacyBracketPlan = buildImportPlan({
 });
 assert.equal(legacyBracketPlan.tables.bid_increments.length, 1, 'inert legacy {0,0} bracket placeholders are not valid target rows');
 assert.equal(legacyBracketPlan.normalizations.length, 1, 'every legacy placeholder must be reported');
+const duplicateQuickBidPlan = buildImportPlan({
+  ...source,
+  tournaments: [{
+    ...source.tournaments[0],
+    directQuickBids: [{ amount: 500 }, { amount: 500 }, { amount: 1000 }],
+  }],
+});
+assert.deepEqual(
+  duplicateQuickBidPlan.tables.direct_quick_bids,
+  [{ tournament_id: 't1', amount: 500 }, { tournament_id: 't1', amount: 1000 }],
+  'duplicate quick-bid buttons are semantically redundant and must not violate the relational key',
+);
+assert.match(
+  duplicateQuickBidPlan.normalizations[0],
+  /ignored duplicate quick-bid amount 500/,
+  'every dropped redundant button must be reported',
+);
 assert.throws(
   () => buildImportPlan({ ...source, players: [{ ...source.players[0], isUnsold: true }] }),
   /cannot be both sold and unsold/,
