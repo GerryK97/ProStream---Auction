@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "next lint",
     "migrate:player-class-codes": "ts-node --compiler-options '{\"module\":\"commonjs\"}' src/scripts/migratePlayerClassCodes.ts",
-    "test:realtime": "node scripts/check-realtime-bid-guards.js"
+    "test:realtime": "node scripts/check-realtime-bid-guards.js",
+    "test:auction-schema": "bash scripts/ops/test-auction-schema.sh",
+    "db:auction:generate": "drizzle-kit generate",
+    "db:auction:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
     "@google/genai": "^1.28.0",
@@ -43,6 +46,8 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.4.17",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9.0.0",
     "eslint-config-next": "^15.1.6",
     "postcss": "^8.5.15",

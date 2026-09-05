@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1788592372545,
+      "tag": "0000_auction_schema_initial",
+      "breakpoints": true
+    }
+  ]
+}

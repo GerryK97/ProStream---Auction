@@ -93,13 +93,33 @@ impossible at the database level, independent of application code.
 
 ## Phases
 
-### D-A — Schema (about 3–4 days)
-1. Write Drizzle schema for every table in the mapping above.
-2. Generate and review the migration SQL by hand (no push-based schema for a
-   financial dataset — every column and constraint should be an explicit,
-   reviewed migration file, unlike Scoreboard's original push-based setup).
-3. Apply to a disposable test database. Do not touch `auction` schema in the
-   real `prostream-postgres` yet.
+### D-A — Schema ✅ COMPLETE
+
+- Drizzle schema: `src/lib/pg/auction-schema.ts` (22 tables)
+- Migration SQL: `drizzle/auction/0000_auction_schema_initial.sql`
+- Config: `drizzle.config.ts`, `schemaFilter: ['auction']` so these migrations
+  can never touch the shared `public` tables Scoreboard owns
+- Test: `scripts/ops/test-auction-schema.sh` (`npm run test:auction-schema`)
+
+Verified against a disposable PostgreSQL 18 container — 22 tables, 16 check
+constraints, 63 indexes, `public` schema untouched. All 10 checks pass:
+
+| Check | Result |
+|---|---|
+| 22 tables created in `auction` schema | PASS |
+| `public` schema untouched | PASS |
+| Overspend rejected (`teams_balance_non_negative`) | PASS |
+| Sold player without price/buyer rejected | PASS |
+| Player both sold and unsold rejected | PASS |
+| Negative bid rejected | PASS |
+| Valid sale committed | PASS |
+| Balance correctly deducted | PASS |
+| **Failed sale left balance unchanged** | PASS |
+| **Failed sale left price unchanged** | PASS |
+
+The last two are the point of the whole migration: a multi-step sale that
+fails partway rolls back atomically with no partial state and no compensation
+code. Nothing has been applied to the real `prostream-postgres` database.
 
 ### D-B — ETL script + dry run (about 4–5 days)
 1. One Node script per model: read all Mongo documents, transform, insert into
