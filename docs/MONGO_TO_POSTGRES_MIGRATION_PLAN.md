@@ -174,6 +174,18 @@ cannot be imported as valid rows because they duplicate the child-table key and
 violate the positive-increment constraint. A slab with no meaningful positive
 rows still fails validation and must be repaired explicitly.
 
+#### Legacy records with deleted parents
+
+The production source contains historical records whose tournament was deleted
+without a Mongo cascade. These must not be dropped or attached to invented live
+parents. Migration `0001_milky_golden_guardian.sql` therefore adds
+`auction.migration_legacy_records`: the ETL stores each original document as
+`jsonb` with its source collection, source ID, and missing-parent reason. The
+live relational tables receive only referentially valid records, while the raw
+historical record remains queryable and fully reconciled. Legacy player-class
+labels are mapped to their tournament's configured class code, with every
+mapping reported by the dry run.
+
 During ETL review, `bid_history.bid_at_epoch_ms` was corrected from PostgreSQL
 `integer` to `bigint`: a modern millisecond epoch is about 1.7 trillion and
 would otherwise overflow before any migration could safely run.

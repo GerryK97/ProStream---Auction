@@ -23,6 +23,7 @@ export const TARGET_TABLES = [
   'overlay_scenes', 'overlay_history', 'overlay_analytics', 'overlay_library',
   'overlay_sessions', 'customers', 'invoices', 'invoice_line_items',
   'quotations', 'quotation_line_items',
+  'migration_legacy_records',
 ];
 
 const TOURNAMENT_STATUSES = new Set(['Draft', 'Completed', 'Setup', 'Pending', 'Live', 'Paused', 'Stopped', 'Archived']);
@@ -106,6 +107,7 @@ export function jsonValue(value, path, { required = false, fallback = null } = {
     return fallback;
   }
   if (value instanceof Date) return value.toISOString();
+  if (typeof value?.toHexString === 'function') return value.toHexString();
   // `required` applies to the top-level blob. Nested values may legitimately
   // be null, for example overlayControlSettings.teamWiseTeamId.
   if (Array.isArray(value)) return value.map((item, index) => jsonValue(item, `${path}[${index}]`));
@@ -133,11 +135,38 @@ function addRow(plan, table, row) {
   plan.tables[table].push(row);
 }
 
+function archiveLegacyRecord(plan, sourceCollection, doc, index, reason) {
+  const sourceId = doc?._id === undefined || doc?._id === null
+    ? `${sourceCollection}:missing-id:${index}`
+    : String(doc._id);
+  addRow(plan, 'migration_legacy_records', {
+    source_collection: sourceCollection,
+    source_id: sourceId,
+    reason,
+    record: jsonValue(doc, `${sourceCollection}[${index}]`, { required: true }),
+  });
+  plan.legacyRecords.push({ sourceCollection, sourceId, reason });
+}
+
+function sourceIds(docs) {
+  return new Set(docs.filter((doc) => doc?._id !== undefined && doc?._id !== null).map((doc) => String(doc._id)));
+}
+
+function splitActiveRecords(plan, sourceCollection, docs, isActive, reason) {
+  const active = [];
+  for (const [index, doc] of docs.entries()) {
+    if (isActive(doc)) active.push(doc);
+    else archiveLegacyRecord(plan, sourceCollection, doc, index, reason(doc));
+  }
+  return active;
+}
+
 function initPlan() {
   return {
     tables: Object.fromEntries(TARGET_TABLES.map((table) => [table, []])),
     sourceCounts: Object.fromEntries(Object.keys(SOURCE_COLLECTIONS).map((key) => [key, 0])),
     normalizations: [],
+    legacyRecords: [],
   };
 }
 
@@ -273,7 +302,7 @@ function mapTeams(plan, docs) {
   }
 }
 
-function mapPlayers(plan, docs) {
+function mapPlayers(plan, docs, playerClassCodes) {
   for (const [index, doc] of docs.entries()) {
     let path = `players[${index}]`;
     const id = docId(doc, path);
@@ -285,6 +314,14 @@ function mapPlayers(plan, docs) {
     if (isSold && (finalPrice === null || winningTeamId === null)) fail(path, 'sold player requires finalPrice and winningTeamId');
     if (isSold && isUnsold) fail(path, 'player cannot be both sold and unsold');
     if (finalPrice !== null && finalPrice < 0) fail(`${path}.finalPrice`, 'must not be negative');
+    const sourcePlayerClass = text(doc.playerClass, `${path}.playerClass`);
+    const playerClass = sourcePlayerClass === null
+      ? null
+      : playerClassCodes.get(doc.tournamentId)?.get(sourcePlayerClass) ?? sourcePlayerClass;
+    if (sourcePlayerClass !== null && playerClass !== sourcePlayerClass) {
+      plan.normalizations.push(`${path}.playerClass mapped legacy label ${JSON.stringify(sourcePlayerClass)} to code ${JSON.stringify(playerClass)}`);
+    }
+    if (playerClass !== null && playerClass.length > 10) fail(`${path}.playerClass`, 'is not a configured class code and exceeds 10 characters');
     addRow(plan, 'players', {
       id,
       player_no: text(doc.playerNo, `${path}.playerNo`, { maxLength: 10 }),
@@ -295,7 +332,7 @@ function mapPlayers(plan, docs) {
       current_club: text(doc.currentClub, `${path}.currentClub`),
       photo_url: text(doc.photoURL, `${path}.photoURL`),
       secondary_image_url: text(doc.secondaryImageURL, `${path}.secondaryImageURL`),
-      player_class: text(doc.playerClass, `${path}.playerClass`, { maxLength: 10 }),
+      player_class: playerClass,
       age: integer(doc.age, `${path}.age`),
       is_sold: isSold,
       is_unsold: isUnsold,
@@ -310,10 +347,17 @@ function mapPlayers(plan, docs) {
   }
 }
 
-function mapAuctionStates(plan, docs) {
+function mapAuctionStates(plan, docs, playerClassCodes) {
   for (const [index, doc] of docs.entries()) {
     const path = `auctionStates[${index}]`;
     const tournamentId = text(doc.tournamentId, `${path}.tournamentId`, { required: true });
+    const codes = playerClassCodes.get(tournamentId);
+    const sourceCurrentClass = text(doc.currentAuctionClass, `${path}.currentAuctionClass`);
+    const currentAuctionClass = sourceCurrentClass === null ? null : codes?.get(sourceCurrentClass) ?? sourceCurrentClass;
+    if (sourceCurrentClass !== null && currentAuctionClass !== sourceCurrentClass) {
+      plan.normalizations.push(`${path}.currentAuctionClass mapped legacy label ${JSON.stringify(sourceCurrentClass)} to code ${JSON.stringify(currentAuctionClass)}`);
+    }
+    if (currentAuctionClass !== null && currentAuctionClass.length > 10) fail(`${path}.currentAuctionClass`, 'is not a configured class code and exceeds 10 characters');
     const currentBid = integer(doc.currentBid, `${path}.currentBid`, { defaultValue: 0 });
     if (currentBid < 0) fail(`${path}.currentBid`, 'must not be negative');
     addRow(plan, 'auction_state', {
@@ -323,7 +367,7 @@ function mapAuctionStates(plan, docs) {
       current_bid: currentBid,
       winning_team_id: text(doc.winningTeamId, `${path}.winningTeamId`),
       current_auction_status: enumValue(doc.currentAuctionStatus, AUCTION_STATUSES, `${path}.currentAuctionStatus`, 'Pending'),
-      current_auction_class: text(doc.currentAuctionClass, `${path}.currentAuctionClass`, { maxLength: 10 }),
+      current_auction_class: currentAuctionClass,
       ...timestamps(doc, path),
     });
     const history = doc.history ?? [];
@@ -344,7 +388,10 @@ function mapAuctionStates(plan, docs) {
     }
     const completed = doc.completedClasses ?? [];
     if (!Array.isArray(completed)) fail(`${path}.completedClasses`, 'must be an array');
-    for (const [childIndex, code] of completed.entries()) {
+    for (const [childIndex, sourceCode] of completed.entries()) {
+      const rawCode = text(sourceCode, `${path}.completedClasses[${childIndex}]`, { required: true });
+      const code = codes?.get(rawCode) ?? rawCode;
+      if (code !== rawCode) plan.normalizations.push(`${path}.completedClasses[${childIndex}] mapped legacy label ${JSON.stringify(rawCode)} to code ${JSON.stringify(code)}`);
       addRow(plan, 'completed_classes', {
         tournament_id: tournamentId,
         class_code: text(code, `${path}.completedClasses[${childIndex}]`, { required: true, maxLength: 10 }),
@@ -488,14 +535,97 @@ export function buildImportPlan(source) {
     if (!Array.isArray(docs)) fail(key, 'must be an array of Mongo documents');
     plan.sourceCounts[key] = docs.length;
   }
-  mapTournaments(plan, source.tournaments ?? []);
-  mapTeams(plan, source.teams ?? []);
-  mapPlayers(plan, source.players ?? []);
-  mapAuctionStates(plan, source.auctionStates ?? []);
-  mapCustomers(plan, source.customers ?? []);
-  mapFinancialDocuments(plan, source.invoices ?? [], 'invoice');
-  mapFinancialDocuments(plan, source.quotations ?? [], 'quotation');
-  mapOverlays(plan, source);
+  const tournaments = source.tournaments ?? [];
+  const tournamentIds = sourceIds(tournaments);
+  const playerClassCodes = new Map(tournaments.map((tournament) => [
+    String(tournament._id),
+    new Map((tournament.playerClasses ?? []).flatMap((playerClass) => [
+      [playerClass.code, playerClass.code],
+      [playerClass.name, playerClass.code],
+    ])),
+  ]));
+  mapTournaments(plan, tournaments);
+
+  const teams = splitActiveRecords(
+    plan, 'teams', source.teams ?? [],
+    (doc) => tournamentIds.has(String(doc.tournamentId)),
+    (doc) => `missing tournament ${JSON.stringify(doc.tournamentId)}`,
+  );
+  const teamIds = sourceIds(teams);
+  mapTeams(plan, teams);
+
+  const players = splitActiveRecords(
+    plan, 'players', source.players ?? [],
+    (doc) => tournamentIds.has(String(doc.tournamentId))
+      && (doc.winningTeamId === undefined || doc.winningTeamId === null || teamIds.has(String(doc.winningTeamId))),
+    (doc) => !tournamentIds.has(String(doc.tournamentId))
+      ? `missing tournament ${JSON.stringify(doc.tournamentId)}`
+      : `missing winning team ${JSON.stringify(doc.winningTeamId)}`,
+  );
+  const playerIds = sourceIds(players);
+  mapPlayers(plan, players, playerClassCodes);
+
+  const auctionStates = splitActiveRecords(
+    plan, 'auctionstates', source.auctionStates ?? [],
+    (doc) => tournamentIds.has(String(doc.tournamentId))
+      && (doc.currentPlayerId === undefined || doc.currentPlayerId === null || playerIds.has(String(doc.currentPlayerId)))
+      && (doc.winningTeamId === undefined || doc.winningTeamId === null || teamIds.has(String(doc.winningTeamId))),
+    (doc) => !tournamentIds.has(String(doc.tournamentId))
+      ? `missing tournament ${JSON.stringify(doc.tournamentId)}`
+      : !playerIds.has(String(doc.currentPlayerId))
+        ? `missing current player ${JSON.stringify(doc.currentPlayerId)}`
+        : `missing winning team ${JSON.stringify(doc.winningTeamId)}`,
+  );
+  mapAuctionStates(plan, auctionStates, playerClassCodes);
+
+  const customers = source.customers ?? [];
+  const customerIds = sourceIds(customers);
+  mapCustomers(plan, customers);
+  const invoices = splitActiveRecords(
+    plan, 'invoices', source.invoices ?? [],
+    (doc) => customerIds.has(String(doc.customerId)),
+    (doc) => `missing customer ${JSON.stringify(doc.customerId)}`,
+  );
+  const invoiceIds = sourceIds(invoices);
+  mapFinancialDocuments(plan, invoices, 'invoice');
+  const quotations = splitActiveRecords(
+    plan, 'quotations', source.quotations ?? [],
+    (doc) => customerIds.has(String(doc.customerId))
+      && (doc.convertedToInvoiceId === undefined || doc.convertedToInvoiceId === null || invoiceIds.has(String(doc.convertedToInvoiceId))),
+    (doc) => !customerIds.has(String(doc.customerId))
+      ? `missing customer ${JSON.stringify(doc.customerId)}`
+      : `missing converted invoice ${JSON.stringify(doc.convertedToInvoiceId)}`,
+  );
+  mapFinancialDocuments(plan, quotations, 'quotation');
+
+  const overlayConfigs = splitActiveRecords(
+    plan, 'overlayconfigs', source.overlayConfigs ?? [],
+    (doc) => doc.tournamentId === undefined || doc.tournamentId === null || tournamentIds.has(String(doc.tournamentId)),
+    (doc) => `missing tournament ${JSON.stringify(doc.tournamentId)}`,
+  );
+  const overlayConfigIds = sourceIds(overlayConfigs);
+  const overlayHistory = splitActiveRecords(
+    plan, 'overlayhistories', source.overlayHistory ?? [],
+    (doc) => overlayConfigIds.has(String(doc.overlayConfigId)),
+    (doc) => `missing overlay config ${JSON.stringify(doc.overlayConfigId)}`,
+  );
+  const overlayAnalytics = splitActiveRecords(
+    plan, 'overlayanalytics', source.overlayAnalytics ?? [],
+    (doc) => overlayConfigIds.has(String(doc.overlayConfigId)),
+    (doc) => `missing overlay config ${JSON.stringify(doc.overlayConfigId)}`,
+  );
+  const overlaySessions = splitActiveRecords(
+    plan, 'overlaysessions', source.overlaySessions ?? [],
+    (doc) => tournamentIds.has(String(doc.tournamentId)),
+    (doc) => `missing tournament ${JSON.stringify(doc.tournamentId)}`,
+  );
+  mapOverlays(plan, {
+    ...source,
+    overlayConfigs,
+    overlayHistory,
+    overlayAnalytics,
+    overlaySessions,
+  });
   return plan;
 }
 

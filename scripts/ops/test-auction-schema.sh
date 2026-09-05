@@ -9,7 +9,7 @@
 #
 # Optional:
 #   POSTGRES_IMAGE=postgres:18-alpine   client/server image to test against
-#   MIGRATION_FILE=drizzle/auction/0000_auction_schema_initial.sql
+#   MIGRATION_FILE=drizzle/auction/0000_auction_schema_initial.sql  # test one file only
 #
 # Test 6 is the important one: it proves a failed multi-step sale rolls back
 # atomically. In MongoDB that same guarantee requires the hand-written
@@ -18,11 +18,13 @@
 set -euo pipefail
 
 POSTGRES_IMAGE="${POSTGRES_IMAGE:-postgres:18-alpine}"
-MIGRATION_FILE="${MIGRATION_FILE:-drizzle/auction/0000_auction_schema_initial.sql}"
-
-if [[ ! -f "$MIGRATION_FILE" ]]; then
-  echo "Migration file not found: ${MIGRATION_FILE}" >&2
-  echo "Run: npx drizzle-kit generate" >&2
+if [[ -n "${MIGRATION_FILE:-}" ]]; then
+  MIGRATION_FILES=("$MIGRATION_FILE")
+else
+  mapfile -t MIGRATION_FILES < <(find drizzle/auction -maxdepth 1 -name '*.sql' -type f | sort)
+fi
+if [[ "${#MIGRATION_FILES[@]}" -eq 0 ]] || [[ ! -f "${MIGRATION_FILES[0]}" ]]; then
+  echo "No migration SQL files found. Run: npx drizzle-kit generate" >&2
   exit 2
 fi
 
@@ -62,14 +64,16 @@ done
 psql_q() { docker exec -i "$CONTAINER" psql -U tester -d testdb -Atq 2>&1; }
 psql_val() { docker exec "$CONTAINER" psql -U tester -d testdb -Atqc "$1"; }
 
-echo "Applying ${MIGRATION_FILE}..."
-docker exec -i "$CONTAINER" psql -U tester -d testdb -v ON_ERROR_STOP=1 \
-  < "$MIGRATION_FILE" >/dev/null
+echo "Applying ${#MIGRATION_FILES[@]} migration file(s)..."
+for migration_file in "${MIGRATION_FILES[@]}"; do
+  docker exec -i "$CONTAINER" psql -U tester -d testdb -v ON_ERROR_STOP=1 \
+    < "$migration_file" >/dev/null
+done
 echo "Applied."
 echo
 
 echo "Structure"
-check "22 tables created" "22" \
+check "23 tables created" "23" \
   "$(psql_val "SELECT count(*) FROM information_schema.tables WHERE table_schema='auction' AND table_type='BASE TABLE';")"
 # The shared public schema is owned by the Scoreboard repo. These migrations
 # must never create anything there.

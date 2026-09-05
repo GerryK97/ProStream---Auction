@@ -225,7 +225,19 @@ async function main() {
 
   console.table(Object.entries(counts).map(([table, count]) => ({ table: `auction.${table}`, rows: count })));
   console.log(`Validated ${Object.values(plan.sourceCounts).reduce((total, count) => total + count, 0)} Mongo documents. Plan fingerprint: ${fingerprint}`);
-  for (const normalization of plan.normalizations) console.warn(`ETL normalization: ${normalization}`);
+  if (plan.normalizations.length) {
+    const normalizationKinds = Object.groupBy(plan.normalizations, (normalization) => normalization
+      .replace(/\[[^\]]*\]/g, '[]')
+      .replace(/mapped legacy label .* to code .*/, 'mapped legacy label to code')
+      .replace(/ignored inert legacy .*/, 'ignored inert legacy placeholder'));
+    console.warn(`ETL applied ${plan.normalizations.length} explicit compatibility normalizations: ${Object.entries(normalizationKinds).map(([kind, rows]) => `${kind} (${rows.length})`).join('; ')}`);
+    for (const normalization of plan.normalizations.slice(0, 10)) console.warn(`ETL normalization sample: ${normalization}`);
+    if (plan.normalizations.length > 10) console.warn(`ETL normalization samples truncated: ${plan.normalizations.length - 10} additional transformations recorded in the deterministic import plan.`);
+  }
+  if (plan.legacyRecords.length) {
+    const byCollection = Object.groupBy(plan.legacyRecords, ({ sourceCollection }) => sourceCollection);
+    console.warn(`ETL archived ${plan.legacyRecords.length} legacy records with missing relational parents: ${Object.entries(byCollection).map(([collection, rows]) => `${collection}=${rows.length}`).join(', ')}`);
+  }
 
   if (mode === '--dry-run') {
     console.log('Dry run passed. PostgreSQL was not opened and no data was written.');
@@ -255,6 +267,7 @@ async function main() {
         'overlay_configs', 'overlay_scenes', 'overlay_history', 'overlay_analytics', 'overlay_library', 'overlay_sessions',
         // Customers are required by both financial document tables.
         'customers', 'invoices', 'invoice_line_items', 'quotations', 'quotation_line_items',
+        'migration_legacy_records',
       ]) await insertRows(client, table, plan.tables[table]);
       await reconcile(client, plan);
       await client.query('COMMIT');

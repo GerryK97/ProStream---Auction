@@ -8,6 +8,13 @@
       "when": 1788592372545,
       "tag": "0000_auction_schema_initial",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788594913341,
+      "tag": "0001_milky_golden_guardian",
+      "breakpoints": true
     }
   ]
 }

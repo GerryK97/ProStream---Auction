@@ -38,6 +38,13 @@ assert.deepEqual(plan.tables.players[0].stats, { runs: 12 });
 assert.equal(counts.invoice_line_items, 1);
 assert.equal(counts.quotation_line_items, 1);
 assert.equal(counts.overlay_sessions, 1);
+const orphanPlan = buildImportPlan({
+  ...source,
+  players: [{ ...source.players[0], tournamentId: 'deleted-tournament' }],
+});
+assert.equal(orphanPlan.tables.players.length, 0);
+assert.equal(orphanPlan.tables.migration_legacy_records.length, 2, 'the dependent auction state is also quarantined');
+assert.equal(orphanPlan.tables.migration_legacy_records[0].source_collection, 'players');
 const legacyBracketPlan = buildImportPlan({
   ...source,
   tournaments: [{

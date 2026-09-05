@@ -37,6 +37,31 @@ import {
 
 export const auction = pgSchema('auction');
 
+/**
+ * Raw, immutable preservation for legacy Mongo records whose parent was
+ * deleted before the relational migration. These rows are intentionally kept
+ * out of live tables because inventing a tournament/team parent would make
+ * them appear live to the application. ETL reconciliation covers this table.
+ */
+export const migrationLegacyRecords = auction.table(
+  'migration_legacy_records',
+  {
+    id: integer('id').generatedAlwaysAsIdentity().primaryKey(),
+    sourceCollection: text('source_collection').notNull(),
+    sourceId: text('source_id').notNull(),
+    reason: text('reason').notNull(),
+    record: jsonb('record').notNull(),
+    archivedAt: timestamp('archived_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    sourceRecordIdx: uniqueIndex('migration_legacy_records_source_id_idx').on(
+      table.sourceCollection,
+      table.sourceId,
+    ),
+    sourceCollectionIdx: index('migration_legacy_records_collection_idx').on(table.sourceCollection),
+  }),
+);
+
 /* ── Enums ──────────────────────────────────────────────────────────────── */
 
 export const tournamentStatusEnum = auction.enum('tournament_status', [
