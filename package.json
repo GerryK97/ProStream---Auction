@@ -15,7 +15,12 @@
     "db:auction:migrate": "drizzle-kit migrate",
     "db:auction:etl:dry-run": "node scripts/ops/auction-mongo-to-postgres.mjs --dry-run",
     "db:auction:etl:apply": "node scripts/ops/auction-mongo-to-postgres.mjs --apply",
-    "db:auction:etl:verify": "node scripts/ops/auction-mongo-to-postgres.mjs --verify"
+    "db:auction:etl:verify": "node scripts/ops/auction-mongo-to-postgres.mjs --verify",
+    "test:cloudinary-r2-backfill": "node scripts/ops/test-cloudinary-r2-backfill-mapping.mjs",
+    "media:backfill:scan": "node scripts/ops/cloudinary-r2-backfill.mjs --scan",
+    "media:backfill:copy": "node scripts/ops/cloudinary-r2-backfill.mjs --copy",
+    "media:backfill:verify": "node scripts/ops/cloudinary-r2-backfill.mjs --verify",
+    "media:backfill:rewrite": "node scripts/ops/cloudinary-r2-backfill.mjs --rewrite"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1127.0",
