@@ -3,7 +3,7 @@
  * Generates optimized image URLs with dynamic transformations based on usage context
  */
 
-import { buildImageUrl } from './cloudinaryUtils';
+import { buildImageUrl, isR2MediaUrl } from './cloudinaryUtils';
 
 export type ImageSize =
   | 'thumbnail' // 64x64 - Small avatars, icons
@@ -57,6 +57,23 @@ export function optimizeImage(
       ? SIZE_PRESETS[size as Exclude<ImageSize, 'original'>]
       : typeof size === 'string' ? {} : size;
     return buildImageUrl(url, { width: options.width ?? 200, height: options.height ?? 200 })
+  }
+
+  // New R2 media uses Cloudflare Images at the edge. Keep the application's
+  // existing presets, while mapping their crop/format choices to the provider-
+  // neutral URL builder. Legacy Cloudinary URLs continue through the branch
+  // below unchanged.
+  if (isR2MediaUrl(url)) {
+    const options: TransformOptions = typeof size === 'string' && size !== 'original'
+      ? SIZE_PRESETS[size as Exclude<ImageSize, 'original'>]
+      : typeof size === 'string' ? {} : size;
+    if (Object.keys(options).length === 0) return url;
+    return buildImageUrl(url, {
+      width: options.width ?? 200,
+      height: options.height ?? 200,
+      fit: options.crop === 'fit' ? 'fit' : options.crop === 'scale' ? 'scale' : options.crop === 'limit' ? 'limit' : 'fill',
+      format: options.format === 'jpg' ? 'jpg' : options.format === 'png' ? 'png' : options.format === 'webp' ? 'webp' : 'auto',
+    });
   }
 
   // Return original URL if not a Cloudinary URL

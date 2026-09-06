@@ -13,7 +13,7 @@ export const TEAM_OFFICIAL_ROLES: TeamOfficialRole[] = ['Owner', 'Manager', 'Cap
 export interface TeamOfficial {
   role: TeamOfficialRole;
   name: string;
-  photoURL?: string; // Cloudinary URL
+  photoURL?: string; // Legacy Cloudinary ID/URL or R2 public media URL
 }
 
 /** Per-tournament config: which official roles are enabled and which are required on team create. */

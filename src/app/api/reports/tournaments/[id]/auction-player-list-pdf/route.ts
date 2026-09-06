@@ -87,7 +87,7 @@ function drawPageFooter(doc: PDFKit.PDFDocument, pageNumber: number, totalPlayer
 async function fetchPhoto(photoURL: string | undefined): Promise<Buffer | null> {
   if (!photoURL) return null;
   // Force a square JPEG at 2x display size for crisp print; pdfkit can't decode webp.
-  const url = buildImageUrl(photoURL, { width: 220, height: 220, fit: 'fill' }).replace('f_webp', 'f_jpg');
+  const url = buildImageUrl(photoURL, { width: 220, height: 220, fit: 'fill', format: 'jpg' });
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
     if (!res.ok) return null;
