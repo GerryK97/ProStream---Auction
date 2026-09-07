@@ -102,7 +102,11 @@ export async function getAuctionBootstrapData(
       };
     }
 
-    // Build query based on user role (same logic as /api/tournaments/active)
+    // Prefer a currently running or paused auction. If the user has none, fall
+    // back to their most recently updated Draft so its operator can prepare it
+    // and start it. Restricting this lookup to Live/Stopped made a newly created
+    // assigned tournament disappear from the Auction workspace until an admin
+    // changed its status.
     const query: any = { status: { $in: ['Live', 'Stopped'] } };
 
     // Admin sees ANY active tournament
@@ -117,6 +121,16 @@ export async function getAuctionBootstrapData(
     tournamentDoc = (await TournamentModel.findOne(query)
       .sort({ updatedAt: -1 })
       .lean()) as Tournament | null;
+
+    if (!tournamentDoc) {
+      const draftQuery: any = { status: 'Draft' };
+      if (userRole !== 'Admin') {
+        draftQuery._id = { $in: assignedTournaments || [] };
+      }
+      tournamentDoc = (await TournamentModel.findOne(draftQuery)
+        .sort({ updatedAt: -1 })
+        .lean()) as Tournament | null;
+    }
   }
 
   if (!tournamentDoc) {

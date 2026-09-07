@@ -4,7 +4,8 @@ import { TournamentModel } from '@/models/Tournament';
 import { validateOverlayToken, getOverlayTokenFromRequest } from '@/lib/overlay-auth';
 import { getUserFromRequest } from '@/lib/request-helpers';
 
-// GET /api/tournaments/active - Get currently active (Live or Stopped) tournament
+// GET /api/tournaments/active - Get the active tournament, or the newest
+// accessible Draft for an authenticated operator to prepare and start.
 // Supports overlay token authentication for OBS browser sources
 export async function GET(request: NextRequest) {
   try {
@@ -57,13 +58,27 @@ export async function GET(request: NextRequest) {
       query._id = { $in: user!.assignedTournaments || [] };
     }
 
-    // Find tournament with Live or Stopped status (scoped by user)
-    const activeTournament = await TournamentModel.findOne(query)
+    // Find tournament with Live or Stopped status (scoped by user).
+    let activeTournament = await TournamentModel.findOne(query)
       .sort({ _id: -1 }) // Get most recent if multiple
       .lean();
 
-    // Return null with 200 status if no active tournament (this is an expected state, not an error)
-    // This prevents console errors when no auction is running
+    // A Draft is not public overlay content, but an authenticated operator must
+    // be able to open the Auction workspace to prepare and start one. Keep the
+    // active status preference, then use the newest accessible Draft only when
+    // no Live/Stopped tournament exists.
+    if (!activeTournament) {
+      const draftQuery: any = { status: 'Draft' };
+      if (user!.role !== 'Admin') {
+        draftQuery._id = { $in: user!.assignedTournaments || [] };
+      }
+      activeTournament = await TournamentModel.findOne(draftQuery)
+        .sort({ updatedAt: -1 })
+        .lean();
+    }
+
+    // Return null with 200 status if no accessible active or Draft tournament
+    // exists. This prevents console errors for a newly provisioned user.
     if (!activeTournament) {
       return NextResponse.json(null);
     }
