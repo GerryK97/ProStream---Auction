@@ -42,6 +42,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<void>;
   signup: (username: string, email: string, password: string, mobileNumber?: string) => Promise<{ user?: User; token?: string | null }>;
+  sendLoginOtp: (phone: string) => Promise<{ sent: boolean; phone: string }>;
+  loginWithOtp: (phone: string, otp: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
   error: string | null;
@@ -165,6 +167,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const sendLoginOtp = async (phone: string): Promise<{ sent: boolean; phone: string }> => {
+    setError(null);
+    const response = await fetch('/api/auth/otp-login/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      const errorMessage = data.error || 'Failed to send OTP';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+    if (!data.sent) {
+      const errorMessage = 'No account found for that mobile number.';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+    return { sent: data.sent, phone: data.phone };
+  };
+
+  const loginWithOtp = async (phone: string, otp: string): Promise<void> => {
+    try {
+      setError(null);
+      setIsLoading(true);
+
+      const response = await fetch('/api/auth/otp-login/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, otp }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Invalid or expired code');
+      }
+
+      localStorage.setItem('auth_token', data.token);
+      setToken(data.token);
+      setUser(data.user);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred during login';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const signup = async (
     username: string,
     email: string,
@@ -249,6 +301,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: !!user && !!token,
     login,
     signup,
+    sendLoginOtp,
+    loginWithOtp,
     logout,
     refreshSession,
     error,

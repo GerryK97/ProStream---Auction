@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import TextField from '@/components/forms/TextField';
 
-export default function LoginPage() {
+function PasswordLoginForm() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -31,6 +31,208 @@ export default function LoginPage() {
   };
 
   const passwordToggleLabel = showPassword ? 'Hide password' : 'Show password';
+
+  return (
+    <>
+      <div className="min-h-[48px]">
+        {error && (
+          <div
+            role="alert"
+            className="rounded-2xl p-3 text-sm"
+            style={{
+              color: 'var(--status-danger)',
+              border: '1px solid color-mix(in oklab, var(--status-danger) 40%, transparent)',
+              background: 'color-mix(in oklab, var(--status-danger) 12%, transparent)'
+            }}
+          >
+            {error}
+          </div>
+        )}
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <TextField
+          id="username"
+          label="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="e.g. auction-admin"
+          disabled={isLoading}
+          autoCapitalize="none"
+          autoComplete="username"
+          inputMode="text"
+          helperText="Use the username assigned by your tournament admin"
+          required
+        />
+
+        <TextField
+          id="password"
+          label="Password"
+          type={showPassword ? 'text' : 'password'}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Enter your password"
+          disabled={isLoading}
+          autoCapitalize="none"
+          autoComplete="current-password"
+          helperText="Minimum 8 characters"
+          required
+          trailing={
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="text-xs font-semibold uppercase tracking-widest"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              {passwordToggleLabel}
+            </button>
+          }
+        />
+
+        <button
+          type="submit"
+          disabled={isLoading || !username || !password}
+          className="w-full rounded-2xl px-4 py-3 text-base font-semibold transition disabled:cursor-not-allowed"
+          style={{
+            backgroundColor: 'var(--brand-primary)',
+            color: '#fff',
+            opacity: isLoading || !username || !password ? 0.5 : 1
+          }}
+        >
+          {isLoading ? 'Signing in…' : 'Login'}
+        </button>
+      </form>
+    </>
+  );
+}
+
+function OtpLoginForm() {
+  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+  const [info, setInfo] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const { sendLoginOtp, loginWithOtp } = useAuth();
+  const router = useRouter();
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+    try {
+      const result = await sendLoginOtp(phone);
+      setInfo(`We sent a code to ${result.phone}. Enter it below.`);
+      setStep('otp');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send code. Check the number and try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+    try {
+      await loginWithOtp(phone, otp);
+      router.push('/');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Invalid or expired code.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="min-h-[48px]">
+        {error && (
+          <div
+            role="alert"
+            className="rounded-2xl p-3 text-sm"
+            style={{
+              color: 'var(--status-danger)',
+              border: '1px solid color-mix(in oklab, var(--status-danger) 40%, transparent)',
+              background: 'color-mix(in oklab, var(--status-danger) 12%, transparent)'
+            }}
+          >
+            {error}
+          </div>
+        )}
+      </div>
+
+      {step === 'phone' ? (
+        <form onSubmit={handleSend} className="space-y-5">
+          <TextField
+            id="phone"
+            label="Mobile number"
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+94 77 123 4567"
+            disabled={isLoading}
+            autoComplete="tel"
+            helperText="Enter the mobile number linked with your account"
+            required
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !phone}
+            className="w-full rounded-2xl px-4 py-3 text-base font-semibold transition disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: 'var(--brand-primary)',
+              color: '#fff',
+              opacity: isLoading || !phone ? 0.5 : 1
+            }}
+          >
+            {isLoading ? 'Sending…' : 'Send Code'}
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={handleVerify} className="space-y-5">
+          {info ? <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>{info}</p> : null}
+          <TextField
+            id="otp"
+            label="6-digit code"
+            inputMode="numeric"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value)}
+            maxLength={6}
+            style={{ letterSpacing: '0.3em', textAlign: 'center' }}
+            disabled={isLoading}
+            autoFocus
+            required
+          />
+          <button
+            type="submit"
+            disabled={isLoading || otp.length < 6}
+            className="w-full rounded-2xl px-4 py-3 text-base font-semibold transition disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: 'var(--brand-primary)',
+              color: '#fff',
+              opacity: isLoading || otp.length < 6 ? 0.5 : 1
+            }}
+          >
+            {isLoading ? 'Verifying…' : 'Verify & Sign In'}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setStep('phone'); setOtp(''); setError(''); setInfo(''); }}
+            className="w-full text-center text-sm transition"
+            style={{ color: 'var(--text-tertiary)' }}
+          >
+            Use a different number
+          </button>
+        </form>
+      )}
+    </>
+  );
+}
+
+export default function LoginPage() {
+  const [mode, setMode] = useState<'password' | 'otp'>('password');
 
   return (
     <div className="relative min-h-[100dvh]" style={{ backgroundColor: 'var(--surface-primary)', color: 'var(--text-primary)' }}>
@@ -92,79 +294,40 @@ export default function LoginPage() {
             border: `1px solid var(--border-primary)`,
             backgroundColor: 'var(--surface-secondary)'
           }}>
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Login to ProStream</h2>
-              <p className="mt-2 text-sm" style={{ color: 'var(--text-tertiary)' }}>Enter your credentials to continue.</p>
-            </div>
-
-            <div className="min-h-[48px]">
-              {error && (
-                <div
-                  role="alert"
-                  className="rounded-2xl p-3 text-sm"
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Login to ProStream</h2>
+                <p className="mt-2 text-sm" style={{ color: 'var(--text-tertiary)' }}>
+                  {mode === 'password' ? 'Enter your credentials to continue.' : 'Sign in with a code sent to your mobile.'}
+                </p>
+              </div>
+              <div className="flex rounded-full p-1 text-xs font-medium" style={{ backgroundColor: 'var(--surface-elevated)' }}>
+                <button
+                  type="button"
+                  onClick={() => setMode('password')}
+                  className="rounded-full px-3 py-1.5 transition"
                   style={{
-                    color: 'var(--status-danger)',
-                    border: '1px solid color-mix(in oklab, var(--status-danger) 40%, transparent)',
-                    background: 'color-mix(in oklab, var(--status-danger) 12%, transparent)'
+                    backgroundColor: mode === 'password' ? 'var(--brand-primary)' : 'transparent',
+                    color: mode === 'password' ? '#fff' : 'var(--text-tertiary)',
                   }}
                 >
-                  {error}
-                </div>
-              )}
+                  Password
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('otp')}
+                  className="rounded-full px-3 py-1.5 transition"
+                  style={{
+                    backgroundColor: mode === 'otp' ? 'var(--brand-primary)' : 'transparent',
+                    color: mode === 'otp' ? '#fff' : 'var(--text-tertiary)',
+                  }}
+                >
+                  Mobile OTP
+                </button>
+              </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <TextField
-                id="username"
-                label="Username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="e.g. auction-admin"
-                disabled={isLoading}
-                autoCapitalize="none"
-                autoComplete="username"
-                inputMode="text"
-                helperText="Use the username assigned by your tournament admin"
-                required
-              />
-
-              <TextField
-                id="password"
-                label="Password"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                disabled={isLoading}
-                autoCapitalize="none"
-                autoComplete="current-password"
-                helperText="Minimum 8 characters"
-                required
-                trailing={
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="text-xs font-semibold uppercase tracking-widest"
-                    style={{ color: 'var(--text-secondary)' }}
-                  >
-                    {passwordToggleLabel}
-                  </button>
-                }
-              />
-
-              <button
-                type="submit"
-                disabled={isLoading || !username || !password}
-                className="w-full rounded-2xl px-4 py-3 text-base font-semibold transition disabled:cursor-not-allowed"
-                style={{
-                  backgroundColor: 'var(--brand-primary)',
-                  color: '#fff',
-                  opacity: isLoading || !username || !password ? 0.5 : 1
-                }}
-              >
-                {isLoading ? 'Signing in…' : 'Login'}
-              </button>
-            </form>
+            {mode === 'password' ? <PasswordLoginForm /> : <OtpLoginForm />}
 
             <div className="mt-6 text-center text-sm" style={{ color: 'var(--text-tertiary)' }}>
               Don't have an account?{' '}
