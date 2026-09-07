@@ -213,8 +213,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Resolve the actual username for the immediate response so the client
+    // doesn't have to refetch just to replace the raw user id it briefly
+    // shows (e.g. "u-1763296676953-vy2r3f") with "admin".
+    const [creator] = await getUsersByIds([user.userId]);
+
     return NextResponse.json(
-      { ...newTournament, createdByUsername: user.userId },
+      {
+        ...serializeTournament(newTournament as any),
+        createdByUsername: creator?.username ?? user.userId,
+      },
       { status: 201 }
     );
   } catch (error) {
