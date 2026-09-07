@@ -127,8 +127,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   let deduction: Awaited<ReturnType<typeof deductWalletBalance>> | null = null;
   let requestedTournamentName = 'Unknown tournament';
+  let requestedTournamentId: string | null = null;
   let requestedUserId: string | null = null;
   let chargedUserId: string | null = null;
+  let entitlementCreatedAt: Date | null = null;
+  let createdSessionIds: string[] = [];
+  let revokedSessionIds: string[] = [];
 
   try {
     await connectToDatabase();
@@ -151,6 +155,7 @@ export async function POST(request: NextRequest) {
     if (!tournamentId) {
       return NextResponse.json({ error: 'Missing required field: tournamentId' }, { status: 400 });
     }
+    requestedTournamentId = String(tournamentId);
     if (!isFullscreenVariant(requestedVariant)) {
       return NextResponse.json({
         error: 'invalid_overlay_variant',
@@ -182,7 +187,7 @@ export async function POST(request: NextRequest) {
     const playerLimit = existingEntitlement?.playerLimit ?? resolvePlayerLimit(playerCount);
     const packagePrice = existingEntitlement
       ? 0
-      : (isAdmin && !isBillingAnotherUser ? 0 : calculatePackagePrice(playerCount, packagePrices));
+      : calculatePackagePrice(playerCount, packagePrices);
 
     if (packagePrice > 0) {
       try {
@@ -213,8 +218,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Persist the entitlement before creating sessions: this is what caps the
-    // player count, and it must not be missed if session creation fails later.
+    // player count. The catch block compensates it if generating sessions fails.
     if (!existingEntitlement) {
+      entitlementCreatedAt = new Date();
       await TournamentModel.updateOne(
         { _id: tournamentId },
         {
@@ -223,7 +229,7 @@ export async function POST(request: NextRequest) {
               playerLimit,
               pricePaid: packagePrice,
               overlayVariant,
-              purchasedAt: new Date(),
+              purchasedAt: entitlementCreatedAt,
               purchasedBy: user.userId,
               billedUserId: chargeUserId,
               playerCountAtPurchase: playerCount,
@@ -241,6 +247,11 @@ export async function POST(request: NextRequest) {
     // Replace any existing active sessions for these types so the tournament
     // ends up with exactly one live link per output.
     const typesToCreate: AuctionOverlayType[] = [overlayVariant, ...ALWAYS_INCLUDED_TYPES];
+    const activeSessionsToReplace = await OverlaySessionModel.find(
+      { tournamentId, overlayType: { $in: typesToCreate }, isActive: true },
+      { _id: 1 },
+    ).lean();
+    revokedSessionIds = activeSessionsToReplace.map(session => String(session._id));
     await OverlaySessionModel.updateMany(
       { tournamentId, overlayType: { $in: typesToCreate }, isActive: true },
       { $set: { isActive: false, revokedAt: new Date() } },
@@ -265,6 +276,7 @@ export async function POST(request: NextRequest) {
         isActive: true,
       });
       sessions.push(session);
+      createdSessionIds.push(String(session._id));
     }
 
     if (isBillingAnotherUser && packagePrice > 0) {
@@ -302,6 +314,28 @@ export async function POST(request: NextRequest) {
       alreadyPurchased: Boolean(existingEntitlement),
     }, { status: 201 });
   } catch (error) {
+    // Restore MongoDB state first. The package should not remain unlocked when
+    // creation failed, particularly if the accompanying wallet refund succeeds.
+    try {
+      if (createdSessionIds.length > 0) {
+        await OverlaySessionModel.deleteMany({ _id: { $in: createdSessionIds } });
+      }
+      if (revokedSessionIds.length > 0) {
+        await OverlaySessionModel.updateMany(
+          { _id: { $in: revokedSessionIds } },
+          { $set: { isActive: true }, $unset: { revokedAt: 1 } },
+        );
+      }
+      if (entitlementCreatedAt && requestedTournamentId) {
+        await TournamentModel.updateOne(
+          { _id: requestedTournamentId, 'packageEntitlement.purchasedAt': entitlementCreatedAt },
+          { $unset: { packageEntitlement: 1 } },
+        );
+      }
+    } catch (compensationError) {
+      console.error('CRITICAL: Failed to compensate a partial overlay package generation:', compensationError, error);
+    }
+
     if (deduction && chargedUserId) {
       try {
         const refund = await creditWalletBalance({

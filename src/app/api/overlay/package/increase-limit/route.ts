@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       : (isAdmin ? entitlement.billedUserId : user.userId);
     chargedUserId = chargeUserId;
 
-    const chargeAmount = isAdmin && !isBillingAnotherUser ? 0 : upgradePrice;
+    const chargeAmount = upgradePrice;
 
     if (chargeAmount > 0) {
       try {

@@ -14,6 +14,7 @@ import {
   buildAuctionOverlayUrl,
   getAuctionOverlayConfig,
 } from '@/lib/overlays/auctionOverlayTypes';
+import { PACKAGE_PLAYER_BLOCK_SIZE, calculateLimitIncreasePrice } from '@/lib/overlays/auctionPackagePricing';
 
 interface OverlaySession {
   _id: string;
@@ -86,6 +87,9 @@ function SessionsPage() {
   const [selectedPalette, setSelectedPalette] = useState('default');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [upgradeTarget, setUpgradeTarget] = useState('');
+  const [upgrading, setUpgrading] = useState(false);
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
 
   const [justCreated, setJustCreated] = useState<OverlaySession[]>([]);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
@@ -117,8 +121,15 @@ function SessionsPage() {
         fetched.forEach(s => { if (s.palette && !next[s._id]) next[s._id] = s.palette; });
         return next;
       });
-      setPackagePrices({ ...DEFAULT_PACKAGE_PRICES, ...(data.packagePrices ?? {}) });
-      setQuote(data.quote ?? null);
+      const nextPrices = { ...DEFAULT_PACKAGE_PRICES, ...(data.packagePrices ?? {}) };
+      const nextQuote = data.quote ?? null;
+      setPackagePrices(nextPrices);
+      setQuote(nextQuote);
+      if (nextQuote?.alreadyPurchased) {
+        setUpgradeTarget(String(nextQuote.playerLimit + PACKAGE_PLAYER_BLOCK_SIZE));
+      } else {
+        setUpgradeTarget('');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch sessions');
     } finally {
@@ -134,6 +145,10 @@ function SessionsPage() {
   const selectedPaletteConfig = availablePalettes.find(p => p.id === selectedPalette) || availablePalettes[0];
   const selectedTypeConfig = getAuctionOverlayConfig(selectedVariant);
   const packageCharge = quote?.alreadyPurchased ? 0 : (quote?.price ?? packagePrices.basePrice);
+  const requestedUpgradeTarget = Number(upgradeTarget);
+  const upgradePrice = quote?.alreadyPurchased && Number.isFinite(requestedUpgradeTarget)
+    ? calculateLimitIncreasePrice(quote.playerLimit, requestedUpgradeTarget, packagePrices)
+    : 0;
   const previewUrl = createTournamentId
     ? buildAuctionOverlayUrl(getOrigin(), createTournamentId, selectedVariant, undefined, {
         theme: selectedTheme,
@@ -224,6 +239,39 @@ function SessionsPage() {
       setCreateError('An error occurred while generating the overlay package. If the wallet was deducted, the server will attempt an automatic refund.');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleIncreasePlayerLimit = async () => {
+    if (!createTournamentId || !quote?.alreadyPurchased) return;
+    const targetPlayerCount = Number(upgradeTarget);
+    if (!Number.isFinite(targetPlayerCount) || targetPlayerCount <= quote.playerLimit) {
+      setUpgradeError(`Enter a player count above the current ${quote.playerLimit} player limit.`);
+      return;
+    }
+
+    setUpgrading(true);
+    setUpgradeError(null);
+    try {
+      const res = await fetch('/api/overlay/package/increase-limit', {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournamentId: createTournamentId, targetPlayerCount }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.error === 'insufficient_balance') {
+          setUpgradeError(`Insufficient wallet balance. Required ${formatCredits(data.requiredAmount ?? 0)}, available ${formatCredits(data.currentBalance ?? 0)}.`);
+        } else {
+          setUpgradeError(data.message || data.error || 'Failed to increase the player limit.');
+        }
+        return;
+      }
+      await fetchSessions();
+    } catch {
+      setUpgradeError('An error occurred while increasing the player limit. If the wallet was deducted, the server will attempt an automatic refund.');
+    } finally {
+      setUpgrading(false);
     }
   };
 
@@ -473,9 +521,39 @@ function SessionsPage() {
               </dl>
 
               {quote?.alreadyPurchased && (
-                <p className="mt-3 rounded-lg p-2 text-[11px]" style={{ backgroundColor: 'var(--surface-card)', color: 'var(--text-tertiary)' }}>
-                  Already purchased. Regenerating links is free and keeps the {quote.playerLimit} player limit.
-                </p>
+                <div className="mt-3 space-y-3 rounded-lg p-3" style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)' }}>
+                  <p className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
+                    Already purchased. Regenerating links is free and keeps the {quote.playerLimit} player limit. Teams remain unlimited.
+                  </p>
+                  <div>
+                    <label className="block text-[11px] font-semibold" style={{ color: 'var(--text-secondary)' }}>Increase player allowance</label>
+                    <p className="mt-1 text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
+                      Extra players are added in blocks of {PACKAGE_PLAYER_BLOCK_SIZE}. The package is never charged a second base fee.
+                    </p>
+                    <div className="mt-2 flex gap-2">
+                      <input
+                        type="number"
+                        min={quote.playerLimit + 1}
+                        step={PACKAGE_PLAYER_BLOCK_SIZE}
+                        value={upgradeTarget}
+                        onChange={event => setUpgradeTarget(event.target.value)}
+                        aria-label="Target player capacity"
+                        className="min-w-0 flex-1 rounded-md px-2 py-1.5 text-xs"
+                        style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleIncreasePlayerLimit}
+                        disabled={upgrading || !Number.isFinite(requestedUpgradeTarget) || requestedUpgradeTarget <= quote.playerLimit}
+                        className="shrink-0 rounded-md px-3 py-1.5 text-xs font-bold disabled:opacity-50"
+                        style={{ backgroundColor: 'var(--brand-primary)', color: '#fff' }}
+                      >
+                        {upgrading ? 'Increasing…' : `Increase · ${formatCredits(upgradePrice)}`}
+                      </button>
+                    </div>
+                    {upgradeError && <p className="mt-2 text-[11px]" style={{ color: '#fca5a5' }}>{upgradeError}</p>}
+                  </div>
+                </div>
               )}
               {quote && !quote.alreadyPurchased && quote.playerLimit > quote.playerCount && (
                 <p className="mt-3 rounded-lg p-2 text-[11px]" style={{ backgroundColor: 'var(--surface-card)', color: 'var(--text-tertiary)' }}>
