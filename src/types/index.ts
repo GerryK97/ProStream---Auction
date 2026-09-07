@@ -77,6 +77,17 @@ export interface OverlayControlSettings {
   bidCardPosition: 'top' | 'right' | 'left';
 }
 
+/** Set once a tournament's overlay package is purchased. Locks the player allowance. */
+export interface TournamentPackageEntitlement {
+  playerLimit: number;
+  pricePaid: number;
+  overlayVariant: 'fullscreen' | 'fullscreen2';
+  purchasedAt: string | Date;
+  purchasedBy: string;
+  billedUserId: string;
+  playerCountAtPurchase: number;
+}
+
 export interface Tournament {
   _id: string;
   name: string;
@@ -104,6 +115,8 @@ export interface Tournament {
   playerCardTemplates?: Array<{ id: string; name: string; pngUrl: string; layoutId?: string }>; // Uploaded card background templates
   auctionDate?: string; // ISO date string e.g. "2026-07-15"
   completedAt?: string | Date; // Set when status transitions to Completed
+  /** Present only after the overlay package is purchased. Locks the player allowance. */
+  packageEntitlement?: TournamentPackageEntitlement;
   overlayControlSettings?: OverlayControlSettings;
 }
 

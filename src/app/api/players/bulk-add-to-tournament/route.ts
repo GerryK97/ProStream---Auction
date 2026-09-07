@@ -8,6 +8,7 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
 import { getPositionsForSport } from '@/lib/sportPositions';
+import { checkPlayerCapacity } from '@/lib/auctionPlayerCapacity';
 
 interface ExcelRow {
   'Player No'?: string | number;
@@ -119,6 +120,19 @@ export async function POST(request: NextRequest) {
     if (jsonData.length === 0) {
       return NextResponse.json({ error: 'Excel file is empty or has no data rows' }, { status: 400 });
     }
+
+    // Check the whole batch against the purchased allowance before inserting
+    // anything. Importing partially would leave the tournament wedged against
+    // its own limit with no clear way to tell which rows landed.
+    const rowsToImport = jsonData.filter(
+      row => row['Add (Yes/No)']?.toString().trim().toLowerCase() === 'yes'
+    ).length;
+    const capacityDenial = await checkPlayerCapacity({
+      tournamentId,
+      tournament,
+      countToAdd: rowsToImport,
+    });
+    if (capacityDenial) return NextResponse.json(capacityDenial, { status: 402 });
 
     const result: ImportResult = {
       success: true, imported: 0, failed: 0, skipped: 0,

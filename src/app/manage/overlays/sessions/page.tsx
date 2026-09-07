@@ -10,7 +10,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { OVERLAY_PALETTES } from '@/config/overlayPalettes';
 import {
   AUCTION_OVERLAY_TYPES,
-  AUCTION_OVERLAY_TYPE_KEYS,
   AuctionOverlayType,
   buildAuctionOverlayUrl,
   getAuctionOverlayConfig,
@@ -33,15 +32,22 @@ interface OverlaySession {
   revokedAt?: string;
 }
 
-type OverlayPrices = Record<AuctionOverlayType, number>;
 type OverlayThemeId = keyof typeof OVERLAY_PALETTES;
 
-const DEFAULT_PRICES: OverlayPrices = {
-  custom: 500,
-  fullscreen: 1000,
-  fullscreen2: 1000,
-  team_owners: 300,
-};
+/** The operator chooses one of these; the rest of the package is included. */
+const FULLSCREEN_VARIANTS: AuctionOverlayType[] = ['fullscreen', 'fullscreen2'];
+const ALWAYS_INCLUDED_TYPES: AuctionOverlayType[] = ['custom', 'team_owners'];
+
+interface PackagePrices { basePrice: number; playerBlockPrice: number }
+interface PackageQuote {
+  tournamentId: string;
+  playerCount: number;
+  playerLimit: number;
+  price: number;
+  alreadyPurchased: boolean;
+}
+
+const DEFAULT_PACKAGE_PRICES: PackagePrices = { basePrice: 6000, playerBlockPrice: 1000 };
 
 const THEME_OPTIONS: Array<{ id: OverlayThemeId; label: string; description: string; previewImage?: string; available: boolean }> = [
   { id: 'standard', label: 'Theme 1 Classic', description: 'Broadcast-safe classic auction layout.', previewImage: '/overlay-previews/auction-theme-1-preview.jpg', available: true },
@@ -52,8 +58,8 @@ const THEME_OPTIONS: Array<{ id: OverlayThemeId; label: string; description: str
   { id: 'neon', label: 'Neon', description: 'Coming soon.', available: false },
 ];
 
-function formatAmount(amount: number) {
-  return `LKR ${amount.toLocaleString('en-LK')}`;
+function formatCredits(amount: number) {
+  return `${amount.toLocaleString()} credits`;
 }
 
 function getOrigin() {
@@ -69,12 +75,13 @@ function SessionsPage() {
   const { user } = useAuth();
 
   const [sessions, setSessions] = useState<OverlaySession[]>([]);
-  const [prices, setPrices] = useState<OverlayPrices>(DEFAULT_PRICES);
+  const [packagePrices, setPackagePrices] = useState<PackagePrices>(DEFAULT_PACKAGE_PRICES);
+  const [quote, setQuote] = useState<PackageQuote | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [createTournamentId, setCreateTournamentId] = useState('');
-  const [selectedTypes, setSelectedTypes] = useState<AuctionOverlayType[]>(['fullscreen']);
+  const [selectedVariant, setSelectedVariant] = useState<AuctionOverlayType>('fullscreen');
   const [selectedTheme, setSelectedTheme] = useState<OverlayThemeId>('standard');
   const [selectedPalette, setSelectedPalette] = useState('default');
   const [creating, setCreating] = useState(false);
@@ -98,7 +105,8 @@ function SessionsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/overlay/sessions', { headers: getAuthHeaders() });
+      const query = createTournamentId ? `?tournamentId=${encodeURIComponent(createTournamentId)}` : '';
+      const res = await fetch(`/api/overlay/sessions${query}`, { headers: getAuthHeaders() });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to fetch sessions');
       const fetched: OverlaySession[] = data.sessions ?? [];
@@ -109,13 +117,14 @@ function SessionsPage() {
         fetched.forEach(s => { if (s.palette && !next[s._id]) next[s._id] = s.palette; });
         return next;
       });
-      setPrices({ ...DEFAULT_PRICES, ...(data.prices ?? {}) });
+      setPackagePrices({ ...DEFAULT_PACKAGE_PRICES, ...(data.packagePrices ?? {}) });
+      setQuote(data.quote ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch sessions');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [createTournamentId]);
 
   useEffect(() => {
     fetchSessions();
@@ -123,11 +132,10 @@ function SessionsPage() {
 
   const availablePalettes = OVERLAY_PALETTES[selectedTheme] || [];
   const selectedPaletteConfig = availablePalettes.find(p => p.id === selectedPalette) || availablePalettes[0];
-  const primarySelectedType = selectedTypes[0] ?? 'fullscreen';
-  const selectedTypeConfig = getAuctionOverlayConfig(primarySelectedType);
-  const selectedTotalCharge = selectedTypes.reduce((total, type) => total + (prices[type] ?? 0), 0);
+  const selectedTypeConfig = getAuctionOverlayConfig(selectedVariant);
+  const packageCharge = quote?.alreadyPurchased ? 0 : (quote?.price ?? packagePrices.basePrice);
   const previewUrl = createTournamentId
-    ? buildAuctionOverlayUrl(getOrigin(), createTournamentId, primarySelectedType, undefined, {
+    ? buildAuctionOverlayUrl(getOrigin(), createTournamentId, selectedVariant, undefined, {
         theme: selectedTheme,
         palette: selectedPaletteConfig?.id || selectedPalette,
         debug: true,
@@ -174,49 +182,35 @@ function SessionsPage() {
     }
   };
 
-  const toggleSelectedType = (type: AuctionOverlayType) => {
-    setSelectedTypes(prev => {
-      if (prev.includes(type)) {
-        return prev.length === 1 ? prev : prev.filter(t => t !== type);
-      }
-      return [...prev, type];
-    });
-  };
-
   const handleCreate = async () => {
-    if (!createTournamentId || selectedTypes.length === 0) return;
+    if (!createTournamentId) return;
     setCreating(true);
     setCreateError(null);
     setJustCreated([]);
     try {
-      const createdSessions: OverlaySession[] = [];
-      const failedLabels: string[] = [];
+      // One request buys the package and returns every overlay link at once.
+      const res = await fetch('/api/overlay/sessions', {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tournamentId: createTournamentId,
+          overlayVariant: selectedVariant,
+          theme: selectedTheme,
+          palette: selectedPaletteConfig?.id || selectedPalette,
+        }),
+      });
+      const data = await res.json();
 
-      for (const overlayType of selectedTypes) {
-        const res = await fetch('/api/overlay/sessions', {
-          method: 'POST',
-          headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-          // Pass theme + palette so they are persisted on the session at creation.
-          body: JSON.stringify({
-            tournamentId: createTournamentId,
-            overlayType,
-            theme: selectedTheme,
-            palette: selectedPaletteConfig?.id || selectedPalette,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          const config = getAuctionOverlayConfig(overlayType);
-          if (data.error === 'insufficient_balance') {
-            failedLabels.push(`${config.label}: insufficient wallet balance. Required ${formatAmount(data.requiredAmount ?? 0)}, available ${formatAmount(data.currentBalance ?? 0)}.`);
-          } else {
-            failedLabels.push(`${config.label}: ${data.message || data.error || 'failed to create overlay'}`);
-          }
-          break;
+      if (!res.ok) {
+        if (data.error === 'insufficient_balance') {
+          setCreateError(`Insufficient wallet balance. Required ${formatCredits(data.requiredAmount ?? 0)}, available ${formatCredits(data.currentBalance ?? 0)}.`);
+        } else {
+          setCreateError(data.message || data.error || 'Failed to generate the overlay package');
         }
-        createdSessions.push(data.session);
+        return;
       }
 
+      const createdSessions: OverlaySession[] = data.sessions ?? [];
       if (createdSessions.length > 0) {
         setJustCreated(createdSessions);
         const urls = createdSessions.map(session => buildAuctionOverlayUrl(getOrigin(), session.tournamentId, sessionOverlayType(session), session._id, {
@@ -225,10 +219,9 @@ function SessionsPage() {
         }));
         await copyToClipboard(urls.join('\n'));
       }
-      if (failedLabels.length > 0) setCreateError(failedLabels.join(' '));
       await fetchSessions();
     } catch {
-      setCreateError('An error occurred while creating the overlay. If wallet was deducted, the server will attempt an automatic refund.');
+      setCreateError('An error occurred while generating the overlay package. If the wallet was deducted, the server will attempt an automatic refund.');
     } finally {
       setCreating(false);
     }
@@ -334,37 +327,19 @@ function SessionsPage() {
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
           <div className="space-y-5">
             <div>
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-                <h3 className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>1. Overlay layouts</h3>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedTypes([...AUCTION_OVERLAY_TYPE_KEYS])}
-                    className="text-[11px] font-semibold underline"
-                    style={{ color: 'var(--brand-primary)' }}
-                  >
-                    Select all
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedTypes(['fullscreen'])}
-                    className="text-[11px] font-semibold underline"
-                    style={{ color: 'var(--text-tertiary)' }}
-                  >
-                    Reset
-                  </button>
-                  <span className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>{selectedTypes.length} selected</span>
-                </div>
-              </div>
+              <h3 className="mb-2 text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>1. Full screen output</h3>
+              <p className="mb-3 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                Choose one. Custom and Team Owners are always included in the package.
+              </p>
               <div className="grid gap-3 md:grid-cols-2">
-                {AUCTION_OVERLAY_TYPE_KEYS.map((type) => {
+                {FULLSCREEN_VARIANTS.map((type) => {
                   const config = getAuctionOverlayConfig(type);
-                  const selected = selectedTypes.includes(type);
+                  const selected = selectedVariant === type;
                   return (
                     <button
                       key={type}
                       type="button"
-                      onClick={() => toggleSelectedType(type)}
+                      onClick={() => setSelectedVariant(type)}
                       className="rounded-2xl p-4 text-left transition"
                       style={{ backgroundColor: selected ? `${config.accent}18` : 'var(--surface-elevated)', border: `1px solid ${selected ? config.accent : 'var(--border-primary)'}` }}
                     >
@@ -373,15 +348,26 @@ function SessionsPage() {
                           <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{config.label}</p>
                           <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>{config.useCase}</p>
                         </div>
-                        <div className="flex flex-col items-end gap-1">
-                          <span className="rounded-full px-2 py-1 text-[10px] font-bold" style={{ backgroundColor: `${config.accent}22`, color: config.accent }}>{formatAmount(prices[type] ?? 0)}</span>
-                          <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ backgroundColor: selected ? config.accent : 'var(--surface-card)', color: selected ? '#fff' : 'var(--text-muted)', border: `1px solid ${selected ? config.accent : 'var(--border-primary)'}` }}>{selected ? 'Selected' : 'Select'}</span>
-                        </div>
+                        <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ backgroundColor: selected ? config.accent : 'var(--surface-card)', color: selected ? '#fff' : 'var(--text-muted)', border: `1px solid ${selected ? config.accent : 'var(--border-primary)'}` }}>{selected ? 'Selected' : 'Select'}</span>
                       </div>
                       <p className="mt-3 text-[11px] font-mono" style={{ color: 'var(--text-muted)' }}>/overlays/:id{config.path || ''}</p>
                     </button>
                   );
                 })}
+              </div>
+
+              <div className="mt-3 rounded-2xl p-4" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}>
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>Always included</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {ALWAYS_INCLUDED_TYPES.map(type => {
+                    const config = getAuctionOverlayConfig(type);
+                    return (
+                      <span key={type} className="rounded-full px-3 py-1 text-xs font-semibold" style={{ backgroundColor: `${config.accent}18`, color: config.accent, border: `1px solid ${config.accent}55` }}>
+                        {config.label}
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -468,20 +454,42 @@ function SessionsPage() {
             </div>
 
             <div className="rounded-2xl p-4" style={{ backgroundColor: 'var(--surface-elevated)', border: '1px solid var(--border-primary)' }}>
-              <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Selected link settings</p>
+              <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Package summary</p>
               <dl className="mt-3 space-y-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                <div className="flex justify-between gap-3"><dt>Layouts</dt><dd className="text-right">{selectedTypes.map(type => getAuctionOverlayConfig(type).shortLabel).join(', ')}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Full screen</dt><dd className="text-right">{selectedTypeConfig.shortLabel}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Included</dt><dd className="text-right">{ALWAYS_INCLUDED_TYPES.map(type => getAuctionOverlayConfig(type).shortLabel).join(', ')}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Theme</dt><dd>{THEME_OPTIONS.find(t => t.id === selectedTheme)?.label}</dd></div>
                 <div className="flex justify-between gap-3"><dt>Palette</dt><dd>{selectedPaletteConfig?.name || selectedPalette}</dd></div>
-                <div className="flex justify-between gap-3"><dt>Total charge</dt><dd>{formatAmount(selectedTotalCharge)}</dd></div>
+                {quote && (
+                  <>
+                    <div className="flex justify-between gap-3"><dt>Players</dt><dd>{quote.playerCount}</dd></div>
+                    <div className="flex justify-between gap-3"><dt>Player limit</dt><dd>{quote.playerLimit}</dd></div>
+                  </>
+                )}
+                <div className="flex justify-between gap-3 border-t pt-2" style={{ borderColor: 'var(--border-primary)' }}>
+                  <dt className="font-bold">Charge</dt>
+                  <dd className="font-bold" style={{ color: 'var(--text-primary)' }}>{formatCredits(packageCharge)}</dd>
+                </div>
               </dl>
+
+              {quote?.alreadyPurchased && (
+                <p className="mt-3 rounded-lg p-2 text-[11px]" style={{ backgroundColor: 'var(--surface-card)', color: 'var(--text-tertiary)' }}>
+                  Already purchased. Regenerating links is free and keeps the {quote.playerLimit} player limit.
+                </p>
+              )}
+              {quote && !quote.alreadyPurchased && quote.playerLimit > quote.playerCount && (
+                <p className="mt-3 rounded-lg p-2 text-[11px]" style={{ backgroundColor: 'var(--surface-card)', color: 'var(--text-tertiary)' }}>
+                  Generating locks this tournament to {quote.playerLimit} players.
+                </p>
+              )}
+
               <button
                 onClick={handleCreate}
-                disabled={creating || !createTournamentId || availablePalettes.length === 0 || selectedTypes.length === 0}
+                disabled={creating || !createTournamentId || availablePalettes.length === 0}
                 className="mt-4 w-full rounded-lg px-3 py-2 text-sm font-bold disabled:opacity-50"
                 style={{ backgroundColor: selectedTypeConfig.accent, color: '#fff' }}
               >
-                {creating ? 'Generating…' : `Generate ${selectedTypes.length} & Copy ${selectedTypes.length === 1 ? 'Link' : 'Links'}`}
+                {creating ? 'Generating…' : 'Generate Package & Copy Links'}
               </button>
             </div>
           </aside>
@@ -494,7 +502,7 @@ function SessionsPage() {
             <p className="text-sm font-semibold" style={{ color: 'var(--brand-primary)' }}>
               {justCreated.length} overlay {justCreated.length === 1 ? 'link' : 'links'} generated and copied
             </p>
-            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Theme: {selectedTheme} · Palette: {selectedPaletteConfig?.name || selectedPalette} · Charged: {formatAmount(justCreated.reduce((total, session) => total + (session.priceCharged ?? 0), 0))}</p>
+            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Theme: {selectedTheme} · Palette: {selectedPaletteConfig?.name || selectedPalette} · Charged: {formatCredits(justCreated.reduce((total, session) => total + (session.priceCharged ?? 0), 0))}</p>
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => copyAllUrls(justCreated)}
@@ -592,7 +600,7 @@ function SessionsPage() {
                         </span>
                         <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ backgroundColor: session.paymentStatus === 'paid' ? '#16a34a22' : 'var(--surface-elevated)', color: session.paymentStatus === 'paid' ? '#4ade80' : 'var(--text-muted)' }}>{session.paymentStatus ?? 'free'}</span>
                       </div>
-                      <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>{tournament ? `${tournament.name} (${tournament.year})` : 'Unknown tournament'} · Created {formatDate(session.createdAt)} · Charged {formatAmount(session.priceCharged ?? 0)}</p>
+                      <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>{tournament ? `${tournament.name} (${tournament.year})` : 'Unknown tournament'} · Created {formatDate(session.createdAt)} · Charged {formatCredits(session.priceCharged ?? 0)}</p>
                       <p className="text-xs mt-1 font-mono" style={{ color: 'var(--text-tertiary)' }}>Token: {session._id.slice(0, 8)}…</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 lg:justify-end">

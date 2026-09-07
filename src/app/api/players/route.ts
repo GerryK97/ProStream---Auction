@@ -8,6 +8,7 @@ import { getUserFromRequest } from '@/lib/request-helpers';
 import { canPerformAction } from '@/lib/permissions';
 import { validateOverlaySessionToken, getOverlayTokenFromRequest } from '@/lib/overlay-auth';
 import { serializePlayer } from '@/lib/cloudinaryUtils';
+import { checkPlayerCapacity } from '@/lib/auctionPlayerCapacity';
 
 // GET /api/players - Get players accessible to the authenticated user
 export async function GET(request: NextRequest) {
@@ -110,6 +111,11 @@ export async function POST(request: NextRequest) {
       tournament.createdBy === user.userId ||
       user.assignedTournaments.includes(tournamentId);
     if (!hasAccess) return NextResponse.json({ error: 'Access denied to this tournament' }, { status: 403 });
+
+    // Once the overlay package is bought, the player count is capped at the
+    // level that was paid for. Before purchase there is no cap.
+    const capacityDenial = await checkPlayerCapacity({ tournamentId, tournament, countToAdd: 1 });
+    if (capacityDenial) return NextResponse.json(capacityDenial, { status: 402 });
 
     const newPlayerData: any = {
       ...(playerNo ? { playerNo } : {}),

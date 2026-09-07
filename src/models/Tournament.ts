@@ -102,6 +102,25 @@ const tournamentSchema = new Schema<Tournament>(
     },
     auctionDate: { type: String },
     completedAt: { type: Date },
+    /**
+     * Set once the tournament's overlay package is purchased. Its presence is
+     * what locks the player allowance: before purchase players are unlimited,
+     * afterwards `playerLimit` is enforced on every player-add path.
+     */
+    packageEntitlement: {
+      type: {
+        playerLimit: { type: Number, required: true },
+        pricePaid: { type: Number, required: true },
+        overlayVariant: { type: String, enum: ['fullscreen', 'fullscreen2'], required: true },
+        purchasedAt: { type: Date, required: true },
+        purchasedBy: { type: String, required: true },
+        billedUserId: { type: String, required: true },
+        /** Player count at purchase time, kept for support and auditing. */
+        playerCountAtPurchase: { type: Number, required: true },
+      },
+      default: undefined,
+      _id: false,
+    },
     overlayControlSettings: {
       type: {
         size: { type: String, enum: ['large', 'small'], default: 'large' },
