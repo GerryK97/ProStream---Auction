@@ -269,6 +269,21 @@ export async function GET(request: NextRequest) {
 
     instrRows.forEach(r => instructions.addRow(r));
 
+    // Sheet order matters: Players must come first so the workbook opens on it
+    // and any importer reading the first sheet gets player rows, not dropdown
+    // lists. Lookup is hidden plumbing, so it goes last.
+    // ExcelJS assigns `orderNo` from insertion order, and Lookup has to be
+    // created before Players because the data validations reference its ranges.
+    // Re-numbering here decouples the written order from the creation order.
+    // `orderNo` is honoured when writing but missing from ExcelJS's typings,
+    // so it is set through a narrow local cast rather than `any` on the sheet.
+    const sheetOrder = ['Players', 'Instructions', 'Lookup'];
+    workbook.worksheets.forEach((sheet) => {
+      const index = sheetOrder.indexOf(sheet.name);
+      (sheet as ExcelJS.Worksheet & { orderNo: number }).orderNo =
+        index === -1 ? sheetOrder.length : index;
+    });
+
     const buffer = await workbook.xlsx.writeBuffer();
     return new NextResponse(buffer as unknown as BodyInit, {
       headers: {

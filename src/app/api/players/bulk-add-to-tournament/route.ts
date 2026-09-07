@@ -103,7 +103,18 @@ export async function POST(request: NextRequest) {
     const workbook = new ExcelJS.Workbook();
     // @ts-expect-error — Node 22 Buffer<ArrayBuffer> generic incompatible with ExcelJS Buffer typedef at compile time
     await workbook.xlsx.load(Buffer.from(new Uint8Array(arrayBuffer)));
-    const worksheet = workbook.worksheets[0];
+    // Select the sheet by name, not position. Templates issued before the
+    // sheet-order fix put the hidden "Lookup" sheet first, so trusting
+    // worksheets[0] made those files import dropdown lists instead of players.
+    // Fall back to the first visible sheet so a hand-made workbook still works.
+    const worksheet =
+      workbook.getWorksheet('Players') ??
+      workbook.worksheets.find(sheet => sheet.name !== 'Lookup' && sheet.name !== 'Instructions' && sheet.state !== 'hidden') ??
+      workbook.worksheets[0];
+
+    if (!worksheet) {
+      return NextResponse.json({ error: 'Excel file has no readable sheet' }, { status: 400 });
+    }
 
     // Convert worksheet to JSON rows (skip header row)
     const headerRow = worksheet.getRow(1).values as any[];
@@ -121,11 +132,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Excel file is empty or has no data rows' }, { status: 400 });
     }
 
+    // A row is only a real import candidate when it carries data beyond the
+    // Add flag. The template ships ~98 pre-formatted blank rows pre-set to
+    // "Yes", so counting those would both inflate the capacity check and
+    // report phantom validation failures.
+    const isBlankRow = (row: ExcelRow) =>
+      !Object.entries(row).some(
+        ([header, value]) => header !== 'Add (Yes/No)' && String(value ?? '').trim() !== '',
+      );
+    const isMarkedForImport = (row: ExcelRow) =>
+      row['Add (Yes/No)']?.toString().trim().toLowerCase() === 'yes';
+
     // Check the whole batch against the purchased allowance before inserting
     // anything. Importing partially would leave the tournament wedged against
     // its own limit with no clear way to tell which rows landed.
     const rowsToImport = jsonData.filter(
-      row => row['Add (Yes/No)']?.toString().trim().toLowerCase() === 'yes'
+      row => !isBlankRow(row) && isMarkedForImport(row)
     ).length;
     const capacityDenial = await checkPlayerCapacity({
       tournamentId,
@@ -143,7 +165,15 @@ export async function POST(request: NextRequest) {
       const row = jsonData[i];
       const rowNumber = i + 2;
 
-      if (row['Add (Yes/No)']?.toString().trim().toLowerCase() !== 'yes') {
+      // The template ships pre-formatted blank rows, so a row with no content
+      // is padding rather than a mistake. Reporting those as failures buried
+      // real errors under ~98 phantom "Missing player Name" entries.
+      if (isBlankRow(row)) {
+        result.skipped++;
+        continue;
+      }
+
+      if (!isMarkedForImport(row)) {
         result.skipped++;
         continue;
       }
