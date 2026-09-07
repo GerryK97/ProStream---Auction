@@ -61,6 +61,32 @@ confirms 0 remaining legacy values (idempotent, verified by re-run).
 Cloudinary account still holds the original assets as a rollback path and can
 be cancelled after a confidence window.
 
+## Post-backfill stragglers (2026-09-07)
+
+The Vercel deployment still ran `MEDIA_STORAGE_PROVIDER=cloudinary`, so uploads
+made through it after the backfill wrote new Cloudinary references. A census on
+2026-09-07 found **43** such values (41 player photos in
+`BERUWALA PREMIER LEAGUE -2026`, plus one tournament logo and one wheel-center
+image).
+
+`scripts/ops/cloudinary-r2-finish.mjs` (`npm run media:finish:scan` /
+`npm run media:finish:migrate`) closes this gap. It needs **no R2 credentials**:
+it uploads through the R2-enabled deployment's authenticated `/api/upload`
+endpoint, so bucket secrets stay inside the deployment. Per asset it downloads
+the Cloudinary original, uploads it, re-downloads the stored R2 object, and
+requires a byte-identical SHA-256 match before rewriting that Mongo value.
+
+Result: 43/43 copied and verified, 43 documents rewritten, re-scan reports 0
+remaining. Whole-database census afterwards: **5,689 R2 values, 0 Cloudinary**
+(209 unrelated external/placeholder URLs are untouched by design). All 41
+BERUWALA photo URLs return HTTP 200 from `media.prostream.lk` on both
+deployments.
+
+Note: both deployments read the same MongoDB, so this fix is visible from
+Vercel and Dokploy alike. Until Vercel is set to `MEDIA_STORAGE_PROVIDER=r2`
+(or retired), **new** uploads made through Vercel will again land on
+Cloudinary; re-running `media:finish:migrate` is safe and idempotent.
+
 ## Rollback
 
 Setting `MEDIA_STORAGE_PROVIDER=cloudinary` reverts new uploads to Cloudinary

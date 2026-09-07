@@ -23,7 +23,9 @@
     "media:backfill:scan": "node scripts/ops/cloudinary-r2-backfill.mjs --scan",
     "media:backfill:copy": "node scripts/ops/cloudinary-r2-backfill.mjs --copy",
     "media:backfill:verify": "node scripts/ops/cloudinary-r2-backfill.mjs --verify",
-    "media:backfill:rewrite": "node scripts/ops/cloudinary-r2-backfill.mjs --rewrite"
+    "media:backfill:rewrite": "node scripts/ops/cloudinary-r2-backfill.mjs --rewrite",
+    "media:finish:scan": "node scripts/ops/cloudinary-r2-finish.mjs --scan",
+    "media:finish:migrate": "node scripts/ops/cloudinary-r2-finish.mjs --migrate"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1127.0",
