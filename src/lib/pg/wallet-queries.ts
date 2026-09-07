@@ -286,6 +286,88 @@ export async function creditWalletBalance({
   });
 }
 
+/**
+ * Posts a manual correction against a wallet, as a normal ledger row.
+ *
+ * Deliberately carries no `category`. The three categories are semantic
+ * business buckets (`paid_recharge` = revenue, `free_credit` = promo,
+ * `overlay_charge` = usage), and a correction is none of them. Tagging one
+ * would silently distort the Accounts totals, so adjustments stay
+ * uncategorised and are excluded from those figures — matching the existing
+ * uncategorised rows already in the ledger.
+ *
+ * Balance is never pushed negative: a deduction larger than the balance
+ * throws InsufficientWalletBalanceError rather than writing a broken row.
+ */
+export async function adjustWalletBalance({
+  userId,
+  amount,
+  description,
+  createdBy,
+}: {
+  /** Wallet owner being corrected. */
+  userId: string;
+  /** Signed: negative deducts, positive credits. Never zero. */
+  amount: number;
+  description: string;
+  /** Operator responsible for the correction, for ledger attribution. */
+  createdBy: string;
+}) {
+  if (!Number.isInteger(amount) || amount === 0) {
+    throw new Error('Wallet adjustment amount must be a non-zero integer');
+  }
+  if (!description.trim()) {
+    throw new Error('Wallet adjustment requires a description');
+  }
+
+  return pgDb.transaction(async (tx) => {
+    await tx
+      .insert(wallets)
+      .values({ userId, balance: 0 })
+      .onConflictDoNothing({ target: wallets.userId });
+
+    // The balance guard is part of the same conditional UPDATE, so a
+    // concurrent spend cannot slip between the check and the write.
+    const guard = amount < 0
+      ? and(eq(wallets.userId, userId), gte(wallets.balance, -amount))
+      : eq(wallets.userId, userId);
+
+    const [updatedWallet] = await tx
+      .update(wallets)
+      .set({
+        balance: sql`${wallets.balance} + ${amount}`,
+        updatedAt: new Date(),
+      })
+      .where(guard)
+      .returning();
+
+    if (!updatedWallet) {
+      const currentWallet = await tx.query.wallets.findFirst({ where: eq(wallets.userId, userId) });
+      throw new InsufficientWalletBalanceError(currentWallet?.balance ?? 0, -amount);
+    }
+
+    const balanceAfter = updatedWallet.balance;
+    const balanceBefore = balanceAfter - amount;
+
+    const [transaction] = await tx.insert(walletTransactions).values({
+      walletId: updatedWallet.id,
+      type: amount < 0 ? 'deduction' : 'topup',
+      category: null,
+      amount,
+      balanceBefore,
+      balanceAfter,
+      description,
+      referenceId: null,
+      createdBy,
+    }).returning();
+
+    return {
+      wallet: toWalletResponse(updatedWallet),
+      transaction,
+    };
+  });
+}
+
 /* ── Accounts ledger ──────────────────────────────────────────────────────
  * Read-only aggregation over the immutable wallet_transactions log. This is
  * the "Accounts" view for Admins and users granted canRechargeWallet. It
