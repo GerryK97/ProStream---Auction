@@ -2,10 +2,15 @@
 
 ## Status
 
-Both Dokploy apps (Scoreboard, Auction) now share one PostgreSQL database
-(`prostream-postgres`, `public` schema) for `users`/`wallets`. Auction's own
-data — tournaments, teams, players, live bidding state, overlays, invoicing —
-still lives entirely in MongoDB Atlas. This plan migrates that remaining data.
+Both Dokploy apps (Scoreboard, Auction) share one PostgreSQL database
+(`prostream-postgres`, `public` schema) for `users`/`wallets`. That database is
+**not** the one Vercel and local development use: those point at Neon, which is
+currently authoritative. See "Prerequisite: reconcile the two PostgreSQL
+databases" below — that gap must be closed before this migration starts.
+
+Auction's own data — tournaments, teams, players, live bidding state, overlays,
+invoicing — still lives entirely in MongoDB Atlas. This plan migrates that
+remaining data.
 
 **Not started. This is the plan only.** Estimated 3–5 weeks of focused work.
 Do not begin until the shared-Postgres switch has run stable for at least a
@@ -32,6 +37,58 @@ Same database, new schema (`auction`), not `public`. Scoreboard already owns
 identity vs. auction lifecycle) — these are different entities with the same
 English name and must not collide. One database still means one backup and
 one connection pool to operate.
+
+## Prerequisite: reconcile the two PostgreSQL databases (measured 2026-09-07)
+
+The Vercel and Dokploy deployments share one MongoDB but do **not** share one
+PostgreSQL. Dokploy runs its own `prostream-postgres`, while Vercel and local
+development use Neon. Neon is currently authoritative (it serves live traffic
+through Vercel), and Dokploy froze behind on 2026-09-04.
+
+Measured divergence:
+
+| | Neon (authoritative) | Dokploy | Gap |
+|---|---|---|---|
+| users | 66 | 57 | 9 |
+| wallet_transactions | 273 (max id 288) | 253 (max id 268) | 20 |
+| money received | 147,500 | 142,500 | 5,000 |
+
+The divergence is a clean lag, not a fork:
+
+- No row exists only in Dokploy.
+- All 253 shared ledger rows are identical field for field.
+- Transaction ids split cleanly at 268, so there are no id collisions.
+- The 9 Neon-only users hold zero balance and own no tournaments.
+- No Mongo `createdBy` value references a user missing from Dokploy, so the
+  `auction` schema (which stores `created_by` as plain `text`, with no foreign
+  key into `users`) cannot orphan against either database.
+
+`scripts/ops/sync-users-wallets.mjs` (`npm run db:sync-users:dry-run` /
+`db:sync-users:apply`) fast-forwards the target. It is additive and
+fail-closed: it refuses to run unless the target is a strict subset, never
+edits or deletes an existing ledger row, inserts wallets before their
+transactions, corrects balances only after those transactions land, and resets
+the sequences so future inserts cannot collide. `SOURCE_SCHEMA`/`TARGET_SCHEMA`
+allow rehearsing against a scratch copy first.
+
+**Tournament access is merged, not overwritten.** Both deployments were
+granting access while they ran in parallel, so `assigned_tournaments` is a set
+where each side may hold grants the other lacks. Measured on 2026-09-07:
+Dokploy held 3 grants absent from Neon, one of them a real tournament
+(`livecast` → TALAWAKELLE PREMIER LEAGUE 2026). Copying source over target
+would have silently revoked it. The tool therefore writes the union to both
+databases and verifies afterwards that no access set still diverges.
+
+Rehearsed 2026-09-07 against a scratch schema seeded to reproduce Dokploy's
+exact lag, including those target-only grants: 9 users, 1 wallet, and 20
+transactions copied, 8 balances corrected, 2 access sets merged, ending at
+273/273 transactions with 0 ledger mismatches, 0 divergent access sets, and
+matching total balances. Re-running reported "already in sync", and injecting a
+target-only row correctly aborted the run.
+
+**Order of operations.** Sync users/wallets and complete the Vercel → Dokploy
+cutover *before* migrating auction data. Migrating first would leave two live
+user tables drifting apart again, which is what produced this gap.
 
 ## Model → table mapping
 
