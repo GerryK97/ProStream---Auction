@@ -173,6 +173,13 @@ export async function POST(request: NextRequest) {
     const resolvedTheme = typeof theme === 'string' && theme.trim() ? theme.trim() : 'standard';
     const resolvedPalette = typeof palette === 'string' && palette.trim() ? palette.trim() : 'default';
 
+    // Theme 2 and Theme 4 are admin-only. Reject a non-admin trying to select one
+    // directly (the UI already hides them, this guards the API).
+    const ADMIN_ONLY_THEMES = new Set(['theme2', 'theme4']);
+    if (!isAdmin && ADMIN_ONLY_THEMES.has(resolvedTheme)) {
+      return NextResponse.json({ error: 'forbidden_theme', message: 'This theme is only available to admins.' }, { status: 403 });
+    }
+
     const access = await assertTournamentAccess(user, tournamentId);
     if (access.response) return access.response;
     const tournament = access.tournament!;

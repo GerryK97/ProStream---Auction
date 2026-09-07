@@ -50,11 +50,11 @@ interface PackageQuote {
 
 const DEFAULT_PACKAGE_PRICES: PackagePrices = { basePrice: 6000, playerBlockPrice: 1000 };
 
-const THEME_OPTIONS: Array<{ id: OverlayThemeId; label: string; description: string; previewImage?: string; available: boolean }> = [
+const THEME_OPTIONS: Array<{ id: OverlayThemeId; label: string; description: string; previewImage?: string; available: boolean; adminOnly?: boolean }> = [
   { id: 'standard', label: 'Theme 1 Classic', description: 'Broadcast-safe classic auction layout.', previewImage: '/overlay-previews/auction-theme-1-preview.jpg', available: true },
-  { id: 'theme2', label: 'Theme 2 Palette System', description: 'Palette-driven overlay design with stronger visual identity.', available: true },
+  { id: 'theme2', label: 'Theme 2 Palette System', description: 'Palette-driven overlay design with stronger visual identity.', available: true, adminOnly: true },
   { id: 'theme3', label: 'Theme 3 Broadcast', description: 'Teal live player bar, ticker, and summary panels.', previewImage: '/overlay-previews/auction-theme-3-preview.jpg', available: true },
-  { id: 'theme4', label: 'Theme 4 Lightning Card', description: 'Frame 15 heraldic shield player card (custom overlay).', previewImage: '/overlay-previews/auction-theme-4-preview.jpg', available: true },
+  { id: 'theme4', label: 'Theme 4 Lightning Card', description: 'Frame 15 heraldic shield player card (custom overlay).', previewImage: '/overlay-previews/auction-theme-4-preview.jpg', available: true, adminOnly: true },
   { id: 'premium', label: 'Premium', description: 'Coming soon.', available: false },
   { id: 'neon', label: 'Neon', description: 'Coming soon.', available: false },
 ];
@@ -149,6 +149,9 @@ function SessionsPage() {
   const upgradePrice = quote?.alreadyPurchased && Number.isFinite(requestedUpgradeTarget)
     ? calculateLimitIncreasePrice(quote.playerLimit, requestedUpgradeTarget, packagePrices)
     : 0;
+  // Theme 2 and Theme 4 are admin-only for now; hide them from operators.
+  const isAdmin = user?.role === 'Admin';
+  const visibleThemes = THEME_OPTIONS.filter(theme => isAdmin || !theme.adminOnly);
   const previewUrl = createTournamentId
     ? buildAuctionOverlayUrl(getOrigin(), createTournamentId, selectedVariant, undefined, {
         theme: selectedTheme,
@@ -156,6 +159,14 @@ function SessionsPage() {
         debug: true,
       })
     : '';
+
+  // If a non-admin somehow has an admin-only theme selected (e.g. persisted
+  // from an earlier state), fall back to the first theme they can use.
+  useEffect(() => {
+    if (!visibleThemes.some(theme => theme.id === selectedTheme)) {
+      setSelectedTheme(visibleThemes[0]?.id ?? 'standard');
+    }
+  }, [visibleThemes, selectedTheme]);
 
   useEffect(() => {
     const palettes = OVERLAY_PALETTES[selectedTheme] || [];
@@ -422,7 +433,7 @@ function SessionsPage() {
             <div>
               <h3 className="mb-2 text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>2. Theme</h3>
               <div className="grid gap-3 md:grid-cols-2">
-                {THEME_OPTIONS.map(theme => {
+                {visibleThemes.map(theme => {
                   const selected = selectedTheme === theme.id;
                   return (
                     <button
@@ -444,6 +455,7 @@ function SessionsPage() {
                       ) : null}
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{theme.label}</p>
+                        {theme.adminOnly && <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ backgroundColor: 'var(--brand-primary)', color: '#fff' }}>Admin only</span>}
                         {!theme.available && <span className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>Coming soon</span>}
                       </div>
                       <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>{theme.description}</p>
