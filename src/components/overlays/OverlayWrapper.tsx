@@ -16,6 +16,11 @@ import type { AuctionOverlayType } from '@/lib/overlays/auctionOverlayTypes';
 import {
   overlaySettingsFromControlSettings,
 } from '@/lib/overlays/overlayControlSettings';
+import {
+  createSizeRevState,
+  isStaleSizeRev as isStaleSizeRevFor,
+  recordSizeRev as recordSizeRevFor,
+} from '@/lib/overlays/overlaySizeRev';
 import '../../styles/animations.css';
 
 export interface OverlaySettings {
@@ -155,8 +160,34 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
     // Overlay settings — updated via overlay:settings Pusher event
     const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>(DEFAULT_OVERLAY_SETTINGS);
     const hydratedSettingsTournamentRef = useRef<string | null>(null);
-    /** Drop stale size patches (e.g. in-flight Small from the previous auto-switch timer). */
-    const lastSizeRevRef = useRef(0);
+    /**
+     * Ordering guard for player-card size updates. See overlaySizeRev.ts: the
+     * revision is only comparable within one short burst from one controller,
+     * never as a global high-water mark across clients.
+     */
+    const sizeRevStateRef = useRef(createSizeRevState());
+
+    /** True when `incomingRev` is an out-of-order patch from the current burst. */
+    const isStaleSizeRev = React.useCallback(
+        (incomingRev: number | undefined) => isStaleSizeRevFor(sizeRevStateRef.current, incomingRev),
+        [],
+    );
+
+    const recordSizeRev = React.useCallback(
+        (incomingRev: number | undefined) => recordSizeRevFor(sizeRevStateRef.current, incomingRev),
+        [],
+    );
+
+    /**
+     * The intro-size hint that has already been folded into `overlaySettings`
+     * (or superseded by a later settings publish). A consumed hint must stop
+     * overriding the rendered size, otherwise the operator's later Large/Small
+     * taps are visually ignored until the next player is selected.
+     */
+    const appliedSizeHintRef = useRef<typeof playerCardSizeHint>(null);
+    /** Latest hint, readable from Pusher handlers without re-binding them. */
+    const playerCardSizeHintRef = useRef<typeof playerCardSizeHint>(null);
+    playerCardSizeHintRef.current = playerCardSizeHint;
 
     // Wheel spin data — updated via overlay:wheel-spin Pusher event
     const [wheelSpinData, setWheelSpinData] = useState<WheelSpinEvent | null>(null);
@@ -186,14 +217,18 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
         if (!playerCardSizeHint) return;
         if (playerCardSizeHint.playerId !== auctionState.currentPlayerId) return;
         const hintRev = playerCardSizeHint.rev;
-        if (hintRev !== undefined && hintRev < lastSizeRevRef.current) return;
-        if (hintRev !== undefined) lastSizeRevRef.current = hintRev;
+        if (isStaleSizeRev(hintRev)) return;
+        recordSizeRev(hintRev);
         setOverlaySettings(prev => (
             prev.size === playerCardSizeHint.size
                 ? prev
                 : { ...prev, size: playerCardSizeHint.size }
         ));
-    }, [playerCardSizeHint, auctionState.currentPlayerId]);
+        // Once the hint is folded into settings it must stop overriding renders,
+        // otherwise it pins the card size for as long as this player is on air
+        // and later Large/Small taps appear to do nothing.
+        appliedSizeHintRef.current = playerCardSizeHint;
+    }, [playerCardSizeHint, auctionState.currentPlayerId, isStaleSizeRev, recordSizeRev]);
 
     useEffect(() => {
         if (!liveTournamentId) return;
@@ -207,10 +242,12 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
 
         const onOverlaySettings = (data: OverlaySettingsEvent) => {
             const incomingRev = typeof data.sizeRev === 'number' ? data.sizeRev : undefined;
-            const sizeIsStale =
-                incomingRev !== undefined && incomingRev < lastSizeRevRef.current;
-            if (incomingRev !== undefined && !sizeIsStale) {
-                lastSizeRevRef.current = incomingRev;
+            const sizeIsStale = isStaleSizeRev(incomingRev);
+            if (!sizeIsStale) {
+                recordSizeRev(incomingRev);
+                // An explicit settings publish supersedes any player-selected
+                // intro hint, so the hint must not re-apply on later renders.
+                appliedSizeHintRef.current = playerCardSizeHintRef.current;
             }
             setOverlaySettings(prev => ({
                 size: sizeIsStale ? prev.size : data.size,
@@ -243,8 +280,8 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
         const onPlayerSelectedSize = (data: PlayerSelectedEvent) => {
             if (data.overlaySize !== 'large' && data.overlaySize !== 'small') return;
             const incomingRev = typeof data.sizeRev === 'number' ? data.sizeRev : undefined;
-            if (incomingRev !== undefined && incomingRev < lastSizeRevRef.current) return;
-            if (incomingRev !== undefined) lastSizeRevRef.current = incomingRev;
+            if (isStaleSizeRev(incomingRev)) return;
+            recordSizeRev(incomingRev);
             setOverlaySettings(prev => (
                 prev.size === data.overlaySize ? prev : { ...prev, size: data.overlaySize! }
             ));
@@ -356,10 +393,13 @@ const OverlayWrapper: React.FC<OverlayWrapperProps> = ({
     let settingsForRender = overlaySettings;
     if (
         playerCardSizeHint &&
-        playerCardSizeHint.playerId === auctionState.currentPlayerId
+        playerCardSizeHint.playerId === auctionState.currentPlayerId &&
+        // Only bridge the gap before the hint is committed to state. Once
+        // consumed, `overlaySettings.size` is authoritative and stays live.
+        appliedSizeHintRef.current !== playerCardSizeHint
     ) {
         const hintRev = playerCardSizeHint.rev;
-        const hintIsFresh = hintRev === undefined || hintRev >= lastSizeRevRef.current;
+        const hintIsFresh = !isStaleSizeRev(hintRev);
         if (hintIsFresh && overlaySettings.size !== playerCardSizeHint.size) {
             settingsForRender = { ...overlaySettings, size: playerCardSizeHint.size };
         }

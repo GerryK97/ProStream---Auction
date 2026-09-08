@@ -9,6 +9,7 @@
     "lint": "next lint",
     "migrate:player-class-codes": "ts-node --compiler-options '{\"module\":\"commonjs\"}' src/scripts/migratePlayerClassCodes.ts",
     "test:realtime": "node scripts/check-realtime-bid-guards.js",
+    "test:overlay-size-rev": "tsx scripts/test-overlay-size-rev.ts",
     "test:auction-schema": "bash scripts/ops/test-auction-schema.sh",
     "test:auction-etl": "node scripts/ops/test-auction-etl-mapping.mjs",
     "db:auction:generate": "drizzle-kit generate",
