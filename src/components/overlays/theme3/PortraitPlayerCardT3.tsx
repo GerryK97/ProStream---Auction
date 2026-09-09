@@ -6,7 +6,7 @@ import { optimizeImage } from '@/lib/imageOptimization';
 import ResilientImage from '../shared/ResilientImage';
 import { PlayerBarBackgroundT3 } from './PlayerBarBackgroundT3';
 import { CurrentBidFooterT3, type BidPanelPhase } from './CurrentBidT3';
-import { UnsoldBarOverlayT3 } from './SoldMessageT3';
+import PortraitUnsoldRevealT3 from './PortraitUnsoldRevealT3';
 import { PLAYER_BAR_T3_TOP_RAIL_HEIGHT } from './theme3Layout';
 import {
   getPortraitCardBottom,
@@ -38,6 +38,8 @@ export interface PortraitPlayerCardT3Props {
   tournament: Tournament | null;
   visible: boolean;
   tickerVisible?: boolean;
+  /** Fired once the card has fully exited, so the parent can drop its staged player. */
+  onDismissed?: () => void;
 }
 
 function resolvePortraitPhoto(player: Player): string | null {
@@ -60,6 +62,7 @@ export function PortraitPlayerCardT3({
   tournament,
   visible,
   tickerVisible = true,
+  onDismissed,
 }: PortraitPlayerCardT3Props) {
   const [phase, setPhase] = useState<CardPhase>('entering');
   const [dismissed, setDismissed] = useState(false);
@@ -74,6 +77,7 @@ export function PortraitPlayerCardT3({
   const prevBidRef = useRef(auctionState.currentBid);
   const prevPlayerIdRef = useRef(currentPlayer._id);
   const prevAuctionPlayerIdRef = useRef(auctionState.currentPlayerId);
+  const dismissedNotifiedRef = useRef(false);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const isBidding = auctionState.currentAuctionStatus === 'Bidding';
@@ -104,6 +108,7 @@ export function PortraitPlayerCardT3({
     prevStatusRef.current = auctionState.currentAuctionStatus;
     prevUnsoldRef.current = !!currentPlayer.isUnsold;
     prevBidRef.current = auctionState.currentBid;
+    dismissedNotifiedRef.current = false;
     setDismissed(false);
     setPhase('entering');
     clearTimers();
@@ -141,6 +146,7 @@ export function PortraitPlayerCardT3({
       return;
     }
     setDismissed(false);
+    dismissedNotifiedRef.current = false;
     setPhase('entering');
     schedule(() => {
       setPhase(
@@ -191,7 +197,14 @@ export function PortraitPlayerCardT3({
       }, PORTRAIT_SOLD_HOLD_MS);
     }
 
-    if (currentPlayer.isUnsold && !prevUnsoldRef.current) {
+    // mark-unsold clears currentPlayerId in the same update that sets isUnsold,
+    // so key off the player flag rather than a status transition.
+    if (
+      currentPlayer.isUnsold &&
+      phase !== 'unsoldReveal' &&
+      phase !== 'exiting' &&
+      phase !== 'soldReveal'
+    ) {
       prevUnsoldRef.current = true;
       setPhase('unsoldReveal');
       clearTimers();
@@ -199,6 +212,7 @@ export function PortraitPlayerCardT3({
         setPhase('exiting');
         schedule(() => setDismissed(true), reducedMotion ? 0 : PORTRAIT_EXIT_MS);
       }, PORTRAIT_UNSOLD_HOLD_MS);
+      return;
     }
 
     if (!currentPlayer.isUnsold) {
@@ -233,6 +247,13 @@ export function PortraitPlayerCardT3({
     }
     prevBidRef.current = auctionState.currentBid;
   }, [auctionState.currentBid, auctionState.currentAuctionStatus]);
+
+  useEffect(() => {
+    if (dismissed && !dismissedNotifiedRef.current) {
+      dismissedNotifiedRef.current = true;
+      onDismissed?.();
+    }
+  }, [dismissed, onDismissed]);
 
   useEffect(() => () => clearTimers(), []);
 
@@ -295,6 +316,11 @@ export function PortraitPlayerCardT3({
           from { opacity: 0; transform: translateY(16px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+        @keyframes t3PortraitUnsoldFlash {
+          0%   { opacity: 0; }
+          18%  { opacity: 0.55; }
+          100% { opacity: 0; }
+        }
         .t3-portrait-enter { transition: transform ${PORTRAIT_ENTER_MS}ms cubic-bezier(0.22,1,0.36,1), opacity ${PORTRAIT_ENTER_MS}ms ease; }
         .t3-portrait-exit  { transition: transform ${PORTRAIT_EXIT_MS}ms cubic-bezier(0.4,0,0.2,1), opacity ${PORTRAIT_EXIT_MS}ms ease; }
         .t3-portrait-photo-enter { animation: t3PortraitPhotoEnter 420ms cubic-bezier(0.22,1,0.36,1) 80ms both; }
@@ -303,8 +329,9 @@ export function PortraitPlayerCardT3({
         .t3bid-pop  { animation: t3PortraitBidPop 0.35s cubic-bezier(0.22,1,0.36,1) forwards; display: inline-block; }
         .t3bid-dot  { animation: t3PortraitLiveDot 1s ease-in-out infinite; }
         .t3bid-delta { animation: t3PortraitBidDelta 0.6s ease-out forwards; }
+        .t3-portrait-unsold-flash { animation: t3PortraitUnsoldFlash 0.7s ease-out both; }
         @media (prefers-reduced-motion: reduce) {
-          .t3bid-glow, .t3bid-dot, .t3-portrait-photo-enter, .t3-portrait-footer-enter { animation: none !important; }
+          .t3bid-glow, .t3bid-dot, .t3-portrait-photo-enter, .t3-portrait-footer-enter, .t3-portrait-unsold-flash { animation: none !important; }
         }
       `}</style>
 
@@ -418,7 +445,13 @@ export function PortraitPlayerCardT3({
                 pointerEvents: 'none',
               }}
             />
-            {showUnsoldOverlay && <UnsoldBarOverlayT3 />}
+            {showUnsoldOverlay && (
+              <PortraitUnsoldRevealT3
+                currentPlayer={currentPlayer}
+                tournament={tournament}
+                reducedMotion={reducedMotion}
+              />
+            )}
           </div>
 
           {/* Footer — identity + embedded bid */}
@@ -503,6 +536,21 @@ export function PortraitPlayerCardT3({
             </div>
           </div>
         </div>
+
+        {showUnsoldOverlay && !reducedMotion && (
+          <div
+            className="t3-portrait-unsold-flash"
+            aria-hidden
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 11,
+              pointerEvents: 'none',
+              background:
+                'radial-gradient(ellipse 72% 58% at 50% 42%, rgba(216,112,112,0.42) 0%, transparent 70%)',
+            }}
+          />
+        )}
       </div>
     </>
   );

@@ -33,6 +33,8 @@ interface LiveAuctionPlayerBarT3Props {
   tickerVisible?: boolean;
   /** Left when team cards are showing; centered when they are hidden. */
   align?: 'left' | 'center';
+  /** Fired once the bar has fully exited, so the parent can drop its staged player. */
+  onDismissed?: () => void;
 }
 
 const ENTER_MS = 480;
@@ -55,6 +57,7 @@ export function LiveAuctionPlayerBarT3({
   visible,
   tickerVisible = true,
   align = 'center',
+  onDismissed,
 }: LiveAuctionPlayerBarT3Props) {
   const [phase, setPhase] = useState<BarPhase>('entering');
   const [dismissed, setDismissed] = useState(false);
@@ -69,6 +72,7 @@ export function LiveAuctionPlayerBarT3({
   const prevBidRef = useRef(auctionState.currentBid);
   const prevPlayerIdRef = useRef(currentPlayer._id);
   const prevAuctionPlayerIdRef = useRef(auctionState.currentPlayerId);
+  const dismissedNotifiedRef = useRef(false);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const isBidding = auctionState.currentAuctionStatus === 'Bidding';
@@ -90,6 +94,7 @@ export function LiveAuctionPlayerBarT3({
     prevStatusRef.current = auctionState.currentAuctionStatus;
     prevUnsoldRef.current = !!currentPlayer.isUnsold;
     prevBidRef.current = auctionState.currentBid;
+    dismissedNotifiedRef.current = false;
     setDismissed(false);
     setPhase('entering');
     clearTimers();
@@ -127,6 +132,7 @@ export function LiveAuctionPlayerBarT3({
       return;
     }
     setDismissed(false);
+    dismissedNotifiedRef.current = false;
     setPhase('entering');
     schedule(() => {
       setPhase(
@@ -177,7 +183,14 @@ export function LiveAuctionPlayerBarT3({
       }, SOLD_HOLD_MS);
     }
 
-    if (currentPlayer.isUnsold && !prevUnsoldRef.current) {
+    // mark-unsold clears currentPlayerId in the same update that sets isUnsold,
+    // so key off the player flag rather than a status transition.
+    if (
+      currentPlayer.isUnsold &&
+      phase !== 'unsoldReveal' &&
+      phase !== 'exiting' &&
+      phase !== 'soldReveal'
+    ) {
       prevUnsoldRef.current = true;
       setPhase('unsoldReveal');
       clearTimers();
@@ -185,6 +198,7 @@ export function LiveAuctionPlayerBarT3({
         setPhase('exiting');
         schedule(() => setDismissed(true), reducedMotion ? 0 : EXIT_MS);
       }, UNSOLD_HOLD_MS);
+      return;
     }
 
     if (!currentPlayer.isUnsold) {
@@ -219,6 +233,13 @@ export function LiveAuctionPlayerBarT3({
     }
     prevBidRef.current = auctionState.currentBid;
   }, [auctionState.currentBid, auctionState.currentAuctionStatus]);
+
+  useEffect(() => {
+    if (dismissed && !dismissedNotifiedRef.current) {
+      dismissedNotifiedRef.current = true;
+      onDismissed?.();
+    }
+  }, [dismissed, onDismissed]);
 
   useEffect(() => () => clearTimers(), []);
 

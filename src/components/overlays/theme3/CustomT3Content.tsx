@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import TickerT3Shared from './TickerT3Shared';
 import { Theme3Canvas } from './Theme3Canvas';
 import LiveAuctionPlayerBarT3 from './LiveAuctionPlayerBarT3';
@@ -16,6 +16,7 @@ import TeamCardOverlayT3 from './TeamCardOverlayT3';
 import type { Theme3ContentProps } from './types';
 import { isTheme3TeamImageryMode } from './types';
 import type { OverlaySettings } from '../OverlayWrapper';
+import type { Player } from '@/types';
 
 type DisplayMode = OverlaySettings['displayMode'];
 
@@ -38,6 +39,26 @@ const CustomT3Content: React.FC<Theme3ContentProps> = ({
   const [activeMode, setActiveMode] = useState<DisplayMode>(overlaySettings.displayMode);
   const [summaryExiting, setSummaryExiting] = useState(false);
   const prevModeRef = useRef<DisplayMode>(overlaySettings.displayMode);
+  /** Latch the last live player through mark-unsold (the API clears currentPlayerId immediately). */
+  const stagePlayerRef = useRef<Player | undefined>(currentPlayer);
+
+  // Sync during render so the card never unmounts for a frame before isUnsold lands.
+  if (currentPlayer) {
+    stagePlayerRef.current = currentPlayer;
+  } else if (stagePlayerRef.current) {
+    const updated = players.find(p => p._id === stagePlayerRef.current!._id);
+    if (updated?.isUnsold) {
+      stagePlayerRef.current = updated;
+    }
+  }
+
+  const stagePlayer =
+    currentPlayer ??
+    (stagePlayerRef.current?.isUnsold ? stagePlayerRef.current : undefined);
+
+  const handleCardDismissed = useCallback(() => {
+    stagePlayerRef.current = undefined;
+  }, []);
 
   useEffect(() => {
     const incoming = overlaySettings.displayMode;
@@ -65,13 +86,22 @@ const CustomT3Content: React.FC<Theme3ContentProps> = ({
 
   const showTicker = !overlaySettings.hideTickerCustom && activeMode !== 'wheel-spin';
   const isLiveMode = activeMode === 'standard' || activeMode === 'custom-ticker';
+  /** Keep the card mounted through the unsold reveal even though currentPlayerId is already null. */
+  const holdingUnsoldReveal = !!stagePlayer?.isUnsold && !auctionState.currentPlayerId;
   const showLiveBar =
     !overlaySettings.hidePremiumCard &&
     isLiveMode &&
     tournament?.status === 'Live' &&
-    !!auctionState.currentPlayerId &&
-    !!currentPlayer;
+    !!stagePlayer &&
+    (!!auctionState.currentPlayerId || holdingUnsoldReveal);
   const showTeamCards = isLiveMode && !overlaySettings.hideTeamCards;
+
+  // The reveal components key off auctionState.currentPlayerId, so re-point it at
+  // the staged player while the unsold animation is holding the card on screen.
+  const cardAuctionState =
+    holdingUnsoldReveal && stagePlayer
+      ? { ...auctionState, currentPlayerId: stagePlayer._id }
+      : auctionState;
 
   const isLargeCard = overlaySettings.size === 'large';
 
@@ -195,27 +225,29 @@ const CustomT3Content: React.FC<Theme3ContentProps> = ({
       )}
 
       {/* ── Live player card (large portrait or small bar) ── */}
-      {showLiveBar && (
+      {showLiveBar && stagePlayer && (
         isLargeCard ? (
           <PortraitPlayerCardT3
-            key={auctionState.currentPlayerId}
-            currentPlayer={currentPlayer}
-            auctionState={auctionState}
+            key={stagePlayer._id}
+            currentPlayer={stagePlayer}
+            auctionState={cardAuctionState}
             teams={teams}
             tournament={tournament}
             visible={showLiveBar}
             tickerVisible={showTicker}
+            onDismissed={handleCardDismissed}
           />
         ) : (
           <LiveAuctionPlayerBarT3
-            key={auctionState.currentPlayerId}
-            currentPlayer={currentPlayer}
-            auctionState={auctionState}
+            key={stagePlayer._id}
+            currentPlayer={stagePlayer}
+            auctionState={cardAuctionState}
             teams={teams}
             tournament={tournament}
             visible={showLiveBar}
             tickerVisible={showTicker}
             align={showTeamCards ? 'left' : 'center'}
+            onDismissed={handleCardDismissed}
           />
         )
       )}
