@@ -28,7 +28,8 @@
     "media:finish:scan": "node scripts/ops/cloudinary-r2-finish.mjs --scan",
     "media:finish:migrate": "node scripts/ops/cloudinary-r2-finish.mjs --migrate",
     "db:sync-users:dry-run": "node scripts/ops/sync-users-wallets.mjs",
-    "db:sync-users:apply": "node scripts/ops/sync-users-wallets.mjs --apply"
+    "db:sync-users:apply": "node scripts/ops/sync-users-wallets.mjs --apply",
+    "test:scoreboard-mapping": "tsx scripts/test-scoreboard-mapping.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1127.0",
