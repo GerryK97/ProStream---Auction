@@ -156,6 +156,10 @@ export function LiveAuctionPlayerBarT3({
 
   useEffect(() => {
     const status = auctionState.currentAuctionStatus;
+    // Never revive a card whose player is already unsold. After mark-unsold the
+    // status sits at 'Pending' indefinitely, so reviving here would restart the
+    // unsold reveal on a loop until the next player is selected.
+    if (currentPlayer.isUnsold) return;
     if (
       dismissed &&
       status !== 'Sold' &&
@@ -164,7 +168,7 @@ export function LiveAuctionPlayerBarT3({
       resetForLivePlayer();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auctionState.currentAuctionStatus, dismissed, reducedMotion]);
+  }, [auctionState.currentAuctionStatus, dismissed, currentPlayer.isUnsold, reducedMotion]);
 
   useEffect(() => {
     const status = auctionState.currentAuctionStatus;
@@ -184,9 +188,11 @@ export function LiveAuctionPlayerBarT3({
     }
 
     // mark-unsold clears currentPlayerId in the same update that sets isUnsold,
-    // so key off the player flag rather than a status transition.
+    // so key off the player flag rather than a status transition. prevUnsoldRef
+    // latches the reveal to a single play for this player.
     if (
       currentPlayer.isUnsold &&
+      !prevUnsoldRef.current &&
       phase !== 'unsoldReveal' &&
       phase !== 'exiting' &&
       phase !== 'soldReveal'

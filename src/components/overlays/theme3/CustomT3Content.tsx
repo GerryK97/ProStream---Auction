@@ -41,6 +41,8 @@ const CustomT3Content: React.FC<Theme3ContentProps> = ({
   const prevModeRef = useRef<DisplayMode>(overlaySettings.displayMode);
   /** Latch the last live player through mark-unsold (the API clears currentPlayerId immediately). */
   const stagePlayerRef = useRef<Player | undefined>(currentPlayer);
+  /** Player whose reveal has finished; keeps the card down until the next player arrives. */
+  const [dismissedPlayerId, setDismissedPlayerId] = useState<string | null>(null);
 
   // Sync during render so the card never unmounts for a frame before isUnsold lands.
   if (currentPlayer) {
@@ -56,8 +58,20 @@ const CustomT3Content: React.FC<Theme3ContentProps> = ({
     currentPlayer ??
     (stagePlayerRef.current?.isUnsold ? stagePlayerRef.current : undefined);
 
+  // Clear the dismissal latch once a live player is on stage again. Covers both
+  // the next player and a re-auction of the same player that was just unsold.
+  useEffect(() => {
+    if (!dismissedPlayerId) return;
+    if (currentPlayer && !currentPlayer.isUnsold) {
+      setDismissedPlayerId(null);
+    }
+  }, [currentPlayer, dismissedPlayerId]);
+
   const handleCardDismissed = useCallback(() => {
+    const finished = stagePlayerRef.current?._id ?? null;
     stagePlayerRef.current = undefined;
+    // State (not just the ref) so the parent re-renders and the card unmounts.
+    if (finished) setDismissedPlayerId(finished);
   }, []);
 
   useEffect(() => {
@@ -88,11 +102,14 @@ const CustomT3Content: React.FC<Theme3ContentProps> = ({
   const isLiveMode = activeMode === 'standard' || activeMode === 'custom-ticker';
   /** Keep the card mounted through the unsold reveal even though currentPlayerId is already null. */
   const holdingUnsoldReveal = !!stagePlayer?.isUnsold && !auctionState.currentPlayerId;
+  /** Once the reveal has played out, stay hidden until a different player is selected. */
+  const revealAlreadyPlayed = !!stagePlayer && stagePlayer._id === dismissedPlayerId;
   const showLiveBar =
     !overlaySettings.hidePremiumCard &&
     isLiveMode &&
     tournament?.status === 'Live' &&
     !!stagePlayer &&
+    !revealAlreadyPlayed &&
     (!!auctionState.currentPlayerId || holdingUnsoldReveal);
   const showTeamCards = isLiveMode && !overlaySettings.hideTeamCards;
 
