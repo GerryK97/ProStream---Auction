@@ -246,21 +246,25 @@ export function deriveShortCode(
 
   let candidate = base.slice(0, 3).padEnd(3, 'X');
   const truncated = sanitizeCode(source).length > 3;
+  const truncationNote = truncated
+    ? `Short code "${source}" truncated to "${candidate}" (Scoreboard allows 3 characters).`
+    : '';
 
   if (!taken.has(candidate)) {
     taken.add(candidate);
-    return truncated
-      ? approx(candidate, `Short code "${source}" truncated to "${candidate}" (Scoreboard allows 3 characters).`)
-      : exact(candidate);
+    return truncated ? approx(candidate, truncationNote) : exact(candidate);
   }
 
   // Collision: walk the last character through 0-9 then A-Z for determinism.
+  // Report the truncation too, otherwise the operator only learns about the
+  // collision and cannot tell their 6-character code was shortened as well.
   const suffixes = '23456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
   for (const suffix of suffixes) {
     const alt = `${candidate.slice(0, 2)}${suffix}`;
     if (!taken.has(alt)) {
       taken.add(alt);
-      return approx(alt, `Short code "${candidate}" already used in this tournament; used "${alt}".`);
+      const collisionNote = `Short code "${candidate}" is already used in this tournament; used "${alt}" instead.`;
+      return approx(alt, truncated ? `${truncationNote} ${collisionNote}` : collisionNote);
     }
   }
 
