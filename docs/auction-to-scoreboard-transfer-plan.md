@@ -218,3 +218,51 @@ with no risk to live data.
 4. Do team officials (Owner/Manager/Captain) need to reach the Scoreboard? That
    requires a schema addition.
 5. Should unsold players transfer as a free-agent pool, or be dropped?
+
+---
+
+## 8. Implementation status (2026-09-09)
+
+Built and verified. Decisions locked with the product owner: fresh Scoreboard
+tournament each time, no `player_directory` linking, cricket only, no team
+officials, unsold players dropped.
+
+| Piece | File |
+|---|---|
+| Enum/shortCode/name/image mapping | `src/lib/transfer/scoreboardMapping.ts` |
+| Transfer planner (pure) | `src/lib/transfer/scoreboardTransferPlan.ts` |
+| Transactional writer + idempotency | `src/lib/transfer/scoreboardTransferService.ts` |
+| Schema handles | `src/lib/pg/transfer-schema.ts` |
+| Mapping table migration | `drizzle/auction/0002_scoreboard_transfer.sql` |
+| Preview API (read-only) | `src/app/api/transfer/scoreboard/preview/route.ts` |
+| Execute API (transactional) | `src/app/api/transfer/scoreboard/execute/route.ts` |
+| UI | `src/components/TransferToScoreboardButton.tsx` |
+
+### Verification
+
+| Check | Result |
+|---|---|
+| `npm run test:scoreboard-mapping` | 47 assertions, every real Auction vocabulary value |
+| `npm run test:scoreboard-plan` | 18 assertions |
+| `npm run test:scoreboard-transfer-db` | 14 assertions against the live DB in a rolled-back transaction |
+| Real production data | Horana Premier League: 14 teams, 175 players, 175/175 photos, 0 invalid enums; football league correctly blocked |
+| `npm run build` | passes |
+| API auth | unauthenticated request returns 401, missing id returns 400 |
+
+### Corrections found during implementation
+
+1. **Live enums differ from a naive reading of the Scoreboard source.**
+   `tournament_status` is `upcoming/group_stage/knockout/complete` (no `active`
+   or `completed`) and `tournament_model` is only `league/knockout`. Introspecting
+   the real database prevented a runtime failure.
+2. **The `auction` schema does not exist in the live database.** The existing
+   `drizzle/auction` migrations describe the unapplied Mongo→Postgres migration,
+   so the mapping table had to be standalone and idempotent, and is also created
+   on demand inside the transaction.
+3. **Misleading warning.** A short code that was both truncated and then collided
+   reported only the collision, hiding the truncation from the operator.
+
+### Deliberately still out of scope
+
+Auction economics (`finalPrice`, budgets) have no Scoreboard column. Adding them
+means a schema change in the Scoreboard repo.
