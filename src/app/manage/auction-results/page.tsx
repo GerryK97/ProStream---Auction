@@ -6,6 +6,7 @@ import { Player, Team } from '@/types';
 import { getAuthHeaders } from '@/lib/api-client';
 import { useTournamentContext } from '@/contexts/TournamentContext';
 import Modal from '@/components/Modal';
+import TransferToScoreboardButton from '@/components/TransferToScoreboardButton';
 
 const formatCurrency = (amount: number) => amount.toLocaleString('en-IN');
 
@@ -179,14 +180,23 @@ function AuctionResultsPage() {
             <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--border-primary)' }}>
                 <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-2">
                     <label className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Select Tournament</label>
-                    <button
-                        onClick={handleExportTeamwisePdf}
-                        disabled={!selectedTournamentId || exportingPdf}
-                        className="px-3 py-2 rounded-md text-sm font-semibold transition-colors hover:opacity-80 disabled:opacity-50"
-                        style={{ backgroundColor: 'var(--brand-primary)', color: '#fff' }}
-                    >
-                        {exportingPdf ? 'Generating PDF...' : 'Export Team-wise PDF'}
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            onClick={handleExportTeamwisePdf}
+                            disabled={!selectedTournamentId || exportingPdf}
+                            className="px-3 py-2 rounded-md text-sm font-semibold transition-colors hover:opacity-80 disabled:opacity-50"
+                            style={{ backgroundColor: 'var(--brand-primary)', color: '#fff' }}
+                        >
+                            {exportingPdf ? 'Generating PDF...' : 'Export Team-wise PDF'}
+                        </button>
+                        {selectedTournamentId && (
+                            <TransferToScoreboardButton
+                                key={selectedTournamentId}
+                                tournamentId={selectedTournamentId}
+                                disabled={loadingPlayers || soldPlayers.length === 0}
+                            />
+                        )}
+                    </div>
                 </div>
                 {tournamentsLoading ? (
                     <div className="h-10 rounded-md animate-pulse" style={{ backgroundColor: 'var(--surface-elevated)' }} />
