@@ -17,13 +17,15 @@
 import { Pool, type PoolClient } from 'pg';
 import type { TransferPlan } from './scoreboardTransferPlan';
 
-const connectionString = process.env.DATABASE_URL;
-
 const globalForTransfer = globalThis as typeof globalThis & {
   prostreamTransferPool?: Pool;
 };
 
 function getPool(): Pool {
+  // Read DATABASE_URL lazily, not at module scope. Reading it at import time
+  // makes the module throw for any importer loaded before the environment is
+  // populated, which would take down the preview route as well.
+  const connectionString = process.env.DATABASE_URL;
   if (!connectionString) throw new Error('DATABASE_URL is required for the Scoreboard transfer');
   const pool = globalForTransfer.prostreamTransferPool ?? new Pool({
     connectionString,
