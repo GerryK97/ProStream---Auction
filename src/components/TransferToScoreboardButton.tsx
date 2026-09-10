@@ -22,8 +22,7 @@ interface PlannedPlayer {
   name: string;
   displayName: string;
   role: string;
-  battingStyle: string;
-  bowlingStyle: string | null;
+  position: string | null;
   headshotCloudinaryId: string | null;
 }
 
@@ -236,6 +235,9 @@ export default function TransferToScoreboardButton({
                 <strong>{preview.plan.tournament.name}</strong>{' '}
                 <span className="text-neutral-500">({preview.plan.tournament.shortName})</span>.
               </p>
+              <p className="text-xs text-neutral-500 mt-1">
+                Transfers player name, photo, position and team only.
+              </p>
             </div>
 
             {/* Squads */}
@@ -267,9 +269,7 @@ export default function TransferToScoreboardButton({
                             <thead>
                               <tr className="text-neutral-500">
                                 <th className="text-left py-1">Name</th>
-                                <th className="text-left py-1">Role</th>
-                                <th className="text-left py-1">Bats</th>
-                                <th className="text-left py-1">Bowls</th>
+                                <th className="text-left py-1">Position</th>
                                 <th className="text-left py-1">Photo</th>
                               </tr>
                             </thead>
@@ -277,9 +277,7 @@ export default function TransferToScoreboardButton({
                               {team.players.map(p => (
                                 <tr key={p.auctionPlayerId} className="text-neutral-300">
                                   <td className="py-1">{p.name}</td>
-                                  <td className="py-1">{p.role}</td>
-                                  <td className="py-1">{p.battingStyle}</td>
-                                  <td className="py-1">{p.bowlingStyle ?? '—'}</td>
+                                  <td className="py-1">{p.position ?? '—'}</td>
                                   <td className="py-1">{p.headshotCloudinaryId ? '✓' : '—'}</td>
                                 </tr>
                               ))}

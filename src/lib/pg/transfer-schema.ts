@@ -93,11 +93,8 @@ export const tournamentModelEnum = pgEnum('tournament_model', [
 export const playerRoleEnum = pgEnum('player_role', [
   'batsman', 'bowler', 'allrounder', 'keeper',
 ]);
-export const battingStyleEnum = pgEnum('batting_style', ['right-hand', 'left-hand']);
-export const bowlingStyleEnum = pgEnum('bowling_style', [
-  'right-arm-fast', 'right-arm-medium', 'right-arm-offbreak', 'right-arm-legbreak',
-  'left-arm-fast', 'left-arm-medium', 'left-arm-orthodox', 'left-arm-chinaman',
-]);
+// batting_style / bowling_style are intentionally absent: the transfer does not
+// write them, and both columns are nullable with their own defaults.
 
 export const scoreboardTournaments = pgTable('tournaments', {
   id: serial('id').primaryKey(),
@@ -135,8 +132,6 @@ export const scoreboardPlayers = pgTable('players', {
   displayName: text('display_name').notNull(),
   role: playerRoleEnum('role').notNull().default('batsman'),
   position: text('position'),
-  battingStyle: battingStyleEnum('batting_style').default('right-hand'),
-  bowlingStyle: bowlingStyleEnum('bowling_style'),
   headshotCloudinaryId: text('headshot_cloudinary_id'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

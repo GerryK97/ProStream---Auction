@@ -108,13 +108,34 @@ check('unnamed player skipped (display_name is NOT NULL)', () => {
 });
 
 console.log('\nWarnings surface downgrades before writing');
-check('inexact bowling style produces a warning', () => {
+check('narrowed position produces a warning', () => {
   const { plan } = buildTransferPlan(tournament(), [team('a', 'Alpha')],
-    [player('p1', 'Medium Fast Guy', { winningTeamId: 'a', bowlingStyle: 'Right-arm Medium-fast' })]);
-  const w = plan.warnings.find(w => w.field === 'Bowling style');
-  assert.ok(w, 'expected a bowling-style warning');
-  assert.equal(w!.subject, 'Medium Fast Guy');
-  assert.ok(w!.note.includes('no Scoreboard equivalent'));
+    [player('p1', 'Keeper Bat Guy', { winningTeamId: 'a', position: 'Wicket Keeper Batsman' })]);
+  const w = plan.warnings.find(w => w.field === 'Position');
+  assert.ok(w, 'expected a position warning');
+  assert.equal(w!.subject, 'Keeper Bat Guy');
+});
+
+check('batting/bowling styles are NOT transferred', () => {
+  const { plan } = buildTransferPlan(tournament(), [team('a', 'Alpha')],
+    [player('p1', 'Styled Guy', {
+      winningTeamId: 'a', position: 'Bowler',
+      battingStyle: 'Left-handed', bowlingStyle: 'Right-arm Medium-fast',
+    })]);
+  const p = plan.teams[0].players[0];
+  assert.ok(!('battingStyle' in p), 'battingStyle must not be in the plan');
+  assert.ok(!('bowlingStyle' in p), 'bowlingStyle must not be in the plan');
+  // ...and they must not generate noise in the warnings either.
+  assert.equal(plan.warnings.filter(w => /batting|bowling/i.test(w.field)).length, 0);
+});
+
+check('only the agreed fields are planned per player', () => {
+  const { plan } = buildTransferPlan(tournament(), [team('a', 'Alpha')],
+    [player('p1', 'Kusal Mendis', { winningTeamId: 'a', position: 'Batsman', photoURL: 'x/y' })]);
+  const keys = Object.keys(plan.teams[0].players[0]).sort();
+  assert.deepEqual(keys,
+    ['auctionPlayerId', 'displayName', 'headshotCloudinaryId', 'name', 'position', 'role'],
+    `unexpected player fields: ${keys}`);
 });
 
 check('short-code truncation produces a warning', () => {

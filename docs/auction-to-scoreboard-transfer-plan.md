@@ -266,3 +266,30 @@ officials, unsold players dropped.
 
 Auction economics (`finalPrice`, budgets) have no Scoreboard column. Adding them
 means a schema change in the Scoreboard repo.
+
+---
+
+## 9. Scope narrowed (2026-09-10)
+
+Per the operator: transfer **player name, primary photo, position and team
+membership only**. Nothing else, and no Scoreboard schema change.
+
+Terminology: what the Auction calls **position** is what the Scoreboard calls
+**role**. The transfer maps Auction `position` onto the Scoreboard's `role`
+enum, and also keeps the original text in the Scoreboard's own nullable
+`position` column.
+
+Removed from the transfer:
+
+- `batting_style` and `bowling_style` are no longer written. Both columns are
+  nullable, so they are simply omitted and Postgres applies its own defaults
+  (`right-hand` / `NULL`). `mapBattingStyle` and `mapBowlingStyle` were deleted.
+
+Effect on real data (Horana Premier League, 175 players): adjustment warnings
+fell from **27 to 1**, because nearly all of them were "no batting style set"
+notices for a field that is no longer transferred. Photo retention stays
+175/175 and invalid role count stays 0.
+
+Per-player payload is now exactly:
+`auctionPlayerId, name, displayName, role, position, headshotCloudinaryId`
+(asserted by a test, so the payload cannot silently grow again).

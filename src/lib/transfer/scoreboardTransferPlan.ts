@@ -8,6 +8,7 @@
  *
  * Scope (agreed with the product owner):
  *   - fresh Scoreboard tournament every time
+ *   - transfers ONLY player name, primary photo, position and team membership
  *   - sold players only; unsold are dropped
  *   - no player_directory linking (ad-hoc players)
  *   - no team officials
@@ -18,12 +19,8 @@ import type { Player, Team, Tournament } from '@/types';
 import {
   deriveDisplayName,
   deriveShortCode,
-  mapBattingStyle,
-  mapBowlingStyle,
   mapPlayerRole,
   normalizeImageRef,
-  type ScoreboardBattingStyle,
-  type ScoreboardBowlingStyle,
   type ScoreboardPlayerRole,
 } from './scoreboardMapping';
 
@@ -47,10 +44,10 @@ export interface PlannedPlayer {
   auctionPlayerId: string;
   name: string;
   displayName: string;
+  /** Scoreboard `role`, which the Auction calls `position`. */
   role: ScoreboardPlayerRole;
+  /** The raw Auction position text, kept in the Scoreboard's own `position` column. */
   position: string | null;
-  battingStyle: ScoreboardBattingStyle;
-  bowlingStyle: ScoreboardBowlingStyle | null;
   headshotCloudinaryId: string | null;
 }
 
@@ -198,17 +195,9 @@ export function buildTransferPlan(
 
     const plannedPlayers: PlannedPlayer[] = squad.map(player => {
       const role = mapPlayerRole(player.position);
-      const batting = mapBattingStyle(player.battingStyle);
-      const bowling = mapBowlingStyle(player.bowlingStyle);
 
       if (!role.exact && role.note) {
-        warnings.push({ scope: 'player', subject: player.name, field: 'Role', note: role.note });
-      }
-      if (!batting.exact && batting.note) {
-        warnings.push({ scope: 'player', subject: player.name, field: 'Batting style', note: batting.note });
-      }
-      if (!bowling.exact && bowling.note) {
-        warnings.push({ scope: 'player', subject: player.name, field: 'Bowling style', note: bowling.note });
+        warnings.push({ scope: 'player', subject: player.name, field: 'Position', note: role.note });
       }
 
       return {
@@ -217,8 +206,6 @@ export function buildTransferPlan(
         displayName: deriveDisplayName(player.name),
         role: role.value,
         position: player.position?.trim() || null,
-        battingStyle: batting.value,
-        bowlingStyle: bowling.value,
         headshotCloudinaryId: normalizeImageRef(player.photoURL ?? player.secondaryImageURL),
       };
     });

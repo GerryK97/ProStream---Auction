@@ -3,40 +3,27 @@
  *
  * Run: npm run test:scoreboard-mapping
  *
- * Every value in the Auction's real vocabularies is asserted, because an
- * unmapped value does not degrade gracefully - it aborts the whole transfer
- * when Postgres rejects the enum INSERT.
+ * Scope: the transfer moves only player name, photo, position and team.
+ * The Auction's "position" becomes the Scoreboard's "role", which is a strict
+ * pg enum - an unmapped value aborts the whole transfer, so every real Auction
+ * position value is asserted here.
  */
 
 import { strict as assert } from 'node:assert';
 import {
   mapPlayerRole,
-  mapBattingStyle,
-  mapBowlingStyle,
   deriveDisplayName,
   deriveShortCode,
   normalizeImageRef,
-  type ScoreboardBowlingStyle,
 } from '../src/lib/transfer/scoreboardMapping';
 
 // Authoritative Scoreboard enum members (schema.ts).
 const VALID_ROLES = new Set(['batsman', 'bowler', 'allrounder', 'keeper']);
-const VALID_BATTING = new Set(['right-hand', 'left-hand']);
-const VALID_BOWLING = new Set<ScoreboardBowlingStyle>([
-  'right-arm-fast', 'right-arm-medium', 'right-arm-offbreak', 'right-arm-legbreak',
-  'left-arm-fast', 'left-arm-medium', 'left-arm-orthodox', 'left-arm-chinaman',
-]);
 
 // Real Auction vocabularies.
 const AUCTION_POSITIONS = [
   'Batsman', 'Bowler', 'All-rounder', 'Batting All-rounder',
   'Bowling All-rounder', 'Wicket-keeper', 'Wicket Keeper Batsman',
-];
-const AUCTION_BATTING = ['Right-handed', 'Left-handed'];
-const AUCTION_BOWLING = [
-  'Right-arm Fast', 'Right-arm Medium-fast', 'Right-arm Medium', 'Right-arm Off-spin',
-  'Left-arm Fast', 'Left-arm Medium-fast', 'Left-arm Medium', 'Left-arm Orthodox',
-  'Left-arm Chinaman', 'Leg-spin',
 ];
 
 let passed = 0;
@@ -75,75 +62,6 @@ check('role: null/empty/garbage still valid', () => {
     assert.ok(VALID_ROLES.has(r.value));
     assert.equal(r.exact, false);
   }
-});
-
-console.log('\nBatting style');
-for (const s of AUCTION_BATTING) {
-  check(`batting: ${s}`, () => {
-    const r = mapBattingStyle(s);
-    assert.ok(VALID_BATTING.has(r.value));
-    assert.equal(r.exact, true);
-  });
-}
-check('batting: correct handedness', () => {
-  assert.equal(mapBattingStyle('Right-handed').value, 'right-hand');
-  assert.equal(mapBattingStyle('Left-handed').value, 'left-hand');
-});
-check('batting: null/garbage defaults to right-hand, flagged', () => {
-  for (const v of [null, undefined, '', 'sideways']) {
-    const r = mapBattingStyle(v as string);
-    assert.ok(VALID_BATTING.has(r.value));
-    assert.equal(r.exact, false);
-  }
-});
-
-console.log('\nBowling style — the highest-risk mapping');
-for (const s of AUCTION_BOWLING) {
-  check(`bowling: ${s}`, () => {
-    const r = mapBowlingStyle(s);
-    assert.ok(r.value !== null && VALID_BOWLING.has(r.value), `"${s}" produced invalid "${r.value}"`);
-  });
-}
-check('bowling: exact counterparts', () => {
-  assert.equal(mapBowlingStyle('Right-arm Fast').value, 'right-arm-fast');
-  assert.equal(mapBowlingStyle('Right-arm Medium').value, 'right-arm-medium');
-  assert.equal(mapBowlingStyle('Right-arm Off-spin').value, 'right-arm-offbreak');
-  assert.equal(mapBowlingStyle('Left-arm Orthodox').value, 'left-arm-orthodox');
-  assert.equal(mapBowlingStyle('Left-arm Chinaman').value, 'left-arm-chinaman');
-  assert.equal(mapBowlingStyle('Right-arm Fast').exact, true);
-});
-check('bowling: Medium-fast has no target and is flagged', () => {
-  const r = mapBowlingStyle('Right-arm Medium-fast');
-  assert.equal(r.value, 'right-arm-medium');
-  assert.equal(r.exact, false, 'Medium-fast must be reported as approximate');
-  assert.ok(r.note?.includes('no Scoreboard equivalent'));
-
-  const l = mapBowlingStyle('Left-arm Medium-fast');
-  assert.equal(l.value, 'left-arm-medium');
-  assert.equal(l.exact, false);
-});
-check('bowling: Leg-spin assumes right-arm and says so', () => {
-  const r = mapBowlingStyle('Leg-spin');
-  assert.equal(r.value, 'right-arm-legbreak');
-  assert.equal(r.exact, false);
-  assert.ok(r.note?.toLowerCase().includes('right-arm'));
-});
-check('bowling: empty means "does not bowl" (null is allowed)', () => {
-  assert.equal(mapBowlingStyle(null).value, null);
-  assert.equal(mapBowlingStyle('').value, null);
-  assert.equal(mapBowlingStyle(undefined).value, null);
-  assert.equal(mapBowlingStyle(null).exact, true, 'unset is not an approximation');
-});
-check('bowling: garbage never yields an invalid enum', () => {
-  for (const v of ['underarm', 'banana', '???', 'Right-arm Wobble']) {
-    const r = mapBowlingStyle(v);
-    assert.ok(r.value === null || VALID_BOWLING.has(r.value), `"${v}" produced "${r.value}"`);
-  }
-});
-check('bowling: left-arm variants keep their arm', () => {
-  assert.ok(mapBowlingStyle('Left-arm Fast').value?.startsWith('left-arm'));
-  assert.ok(mapBowlingStyle('Left-arm Medium').value?.startsWith('left-arm'));
-  assert.ok(mapBowlingStyle('Left-arm Medium-fast').value?.startsWith('left-arm'));
 });
 
 console.log('\nDisplay name');

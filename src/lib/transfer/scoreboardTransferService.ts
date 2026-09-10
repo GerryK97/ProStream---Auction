@@ -163,11 +163,13 @@ export async function executeTransfer(
       });
 
       for (const player of team.players) {
+        // Only name, display name, role (the Auction's "position"), the raw
+        // position text and the primary photo are transferred. batting_style
+        // and bowling_style are omitted so Postgres applies its own defaults.
         const { rows: playerRows } = await client.query(
           `INSERT INTO public.players
-             (team_id, name, display_name, role, position, batting_style,
-              bowling_style, headshot_cloudinary_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+             (team_id, name, display_name, role, position, headshot_cloudinary_id)
+           VALUES ($1,$2,$3,$4,$5,$6)
            RETURNING id`,
           [
             scoreboardTeamId,
@@ -175,8 +177,6 @@ export async function executeTransfer(
             player.displayName,
             player.role,
             player.position,
-            player.battingStyle,
-            player.bowlingStyle,
             player.headshotCloudinaryId,
           ],
         );

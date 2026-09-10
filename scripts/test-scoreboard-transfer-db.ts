@@ -62,9 +62,12 @@ async function main() {
     assert.equal(plan.totals.players, 5);
     assert.ok(plan.skippedPlayers.some(s => s.name === 'Unsold Fellow'));
   });
-  check('downgrades reported', () => {
-    assert.ok(plan.warnings.some(w => w.note.includes('no Scoreboard equivalent')));
+  check('adjustments reported', () => {
+    // Short code KANDYX is truncated; the keeper-batsman position is narrowed.
     assert.ok(plan.warnings.some(w => w.note.includes('truncated')));
+    assert.ok(plan.warnings.some(w => w.field === 'Position'));
+    // Styles are out of scope, so they must not appear as warnings at all.
+    assert.equal(plan.warnings.filter(w => /batting|bowling/i.test(w.field)).length, 0);
   });
   check('short codes unique and 3 chars', () => {
     const codes = plan.teams.map(t => t.shortCode);
@@ -114,11 +117,10 @@ async function main() {
       for (const p of team.players) {
         await client.query(
           `INSERT INTO public.players
-             (team_id, name, display_name, role, position, batting_style,
-              bowling_style, headshot_cloudinary_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+             (team_id, name, display_name, role, position, headshot_cloudinary_id)
+           VALUES ($1,$2,$3,$4,$5,$6)`,
           [teamRows[0].id, p.name, p.displayName, p.role, p.position,
-           p.battingStyle, p.bowlingStyle, p.headshotCloudinaryId],
+           p.headshotCloudinaryId],
         );
         playerCount++;
       }
@@ -129,7 +131,7 @@ async function main() {
 
     // Read back through the real relations to confirm the squads are intact.
     const { rows: readback } = await client.query(
-      `SELECT t.name AS team, t.short_code, p.display_name, p.role,
+      `SELECT t.name AS team, t.short_code, p.display_name, p.role, p.position,
               p.batting_style, p.bowling_style, p.headshot_cloudinary_id
          FROM public.teams t
          LEFT JOIN public.players p ON p.team_id = t.id
@@ -144,28 +146,29 @@ async function main() {
       const keeper = rows.find(r => r.display_name === 'K Sangakkara');
       assert.ok(keeper, 'expected abbreviated display name');
       assert.equal(keeper.role, 'keeper');
-      assert.equal(keeper.batting_style, 'left-hand');
       assert.equal(keeper.headshot_cloudinary_id, 'prostream-auction/players/kumar');
     });
 
-    check('medium-fast downgraded to a valid enum', () => {
-      const r = readback.find(r => r.display_name === 'N Pradeep' || r.display_name === 'Nuwan Pradeep');
-      assert.ok(r);
-      assert.equal(r.bowling_style, 'right-arm-medium');
-    });
-
-    check('leg-spin stored as right-arm-legbreak', () => {
+    check('position text preserved alongside the mapped role', () => {
       const r = readback.find(r => (r.display_name ?? '').includes('Hasaranga'));
       assert.ok(r);
-      assert.equal(r.bowling_style, 'right-arm-legbreak');
       assert.equal(r.role, 'allrounder');
+      assert.equal(r.position, 'Bowling All-rounder');
     });
 
-    check('player with no styles gets column defaults', () => {
+    check('batting/bowling NOT written - columns fall back to defaults', () => {
+      const rows = readback.filter(r => r.display_name);
+      // batting_style defaults to 'right-hand'; bowling_style has no default.
+      for (const r of rows) {
+        assert.equal(r.batting_style, 'right-hand', `${r.display_name} batting_style`);
+        assert.equal(r.bowling_style, null, `${r.display_name} bowling_style`);
+      }
+    });
+
+    check('player with only a name still inserts', () => {
       const r = readback.find(r => (r.display_name ?? '').includes('Minimal'));
       assert.ok(r);
       assert.equal(r.role, 'batsman');
-      assert.equal(r.bowling_style, null);
     });
 
     // Bookkeeping table round-trip.

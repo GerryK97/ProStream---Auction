@@ -3,19 +3,22 @@
  *
  * Pure mapping helpers for transferring a completed Auction into the Scoreboard.
  *
+ * Scope: only the fields the operator asked to transfer - player name, primary
+ * photo, position and which team. Batting/bowling styles are deliberately NOT
+ * transferred; those columns are nullable in the Scoreboard and are left to
+ * their own defaults.
+ *
  * Why this file exists
  * --------------------
- * The Scoreboard stores player role / batting style / bowling style as strict
- * PostgreSQL enums (`player_role`, `batting_style`, `bowling_style`). The
- * Auction stores the same concepts as free text chosen in `PlayerForm`. A value
- * the enum does not know is not silently coerced - Postgres rejects the INSERT
- * and the whole transfer fails.
+ * The Auction's "position" is the Scoreboard's "role", and the Scoreboard
+ * stores it as a strict PostgreSQL enum (`player_role`) while the Auction
+ * stores free text. A value the enum does not know is not silently coerced -
+ * Postgres rejects the INSERT and the whole transfer fails.
  *
- * Every function here is therefore TOTAL: it always returns a value the
- * Scoreboard enum will accept. When the source value has no exact counterpart
- * the result is flagged `exact: false` with a human-readable `note`, so the
- * preview screen can show the operator precisely what was downgraded instead of
- * guessing on their behalf.
+ * `mapPlayerRole` is therefore TOTAL: it always returns a value the enum will
+ * accept. When the source has no exact counterpart the result is flagged
+ * `exact: false` with a human-readable `note`, so the preview screen can show
+ * the operator what was narrowed instead of guessing on their behalf.
  *
  * No I/O. Everything here is unit-testable without a database.
  */
@@ -23,18 +26,6 @@
 // ─── Scoreboard enum types (mirrors ProStream-Scoreboard/src/lib/db/schema.ts) ─
 
 export type ScoreboardPlayerRole = 'batsman' | 'bowler' | 'allrounder' | 'keeper';
-
-export type ScoreboardBattingStyle = 'right-hand' | 'left-hand';
-
-export type ScoreboardBowlingStyle =
-  | 'right-arm-fast'
-  | 'right-arm-medium'
-  | 'right-arm-offbreak'
-  | 'right-arm-legbreak'
-  | 'left-arm-fast'
-  | 'left-arm-medium'
-  | 'left-arm-orthodox'
-  | 'left-arm-chinaman';
 
 /** A mapped value plus whether the source matched exactly. */
 export interface Mapped<T> {
@@ -80,6 +71,8 @@ const ROLE_EXACT: Record<string, ScoreboardPlayerRole> = {
 
 /**
  * Map an Auction position string to a Scoreboard player_role.
+ *
+ * The Auction calls this field "position"; the Scoreboard calls it "role".
  * Falls back to 'batsman', the Scoreboard column default.
  */
 export function mapPlayerRole(position: string | null | undefined): Mapped<ScoreboardPlayerRole> {
@@ -107,104 +100,6 @@ export function mapPlayerRole(position: string | null | undefined): Mapped<Score
   if (key.includes('bat')) return approx('batsman', `"${position}" matched to Batsman.`);
 
   return approx('batsman', `"${position}" is not a cricket role; defaulted to Batsman.`);
-}
-
-// ─── Batting style ────────────────────────────────────────────────────────────
-
-/**
- * Map an Auction batting style to a Scoreboard batting_style.
- * Auction uses 'Right-handed' / 'Left-handed'.
- */
-export function mapBattingStyle(style: string | null | undefined): Mapped<ScoreboardBattingStyle> {
-  if (!style || !style.trim()) {
-    return approx('right-hand', 'No batting style set; defaulted to Right-hand.');
-  }
-
-  const key = canonical(style);
-  if (key === 'right-handed' || key === 'right hand' || key === 'right-hand' || key === 'rhb') {
-    return exact('right-hand');
-  }
-  if (key === 'left-handed' || key === 'left hand' || key === 'left-hand' || key === 'lhb') {
-    return exact('left-hand');
-  }
-  if (key.includes('left')) return approx('left-hand', `"${style}" matched to Left-hand.`);
-  if (key.includes('right')) return approx('right-hand', `"${style}" matched to Right-hand.`);
-
-  return approx('right-hand', `"${style}" is not a known batting style; defaulted to Right-hand.`);
-}
-
-// ─── Bowling style ────────────────────────────────────────────────────────────
-
-const BOWLING_EXACT: Record<string, ScoreboardBowlingStyle> = {
-  'right-arm fast': 'right-arm-fast',
-  'right-arm medium': 'right-arm-medium',
-  'right-arm off-spin': 'right-arm-offbreak',
-  'right-arm offbreak': 'right-arm-offbreak',
-  'left-arm fast': 'left-arm-fast',
-  'left-arm medium': 'left-arm-medium',
-  'left-arm orthodox': 'left-arm-orthodox',
-  'left-arm chinaman': 'left-arm-chinaman',
-};
-
-/**
- * Map an Auction bowling style to a Scoreboard bowling_style.
- *
- * Returns null for "does not bowl", which the Scoreboard column allows
- * (bowling_style is nullable). Note that Auction offers
- * 'Right-arm Medium-fast', which has no exact Scoreboard counterpart and is
- * deliberately downgraded to 'right-arm-medium'.
- */
-export function mapBowlingStyle(style: string | null | undefined): Mapped<ScoreboardBowlingStyle | null> {
-  if (!style || !style.trim()) {
-    // Not an approximation: no bowling style genuinely means "unset".
-    return exact(null);
-  }
-
-  const key = canonical(style);
-
-  const direct = BOWLING_EXACT[key];
-  if (direct) return exact(direct);
-
-  // 'Leg-spin' in Auction has no arm prefix; Scoreboard only models the
-  // right-arm variant, so this is an assumption worth surfacing.
-  if (key === 'leg-spin' || key === 'leg spin' || key === 'legspin' || key === 'leg break') {
-    return approx('right-arm-legbreak', '"Leg-spin" assumed right-arm (Scoreboard has no arm-neutral leg-spin).');
-  }
-
-  // Medium-fast has no target: Scoreboard offers only fast or medium.
-  if (key.includes('medium-fast') || key.includes('medium fast') || key.includes('fast-medium') || key.includes('fast medium')) {
-    const left = key.includes('left');
-    return approx(
-      left ? 'left-arm-medium' : 'right-arm-medium',
-      `"${style}" has no Scoreboard equivalent; recorded as ${left ? 'Left' : 'Right'}-arm Medium.`,
-    );
-  }
-
-  const left = key.includes('left');
-
-  if (key.includes('chinaman') || (left && key.includes('wrist'))) {
-    return approx('left-arm-chinaman', `"${style}" matched to Left-arm Chinaman.`);
-  }
-  if (key.includes('orthodox') || (left && key.includes('spin') && !key.includes('leg'))) {
-    return approx('left-arm-orthodox', `"${style}" matched to Left-arm Orthodox.`);
-  }
-  if (key.includes('off-spin') || key.includes('off spin') || key.includes('offbreak') || key.includes('off break')) {
-    return approx('right-arm-offbreak', `"${style}" matched to Right-arm Offbreak.`);
-  }
-  if (key.includes('leg-spin') || key.includes('leg spin') || key.includes('legbreak') || key.includes('googly')) {
-    return approx('right-arm-legbreak', `"${style}" matched to Right-arm Legbreak.`);
-  }
-  if (key.includes('fast')) {
-    return approx(left ? 'left-arm-fast' : 'right-arm-fast', `"${style}" matched to ${left ? 'Left' : 'Right'}-arm Fast.`);
-  }
-  if (key.includes('medium')) {
-    return approx(left ? 'left-arm-medium' : 'right-arm-medium', `"${style}" matched to ${left ? 'Left' : 'Right'}-arm Medium.`);
-  }
-  if (key.includes('spin')) {
-    return approx(left ? 'left-arm-orthodox' : 'right-arm-offbreak', `"${style}" matched to ${left ? 'Left-arm Orthodox' : 'Right-arm Offbreak'}.`);
-  }
-
-  return approx('right-arm-medium', `"${style}" is not a known bowling style; recorded as Right-arm Medium.`);
 }
 
 // ─── Display name ─────────────────────────────────────────────────────────────
