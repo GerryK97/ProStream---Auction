@@ -181,10 +181,19 @@ function initialsFrom(teamName: string): string {
 // ─── Images ───────────────────────────────────────────────────────────────────
 
 /**
- * The Scoreboard stores Cloudinary public_ids but its `cloudinaryUrl()` helper
- * also accepts full URLs, so no re-upload is needed. We still normalise to a
- * bare public_id when possible to match how the Scoreboard stores its own
- * uploads. Mirrors normalizePublicId() in ProStream-Scoreboard.
+ * Normalise an Auction image reference to a bare Cloudinary public_id.
+ *
+ * Auction images are served through the media.prostream.lk CDN, which fronts
+ * Cloudinary and adds a routing prefix:
+ *
+ *   https://media.prostream.lk/cloudinary-backfill/prostream-auction/players/abc
+ *                              └── CDN prefix ──┘ └──── real public_id ────┘
+ *
+ * The Scoreboard stores public_ids and rebuilds URLs against res.cloudinary.com,
+ * and several of its pages do so inline rather than through cloudinaryUrl(), so
+ * storing a full URL renders a broken image. 94% of auction images use this CDN
+ * form, so the prefix must be stripped to the real public_id, which is verified
+ * to resolve on Cloudinary directly.
  */
 export function normalizeImageRef(value: string | null | undefined): string | null {
   if (!value) return null;
@@ -192,19 +201,53 @@ export function normalizeImageRef(value: string | null | undefined): string | nu
   if (!trimmed) return null;
 
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-    if (!trimmed.includes('cloudinary.com')) {
-      // A non-Cloudinary URL still renders: cloudinaryUrl() returns it as-is.
+    // Cloudinary's own delivery URL: strip transforms/version/extension.
+    if (trimmed.includes('cloudinary.com')) {
+      const uploadIdx = trimmed.indexOf('/upload/');
+      if (uploadIdx === -1) return trimmed;
+      let rest = trimmed.slice(uploadIdx + '/upload/'.length);
+      rest = rest.replace(/^(?:[a-z]+_[^/]+,?)+\//, ''); // transforms
+      rest = rest.replace(/^v\d+\//, '');                 // version
+      rest = rest.replace(/\.[a-zA-Z]{2,5}$/i, '');       // extension
+      return rest || trimmed;
+    }
+
+    // media.prostream.lk (and any other host fronting Cloudinary) serves the
+    // auction's images. Only treat a host as a Cloudinary CDN when the path
+    // actually looks like an auction public_id, so an unrelated external image
+    // URL is preserved verbatim rather than mangled into a bogus id.
+    let path: string;
+    try {
+      path = new URL(trimmed).pathname.replace(/^\/+/, '');
+    } catch {
       return trimmed;
     }
-    const uploadIdx = trimmed.indexOf('/upload/');
-    if (uploadIdx === -1) return trimmed;
+    if (!path) return trimmed;
 
-    let rest = trimmed.slice(uploadIdx + '/upload/'.length);
-    rest = rest.replace(/^(?:[a-z]+_[^/]+,?)+\//, ''); // transforms
-    rest = rest.replace(/^v\d+\//, '');                 // version
-    rest = rest.replace(/\.[a-zA-Z]{2,5}$/i, '');       // extension
-    return rest || trimmed;
+    // Cloudflare Image Resizing puts a transform segment in front of the real
+    // path, e.g. /cdn-cgi/image/width=600,fit=cover/cloudinary-backfill/...
+    path = path.replace(/^cdn-cgi\/image\/[^/]*\//, '');
+
+    // Only assets served under /cloudinary-backfill/ were migrated into
+    // Cloudinary, so only those can be reduced to a public_id. Verified against
+    // production: 4191 player photos carry that prefix and resolve on
+    // res.cloudinary.com, while 401 are served directly from R2 and 404 there.
+    // Reducing an R2-only asset to a public_id would break the image, so those
+    // keep their full URL, which the Scoreboard renders as-is.
+    if (!path.startsWith('cloudinary-backfill/')) {
+      return trimmed;
+    }
+
+    const withoutPrefix = path.replace(/^cloudinary-backfill\//, '');
+    const isAuctionAsset = /^prostream(-auction)?\//.test(withoutPrefix);
+    if (!isAuctionAsset) {
+      // Not one of ours: hand back the original URL untouched.
+      return trimmed;
+    }
+
+    return withoutPrefix.replace(/\.[a-zA-Z]{2,5}$/i, '') || trimmed;
   }
 
+  // Already a bare public_id.
   return trimmed;
 }

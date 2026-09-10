@@ -138,7 +138,46 @@ check('image: URL without transforms/version', () => {
 check('image: bare public_id passed through', () => {
   assert.equal(normalizeImageRef('prostream-auction/players/abc'), 'prostream-auction/players/abc');
 });
-check('image: non-Cloudinary URL preserved', () => {
+check('image: media.prostream.lk CDN URL reduced to the real public_id', () => {
+  // 94% of auction images use this form. The cloudinary-backfill/ segment is a
+  // CDN routing prefix, not part of the Cloudinary public_id, so it must be
+  // stripped or the Scoreboard renders a 404.
+  assert.equal(
+    normalizeImageRef('https://media.prostream.lk/cloudinary-backfill/prostream-auction/players/wfi4lkfs4zjx35gqja8j'),
+    'prostream-auction/players/wfi4lkfs4zjx35gqja8j',
+  );
+});
+check('image: R2-only asset (no backfill prefix) keeps its full URL', () => {
+  // Only /cloudinary-backfill/ assets were migrated into Cloudinary. ~400
+  // images are served straight from R2 and 404 on res.cloudinary.com, so
+  // reducing them to a public_id would break them.
+  assert.equal(
+    normalizeImageRef('https://media.prostream.lk/prostream-auction/players/abc.jpg'),
+    'https://media.prostream.lk/prostream-auction/players/abc.jpg',
+  );
+});
+check('image: team logos normalise the same way', () => {
+  assert.equal(
+    normalizeImageRef('https://media.prostream.lk/cloudinary-backfill/prostream-auction/teams/jmgqu32qv4bdumdrwjww'),
+    'prostream-auction/teams/jmgqu32qv4bdumdrwjww',
+  );
+});
+check('image: file extension stripped from CDN URLs', () => {
+  assert.equal(
+    normalizeImageRef('https://media.prostream.lk/cloudinary-backfill/prostream-auction/players/abc.png'),
+    'prostream-auction/players/abc',
+  );
+});
+check('image: Cloudflare /cdn-cgi/image transform stripped', () => {
+  // 58 auction records use Cloudflare Image Resizing, which prepends a
+  // transform segment before the real path.
+  assert.equal(
+    normalizeImageRef('https://media.prostream.lk/cdn-cgi/image/width=600,height=600,fit=cover,format=auto,onerror=redirect/cloudinary-backfill/prostream-auction/players/p1tfczsxp85x0b72ztwc'),
+    'prostream-auction/players/p1tfczsxp85x0b72ztwc',
+  );
+});
+check('image: unrelated external URL preserved verbatim', () => {
+  // Not an auction asset, so it must not be mangled into a bogus public_id.
   assert.equal(normalizeImageRef('https://example.com/a.jpg'), 'https://example.com/a.jpg');
 });
 check('image: empty is null', () => {
