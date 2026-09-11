@@ -32,6 +32,49 @@ interface ImageUploadProps {
 const MAX_DIMENSION = 1024;
 const JPEG_QUALITY = 0.85;
 
+/**
+ * Canvas re-encoding always produced `image/jpeg`, and JPEG has no alpha
+ * channel, so a cut-out PNG had its transparent pixels flattened to black
+ * before upload. That baked a black background into the stored image, which
+ * then showed behind players in the overlays.
+ *
+ * Keep PNG only when the pixels really are transparent: PNG photos are much
+ * larger than JPEG, so converting everything would bloat storage for nothing.
+ */
+function encodeCanvas(
+  canvas: HTMLCanvasElement,
+  type: 'image/png' | 'image/jpeg',
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      b => (b ? resolve(b) : reject(new Error('Image encoding failed'))),
+      type,
+      type === 'image/jpeg' ? JPEG_QUALITY : undefined,
+    );
+  });
+}
+
+/** True when any pixel is not fully opaque. */
+function canvasHasTransparency(canvas: HTMLCanvasElement): boolean {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return false;
+  try {
+    const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    for (let i = 3; i < data.length; i += 4) {
+      if (data[i] < 255) return true;
+    }
+  } catch {
+    // Tainted canvas: assume opaque and keep the JPEG path.
+    return false;
+  }
+  return false;
+}
+
+/** PNG sources may carry alpha; anything else can only be opaque. */
+function sourceAllowsAlpha(blob: Blob): boolean {
+  return blob.type === 'image/png' || blob.type === 'image/webp';
+}
+
 async function resizeImage(blob: Blob): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -39,12 +82,15 @@ async function resizeImage(blob: Blob): Promise<Blob> {
     img.onload = () => {
       URL.revokeObjectURL(url);
       let { width, height } = img;
+      const pickType = (canvas: HTMLCanvasElement): 'image/png' | 'image/jpeg' =>
+        sourceAllowsAlpha(blob) && canvasHasTransparency(canvas) ? 'image/png' : 'image/jpeg';
+
       if (width <= MAX_DIMENSION && height <= MAX_DIMENSION) {
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
         canvas.getContext('2d')!.drawImage(img, 0, 0);
-        canvas.toBlob(b => b ? resolve(b) : reject(new Error('Conversion failed')), 'image/jpeg', JPEG_QUALITY);
+        encodeCanvas(canvas, pickType(canvas)).then(resolve, reject);
         return;
       }
       if (width > height) {
@@ -58,7 +104,7 @@ async function resizeImage(blob: Blob): Promise<Blob> {
       canvas.width = width;
       canvas.height = height;
       canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
-      canvas.toBlob(b => b ? resolve(b) : reject(new Error('Resize failed')), 'image/jpeg', JPEG_QUALITY);
+      encodeCanvas(canvas, pickType(canvas)).then(resolve, reject);
     };
     img.onerror = reject;
     img.src = url;
@@ -74,7 +120,10 @@ async function getCroppedBlob(imageSrc: string, pixelCrop: Area): Promise<Blob> 
       canvas.height = pixelCrop.height;
       const ctx = canvas.getContext('2d')!;
       ctx.drawImage(img, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, pixelCrop.width, pixelCrop.height);
-      canvas.toBlob(b => b ? resolve(b) : reject(new Error('Crop failed')), 'image/jpeg', JPEG_QUALITY);
+      // Crop runs before resize, so flattening here would destroy the alpha
+      // before resizeImage ever sees it.
+      encodeCanvas(canvas, canvasHasTransparency(canvas) ? 'image/png' : 'image/jpeg')
+        .then(resolve, reject);
     };
     img.onerror = reject;
     img.src = imageSrc;
@@ -142,7 +191,9 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       const resized = await resizeImage(cropped);
 
       const formData = new FormData();
-      formData.append('file', resized, 'photo.jpg');
+      // Name the part after the real encoding, otherwise a transparent upload is
+      // announced as photo.jpg and may be stored as JPEG anyway.
+      formData.append('file', resized, resized.type === 'image/png' ? 'photo.png' : 'photo.jpg');
       formData.append('folder', `prostream-auction/${folder}`);
 
       const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
