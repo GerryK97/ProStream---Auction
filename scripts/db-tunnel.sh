@@ -47,6 +47,21 @@ get_password() {
 
 tunnel_pid() { pgrep -f "$LOCAL_PORT:127.0.0.1:$LOCAL_PORT $VPS_HOST" || true; }
 
+# A live pid is not enough: the forward can die while ssh lingers. Probe the port.
+port_alive() { nc -z -w 5 127.0.0.1 "$LOCAL_PORT" >/dev/null 2>&1; }
+
+# Reopen the tunnel if the port has stopped accepting.
+ensure_tunnel() {
+  if port_alive; then return 0; fi
+  echo "==> tunnel is down, reopening"
+  [ -n "$(tunnel_pid)" ] && kill "$(tunnel_pid)" 2>/dev/null || true
+  ssh -o BatchMode=yes -o ExitOnForwardFailure=yes -f -N \
+      -o ServerAliveInterval=20 -o ServerAliveCountMax=3 -o TCPKeepAlive=yes \
+      -L "$LOCAL_PORT:127.0.0.1:$LOCAL_PORT" "$VPS_HOST"
+  sleep 2
+  port_alive
+}
+
 start() {
   echo "==> ensuring relay container on $NETWORK"
   ssh_vps "docker rm -f $RELAY_NAME >/dev/null 2>&1 || true; \
@@ -56,10 +71,17 @@ start() {
 
   echo "==> opening SSH tunnel localhost:$LOCAL_PORT"
   [ -n "$(tunnel_pid)" ] && kill "$(tunnel_pid)" 2>/dev/null || true
+  # ServerAlive* keeps the forward from silently dying on an idle NAT/Wi-Fi
+  # link, which otherwise leaves the ssh process alive but the port dead.
   ssh -o BatchMode=yes -o ExitOnForwardFailure=yes -f -N \
+      -o ServerAliveInterval=20 -o ServerAliveCountMax=3 -o TCPKeepAlive=yes \
       -L "$LOCAL_PORT:127.0.0.1:$LOCAL_PORT" "$VPS_HOST"
 
   sleep 2
+  if ! port_alive; then
+    echo "!! tunnel did not come up on $LOCAL_PORT" >&2
+    exit 1
+  fi
   local pw; pw="$(get_password)"
   echo
   echo "Tunnel is up. Use this DATABASE_URL:"
@@ -76,12 +98,19 @@ stop() {
 }
 
 status() {
-  if [ -n "$(tunnel_pid)" ]; then echo "tunnel: RUNNING (pid $(tunnel_pid))"; else echo "tunnel: not running"; fi
+  if port_alive; then
+    echo "tunnel: UP (port $LOCAL_PORT accepting, pid $(tunnel_pid))"
+  elif [ -n "$(tunnel_pid)" ]; then
+    echo "tunnel: STALE (pid $(tunnel_pid) alive but port $LOCAL_PORT dead) - run: $0 start"
+  else
+    echo "tunnel: not running"
+  fi
   ssh_vps "docker ps --filter name=$RELAY_NAME --format 'relay : {{.Status}}'" || true
 }
 
 dev() {
-  start
+  if port_alive; then echo "==> reusing existing tunnel"; else start; fi
+  ensure_tunnel >/dev/null
   local pw; pw="$(get_password)"
   echo "==> starting Next.js against production Postgres"
   DATABASE_URL="postgresql://$PG_USER:$pw@127.0.0.1:$LOCAL_PORT/$PG_DB" npm run dev
