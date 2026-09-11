@@ -40,3 +40,7 @@ next-env.d.ts
 *.sw?
 NUL
 .vercel
+
+# local env backups (contain live credentials)
+.env.local.bak-*
+.env*.bak*

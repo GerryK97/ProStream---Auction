@@ -83,3 +83,31 @@ reachable directly, so it needs no tunnel.
 
 This connects to the **live production database**. Reads are safe; treat writes
 as production changes.
+
+### Scoreboard local dev hits the same wall
+
+`ProStream-Scoreboard/.env.local` shipped with the **Docker-internal** hostname:
+
+```
+DATABASE_URL=postgresql://postgres:***@prostream-prostreampostgres-gzgwy2:5432/prostream
+```
+
+That name only resolves inside the VPS container network. From a laptop it
+fails with `ENOTFOUND`, which NextAuth surfaces as a confusing
+`CallbackRouteError` on login rather than an obvious database error.
+
+Point it at the tunnel instead (same relay serves both apps):
+
+```
+DATABASE_URL=postgresql://postgres:***@127.0.0.1:15432/prostream
+```
+
+Summary of what each `.env.local` needs locally:
+
+| App | Shipped value | Works locally? | Use instead |
+|---|---|---|---|
+| Auction | Neon URL | No, credentials revoked | `127.0.0.1:15432` via tunnel |
+| Scoreboard | `prostream-...-gzgwy2:5432` | No, Docker-internal DNS | `127.0.0.1:15432` via tunnel |
+
+Both are now set to the tunnel, so `npm run dev` works in either repo with the
+tunnel open. Original files are backed up as `.env.local.bak-*` (gitignored).
